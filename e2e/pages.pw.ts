@@ -90,3 +90,19 @@ for (const [name, path, heading] of [
     await accessible(page)
   })
 }
+
+test("pointing at a chart reads a point on every chart, and dragging zooms them", async ({ page }) => {
+  await page.goto("/services/storefront?env=production")
+  const p99 = page.getByRole("img", { name: /^p99 over 1h/ })
+  await expect(p99).toBeVisible({ timeout: 20_000 })
+  const box = await p99.boundingBox()
+  if (box === null) throw new Error("p99 is not drawn")
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await expect(page.getByText(/^Requests at \d\d:\d\d$/)).toBeVisible()
+  await expect(page.getByText(/^p99 at \d\d:\d\d$/)).toBeVisible()
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * 0.9, box.y + box.height / 2, { steps: 5 })
+  await page.mouse.up()
+  await page.getByRole("button", { name: "Show all 1h" }).click()
+  await expect(page.getByRole("button", { name: "Show all 1h" })).toHaveCount(0)
+})

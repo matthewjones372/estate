@@ -85,3 +85,33 @@
 .rail-notes > span:first-child {
   flex: none;
 }
+/* A chart that can be read */
+.plot {
+  position: relative;
+}
+.plot svg {
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+.plot svg:focus-visible {
+  outline: 2px solid var(--quiet);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.plot-mark {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+}
+.plot-span {
+  fill: var(--quiet);
+  fill-opacity: 0.12;
+}
+.plot-dot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--ground);
+  pointer-events: none;
+}

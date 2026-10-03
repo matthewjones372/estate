@@ -174,6 +174,76 @@ describe("the service's load", () => {
   })
 })
 
+describe("reading a chart", () => {
+  const charts = (page: ReturnType<typeof mount>) => [...page.container.querySelectorAll<SVGSVGElement>(".chart svg")]
+  const captions = (page: ReturnType<typeof mount>) =>
+    [...page.container.querySelectorAll(".chart figcaption")].map((each) => each.textContent ?? "")
+  const key = (element: Element, name: string) =>
+    act(() => {
+      element.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true }))
+    })
+  const pointer = (element: Element, type: string, clientX: number) =>
+    act(() => {
+      element.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX, button: 0, pointerId: 1 }))
+    })
+  const wide = (element: Element) =>
+    Object.assign(element, {
+      getBoundingClientRect: () => ({ left: 0, width: 600, top: 0, height: 110, right: 600, bottom: 110 }),
+    })
+
+  test("stepping with the keys marks the same moment on every chart, and Escape lets go", () => {
+    const page = mount(<ServicePage name="storefront" />)
+    const [requests] = charts(page)
+    if (requests === undefined) throw new Error("no chart")
+    key(requests, "End")
+    key(requests, "ArrowLeft")
+    const marked = captions(page)
+    expect(marked.every((each) => / at \d\d:\d\d/.test(each))).toBe(true)
+    key(requests, "Home")
+    key(requests, "Tab")
+    expect(captions(page)).not.toEqual(marked)
+    key(requests, "Escape")
+    expect(captions(page).some((each) => / at /.test(each))).toBe(false)
+  })
+
+  test("pointing marks a point and leaving lets go; dragging zooms every chart, and Show all goes back", () => {
+    const page = mount(<ServicePage name="storefront" />)
+    const [requests] = charts(page)
+    if (requests === undefined) throw new Error("no chart")
+    wide(requests)
+    pointer(requests, "pointermove", 300)
+    expect(captions(page)[0]).toMatch(/ at /)
+    pointer(requests, "pointerout", 300)
+    expect(captions(page)[0]).not.toMatch(/ at /)
+    pointer(requests, "pointerdown", 60)
+    pointer(requests, "pointermove", 300)
+    pointer(requests, "pointerup", 300)
+    expect(page.container.textContent).toContain("Show all 1h")
+    pointer(requests, "pointerdown", 100)
+    pointer(requests, "pointerup", 101)
+    page.click(page.button("Show all 1h"))
+    expect(page.container.textContent).not.toContain("Show all")
+    expect(page.container.textContent).toContain("1h ago")
+  })
+
+  test("the alert's chart reads its points too, and a sparkline answers to a pointer", () => {
+    const page = mount(<Overview />)
+    const alert = page.container.querySelector<SVGSVGElement>(".alert-card svg[tabindex], article svg[tabindex]")
+    if (alert === null) throw new Error("no alert chart")
+    key(alert, "End")
+    expect(alert.closest("div")?.parentElement?.textContent).toMatch(/\d\d:\d\d /)
+    key(alert, "Escape")
+    const spark = page.container.querySelector(".spark svg")
+    if (spark === null) throw new Error("no sparkline")
+    wide(spark)
+    pointer(spark, "pointermove", 590)
+    expect(spark.closest(".spark")?.textContent).toMatch(/\d\d:\d\d/)
+    act(() => {
+      spark.dispatchEvent(new FocusEvent("blur"))
+    })
+  })
+})
+
 describe("getting about", () => {
   test("the switcher lists each environment with its worst, and chooses one", () => {
     const page = mount(<Header />)

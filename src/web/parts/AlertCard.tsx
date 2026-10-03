@@ -1,11 +1,12 @@
 /** An alert that needs someone: what fired against its threshold, its notes, Silence, and where to look. */
 import { useState } from "react"
 import type { Alert, CatalogEvent } from "../../shared/events"
-import { shape } from "../chart"
+import { reading } from "../chart"
 import { useEstate } from "../context"
 import { amount, clock, initials, since } from "../format"
 import { A, Out } from "./A"
 import { Icon } from "./icons"
+import { Plot } from "./Plot"
 
 const minutesUntilNine = (now: number): number => {
   const nine = new Date(now)
@@ -22,46 +23,44 @@ const spansFrom = (now: number) =>
     { label: "until 09:00 tomorrow", minutes: minutesUntilNine(now) },
   ] as const
 
+const hour = 3_600_000
+
 const Chart = (props: { readonly alert: Alert }) => {
+  const { now: clockNow } = useEstate()
+  const [mark, setMark] = useState<number | undefined>(undefined)
   const chart = props.alert.chart
   if (chart === undefined) return null
   const known = chart.points.filter((point): point is number => point !== null)
-  const high = Math.max(chart.threshold * 1.25, ...known)
-  const drawn = shape(chart.points, 400, 80, { pad: 6, low: 0, high })
   const now = known.at(-1)
+  const end = clockNow()
+  const read = reading(chart.points, end, hour, mark)
   return (
     <div>
-      <svg
-        viewBox="0 0 400 80"
-        preserveAspectRatio="none"
-        role="img"
+      <Plot
+        label={`${props.alert.name} over the last hour against its threshold ${amount(chart.threshold)}, now ${amount(now)}`}
+        points={chart.points}
+        end={end}
+        span={hour}
+        width={400}
+        height={80}
+        pad={6}
+        headroom={chart.threshold * 1.25}
+        ink="#F5A524"
+        fill={0.12}
+        limit={{ value: chart.threshold, ink: "#F5A524" }}
         style={{ width: "100%", height: 80, display: "block" }}
-        aria-label={`${props.alert.name} over the last hour against its threshold ${amount(chart.threshold)}, now ${amount(now)}`}
-      >
-        {drawn.area !== "" && <polygon points={drawn.area} fill="#F5A524" fillOpacity="0.12" />}
-        <line
-          x1="0"
-          y1={drawn.y(chart.threshold)}
-          x2="400"
-          y2={drawn.y(chart.threshold)}
-          stroke="#F5A524"
-          strokeWidth="1"
-          strokeDasharray="4 4"
-          vectorEffect="non-scaling-stroke"
-        />
-        <polyline
-          points={drawn.line}
-          fill="none"
-          stroke="#F5B54A"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
+        keys
+        mark={mark}
+        onMark={setMark}
+      />
       <div className="chart-axis mono">
         <span>1 h ago</span>
         <span>threshold {amount(chart.threshold)}</span>
-        <span>now {amount(now)}</span>
+        <span aria-live="polite">
+          {read === undefined
+            ? `now ${amount(now)}`
+            : `${clock(new Date(read.at).toISOString())} ${amount(read.value)}`}
+        </span>
       </div>
     </div>
   )
