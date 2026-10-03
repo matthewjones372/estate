@@ -226,7 +226,11 @@ Nothing. Its first estate, lark-bank, adopts it in its own spec 0026.
       label names, or to the only service in its namespace. Pods are found by each workload's own selector. Flux's
       ImagePolicy is read at `v1` then `v1beta2`. Sources start for the environments in the catalog Estate started
       with; one a reloaded catalog adds is read from the next start.
-- [ ] **`deploys`** — builds from GitHub Actions, Flux's choice, the running image; the deploys page across environments.
+- [x] **`deploys`** — builds from GitHub Actions, Flux's choice, the running image; the deploys page across environments.
+      *Notes:* builds are read for every service with a `repository` and `build.workflow`, eight runs on its branch,
+      every minute with the last ETag (a 304 costs nothing of GitHub's rate limit); `builds.github` in `estate.yaml`
+      holds the token and, for GitHub Enterprise, the API's URL. The running version is the tag of the image a ready
+      pod runs, or its digest's start.
 - [ ] **`load`** — the vitals, sparklines, the service page's charts, the map's rates.
 - [ ] **`stats`** — a service's stats from its preset (`jvm`, `process`, `container`) and its own queries, as charts on
       its page. Done when: a JVM service shows heap, GC pauses, threads and CPU from Micrometer's metrics, and a query

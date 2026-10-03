@@ -8,6 +8,7 @@ import { inEnvironment } from "../views/catalog"
 import { readAlerts, withResolved } from "./alerts"
 import { readCluster } from "./cluster"
 import { readDeploys } from "./flux"
+import { runBuilds } from "./github"
 import { clusterOf } from "./kubernetes"
 import { type Failure, runSource } from "./run"
 
@@ -47,5 +48,6 @@ export const startSources = (
           readers.push(runSource(environment.name, "deploys", "30 seconds", withCluster(readDeploys)))
       }
     }
+    if (settings.builds !== undefined) readers.push(runBuilds(settings.builds.github))
     return yield* Effect.all(readers, { concurrency: "unbounded" }).pipe(Effect.andThen(Effect.never))
   })
