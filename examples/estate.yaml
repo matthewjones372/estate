@@ -19,3 +19,6 @@ sources:
     alertmanager: { url: http://alertmanager.production.invalid:9093 }
     kubernetes: { url: https://kubernetes.production.invalid:6443 }
     flux: {}
+
+builds:
+  github: {}
