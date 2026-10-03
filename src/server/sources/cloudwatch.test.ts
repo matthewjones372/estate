@@ -160,10 +160,22 @@ describe("an estate on ECS with no Prometheus", () => {
     ...settings({ anonymous: { name: "visitor", role: "viewer" } }),
     sources: { staging: { aws: { region: "eu-west-2" } }, production: {} },
   }
-  const answer = (call: Call) =>
-    call.headers?.["x-amz-target"]?.startsWith("AmazonEC2ContainerService")
+  // The instance's role answers too, so the server finds credentials as it would on EC2, whatever this machine has.
+  const metadata = "http://169.254.169.254/latest"
+  const role = {
+    AccessKeyId: "ASIAROLE",
+    SecretAccessKey: "role-secret",
+    Token: "t",
+    Expiration: "2099-01-01T00:00:00Z",
+  }
+  const answer = (call: Call) => {
+    if (call.url === `${metadata}/api/token`) return reply("imds-token")
+    if (call.url === `${metadata}/meta-data/iam/security-credentials/`) return reply("estate")
+    if (call.url === `${metadata}/meta-data/iam/security-credentials/estate`) return reply(role)
+    return call.headers?.["x-amz-target"]?.startsWith("AmazonEC2ContainerService")
       ? reply({ taskArns: [], services: [] })
       : fakeCloudWatch([])(call)
+  }
 
   test("shows its alarms with their charts, its load and its vitals", () => {
     const program = Effect.gen(function* () {
