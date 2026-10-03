@@ -1,5 +1,13 @@
 # Estate
 
+[![gate](https://github.com/matthewjones372/estate/actions/workflows/gate.yml/badge.svg)](https://github.com/matthewjones372/estate/actions/workflows/gate.yml)
+[![image](https://github.com/matthewjones372/estate/actions/workflows/image.yml/badge.svg)](https://github.com/matthewjones372/estate/actions/workflows/image.yml)
+![Bun](https://img.shields.io/badge/Bun-1.3-14151a?logo=bun&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
+![Effect](https://img.shields.io/badge/Effect-4-0b0d12)
+![React](https://img.shields.io/badge/React-19-20232a?logo=react&logoColor=61dafb)
+![Image](https://img.shields.io/badge/memory-~120%20MB-2a3247)
+
 **Is the estate well, and if not, where do I look?** Estate answers that on one page, for every service your team
 runs, in every environment, without anyone building a dashboard.
 
