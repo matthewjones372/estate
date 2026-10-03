@@ -38,6 +38,8 @@ export const Kubernetes = Schema.Struct({
   caFile: optional(Schema.String),
   inCluster: optional(Schema.Boolean),
   impersonate: optional(Schema.Boolean),
+  /** Put before the person's name and each group when impersonating, as the cluster's own sign-in names them. */
+  impersonationPrefix: optional(Schema.String),
 })
 
 const Sources = Schema.Struct({
