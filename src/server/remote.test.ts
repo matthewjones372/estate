@@ -9,6 +9,7 @@ const server = Bun.serve({
   fetch: (request) => {
     const path = new URL(request.url).pathname
     if (path === "/json") return Response.json({ said: request.method, header: request.headers.get("x-asked") })
+    if (path === "/typed") return Response.json({ type: request.headers.get("content-type") })
     if (path === "/empty") return new Response("")
     if (path === "/text") return new Response("plain words")
     return new Response("broken", { status: 500 })
@@ -32,6 +33,23 @@ describe("calls to other tools", () => {
   test("bring back the JSON they answer with", () =>
     call("/json").then((result) =>
       expect(Result.isSuccess(result) && result.success).toEqual({ said: "POST", header: "yes" }),
+    ))
+
+  test("send a body as the type the call says, as JSON APIs require, and as text where it says none", () =>
+    Promise.all(
+      [{ "Content-Type": "application/json" }, { "content-type": "application/x-amz-json-1.0" }, {}].map((headers) =>
+        Effect.runPromise(
+          callJson({ url: `http://127.0.0.1:${server.port}/typed`, method: "POST", headers, body: "{}" }).pipe(
+            Effect.provide(liveRemote),
+          ),
+        ),
+      ),
+    ).then((answers) =>
+      expect(answers).toEqual([
+        { type: "application/json" },
+        { type: "application/x-amz-json-1.0" },
+        { type: "text/plain" },
+      ]),
     ))
 
   test("an empty answer is nothing", () =>

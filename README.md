@@ -150,6 +150,7 @@ bun install
 bun run gate          # typecheck, lint, unused code, layering, tests
 bunx playwright test  # browser tests against fake tools in e2e/
 bun run perf          # fifty services against the budgets in bench/run.ts
+bun run integration   # Estate's readers against the real tools, in containers: needs Docker
 ```
 
 [AGENTS.md](AGENTS.md) covers code conventions. Design decisions are written up in [specs/](specs).

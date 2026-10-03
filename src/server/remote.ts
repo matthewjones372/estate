@@ -30,11 +30,18 @@ const timeout = Duration.seconds(10)
 
 const hostOf = (url: string): string => URL.parse(url)?.host ?? url
 
+/** The call's content type, whatever the case of its header's name. */
+const contentTypeOf = (headers: Call["headers"]) =>
+  Object.entries(headers ?? {}).find(([name]) => name.toLowerCase() === "content-type")?.[1]
+
 const requestOf = (call: Call) => {
   const request = HttpClientRequest.make(call.method ?? "GET")(call.url).pipe(
     HttpClientRequest.setHeaders(call.headers ?? {}),
   )
-  return call.body === undefined ? request : HttpClientRequest.bodyText(request, call.body)
+  // The body's content type is the call's own; left out, it would be text/plain, which JSON APIs refuse.
+  return call.body === undefined
+    ? request
+    : HttpClientRequest.bodyText(request, call.body, contentTypeOf(call.headers) ?? "text/plain")
 }
 
 /** Bun's fetch takes `tls`, beyond the standard's options. */
