@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, SubscriptionRef } from "effect"
+import { Effect, Layer, Redacted, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
 import { ask, catalog, environment, estate, serverFor, settings, storefront } from "../fixture"
 import { type Call, type Reply, reply, stubRemote } from "../remote"
@@ -141,7 +141,10 @@ describe("putting debug back", () => {
 describe("switching debug from the page", () => {
   const configured = (role: "viewer" | "operator", kubernetes = true) => ({
     ...settings({ anonymous: { name: "ada", role } }),
-    sources: { staging: kubernetes ? { kubernetes: { url: "https://cluster", token: "t" } } : {}, production: {} },
+    sources: {
+      staging: kubernetes ? { kubernetes: { url: "https://cluster", token: Redacted.make("t") } } : {},
+      production: {},
+    },
   })
   const withCluster = estate({
     environments: {
@@ -181,7 +184,12 @@ describe("switching debug from the page", () => {
       ...configured("operator"),
       sources: {
         staging: {
-          kubernetes: { url: "https://cluster", token: "t", impersonate: true, impersonationPrefix: "pocket-id:" },
+          kubernetes: {
+            url: "https://cluster",
+            token: Redacted.make("t"),
+            impersonate: true,
+            impersonationPrefix: "pocket-id:",
+          },
         },
         production: {},
       },

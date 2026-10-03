@@ -2,7 +2,7 @@
  * Builds from GitHub Actions: each service's workflow runs on its branch, newest first. Asked with the ETag of the last
  * answer, so a quiet repository costs a 304 and nothing of the rate limit.
  */
-import { Clock, type Duration, Effect, Schedule, Schema, SubscriptionRef } from "effect"
+import { Clock, type Duration, Effect, Redacted, Schedule, Schema, SubscriptionRef } from "effect"
 import type { Service } from "../../shared/catalog"
 import type { Build } from "../../shared/events"
 import { Remote } from "../remote"
@@ -31,7 +31,7 @@ export const statusOf = (run: Pick<Run, "status" | "conclusion">): Build["status
 
 export interface GitHub {
   readonly url?: string
-  readonly token?: string
+  readonly token?: Redacted.Redacted<string>
 }
 
 interface Remembered {
@@ -56,7 +56,7 @@ const buildsOf = (
   const headers = {
     accept: "application/vnd.github+json",
     "user-agent": "estate",
-    ...(github.token === undefined ? {} : { authorization: `Bearer ${github.token}` }),
+    ...(github.token === undefined ? {} : { authorization: `Bearer ${Redacted.value(github.token)}` }),
     ...(last === undefined ? {} : { "if-none-match": last.etag }),
   }
   return Effect.gen(function* () {

@@ -1,5 +1,5 @@
 /** A cluster's API: where it is and how Estate signs in to it, from inside the cluster or from settings. */
-import { Context, Effect, Schema } from "effect"
+import { Context, Effect, Redacted, Schema } from "effect"
 import { callJson, type Remote } from "../remote"
 import type { Kubernetes } from "../settings"
 import type { Failure } from "./run"
@@ -30,7 +30,11 @@ export const clusterOf = (
     if (inside && KUBERNETES_SERVICE_HOST === undefined)
       return yield* Effect.fail({ message: "Estate is not in a cluster, and no url is set" })
     const url = inside ? `https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}` : (settings.url ?? "")
-    const token = inside ? yield* readFile(`${serviceAccount}/token`) : settings.token
+    const token = inside
+      ? yield* readFile(`${serviceAccount}/token`)
+      : settings.token === undefined
+        ? undefined
+        : Redacted.value(settings.token)
     const caFile = inside ? `${serviceAccount}/ca.crt` : settings.caFile
     const ca = caFile === undefined ? undefined : yield* readFile(caFile)
     return {

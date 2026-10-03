@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, Result, SubscriptionRef } from "effect"
+import { Effect, Layer, Redacted, Result, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
 import { ask, estate, serverFor, settings } from "./fixture"
 import { loadNotes, sweepNotes } from "./http/notes"
@@ -126,7 +126,12 @@ describe("adding a note", () => {
     Effect.runPromise(
       Effect.gen(function* () {
         const oidc = settings({
-          oidc: { issuer: "https://id.example", clientId: "e", clientSecret: "s", publicUrl: "https://e" },
+          oidc: {
+            issuer: "https://id.example",
+            clientId: "e",
+            clientSecret: Redacted.make("s"),
+            publicUrl: "https://e",
+          },
         })
         expect(
           (yield* ask(yield* serverFor(oidc), post({ environment: "staging", alert: "a1", text: "hi" }))).status,
