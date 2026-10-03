@@ -3,6 +3,7 @@ import { Effect, Layer } from "effect"
 import { HttpRouter } from "effect/http"
 import type { Catalog } from "../shared/catalog"
 import { application, type Started, services } from "./app"
+import { memoryNotes, type Notes } from "./notes"
 import { type Call, type Reply, stubRemote } from "./remote"
 import type { Settings } from "./settings"
 import { type EnvironmentState, type EstateState, emptyEnvironment, off } from "./state"
@@ -74,12 +75,13 @@ export const serverFor = (
   configured: Settings,
   initial: EstateState = estate(),
   answer: (call: Call) => Reply | undefined = () => undefined,
+  notes: Layer.Layer<Notes> = memoryNotes,
 ) => {
   const web = stubWeb("<!doctype html><title>Estate</title>", {
     "main.js": { body: new TextEncoder().encode("run()"), type: "text/javascript" },
   })
   const { handler } = HttpRouter.toWebHandler(application, { disableLogger: true })
-  return Effect.scoped(Layer.build(services(started(configured, initial), web, stubRemote(answer)))).pipe(
+  return Effect.scoped(Layer.build(services(started(configured, initial), web, stubRemote(answer), notes))).pipe(
     Effect.map((context) => ({ handler: (request: Request) => handler(request, context), context })),
   )
 }
