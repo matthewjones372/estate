@@ -187,13 +187,30 @@ export type SettingsError = InstanceType<typeof SettingsError>
 
 const named = /\$\{(\w+)\}/g
 
+/** Where a line's YAML comment starts: a `#` at its start or after a space, outside quotes. */
+const commentAt = (line: string): number => {
+  let quote: string | undefined
+  for (let at = 0; at < line.length; at++) {
+    const char = line[at]
+    if (quote !== undefined) quote = char === quote ? undefined : quote
+    else if (char === '"' || char === "'") quote = char
+    else if (char === "#" && (at === 0 || /\s/.test(line[at - 1] ?? ""))) return at
+  }
+  return line.length
+}
+
+/** Each line as the YAML it holds and the comment after it, which is left as it is. */
+const linesOf = (text: string) =>
+  text.split("\n").map((line) => ({ yaml: line.slice(0, commentAt(line)), comment: line.slice(commentAt(line)) }))
+
 /**
  * Replaces each `${NAME}` with its value from the `ConfigProvider` (the environment, unless a test says otherwise),
- * naming each one that is not set.
+ * naming each one that is not set. A `${NAME}` in a comment is neither needed nor replaced.
  */
 export const substitute = (text: string): Effect.Effect<Result.Result<string, ReadonlyArray<Mistake>>> =>
   Effect.gen(function* () {
-    const names = [...new Set([...text.matchAll(named)].map((match) => match[1] ?? ""))]
+    const lines = linesOf(text)
+    const names = [...new Set(lines.flatMap((line) => [...line.yaml.matchAll(named)].map((match) => match[1] ?? "")))]
     const values = new Map<string, string>()
     const missing: Mistake[] = []
     for (const name of names) {
@@ -201,8 +218,9 @@ export const substitute = (text: string): Effect.Effect<Result.Result<string, Re
       if (Option.isSome(value)) values.set(name, value.value)
       else missing.push({ at: `\${${name}}`, message: "is not set in the environment" })
     }
+    const replaced = (yaml: string) => yaml.replace(named, (_, name: string) => values.get(name) ?? "")
     return missing.length === 0
-      ? Result.succeed(text.replace(named, (_, name: string) => values.get(name) ?? ""))
+      ? Result.succeed(lines.map((line) => replaced(line.yaml) + line.comment).join("\n"))
       : Result.fail(missing)
   })
 

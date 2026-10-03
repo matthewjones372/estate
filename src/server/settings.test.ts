@@ -42,6 +42,23 @@ describe("the settings", () => {
       ]),
     ))
 
+  test("need no secret named only in a comment, whole-line or after a value", () =>
+    Effect.runPromise(
+      substitute(
+        `# token: ${secretOf("ONE")}\na: ${secretOf("TWO")} # or ${secretOf("THREE")}\nb: "x # ${secretOf("TWO")}"`,
+      ).pipe(within({ TWO: "two" })),
+    ).then((substituted) =>
+      expect(Result.isSuccess(substituted) && substituted.success).toBe(
+        `# token: ${secretOf("ONE")}\na: two # or ${secretOf("THREE")}\nb: "x # two"`,
+      ),
+    ))
+
+  test("in examples/, which the README runs with nothing set, read with nothing set", () =>
+    Bun.file(new URL("../../examples/estate.yaml", import.meta.url))
+      .text()
+      .then((text) => Effect.runPromise(read(text)))
+      .then((result) => expect(Result.isSuccess(result)).toBe(true)))
+
   test("name every mistake in their shape", () =>
     Effect.runPromise(
       Effect.gen(function* () {
