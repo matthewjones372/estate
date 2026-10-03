@@ -80,7 +80,7 @@ describe("the catalog's check", () => {
       "services[0] (orders).load.requests: the query is missing a )",
       'services[0] (orders).load.errors: the query has an unclosed "',
       "services[0] (orders).load.p99: the query is empty",
-      "services[0] (orders).links.logs: {cluster} is not one of {env}, {namespace}, {service}",
+      "services[0] (orders).links.logs: {cluster} is not one of {env}, {namespace}, {service}, nor a value staging names",
       "services[0] (orders).debug.levels: needs the usual level and the debug level, in that order",
       'services[0] (orders).repository: "gitlab.com/example/orders" is not github:owner/name',
       "vitals[0] (Orders): the query has an unmatched )",
@@ -111,5 +111,25 @@ describe("a service's jobs", () => {
         services: [{ name: "s", environments: ["a"], jobs: [{ kind: "CronJob", name: "backup" }] }],
       }),
     ).toEqual([{ at: "services[0] (s).jobs", message: "needs kubernetes.namespace, where its jobs run" }])
+  })
+})
+
+describe("a link's values", () => {
+  test("may be named when every environment the service runs in has them", () => {
+    const valued = {
+      environments: [
+        { name: "home", sources: "home", values: { grafana: "https://grafana.home.arpa" } },
+        { name: "kind", sources: "kind", values: { grafana: "http://localhost:3000" } },
+      ],
+      services: [{ name: "s", environments: ["home", "kind"], links: { dashboard: "{grafana}/d/{service}" } }],
+    }
+    expect(mistakes(valued)).toEqual([])
+    const lacking = { ...valued, environments: [valued.environments[0], { name: "kind", sources: "kind" }] }
+    expect(mistakes(lacking)).toEqual([
+      {
+        at: "services[0] (s).links.dashboard",
+        message: "{grafana} is not one of {env}, {namespace}, {service}, nor a value kind names",
+      },
+    ])
   })
 })

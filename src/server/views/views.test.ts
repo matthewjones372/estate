@@ -130,6 +130,19 @@ describe("the services event", () => {
 })
 
 describe("the catalog event", () => {
+  test("fills an environment's own values into links", () => {
+    const valued = {
+      ...catalog,
+      environments: [{ name: "staging", sources: "staging", values: { grafana: "http://localhost:3000" } }],
+      services: [
+        { name: "orders", environments: ["staging"], links: { dashboard: "{grafana}/d/{service}?{unknown}" } },
+      ],
+    }
+    expect(catalogView(valued, "staging").services[0]?.links).toEqual([
+      { name: "dashboard", url: "http://localhost:3000/d/orders?{unknown}" },
+    ])
+  })
+
   test("fills each link in for the environment, and draws only what is in it", () => {
     const view = catalogView(catalog, "staging")
     expect(view.services[0]?.links).toEqual([{ name: "logs", url: "https://logs.example/staging/shop/storefront" }])
