@@ -80,7 +80,7 @@ describe("acting on an alert", () => {
   test("silences it for a chosen time, only with a reason", async () => {
     const page = mount(<Overview />)
     page.click(page.button("Silence…"))
-    page.click(page.button("4 hours"))
+    page.click(page.button("6 hours"))
     const silence = page.button(/^Silence until/)
     expect(silence.disabled).toBe(true)
     const reason = page.container.querySelector<HTMLInputElement>(".reason input")
@@ -89,7 +89,7 @@ describe("acting on an alert", () => {
     await page.settle()
     page.click(page.button(/^Silence until/))
     await page.settle()
-    expect(page.calls).toContainEqual(["silence", "a1", 240, "vacuum on the database"])
+    expect(page.calls).toContainEqual(["silence", "a1", 360, "vacuum on the database"])
     expect(page.container.textContent).not.toContain("Silence until")
   })
 
@@ -100,6 +100,14 @@ describe("acting on an alert", () => {
     expect(page.container.textContent).not.toContain("Silence until")
     page.click(page.button("Unsilence"))
     expect(page.calls).toContainEqual(["unsilence", "s1"])
+  })
+})
+
+describe("a note", () => {
+  test("is removed by an operator, or by whoever wrote it", () => {
+    const page = mount(<Overview />)
+    page.click(page.button(/^Remove/))
+    expect(page.calls).toContainEqual(["removeNote", "n1"])
   })
 })
 

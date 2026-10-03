@@ -11,6 +11,9 @@ export type StoredNote = Note & { readonly environment: string; readonly alert: 
 export interface Notes {
   readonly all: Effect.Effect<ReadonlyArray<StoredNote>, Failure>
   readonly add: (note: StoredNote) => Effect.Effect<void, Failure>
+  readonly remove: (id: string) => Effect.Effect<void, Failure>
+  /** Removes every note written before `at`. */
+  readonly removeBefore: (at: string) => Effect.Effect<void, Failure>
 }
 export const Notes = Context.Service<Notes>("estate/Notes")
 
@@ -64,18 +67,28 @@ export const postgresNotes = (query: Query) =>
             "insert into estate_notes (id, environment, alert, at, by, text) values ($1, $2, $3, $4, $5, $6)",
             [note.id, note.environment, note.alert, note.at, note.by, note.text],
           ).pipe(Effect.asVoid),
+        remove: (id: string) => run(query, "delete from estate_notes where id = $1", [id]).pipe(Effect.asVoid),
+        removeBefore: (at: string) => run(query, "delete from estate_notes where at < $1", [at]).pipe(Effect.asVoid),
       }),
     ),
   )
 
 /** Notes for as long as Estate runs. */
 export const memoryNotes = Layer.sync(Notes)(() => {
-  const notes: StoredNote[] = []
+  let notes: ReadonlyArray<StoredNote> = []
   return {
     all: Effect.sync(() => [...notes].reverse()),
     add: (note: StoredNote) =>
       Effect.sync(() => {
-        notes.push(note)
+        notes = [...notes, note]
+      }),
+    remove: (id: string) =>
+      Effect.sync(() => {
+        notes = notes.filter((note) => note.id !== id)
+      }),
+    removeBefore: (at: string) =>
+      Effect.sync(() => {
+        notes = notes.filter((note) => note.at >= at)
       }),
   }
 })

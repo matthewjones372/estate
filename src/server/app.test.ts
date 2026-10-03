@@ -102,6 +102,8 @@ describe("running", () => {
                 Layer.succeed(Notes)({
                   all: Effect.fail({ message: "the notes database: down" }),
                   add: () => Effect.void,
+                  remove: () => Effect.void,
+                  removeBefore: () => Effect.fail({ message: "the notes database: down" }),
                 }),
               ),
             ),

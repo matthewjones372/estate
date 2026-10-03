@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer, Result, SubscriptionRef } from "effect"
+import { TestClock } from "effect/testing"
 import { ask, estate, serverFor, settings } from "./fixture"
-import { loadNotes } from "./http/notes"
+import { loadNotes, sweepNotes } from "./http/notes"
 import { memoryNotes, Notes, postgresNotes, type Query, type StoredNote } from "./notes"
-import { Estate, estateLayer } from "./state"
+import { Estate, estateLayer, updateEstate } from "./state"
 
 const note: StoredNote = {
   id: "n1",
@@ -111,6 +112,8 @@ describe("adding a note", () => {
           Layer.succeed(Notes)({
             all: Effect.succeed([]),
             add: () => Effect.fail({ message: "the notes database: down" }),
+            remove: () => Effect.fail({ message: "the notes database: down" }),
+            removeBefore: () => Effect.void,
           }),
         )
         const answered = yield* ask(server, post({ environment: "staging", alert: "a1", text: "hi" }))
@@ -152,4 +155,84 @@ describe("the notes already kept", () => {
         return (yield* SubscriptionRef.get(yield* Estate)).notes
       }).pipe(Effect.provide(Layer.merge(memoryNotes, estateLayer(estate())))),
     ).then((notes) => expect(notes).toEqual([note])))
+})
+
+describe("taking a note back", () => {
+  const as = (name: string, role: "viewer" | "operator") => settings({ anonymous: { name, role } })
+  const remove = (id: string) => new Request(`http://estate/api/notes/${id}`, { method: "DELETE" })
+  const withNote = estate({ notes: [note] })
+
+  test("is for whoever wrote it, or an operator", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const other = yield* serverFor(as("eve", "viewer"), withNote)
+        expect((yield* ask(other, remove("n1"))).status).toBe(403)
+        expect((yield* ask(other, remove("nope"))).status).toBe(404)
+        for (const person of [as("gil", "viewer"), as("ada", "operator")]) {
+          const server = yield* serverFor(person, withNote)
+          expect((yield* ask(server, remove("n1"))).status).toBe(200)
+          expect((yield* SubscriptionRef.get(yield* Effect.provide(Estate, server.context))).notes).toEqual([])
+        }
+      }),
+    ))
+
+  test("says so when the database does not", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(
+          as("gil", "viewer"),
+          withNote,
+          undefined,
+          Layer.succeed(Notes)({
+            all: Effect.succeed([]),
+            add: () => Effect.void,
+            remove: () => Effect.fail({ message: "the notes database: down" }),
+            removeBefore: () => Effect.void,
+          }),
+        )
+        const answered = yield* ask(server, remove("n1"))
+        expect([answered.status, answered.json()]).toEqual([503, { message: "the notes database: down" }])
+      }),
+    ))
+})
+
+describe("old notes", () => {
+  test("are removed after the days they are kept, from the store and the page", () => {
+    const old = { ...note, id: "old", at: "1970-01-01T00:00:00.000Z" }
+    const recent = { ...note, id: "recent", at: "1970-01-31T00:00:00.000Z" }
+    const program = Effect.gen(function* () {
+      const notes = yield* Notes
+      yield* notes.add(old)
+      yield* notes.add(recent)
+      yield* updateEstate((state) => ({ ...state, notes: [recent, old] }))
+      yield* TestClock.setTime(Date.parse("1970-02-15T00:00:00Z"))
+      yield* Effect.forkChild(sweepNotes(30))
+      yield* TestClock.adjust("1 second")
+      return {
+        kept: (yield* notes.all).map((each) => each.id),
+        shown: (yield* SubscriptionRef.get(yield* Estate)).notes.map((each) => each.id),
+      }
+    })
+    return Effect.runPromise(
+      program.pipe(Effect.provide(Layer.mergeAll(memoryNotes, estateLayer(estate()), TestClock.layer()))),
+    ).then((result) => {
+      expect(result).toEqual({ kept: ["recent"], shown: ["recent"] })
+    })
+  })
+
+  test("are removed from Postgres by their time", () => {
+    const statements: Array<readonly [string, ReadonlyArray<unknown>]> = []
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const notes = yield* Notes
+        yield* notes.remove("n1")
+        yield* notes.removeBefore("2026-09-03T00:00:00.000Z")
+      }).pipe(Effect.provide(postgresNotes(database(statements)))),
+    ).then(() => {
+      expect(statements.slice(1)).toEqual([
+        ["delete from estate_notes where id = $1", ["n1"]],
+        ["delete from estate_notes where at < $1", ["2026-09-03T00:00:00.000Z"]],
+      ])
+    })
+  })
 })

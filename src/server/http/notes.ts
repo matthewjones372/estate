@@ -1,5 +1,5 @@
 /** `POST /api/notes`: anyone who may see the estate adds a note to an alert, under their own name. */
-import { Clock, Effect, Schema, SubscriptionRef } from "effect"
+import { Clock, Effect, Schedule, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Notes } from "../notes"
 import { Estate, updateEstate } from "../state"
@@ -40,6 +40,41 @@ export const notesRoute = HttpRouter.add(
     return json(note, 201)
   }).pipe(Effect.catch((refusal) => refused(refusal))),
 )
+
+/** `DELETE /api/notes/:id`: a note taken back by whoever wrote it, or by an operator. */
+export const removeNoteRoute = HttpRouter.add(
+  "DELETE",
+  "/api/notes/:id",
+  Effect.gen(function* () {
+    const person = yield* withRole
+    const { id = "" } = yield* HttpRouter.params
+    const { notes: shown } = yield* SubscriptionRef.get(yield* Estate)
+    const note = shown.find((each) => each.id === id)
+    if (note === undefined) return json({ message: "there is no such note" }, 404)
+    if (note.by !== person.name && person.role !== "operator")
+      return json({ message: "a note is removed by whoever wrote it, or an operator" }, 403)
+    const notes = yield* Notes
+    const removed = yield* Effect.result(notes.remove(id))
+    if (removed._tag === "Failure") return json({ message: removed.failure.message }, 503)
+    yield* updateEstate((estate) => ({ ...estate, notes: estate.notes.filter((each) => each.id !== id) }))
+    return json({ id })
+  }).pipe(Effect.catch(refused)),
+)
+
+const day = 24 * 3_600_000
+
+/** Every hour, notes older than `keepDays` removed, from the database and the page. */
+export const sweepNotes = (keepDays: number) =>
+  Effect.gen(function* () {
+    const cutoff = new Date((yield* Clock.currentTimeMillis) - keepDays * day).toISOString()
+    const notes = yield* Notes
+    yield* notes.removeBefore(cutoff)
+    yield* updateEstate((estate) => ({ ...estate, notes: estate.notes.filter((note) => note.at >= cutoff) }))
+  }).pipe(
+    Effect.catch((failure) => Effect.logWarning(`old notes could not be removed: ${failure.message}`)),
+    Effect.repeat(Schedule.spaced("1 hour")),
+    Effect.andThen(Effect.never),
+  )
 
 /** The notes already kept, into the state as Estate starts; tried again until the database answers. */
 export const loadNotes = Effect.gen(function* () {

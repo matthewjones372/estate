@@ -177,6 +177,12 @@ describe("the other pages", () => {
     expect(text(render(<ServicePage name="nothing" />))).toContain("nothing is not in production")
   })
 
+  test("a viewer cannot remove someone else's note", () => {
+    const viewer = { ...operator, role: "viewer" as const }
+    expect(text(render(<Overview />, { me: viewer }))).not.toContain("Remove the note")
+    expect(text(render(<Overview />, { me: { ...viewer, name: "gil" } }))).toContain("Remove the note by gil")
+  })
+
   test("a viewer sees debug and silences but cannot switch them", () => {
     const viewer = { ...operator, role: "viewer" as const }
     const page = text(render(<ServicePage name="storefront" />, { me: viewer }))

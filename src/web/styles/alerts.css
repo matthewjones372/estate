@@ -199,3 +199,12 @@
   color: var(--ink-2);
   font-size: 13px;
 }
+.note-remove {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--amber-muted);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
