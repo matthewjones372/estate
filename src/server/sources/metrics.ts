@@ -5,7 +5,9 @@
  */
 import { Effect } from "effect"
 import type { Catalog, Service } from "../../shared/catalog"
+import { compact } from "../../shared/compact"
 import type { Series } from "../../shared/events"
+import { statsOf } from "../../shared/stats"
 import type { Remote } from "../remote"
 import type { Metrics, ServiceLoad, SourcedAlert } from "../state"
 import { alertingRules, lastHour, rangeOf, type Span, thresholdOf } from "./prometheus"
@@ -17,21 +19,32 @@ const quietly = (read: Effect.Effect<Series, Failure, Remote>) => read.pipe(Effe
 
 const loadKinds = ["requests", "errors", "p99"] as const
 
-/** A service's load over a span: each of its queries that the catalog names. */
+/** A service's load over a span: each of its queries that the catalog names, and its stats. */
 export const loadOf = (
   url: string,
   service: Service,
   span: Span,
   now: number,
 ): Effect.Effect<ServiceLoad, never, Remote> =>
-  Effect.forEach(
-    loadKinds.flatMap((kind) => {
-      const query = service.load?.[kind]
-      return query === undefined ? [] : [[kind, query] as const]
-    }),
-    ([kind, query]) => quietly(rangeOf(url, query, span, now)).pipe(Effect.map((series) => [kind, series] as const)),
-    { concurrency: 3 },
-  ).pipe(Effect.map((read) => Object.fromEntries(read)))
+  Effect.gen(function* () {
+    const load = yield* Effect.forEach(
+      loadKinds.flatMap((kind) => {
+        const query = service.load?.[kind]
+        return query === undefined ? [] : [[kind, query] as const]
+      }),
+      ([kind, query]) => quietly(rangeOf(url, query, span, now)).pipe(Effect.map((series) => [kind, series] as const)),
+      { concurrency: 3 },
+    )
+    const stats = yield* Effect.forEach(
+      statsOf(service),
+      (stat) =>
+        quietly(rangeOf(url, stat.query, span, now)).pipe(
+          Effect.map((series) => compact({ title: stat.title, unit: stat.unit, series })),
+        ),
+      { concurrency: 3 },
+    )
+    return { ...Object.fromEntries(load), ...(stats.length === 0 ? {} : { stats }) }
+  })
 
 const ignored = new Set(["alertname", "severity", "alertstate"])
 

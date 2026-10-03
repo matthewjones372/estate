@@ -27,6 +27,7 @@ services:
       api: https://{service}.{env}.example.com/swagger-ui
       app: https://shop.{env}.example.com
     debug: { configMap: storefront-logging, key: level, levels: [ INFO, DEBUG ] }
+    stats: { preset: container }
 
   - name: orders
     description: Baskets become orders, and orders are tracked to the door
@@ -43,6 +44,10 @@ services:
     links:
       logs: https://grafana.example.com/explore?env={env}&logs={namespace}/{service}
       traces: https://grafana.example.com/explore?env={env}&traces={service}
+    stats:
+      preset: jvm
+      extra:
+        - { title: Orders waiting, query: 'sum(orders_waiting{app="orders"})' }
 
   - name: payments
     description: Takes the money, through the card provider

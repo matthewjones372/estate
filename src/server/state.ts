@@ -4,7 +4,7 @@
  */
 import { Context, Effect, Layer, SubscriptionRef } from "effect"
 import type { Catalog } from "../shared/catalog"
-import type { Alert, Build, Debug, Note, Pod, Series, SourceKind } from "../shared/events"
+import type { Alert, Build, Debug, Load, Note, Pod, Series, SourceKind } from "../shared/events"
 
 export interface Part<A> {
   readonly state: "off" | "waiting" | "ok" | "failing"
@@ -16,11 +16,7 @@ export interface Part<A> {
 export const off: Part<never> = { state: "off" }
 export const waiting: Part<never> = { state: "waiting" }
 
-export interface ServiceLoad {
-  readonly requests?: Series
-  readonly errors?: Series
-  readonly p99?: Series
-}
+export type ServiceLoad = Load
 
 export interface Metrics {
   readonly services: Readonly<Record<string, ServiceLoad>>
