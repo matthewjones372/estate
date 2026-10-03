@@ -248,7 +248,11 @@ Nothing. Its first estate, orders, adopts it in its own spec 0026.
       *Notes:* read with the cluster every 15 s: a CronJob's schedule and its last five Jobs (found by their owner),
       a Job by name. A run is missed when the schedule's next time after the last scheduled run is more than five
       minutes past; schedules are read in the CronJob's `timeZone`, or UTC.
-- [ ] **`notes`** — notes on alerts, kept in Postgres.
+- [x] **`notes`** — notes on alerts, kept in Postgres.
+      *Notes:* `notes.postgres` in `estate.yaml` (a URL, usually `${DATABASE_URL}`); Estate makes its one table,
+      `estate_notes`, if it is not there. Without it notes are kept in memory, for trying Estate out. A note is 1 to
+      2,000 characters, under the name of whoever is signed in; the last 500 are on the stream. A database that does
+      not answer as Estate starts stops it, named; one that stops answering later refuses new notes with its words.
 - [ ] **`silences`** — silences through Alertmanager, with a reason.
 - [ ] **`debug`** — the debug switch and its revert.
 - [ ] **`feed`** — what changed today, from the sources and Estate's own records.

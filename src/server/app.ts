@@ -1,10 +1,12 @@
 /** Estate assembled: settings and catalog read and checked, the routes, the catalog's reload and the sources. */
-import { Data, Effect, Layer, Result } from "effect"
+import { Data, Effect, Layer, Result, Schedule } from "effect"
 import type { Mistake } from "../shared/shape"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { loadRoute } from "./http/load"
+import { loadNotes, notesRoute } from "./http/notes"
 import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
+import { memoryNotes, type Notes } from "./notes"
 import type { Remote } from "./remote"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
 import { startSources } from "./sources/start"
@@ -59,20 +61,30 @@ export const prepare = (
   )
 
 /** The routes with what they need, for serving or for a test's web handler. */
-export const application = Layer.mergeAll(routes, signInRoutes, loadRoute)
+export const application = Layer.mergeAll(routes, signInRoutes, loadRoute, notesRoute)
 
 /** What runs beside the routes for as long as Estate does. */
 export const background = (
   started: Started,
   host: Readonly<Record<string, string | undefined>>,
-): Effect.Effect<never, never, Estate | Remote> =>
+): Effect.Effect<never, never, Estate | Remote | Notes> =>
   Effect.all(
     [
+      loadNotes.pipe(
+        Effect.tapError((failure) => Effect.logWarning(`notes cannot be read yet: ${failure.message}`)),
+        Effect.retry(Schedule.spaced("10 seconds")),
+        Effect.orDie,
+        Effect.andThen(Effect.never),
+      ),
       reloadCatalog(started.settings.catalog, started.settings, started.catalogText),
       startSources(started.settings, started.initial.catalog.environments, host),
     ],
     { concurrency: "unbounded" },
   ).pipe(Effect.andThen(Effect.never))
 
-export const services = <E>(started: Started, web: Layer.Layer<Web, E>, remote: Layer.Layer<Remote>) =>
-  Layer.mergeAll(estateLayer(started.initial), web, remote, Layer.succeed(Configured)(started.settings))
+export const services = <E, F>(
+  started: Started,
+  web: Layer.Layer<Web, E>,
+  remote: Layer.Layer<Remote>,
+  notes: Layer.Layer<Notes, F> = memoryNotes,
+) => Layer.mergeAll(estateLayer(started.initial), web, remote, notes, Layer.succeed(Configured)(started.settings))

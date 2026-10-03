@@ -11,7 +11,7 @@ import { type Person, personAsking } from "./people"
 export const json = (body: unknown, status = 200) =>
   HttpServerResponse.text(JSON.stringify(body), { status, contentType: "application/json" })
 
-export type Refusal = { readonly status: 401 | 403; readonly body: unknown }
+export type Refusal = { readonly status: 400 | 401 | 403 | 404; readonly body: unknown }
 
 /** The person asking if they hold a role, or the response that says why not. */
 export const withRole: Effect.Effect<
