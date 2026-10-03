@@ -5,7 +5,7 @@ import { ask, catalog, estate, serverFor, settings, storefront } from "../fixtur
 import { type Call, type Reply, reply, stubRemote } from "../remote"
 import type { SourcedAlert } from "../state"
 import { readMetrics } from "./metrics"
-import { onGrid, thresholdOf } from "./prometheus"
+import { onGrid, prometheusRanges, thresholdOf } from "./prometheus"
 
 const now = Date.parse("2026-10-03T12:00:00Z")
 
@@ -78,7 +78,7 @@ const read = (
 ) =>
   Effect.runPromise(
     Effect.result(
-      readMetrics("http://prometheus", Effect.succeed(new Map()), withMetrics, services, stores, alerts, now).pipe(
+      readMetrics(prometheusRanges("http://prometheus"), withMetrics, services, stores, alerts, now).pipe(
         Effect.provide(stubRemote(answer)),
       ),
     ),
@@ -183,7 +183,7 @@ describe("load over a longer range", () => {
           server,
           new Request("http://estate/api/load?env=production&service=storefront&range=6h"),
         )
-        expect(none.json()).toEqual({ message: "production has no Prometheus" })
+        expect(none.json()).toEqual({ message: "production has no metrics to read" })
       }),
     )
   })
@@ -213,7 +213,7 @@ describe("load over a longer range", () => {
           estate({ catalog: { ...withMetrics, stores: [ordersDb] } }),
         )
         const none = yield* ask(bare, new Request("http://estate/api/store-load?env=staging&store=orders-db&range=6h"))
-        expect(none.json()).toEqual({ message: "staging has no Prometheus" })
+        expect(none.json()).toEqual({ message: "staging has no metrics to read" })
         const wrong = yield* ask(bare, new Request("http://estate/api/store-load?env=staging&store=orders-db"))
         expect(wrong.status).toBe(400)
       }),

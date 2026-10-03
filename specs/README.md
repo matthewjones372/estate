@@ -6,7 +6,7 @@ entries, one per pull request, each with what proves it done.
 | Spec | What |
 |---|---|
 | [0001](0001-the-estate-on-one-page.md) | the estate on one page: alerts with notes and silences, health, versions through the pipeline in every environment, load, links, and a debug switch that turns itself off, for any estate described by a catalog; draft |
-| [0002](0002-more-kinds-of-estate.md) | more kinds of estate: Grafana alerting, Elasticsearch logs, Argo CD, GitLab CI, ECS and CloudWatch as sources beside today's, each a port with its kinds behind it; draft |
+| [0002](0002-more-kinds-of-estate.md) | more kinds of estate: Grafana alerting, Elasticsearch logs, Argo CD, GitLab CI, ECS, CloudWatch and notes in DynamoDB beside the first kinds, each part a port with its kinds behind it; done, with Buildkite, Nomad, Datadog and Cloud Run left for when someone asks |
 | [0003](0003-stores.md) | stores: databases, queues and caches in the catalog, with stats and health from a preset per engine (Postgres, CloudNativePG, MySQL, Redis, Kafka), on the overview and a page of their own; done |
 | [0004](0004-notes-that-end.md) | notes that end: removed by their author or an operator, and after `notes.keepDays`; silences for 1 hour, 6 hours, 1 day or until 09:00; done |
 | [0005](0005-charts-you-can-read.md) | charts you can read: point at, step through or drag across a chart to read a time and value, shared across a service's charts; done |

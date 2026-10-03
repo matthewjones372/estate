@@ -145,8 +145,11 @@ const prometheusAlerts = (
     ),
   )
 
-/** Every alert the environment's sources know: its manager's, and Grafana's and Prometheus's pending ones. */
-export const readAlerts = (sources: Sources): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
+/** Every alert the environment's sources know: its manager's, Grafana's and Prometheus's pending ones, and CloudWatch's alarms. */
+export const readAlerts = (
+  sources: Sources,
+  alarms?: Effect.Effect<ReadonlyArray<SourcedAlert>, Failure>,
+): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
   Effect.gen(function* () {
     const manager = managerOf(sources)
     const managed = manager === undefined ? [] : yield* managerAlerts(manager)
@@ -163,7 +166,8 @@ export const readAlerts = (sources: Sources): Effect.Effect<ReadonlyArray<Source
     const states = new Set(manager === undefined ? ["pending", "firing"] : ["pending"])
     const prometheus =
       sources.prometheus === undefined ? [] : yield* prometheusAlerts(sources.prometheus.url.replace(/\/$/, ""), states)
-    return [...managed, ...grafanaPending, ...prometheus]
+    const cloudwatch = alarms === undefined ? [] : yield* alarms
+    return [...managed, ...grafanaPending, ...prometheus, ...cloudwatch]
   })
 
 /** Alerts that fired before this read and do not now have resolved; a day of them is kept. */

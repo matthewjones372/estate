@@ -39,7 +39,7 @@ describe("the catalog file", () => {
     expect([...configuredKinds(configured, "c")]).toEqual([])
     expect([...configuredKinds(configured, "d")]).toEqual(["alerts"])
     expect([...configuredKinds(configured, "e")]).toEqual(["deploys"])
-    expect([...configuredKinds(configured, "f")]).toEqual(["cluster", "deploys"])
+    expect([...configuredKinds(configured, "f")]).toEqual(["metrics", "alerts", "cluster", "deploys"])
   })
 
   test("a new catalog keeps what is known of environments it keeps, and forgets the rest", () => {

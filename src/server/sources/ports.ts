@@ -21,15 +21,18 @@ export const deploysOf = (section: Sources): "argo" | "flux" | "ecs" | undefined
 }
 
 /** Where firing, pending and silenced alerts are read. */
-export const alertsOf = (section: Sources): ReadonlyArray<"alertmanager" | "grafana" | "prometheus"> => [
+export const alertsOf = (section: Sources): ReadonlyArray<"alertmanager" | "grafana" | "prometheus" | "cloudwatch"> => [
   ...(section.alertmanager === undefined ? [] : ["alertmanager" as const]),
   ...(section.grafana === undefined ? [] : ["grafana" as const]),
   ...(section.prometheus === undefined ? [] : ["prometheus" as const]),
+  ...(section.aws === undefined ? [] : ["cloudwatch" as const]),
 ]
 
-/** Where queries over a range are answered. */
-export const metricsOf = (section: Sources): "prometheus" | undefined =>
-  section.prometheus === undefined ? undefined : "prometheus"
+/** Where queries over a range are answered: Prometheus, or CloudWatch where there is no Prometheus. */
+export const metricsOf = (section: Sources): "prometheus" | "cloudwatch" | undefined => {
+  if (section.prometheus !== undefined) return "prometheus"
+  return section.aws === undefined ? undefined : "cloudwatch"
+}
 
 /** Where each service's builds are read, for the whole estate rather than per environment. */
 export const buildsOf = (settings: Settings): ReadonlyArray<"github" | "gitlab"> => [

@@ -14,9 +14,9 @@ runs, in every environment, without anyone building a dashboard.
 
 ![The overview: what needs you, the estate drawn live, each service's lane, and what changed today](docs/overview.png)
 
-Your team already has the answers. The alerts are in Alertmanager or Grafana, what runs where is in Kubernetes and
-Flux or Argo CD, or ECS, the builds are in GitHub or GitLab, the load is in Prometheus. Each morning, and at every
-alert, someone joins them up in their head across five tabs. Estate does the joining:
+Your team already has the answers. The alerts are in Alertmanager, Grafana or CloudWatch, what runs where is in
+Kubernetes and Flux or Argo CD, or ECS, the builds are in GitHub or GitLab, the load is in Prometheus or CloudWatch.
+Each morning, and at every alert, someone joins them up in their head across five tabs. Estate does the joining:
 
 - **What needs you now**, at the top, in plain words: "Two things need you." Each alert as a card drawing the metric
   that fired against its threshold, with the runbook, its errors from then, and the traces one click away.

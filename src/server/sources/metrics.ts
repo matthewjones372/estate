@@ -11,7 +11,7 @@ import { statsOf } from "../../shared/stats"
 import { storeStatsOf } from "../../shared/stores"
 import type { Remote } from "../remote"
 import type { Metrics, ServiceLoad, SourcedAlert, StoreReading } from "../state"
-import { alertingRules, lastHour, rangeOf, type Span, thresholdOf } from "./prometheus"
+import { lastHour, type Ranges, type Span, thresholdOf } from "./prometheus"
 import type { Failure } from "./run"
 
 const empty: Series = { now: null, points: [] }
@@ -22,7 +22,7 @@ const loadKinds = ["requests", "errors", "p99"] as const
 
 /** A service's load over a span: each of its queries that the catalog names, and its stats. */
 export const loadOf = (
-  url: string,
+  ranges: Ranges,
   service: Service,
   span: Span,
   now: number,
@@ -33,13 +33,13 @@ export const loadOf = (
         const query = service.load?.[kind]
         return query === undefined ? [] : [[kind, query] as const]
       }),
-      ([kind, query]) => quietly(rangeOf(url, query, span, now)).pipe(Effect.map((series) => [kind, series] as const)),
+      ([kind, query]) => quietly(ranges.range(query, span, now)).pipe(Effect.map((series) => [kind, series] as const)),
       { concurrency: 3 },
     )
     const stats = yield* Effect.forEach(
       statsOf(service),
       (stat) =>
-        quietly(rangeOf(url, stat.query, span, now)).pipe(
+        quietly(ranges.range(stat.query, span, now)).pipe(
           Effect.map((series) => compact({ title: stat.title, unit: stat.unit, series })),
         ),
       { concurrency: 3 },
@@ -49,7 +49,7 @@ export const loadOf = (
 
 /** A store's stats over a span, from the preset for its engine and its own queries. */
 export const storeLoadOf = (
-  url: string,
+  ranges: Ranges,
   store: Store,
   span: Span,
   now: number,
@@ -57,7 +57,7 @@ export const storeLoadOf = (
   Effect.forEach(
     storeStatsOf(store),
     (stat) =>
-      quietly(rangeOf(url, stat.query, span, now)).pipe(
+      quietly(ranges.range(stat.query, span, now)).pipe(
         Effect.map((series) => compact({ key: stat.key, title: stat.title, unit: stat.unit, series })),
       ),
     { concurrency: 3 },
@@ -76,8 +76,7 @@ const ignored = new Set([
 ])
 
 export const readMetrics = (
-  url: string,
-  more: Effect.Effect<ReadonlyMap<string, string>, never, Remote>,
+  ranges: Ranges,
   catalog: Catalog,
   services: ReadonlyArray<Service>,
   stores: ReadonlyArray<Store>,
@@ -85,22 +84,23 @@ export const readMetrics = (
   now: number,
 ): Effect.Effect<Metrics, Failure, Remote> =>
   Effect.gen(function* () {
-    const rules = new Map([...(yield* alertingRules(url)), ...(yield* more)])
+    const rules = yield* ranges.rules
     const loads = yield* Effect.forEach(
       services,
-      (service) => loadOf(url, service, lastHour, now).pipe(Effect.map((load) => [service.name, load] as const)),
+      (service) => loadOf(ranges, service, lastHour, now).pipe(Effect.map((load) => [service.name, load] as const)),
       {
         concurrency: 4,
       },
     )
     const storeLoads = yield* Effect.forEach(
       stores,
-      (store) => storeLoadOf(url, store, lastHour, now).pipe(Effect.map((readings) => [store.name, readings] as const)),
+      (store) =>
+        storeLoadOf(ranges, store, lastHour, now).pipe(Effect.map((readings) => [store.name, readings] as const)),
       { concurrency: 4 },
     )
     const vitals = yield* Effect.forEach(
       catalog.vitals ?? [],
-      (vital) => quietly(rangeOf(url, vital.query, lastHour, now)),
+      (vital) => quietly(ranges.range(vital.query, lastHour, now)),
       { concurrency: 4 },
     )
     const edges = yield* Effect.forEach(
@@ -108,16 +108,17 @@ export const readMetrics = (
       (edge) =>
         edge.rate === undefined
           ? Effect.succeed(null)
-          : quietly(rangeOf(url, edge.rate, lastHour, now)).pipe(Effect.map((series) => series.now)),
+          : quietly(ranges.range(edge.rate, lastHour, now)).pipe(Effect.map((series) => series.now)),
       { concurrency: 4 },
     )
     const charts = yield* Effect.forEach(
       firing.filter((alert) => alert.state === "firing"),
       (alert) => {
-        const watched = thresholdOf(rules.get(alert.name) ?? "")
+        // An alert that carries its own comparison (a CloudWatch alarm's) is charted by it, else by its rule's.
+        const watched = thresholdOf(alert.expression ?? rules.get(alert.name) ?? "")
         if (watched === undefined) return Effect.succeed([])
         const labels = Object.fromEntries(Object.entries(alert.labels).filter(([name]) => !ignored.has(name)))
-        return quietly(rangeOf(url, watched.measure, lastHour, now, labels)).pipe(
+        return quietly(ranges.range(watched.measure, lastHour, now, labels)).pipe(
           Effect.map((series) => [[alert.id, { points: series.points, threshold: watched.threshold }] as const]),
         )
       },

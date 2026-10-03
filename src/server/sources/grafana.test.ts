@@ -6,6 +6,7 @@ import { Estate, type SourcedAlert } from "../state"
 import { readAlerts } from "./alerts"
 import { comparisonOf, grafanaRules } from "./grafana"
 import { readMetrics } from "./metrics"
+import { prometheusRanges } from "./prometheus"
 
 const grafana = { url: "http://grafana/", token: Redacted.make("glsa_secret") }
 
@@ -115,8 +116,7 @@ describe("Grafana's alerting", () => {
       labels,
     }
     const read = readMetrics(
-      "http://prometheus",
-      grafanaRules(grafana),
+      prometheusRanges("http://prometheus", grafanaRules(grafana)),
       { environments: [], services: [] },
       [],
       [],

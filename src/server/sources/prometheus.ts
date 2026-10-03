@@ -58,7 +58,7 @@ const subsetOf = (labels: Readonly<Record<string, string>>, of: Readonly<Record<
   Object.entries(labels).every(([name, value]) => of[name] === value)
 
 /** A query over the span ending now: the result whose labels the alert's include, or the first. */
-export const rangeOf = (
+const rangeOf = (
   url: string,
   query: string,
   span: Span,
@@ -79,7 +79,7 @@ export const rangeOf = (
 }
 
 /** Each alerting rule's expression, by the alert's name. */
-export const alertingRules = (url: string): Effect.Effect<ReadonlyMap<string, string>, Failure, Remote> =>
+const alertingRules = (url: string): Effect.Effect<ReadonlyMap<string, string>, Failure, Remote> =>
   callJson({ url: `${url}/api/v1/rules?type=alert` }).pipe(
     Effect.mapError(failure),
     Effect.flatMap(decoded(Rules)),
@@ -101,4 +101,29 @@ export const thresholdOf = (
   const measure = match?.[1]
   const threshold = Number(match?.[2])
   return measure === undefined || !Number.isFinite(threshold) ? undefined : { measure, threshold }
+}
+
+/** What a metrics source gives: a query over a span, and each alerting rule as `measure > threshold`. */
+export interface Ranges {
+  readonly range: (
+    query: string,
+    span: Span,
+    now: number,
+    labels?: Readonly<Record<string, string>>,
+  ) => Effect.Effect<Series, Failure, Remote>
+  readonly rules: Effect.Effect<ReadonlyMap<string, string>, Failure, Remote>
+}
+
+/** Prometheus at `url`, with any rules Prometheus does not hold (Grafana's) beside its own. */
+export const prometheusRanges = (
+  url: string,
+  more: Effect.Effect<ReadonlyMap<string, string>, never, Remote> = Effect.succeed(new Map()),
+): Ranges => {
+  const base = url.replace(/\/$/, "")
+  return {
+    range: (query, span, now, labels) => rangeOf(base, query, span, now, labels),
+    rules: Effect.gen(function* () {
+      return new Map([...(yield* alertingRules(base)), ...(yield* more)])
+    }),
+  }
 }

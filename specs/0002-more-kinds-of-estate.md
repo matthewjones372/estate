@@ -130,7 +130,7 @@ rather than the AWS SDK, so the image stays small.
 - [x] **`ecs`** — ECS services: running and desired tasks, each task's image and health, deployments rolling or
       failed, scheduled tasks as jobs.
       Done when: a service whose deployment is failing shows it stalled with ECS's reason.
-- [ ] **`cloudwatch`** — CloudWatch alarms as alerts (read-only) and `GetMetricData` as a metrics source.
+- [x] **`cloudwatch`** — CloudWatch alarms as alerts (read-only) and `GetMetricData` as a metrics source.
       Done when: an ECS service's estate shows its alarms, load and vitals with no Prometheus.
 - [ ] **`buildkite`**, **`nomad`**, **`datadog`**, **`cloud-run`** — each when someone running Estate asks.
 

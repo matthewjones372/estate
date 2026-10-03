@@ -7,6 +7,7 @@ import { HttpRouter } from "effect/http"
 import { Configured } from "../settings"
 import { loadOf, storeLoadOf } from "../sources/metrics"
 import type { Span } from "../sources/prometheus"
+import { rangesIn } from "../sources/ranges"
 import { Estate } from "../state"
 import { storesIn } from "../views/stores"
 import { json, refused, searchParams, withRole } from "./routes"
@@ -40,10 +41,10 @@ export const loadRoute = HttpRouter.add(
     const span = spans[asked.range]
     if (environment === undefined || service === undefined)
       return json({ message: "no such environment or service" }, 404)
-    const prometheus = settings.sources[environment.sources]?.prometheus
-    if (prometheus === undefined) return json({ message: `${environment.name} has no Prometheus` }, 404)
+    const ranges = yield* rangesIn(settings.sources[environment.sources] ?? {})
+    if (ranges === undefined) return json({ message: `${environment.name} has no metrics to read` }, 404)
     const now = yield* Clock.currentTimeMillis
-    return json(yield* loadOf(prometheus.url.replace(/\/$/, ""), service, span, now))
+    return json(yield* loadOf(ranges, service, span, now))
   }).pipe(Effect.catchTag("Refusal", refused)),
 )
 
@@ -67,10 +68,10 @@ export const storeLoadRoute = HttpRouter.add(
     const environment = catalog.environments.find((each) => each.name === asked.env)
     const store = storesIn(catalog, asked.env).find((each) => each.name === asked.store)
     if (environment === undefined || store === undefined) return json({ message: "no such environment or store" }, 404)
-    const prometheus = settings.sources[environment.sources]?.prometheus
-    if (prometheus === undefined) return json({ message: `${environment.name} has no Prometheus` }, 404)
+    const ranges = yield* rangesIn(settings.sources[environment.sources] ?? {})
+    if (ranges === undefined) return json({ message: `${environment.name} has no metrics to read` }, 404)
     const now = yield* Clock.currentTimeMillis
-    const readings = yield* storeLoadOf(prometheus.url.replace(/\/$/, ""), store, spans[asked.range], now)
+    const readings = yield* storeLoadOf(ranges, store, spans[asked.range], now)
     return json({ stats: readings.map(({ key: _, ...stat }) => stat) })
   }).pipe(Effect.catchTag("Refusal", refused)),
 )
