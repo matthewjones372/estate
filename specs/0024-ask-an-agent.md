@@ -42,9 +42,41 @@ Tools, each answering from Estate's current state, in the words the page uses:
 | `changes` | what changed in an environment: deploys, builds, alerts, silences and notes, newest first |
 | `errors` | a service's errors over a range, grouped by message, masked as the page masks them |
 | `agents` | each AI agent's usage, model and since when, tokens against budget, and recent runs |
+| `around_alert` | an alert's brief: what changed near it, what it depends on, its errors, history and runbook |
 
 Each tool returns structured content and a short text summary, and takes `environment`, defaulting to the
 catalog's first.
+
+### Around this alert
+
+Before any model is asked, Estate gathers what is relevant to an alert, because it already knows how the estate fits
+together. This is useful on its own, with no AI set up, and it is where the model starts:
+
+```text
+┌ WARNING  OrdersSlow                                          firing 14 min ┐
+│ Around this alert                                                            │
+│  Changed   orders main-88-04bc441 deployed 2 min before it fired (Flux)      │
+│            storefront build passed 13:46; payments unchanged today           │
+│  Depends   orders-db: connections 92% (attention), replication lag 2 s       │
+│            payments: healthy, 11 req/s                                        │
+│  Errors    142 since 11:36: "lock timeout on orders_items" (128), …          │
+│  Before    once, 27 Sep, 22 min: "vacuumed the orders table" (ada)          │
+│  Runbook   "If p99 is high after a deploy, roll back; if the db is the       │
+│            cause, check for long-running vacuums." (runbooks/orders.md)     │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Changed**: the alert's service's deploys and builds in the hour before it fired, and those of what it calls and
+  what calls it on the map.
+- **Depends**: the services and stores next to it on the map, each with its health and the stats that need someone.
+- **Errors**: its service's errors from ten minutes before it fired, grouped by message, masked.
+- **Before**: its earlier firings and the notes written then (spec 0021).
+- **Runbook**: the runbook's text, where its link is a page Estate can read (Markdown, plain text or HTML from the
+  repository or wiki it names), otherwise the link. Estate reads it with the credentials `runbooks:` in
+  `estate.yaml` gives for that host, and never sends them anywhere else.
+
+The brief is built from the views the page already has, plus the log and runbook reads, so it costs nothing until
+someone opens it.
 
 ### Ask AI, on an alert's card
 
@@ -70,8 +102,9 @@ ai: { provider: openai-compatible, url: http://vllm.ai:8000/v1, model: <the mode
 ```
 
 - **"Ask AI"** is on the card of any alert, for anyone who may write notes, when `ai` is set. Estate gives the model
-  the alert and the same tools the MCP server offers, and the model decides what to look at: the service, what
-  changed, the alert's history, the errors from the logs.
+  the alert and its brief, *Around this alert*, and the same tools the MCP server offers for anything further.
+- **The answer has a shape**: the likely cause, the evidence for it with each piece linked to where it came from,
+  what the runbook says to do, and what to check next. A claim with no evidence from Estate's tools is not made.
 - **Any model that calls tools**: Anthropic's Messages API, OpenAI's Chat Completions, or any server that speaks the
   OpenAI-compatible API, so a team can keep everything on its own hardware. One port, three kinds, as for every
   other tool Estate reads.
@@ -101,6 +134,10 @@ Nothing.
 
 ## Stack
 
+- [ ] **`around-alert`** — *Around this alert* on the card: what changed near it, what it depends on, its errors,
+      its history and its runbook's text. No AI needed.
+      Done when: the example estate's OrdersSlow shows orders' deploy before it fired, orders-db's stats, its errors
+      and its runbook's text.
 - [ ] **`mcp-server`** — `/mcp` over streamable HTTP with tokens and roles; `estate_now`, `services`, `service`.
       Done when: Claude Code, given the token, lists the tools and answers "what needs someone in production?".
 - [ ] **`mcp-alerts`** — `alerts`, `alert_history`, `changes`, `errors`, `agents`.
