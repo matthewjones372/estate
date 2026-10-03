@@ -8,13 +8,13 @@ import { eventStream } from "../stream"
 import { Web } from "../web"
 import { type Person, personAsking } from "./people"
 
-const json = (body: unknown, status = 200) =>
+export const json = (body: unknown, status = 200) =>
   HttpServerResponse.text(JSON.stringify(body), { status, contentType: "application/json" })
 
 export type Refusal = { readonly status: 401 | 403; readonly body: unknown }
 
 /** The person asking if they hold a role, or the response that says why not. */
-const withRole: Effect.Effect<
+export const withRole: Effect.Effect<
   Person & { readonly role: Me["role"] },
   Refusal,
   HttpServerRequest.HttpServerRequest | Configured
@@ -30,7 +30,7 @@ const withRole: Effect.Effect<
   return { name, role }
 })
 
-const refused = (refusal: Refusal) => Effect.succeed(json(refusal.body, refusal.status))
+export const refused = (refusal: Refusal) => Effect.succeed(json(refusal.body, refusal.status))
 
 const health = HttpRouter.add("GET", "/healthz", HttpServerResponse.text("ok"))
 

@@ -1,5 +1,5 @@
 /** Every environment's sources, each read on its own schedule, for as long as Estate runs. */
-import { Effect, SubscriptionRef } from "effect"
+import { Clock, Effect, SubscriptionRef } from "effect"
 import type { Service } from "../../shared/catalog"
 import type { Remote } from "../remote"
 import type { Settings } from "../settings"
@@ -10,6 +10,7 @@ import { readCluster } from "./cluster"
 import { readDeploys } from "./flux"
 import { runBuilds } from "./github"
 import { clusterOf } from "./kubernetes"
+import { readMetrics } from "./metrics"
 import { type Failure, runSource } from "./run"
 
 /** The services in an environment as the catalog says now, so a reloaded catalog is read from the next time. */
@@ -30,6 +31,17 @@ export const startSources = (
       const section = settings.sources[environment.sources] ?? {}
       if (section.alertmanager !== undefined || section.prometheus !== undefined) {
         readers.push(runSource(environment.name, "alerts", "20 seconds", readAlerts(section), withResolved))
+      }
+      const { prometheus } = section
+      if (prometheus !== undefined) {
+        const url = prometheus.url.replace(/\/$/, "")
+        const read = Effect.gen(function* () {
+          const estate = yield* SubscriptionRef.get(yield* Estate)
+          const firing = estate.environments[environment.name]?.alerts.value ?? []
+          const now = yield* Clock.currentTimeMillis
+          return yield* readMetrics(url, estate.catalog, inEnvironment(estate.catalog, environment.name), firing, now)
+        })
+        readers.push(runSource(environment.name, "metrics", "30 seconds", read))
       }
       const { kubernetes } = section
       if (kubernetes !== undefined) {
