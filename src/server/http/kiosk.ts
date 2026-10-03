@@ -31,8 +31,13 @@ export const kioskRoute = HttpRouter.add("GET", "/kiosk", (request) =>
         after(now, Duration.days(screenDays)),
         Redacted.value(auth.sessionSecret),
       )
-      const team = new URL(request.url, "http://estate").searchParams.get("team")
-      return HttpServerResponse.redirect(team === null ? "/kiosk" : `/kiosk?team=${encodeURIComponent(team)}`).pipe(
+      // The screen keeps what it is narrowed to, and loses the token.
+      const kept = new URLSearchParams()
+      for (const name of ["team", "category"]) {
+        const value = new URL(request.url, "http://estate").searchParams.get(name)
+        if (value !== null) kept.set(name, value)
+      }
+      return HttpServerResponse.redirect(kept.size === 0 ? "/kiosk" : `/kiosk?${kept}`).pipe(
         HttpServerResponse.setCookieUnsafe(sessionCookie, sealed, cookieOptions(auth, screenDays * 24 * 3600)),
       )
     }

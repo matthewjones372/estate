@@ -10,7 +10,7 @@ const accessible = async (page: Page) => {
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screenshots/${name}.png`, fullPage: true })
 
-const services = (page: Page) => page.getByRole("region", { name: "Services" })
+const services = (page: Page) => page.getByRole("region", { name: "The estate by area" })
 
 test("the overview says what needs someone, with each service's lane and what changed", async ({ page }) => {
   await page.goto("/?env=production")
@@ -22,6 +22,9 @@ test("the overview says what needs someone, with each service's lane and what ch
     "https://storefront.production.example.com/swagger-ui",
   )
   await expect(page.getByText("orders job orders-nightly-export succeeded")).toBeVisible()
+  // The catalog's categories, in its order, and what has none last.
+  await expect(services(page).getByRole("heading", { level: 2 })).toHaveText(["Shop", "Payments", "Everything else"])
+  await expect(page.getByRole("region", { name: "Payments" }).getByRole("link", { name: "orders-db" })).toBeVisible()
   await shot(page, "overview")
   await accessible(page)
 })
@@ -127,9 +130,10 @@ test("a service's lines arrive live, pause, filter to errors, and its errors gro
 
 test("a store opened from the overview shows its stats over a day", async ({ page }) => {
   await page.goto("/?env=production")
-  const stores = services(page)
-  await expect(stores.getByRole("heading", { name: "Stores" })).toBeVisible({ timeout: 20_000 })
-  await stores.getByRole("link", { name: "orders-db", exact: true }).click()
+  // A store sits under its category, beside the services that use it.
+  const payments = page.getByRole("region", { name: "Payments" })
+  await expect(payments.getByRole("link", { name: "orders-db", exact: true })).toBeVisible({ timeout: 20_000 })
+  await payments.getByRole("link", { name: "orders-db", exact: true }).click()
   await expect(page).toHaveURL(/\/stores\/orders-db/)
   await expect(page.getByRole("heading", { name: "orders-db", level: 1 })).toBeVisible()
   await expect(page.getByText("Healthy")).toBeVisible()

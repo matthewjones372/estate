@@ -1,19 +1,17 @@
 /** @jsxImportSource solid-js */
 /**
- * The overview: the headline, the vitals, the map, what needs someone, a lane per service and per store, and what
- * changed.
+ * The overview: the headline, the vitals, the map, what needs someone, a lane per service and per store, grouped by
+ * category when the catalog names any, and what changed.
  */
 import { For, Show } from "solid-js"
 import type { Alert, Events } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock, counted, measured } from "../format"
-import { byName } from "../indexed"
 import { AlertCard } from "../parts/AlertCard"
 import { Feed } from "../parts/Feed"
 import { Icon } from "../parts/icons"
-import { Lane } from "../parts/Lane"
+import { Lanes } from "../parts/Lanes"
 import { EstateMap } from "../parts/Map"
-import { StoreLane } from "../parts/StoreLane"
 import { Reading, SourceNotices } from "./States"
 
 export interface Headline {
@@ -178,9 +176,6 @@ export const Overview = () => {
   const { me, now } = useEstate()
   const snapshot = useSnapshot()
   const events = () => snapshot.events
-  const states = byName(() => events().services?.services)
-  const storeStates = byName(() => events().services?.stores)
-  const deployed = byName(() => events().deploys?.services)
   const headline = () => headlineOf(events())
   const alerts = () => events().alerts?.alerts ?? []
   const firing = () => alerts().filter((alert) => alert.state === "firing")
@@ -247,39 +242,7 @@ export const Overview = () => {
         <Silenced alerts={silenced()} canSilence={canSilence()} />
       </section>
       <div class="row">
-        <section aria-labelledby="services-title" class="services">
-          <div class="spread">
-            <h2 id="services-title" class="section-title">
-              Services
-            </h2>
-            <span class="muted" style={{ "font-size": "12px" }}>
-              Last hour · pipeline: commit, build, chosen, running
-            </span>
-          </div>
-          <For each={events().catalog?.services ?? []}>
-            {(service) => (
-              <Lane
-                service={service}
-                state={states().get(service.name)}
-                deployed={deployed().get(service.name)}
-                environment={snapshot.environment}
-              />
-            )}
-          </For>
-          <Show when={(events().catalog?.stores ?? []).length > 0}>
-            <div class="spread">
-              <h2 id="stores-title" class="section-title">
-                Stores
-              </h2>
-              <span class="muted" style={{ "font-size": "12px" }}>
-                Last hour
-              </span>
-            </div>
-            <For each={events().catalog?.stores ?? []}>
-              {(store) => <StoreLane store={store} state={storeStates().get(store.name)} />}
-            </For>
-          </Show>
-        </section>
+        <Lanes />
         <Feed feed={events().feed} />
       </div>
     </main>

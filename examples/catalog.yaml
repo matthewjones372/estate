@@ -9,6 +9,7 @@ environments:
 
 services:
   - name: storefront
+    category: Shop
     description: The pages customers browse and buy from
     owner: web
     repository: github:example/storefront
@@ -30,6 +31,7 @@ services:
     stats: { preset: container }
 
   - name: orders
+    category: Payments
     description: Baskets become orders, and orders are tracked to the door
     owner: orders
     repository: github:example/orders
@@ -58,6 +60,7 @@ services:
         - { title: Orders waiting, query: 'sum(orders_waiting{app="orders"})' }
 
   - name: payments
+    category: Payments
     description: Takes the money, through the card provider
     owner: payments
     repository: github:example/payments
@@ -68,6 +71,7 @@ services:
       errors: sum(rate(payments_total{outcome="error"}[1m]))
 
   - name: search
+    category: Shop
     description: Finds products as customers type
     owner: web
     environments: [ staging, production ]
@@ -75,12 +79,14 @@ services:
 
 stores:
   - name: orders-db
+    category: Payments
     description: Orders, baskets and deliveries
     environments: [ staging, production ]
     engine: postgres
     selector: 'datname="orders"'
     links: { dashboard: 'https://grafana.example.com/d/postgres?var-env={env}&var-db={store}' }
   - name: cache
+    category: Shop
     description: Sessions and product pages
     environments: [ staging, production ]
     engine: redis

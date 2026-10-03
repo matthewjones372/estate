@@ -46,6 +46,7 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
     name: service.name,
     ...(service.description === undefined ? {} : { description: service.description }),
     ...(service.owner === undefined ? {} : { owner: service.owner }),
+    ...(service.category === undefined ? {} : { category: service.category }),
     ...(service.runbook === undefined ? {} : { runbook: service.runbook }),
     ...(service.repository === undefined ? {} : { repository: service.repository }),
     links: linksOf(
@@ -66,6 +67,7 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
         stores: storesIn(catalog, environment).map((store) => ({
           name: store.name,
           ...(store.description === undefined ? {} : { description: store.description }),
+          ...(store.category === undefined ? {} : { category: store.category }),
           engine: store.engine,
           links: linksOf(catalog, environment, store, store.links),
         })),

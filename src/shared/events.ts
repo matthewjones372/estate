@@ -34,6 +34,7 @@ export const CatalogEvent = Schema.Struct({
       name: Schema.String,
       description: optional(Schema.String),
       owner: optional(Schema.String),
+      category: optional(Schema.String),
       runbook: optional(Schema.String),
       repository: optional(Schema.String),
       links: Schema.Array(Link),
@@ -46,6 +47,7 @@ export const CatalogEvent = Schema.Struct({
       Schema.Struct({
         name: Schema.String,
         description: optional(Schema.String),
+        category: optional(Schema.String),
         engine: Schema.String,
         links: Schema.Array(Link),
       }),

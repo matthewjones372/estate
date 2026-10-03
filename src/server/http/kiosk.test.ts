@@ -17,7 +17,10 @@ describe("a screen", () => {
       Effect.gen(function* () {
         const server = yield* serverFor(screen)
         const wrong = yield* ask(server, new Request("http://estate/kiosk?token=guess"))
-        const right = yield* ask(server, new Request("http://estate/kiosk?token=screen-token&team=payments"))
+        const right = yield* ask(
+          server,
+          new Request("http://estate/kiosk?token=screen-token&team=payments&category=Payments"),
+        )
         const page = yield* ask(server, new Request("http://estate/kiosk"))
         const none = yield* ask(yield* serverFor(settings()), new Request("http://estate/kiosk?token=screen-token"))
         return { wrong, right, page, none }
@@ -26,7 +29,7 @@ describe("a screen", () => {
       expect(wrong.status).toBe(403)
       expect(none.status).toBe(403)
       expect(right.status).toBe(302)
-      expect(right.headers.get("location")).toBe("/kiosk?team=payments")
+      expect(right.headers.get("location")).toBe("/kiosk?team=payments&category=Payments")
       expect(right.headers.get("set-cookie")).toMatch(/^estate_session=.*HttpOnly/)
       expect(page.text).toContain("<title>Estate</title>")
     }))

@@ -36,6 +36,8 @@ export const Service = Schema.Struct({
   name: Schema.String,
   description: optional(Schema.String),
   owner: optional(Schema.String),
+  /** The area it belongs to, such as payments or data: the overview groups lanes by it, and a screen can show one. */
+  category: optional(Schema.String),
   repository: optional(Schema.String),
   /**
    * Its builds: `{ github: { workflow, branch } }` or the workflow alone, meaning GitHub Actions; or
@@ -162,6 +164,8 @@ const Vital = Schema.Struct({ title: Schema.String, query: Schema.String, unit: 
 export const Store = Schema.Struct({
   name: Schema.String,
   description: optional(Schema.String),
+  /** The area it belongs to, such as payments or data: the overview groups lanes by it, and a screen can show one. */
+  category: optional(Schema.String),
   environments: Schema.Array(Schema.String),
   engine: Schema.Literals(["postgres", "cnpg", "mysql", "redis", "kafka"]),
   /** The labels its exporter's series carry, as PromQL matchers. */

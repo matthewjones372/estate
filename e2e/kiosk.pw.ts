@@ -16,6 +16,14 @@ test("a screen signs in with the kiosk token, shows each environment in turn, an
   await expect(kiosk).toHaveAccessibleName(/^The estate on a screen: Staging/, { timeout: 25_000 })
 })
 
+test("a screen for one category shows only its services, and says which", async ({ page }) => {
+  await page.goto("/kiosk?token=e2e-screen&category=Payments")
+  await expect(page).toHaveURL(/\/kiosk\?category=Payments&env=production$/)
+  const tiles = page.locator(".kiosk-tile")
+  await expect(tiles).toHaveCount(2, { timeout: 20_000 })
+  await expect(page.locator(".kiosk-team")).toHaveText("Payments")
+})
+
 test("a wrong kiosk token is refused", async ({ page }) => {
   const response = await page.goto("/kiosk?token=guess")
   expect(response?.status()).toBe(403)

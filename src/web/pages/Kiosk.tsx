@@ -7,7 +7,7 @@ import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Sh
 import type { Alert, Health, ServiceState } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { amount, clock, since } from "../format"
-import { firingOf, nextOf, staleSince, tilesOf, turnOf } from "../kiosk"
+import { firingOf, type Narrowed, nextOf, staleSince, tilesOf, turnOf } from "../kiosk"
 import { Plot } from "../parts/Plot"
 import { Spark } from "../parts/Sparkline"
 import { headlineOf } from "./Overview"
@@ -88,11 +88,11 @@ const stayAwake = () => {
   onCleanup(() => document.removeEventListener("visibilitychange", again))
 }
 
-export const Kiosk = (props: { readonly team?: string | undefined }) => {
+export const Kiosk = (props: Narrowed) => {
   const { me, actions, now } = useEstate()
   const snapshot = useSnapshot()
   const events = () => snapshot.events
-  const team = props.team
+  const narrowed = { team: props.team, category: props.category }
   const [tick, setTick] = createSignal(now())
   const timer = setInterval(() => setTick(now()), 1000)
   onCleanup(() => clearInterval(timer))
@@ -100,7 +100,7 @@ export const Kiosk = (props: { readonly team?: string | undefined }) => {
 
   const environments = me.screen?.environments ?? me.environments
   const every = me.screen?.every ?? 30
-  const firing = () => firingOf(events(), team)
+  const firing = () => firingOf(events(), narrowed)
   const [chosenAt, setChosenAt] = createSignal(now())
   let turn: ReturnType<typeof setTimeout> | undefined
   createEffect(
@@ -125,7 +125,8 @@ export const Kiosk = (props: { readonly team?: string | undefined }) => {
     <main class="kiosk" aria-label={`The estate on a screen: ${title()}`}>
       <header class="kiosk-top">
         <span class="kiosk-environment">{title()}</span>
-        <Show when={team}>{(name) => <span class="kiosk-team">{name()}</span>}</Show>
+        <Show when={props.category}>{(name) => <span class="kiosk-team">{name()}</span>}</Show>
+        <Show when={props.team}>{(name) => <span class="kiosk-team">{name()}</span>}</Show>
         <span class="kiosk-clock mono">{clock(new Date(tick()).toISOString())}</span>
       </header>
       <Show when={stale()}>
@@ -147,7 +148,7 @@ export const Kiosk = (props: { readonly team?: string | undefined }) => {
         </section>
       </Show>
       <section class="kiosk-tiles" aria-label="Services">
-        <For each={tilesOf(events(), team)}>{(service) => <Tile service={service} />}</For>
+        <For each={tilesOf(events(), narrowed)}>{(service) => <Tile service={service} />}</For>
       </section>
     </main>
   )

@@ -45,7 +45,8 @@ const Page = (props: { readonly estate: Estate }) => {
   )
 }
 
-const kioskTeam = (page: ReturnType<Estate["page"]>) => (page.page === "kiosk" ? page.team : undefined)
+const kioskOf = (page: ReturnType<Estate["page"]>) =>
+  page.page === "kiosk" ? { team: page.team, category: page.category } : {}
 
 export const App = (props: { readonly estate: Estate }) => (
   <EstateContext.Provider value={props.estate}>
@@ -58,7 +59,7 @@ export const App = (props: { readonly estate: Estate }) => (
         </>
       }
     >
-      <Kiosk team={kioskTeam(props.estate.page())} />
+      <Kiosk {...kioskOf(props.estate.page())} />
     </Show>
   </EstateContext.Provider>
 )

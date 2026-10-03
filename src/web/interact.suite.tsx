@@ -9,6 +9,33 @@ import { ServicePage } from "./pages/Service"
 import { A } from "./parts/A"
 import { Header } from "./parts/Header"
 
+describe("an overview of a catalog with categories", () => {
+  test("puts each category's lanes under its heading, in the catalog's order, and the rest last", () => {
+    const catalog = events.catalog
+    if (catalog === undefined) throw new Error("no catalog")
+    const page = mount(() => <Overview />, {
+      sent: {
+        ...events,
+        catalog: {
+          ...catalog,
+          services: [
+            { ...catalog.services[1], name: "orders", links: [], category: "Payments" },
+            { ...catalog.services[0], name: "storefront", links: [] },
+          ],
+          stores: [{ name: "orders-db", engine: "postgres", links: [], category: "Payments" }],
+        },
+      },
+    })
+    const groups = [...page.container.querySelectorAll(".lanes-group")].map((group) => [
+      group.querySelector("h2")?.textContent,
+      [...group.querySelectorAll(".lane .lane-name, .lane a.mono")].length,
+    ])
+    expect(groups.map(([title]) => title)).toEqual(["Payments", "Everything else"])
+    expect(page.container.querySelector('[aria-label="The estate by area"]')).not.toBeNull()
+    expect(page.container.textContent).not.toContain("Stores")
+  })
+})
+
 describe("acting on an alert", () => {
   test("adds a note", async () => {
     const page = mount(() => <Overview />)

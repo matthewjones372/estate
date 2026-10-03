@@ -14,10 +14,26 @@ const screen: Me = { ...operator, kiosk: true, screen: { environments: ["product
 
 describe("what a screen shows", () => {
   test("every service worst first, or a team's by the catalog's owner, with only its alerts", () => {
-    expect(tilesOf(events, undefined).map((service) => service.name)).toEqual(["storefront", "orders"])
-    expect(tilesOf(events, "web").map((service) => service.name)).toEqual(["storefront"])
-    expect(firingOf(events, "web").map((alert) => alert.name)).toEqual(["OrdersSlow"])
-    expect(firingOf(events, "payments")).toEqual([])
+    expect(tilesOf(events, {}).map((service) => service.name)).toEqual(["storefront", "orders"])
+    expect(tilesOf(events, { team: "web" }).map((service) => service.name)).toEqual(["storefront"])
+    expect(firingOf(events, { team: "web" }).map((alert) => alert.name)).toEqual(["OrdersSlow"])
+    expect(firingOf(events, { team: "payments" })).toEqual([])
+  })
+
+  test("or a category's, by the catalog's category", () => {
+    const catalog = events.catalog
+    if (catalog === undefined) throw new Error("no catalog")
+    const categorised = {
+      ...events,
+      catalog: {
+        ...catalog,
+        services: catalog.services.map((each) => ({ ...each, category: each.name === "orders" ? "Payments" : "Shop" })),
+      },
+    }
+    expect(tilesOf(categorised, { category: "Payments" }).map((service) => service.name)).toEqual(["orders"])
+    expect(firingOf(categorised, { category: "Shop" }).map((alert) => alert.name)).toEqual(["OrdersSlow"])
+    expect(firingOf(categorised, { category: "Payments" })).toEqual([])
+    expect(tilesOf(categorised, { category: "Data" })).toEqual([])
   })
 
   test("takes turns, staying twice as long where something fires, and says when it has heard nothing", () => {

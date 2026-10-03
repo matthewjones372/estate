@@ -3,11 +3,19 @@ import type { Alert, Events, Health, ServiceState } from "../shared/events"
 
 const rank: Readonly<Record<Health, number>> = { critical: 0, attention: 1, unknown: 2, healthy: 3 }
 
-/** The services a screen shows: a team's, by the catalog's owner, or all of them; worst first, then by name. */
-export const tilesOf = (events: Partial<Events>, team: string | undefined): ReadonlyArray<ServiceState> => {
+/** What a screen is narrowed to: a team, by the catalog's owner, and a category. */
+export interface Narrowed {
+  readonly team?: string | undefined
+  readonly category?: string | undefined
+}
+
+/** The services a screen shows: those it is narrowed to, or all of them; worst first, then by name. */
+export const tilesOf = (events: Partial<Events>, narrowed: Narrowed): ReadonlyArray<ServiceState> => {
+  const { team, category } = narrowed
   const owned = new Set(
     (events.catalog?.services ?? [])
       .filter((service) => team === undefined || service.owner === team)
+      .filter((service) => category === undefined || service.category === category)
       .map((service) => service.name),
   )
   return (events.services?.services ?? [])
@@ -15,12 +23,12 @@ export const tilesOf = (events: Partial<Events>, team: string | undefined): Read
     .toSorted((a, b) => rank[a.health] - rank[b.health] || a.name.localeCompare(b.name))
 }
 
-/** The alerts firing that a screen shows: a team's are about its services; without a team, every one. */
-export const firingOf = (events: Partial<Events>, team: string | undefined): ReadonlyArray<Alert> => {
-  const shown = new Set(tilesOf(events, team).map((service) => service.name))
+/** The alerts firing that a screen shows: when narrowed, those about its services; otherwise every one. */
+export const firingOf = (events: Partial<Events>, narrowed: Narrowed): ReadonlyArray<Alert> => {
+  const shown = new Set(tilesOf(events, narrowed).map((service) => service.name))
+  const everything = narrowed.team === undefined && narrowed.category === undefined
   return (events.alerts?.alerts ?? []).filter(
-    (alert) =>
-      alert.state === "firing" && (team === undefined || (alert.service !== undefined && shown.has(alert.service))),
+    (alert) => alert.state === "firing" && (everything || (alert.service !== undefined && shown.has(alert.service))),
   )
 }
 

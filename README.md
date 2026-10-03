@@ -61,7 +61,7 @@ From the page you can:
 For a screen on the wall there is `/kiosk`: the headline, what's firing and every service worst first, in type you
 can read across a room, with nothing to press. Set `kiosk.token` and open `/kiosk?token=…` once on the screen; it
 signs in for 30 days and can read but never change anything. Environments take turns, `?team=payments` shows only
-the services that team owns, and if the screen stops hearing from Estate it says so in red.
+the services that team owns, `?category=Payments` only that category's, and if the screen stops hearing from Estate it says so in red.
 
 ![The kiosk on a 1080p screen](docs/kiosk.png)
 
@@ -117,7 +117,8 @@ settings for each kind of tool, and what each line should say when it is right.
 Estate reads two files from `/etc/estate`:
 
 - `catalog.yaml` describes your environments and services. [`examples/catalog.yaml`](examples/catalog.yaml) uses
-  every option.
+  every option. Give services and stores a `category`, such as payments or data, and the overview groups them under
+  a heading each.
 - `estate.yaml` holds settings: sign-in, roles, where each environment's tools are, and where to keep notes. Secrets
   can be written as `${NAME}` and are read from the environment.
 

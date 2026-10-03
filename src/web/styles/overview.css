@@ -119,6 +119,15 @@
   flex-direction: column;
   gap: 12px;
 }
+/* A category's lanes, spaced from the next category's heading. */
+.lanes-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lanes-group + .lanes-group {
+  margin-top: 16px;
+}
 .lane {
   background: var(--panel);
   border: 1px solid var(--line);

@@ -99,6 +99,7 @@ describe("where the page is", () => {
     expect(pageOf("/nowhere")).toEqual({ page: "missing" })
     expect(pathOf({ page: "missing" })).toBe("/")
     expect(pageOf("/kiosk", "?team=payments&env=production")).toEqual({ page: "kiosk", team: "payments" })
+    expect(pageOf("/kiosk", "?category=Data")).toEqual({ page: "kiosk", category: "Data" })
     expect(pathOf(pageOf("/kiosk"))).toBe("/kiosk")
   })
 
