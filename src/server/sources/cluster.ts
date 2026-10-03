@@ -41,7 +41,7 @@ const ConfigMap = Schema.Struct({
 
 const plural = { Deployment: "deployments", StatefulSet: "statefulsets", DaemonSet: "daemonsets" } as const
 
-const podsOf = (cluster: Cluster, service: Service): Effect.Effect<ReadonlyArray<Pod>, Failure, Remote> => {
+export const podsOf = (cluster: Cluster, service: Service): Effect.Effect<ReadonlyArray<Pod>, Failure, Remote> => {
   const kubernetes = service.kubernetes
   if (kubernetes === undefined) return Effect.succeed([])
   const namespace = encodeURIComponent(kubernetes.namespace)

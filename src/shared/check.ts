@@ -9,6 +9,9 @@ import { statsOf } from "./stats"
 
 const pairs: Readonly<Record<string, string>> = { "(": ")", "[": "]", "{": "}" }
 
+/** Whether `text` is a regular expression the logs can use. */
+const isPattern = (text: string): boolean => Result.isSuccess(Result.try(() => new RegExp(text)))
+
 /** Brackets and quotes balanced: the mistakes a hand-written PromQL query makes most. */
 export const queryMistake = (query: string): string | undefined => {
   if (query.trim() === "") return "is empty"
@@ -87,6 +90,12 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
     if (service.repository !== undefined && !/^github:[\w.-]+\/[\w.-]+$/.test(service.repository)) {
       mistake(`${at}.repository`, `"${service.repository}" is not github:owner/name`)
     }
+    const logs = service.logs
+    if (logs?.errors !== undefined && !isPattern(logs.errors))
+      mistake(`${at}.logs.errors`, `"${logs.errors}" is not a pattern`)
+    logs?.mask?.forEach((pattern, index) => {
+      if (!isPattern(pattern)) mistake(`${at}.logs.mask[${index}]`, `"${pattern}" is not a pattern`)
+    })
   })
   catalog.vitals?.forEach((vital, index) => {
     query(`vitals[${index}] (${vital.title})`, vital.query)

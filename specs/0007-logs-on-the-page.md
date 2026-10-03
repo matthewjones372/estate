@@ -16,12 +16,13 @@ or to watch a service's lines as a deploy rolls out.
 
 ## Shape
 
-**Sources**, per environment in `estate.yaml`:
+**Sources**, per environment in `estate.yaml`, beside its Prometheus:
 
 ```yaml
-production:
-  logs: { loki: { url: http://loki.monitoring:3100, tenant: estate } }   # history and live
-  # or nothing: the cluster's own pod logs, live and since each pod started
+sources:
+  production:
+    loki: { url: http://loki.monitoring:3100, tenant: estate }   # history and live
+    # or no loki: the cluster's own pod logs, live and as far back as each pod's log goes
 ```
 
 **The catalog** says how to find a service's lines and its errors, with defaults that fit most services:
@@ -31,7 +32,8 @@ services:
   - name: orders
     logs:
       selector: '{namespace="shop", app="orders"}'   # Loki's; the default is the workloads' namespace and app label
-      errors: 'level=~"(?i)error|fatal"'             # a JSON line's level; the default also matches ERROR, Exception, panic
+      errors: 'ERROR|FATAL'                            # matched against a line's level, or its text if it has none;
+                                                       # case aside, the default is error, fatal, panic, exception
       mask: [ '\b\d{16}\b', 'Bearer [A-Za-z0-9._-]+' ] # replaced with ••• before a line leaves Estate
 ```
 
@@ -46,12 +48,15 @@ services:
 
 **On an alert's card**, "Lines from then": the service's errors from ten minutes before the alert started until now.
 
-**Server**: `GET /logs?env=&service=` is an event stream of lines. One Loki tail (`/loki/api/v1/tail`) or one follow
-per pod is shared by everyone watching that service, and closed when the last of them leaves. It is capped at 100
-lines a second, saying how many were skipped. `GET /api/logs/errors?env=&service=&range=` returns the groups, from
-Loki's `query_range` or, without Loki, the pods' last 2,000 lines.
+**Server**: `GET /logs?env=&service=` is an event stream of lines. One reader per service, shared by everyone
+watching it and stopped a little after the last of them leaves, asks for what is new every two seconds: Loki's
+`query_range` from the last line it saw, or, without Loki, each pod's `log?sinceTime=`. It sends at most 200 lines a
+read, saying how many it skipped. Polling rather than Loki's WebSocket tail or a follow per pod keeps every source
+behind the one HTTP client, answered by the same stubs in tests, at the cost of up to two seconds' delay.
+`GET /api/logs/errors?env=&service=&range=` returns the groups, from Loki's `query_range` or, without Loki, the pods'
+last 2,000 lines.
 
-**Who may read them**: viewers by default; `roles.logs: operator` keeps them to operators, since logs can carry
+**Who may read them**: viewers by default; `auth.logs: operator` keeps them to operators, since logs can carry
 customers' data. Masking is applied on the server.
 
 ## Why this shape
@@ -69,8 +74,8 @@ error pattern finds them.
 
 ## Stack
 
-- [ ] **`logs-sources`** — the Logs port: Loki (tail over a WebSocket, `query_range`) and Kubernetes (pod log follow,
-      last lines), the catalog's `logs`, masking, and the role setting.
+- [x] **`logs-sources`** — Loki (`query_range`) and Kubernetes (pod logs since a time), the catalog's `logs`,
+      levels, masking, grouping errors, and the role setting.
       Done when: against stubs of both, a service's lines arrive masked and in order, and errors group by message.
 - [ ] **`logs-stream`** — `/logs` and `/api/logs/errors`: one upstream per service shared by its watchers, the rate
       cap, and closing when the last watcher leaves.

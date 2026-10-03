@@ -41,6 +41,17 @@ export const Service = Schema.Struct({
   links: optional(Schema.Record(Schema.String, Schema.String)),
   debug: optional(Schema.Struct({ configMap: Schema.String, key: Schema.String, levels: Schema.Array(Schema.String) })),
   jobs: optional(Schema.Array(Schema.Struct({ kind: Schema.Literals(["CronJob", "Job"]), name: Schema.String }))),
+  /** Where its lines are and which are errors; the defaults suit most services. */
+  logs: optional(
+    Schema.Struct({
+      /** Loki's stream selector; by default its namespace and its name as the app label. */
+      selector: optional(Schema.String),
+      /** A pattern for an error, matched against a line's level, or its text if it has none, case aside. */
+      errors: optional(Schema.String),
+      /** Patterns for what must not leave Estate, each replaced with •••. */
+      mask: optional(Schema.Array(Schema.String)),
+    }),
+  ),
   stats: optional(
     Schema.Struct({
       preset: optional(Schema.Literals(["jvm", "process", "container"])),

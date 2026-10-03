@@ -31,6 +31,8 @@ const Auth = Schema.Struct({
   oidc: optional(Oidc),
   /** Without OIDC, everyone is this person in this role: for trying Estate out, never for an estate people use. */
   anonymous: optional(Schema.Struct({ name: Schema.String, role: Schema.Literals(["viewer", "operator"]) })),
+  /** Who may read services' logs: viewers, or only operators where logs carry customers' data. */
+  logs: optional(Schema.Literals(["viewer", "operator"])),
 })
 
 const Url = Schema.Struct({ url: Schema.String })
@@ -47,6 +49,8 @@ export const Kubernetes = Schema.Struct({
 
 const Sources = Schema.Struct({
   prometheus: optional(Url),
+  /** Loki, for services' lines; without it, the cluster's own pod logs. */
+  loki: optional(Schema.Struct({ url: Schema.String, tenant: optional(Schema.String) })),
   alertmanager: optional(Url),
   kubernetes: optional(Kubernetes),
   flux: optional(Schema.Struct({})),
