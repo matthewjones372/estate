@@ -12,3 +12,4 @@ entries, one per pull request, each with what proves it done.
 | [0005](0005-charts-you-can-read.md) | charts you can read: point at, step through or drag across a chart to read a time and value, shared across a service's charts; done |
 | [0006](0006-pages-in-solid.md) | the pages in Solid: the same pages and tests, updating only what changed, compiled by a Bun plugin; done |
 | [0007](0007-logs-on-the-page.md) | logs on the page: a service's live lines and its errors grouped by message, from Loki or the cluster, masked; draft |
+| [0008](0008-the-whole-of-effect.md) | the whole of Effect: HttpClient, Config, Redacted, FiberMap, Cache, DateTime, FileSystem, metrics and spans where code is hand-rolled; fixes environments added by a reload never being read; draft |
