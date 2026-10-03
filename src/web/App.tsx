@@ -1,9 +1,10 @@
 /** @jsxImportSource solid-js */
 /** The signed-in page: the header, then the page the address names. */
-import { Match, Switch } from "solid-js"
+import { Match, Show, Switch } from "solid-js"
 import { type Estate, EstateContext } from "./context"
 import { Alerts } from "./pages/Alerts"
 import { Deploys } from "./pages/Deploys"
+import { Kiosk } from "./pages/Kiosk"
 import { Overview } from "./pages/Overview"
 import { ServicePage } from "./pages/Service"
 import { StorePage } from "./pages/Store"
@@ -44,9 +45,20 @@ const Page = (props: { readonly estate: Estate }) => {
   )
 }
 
+const kioskTeam = (page: ReturnType<Estate["page"]>) => (page.page === "kiosk" ? page.team : undefined)
+
 export const App = (props: { readonly estate: Estate }) => (
   <EstateContext.Provider value={props.estate}>
-    <Header />
-    <Page estate={props.estate} />
+    <Show
+      when={props.estate.page().page === "kiosk"}
+      fallback={
+        <>
+          <Header />
+          <Page estate={props.estate} />
+        </>
+      }
+    >
+      <Kiosk team={kioskTeam(props.estate.page())} />
+    </Show>
   </EstateContext.Provider>
 )

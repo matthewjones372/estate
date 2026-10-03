@@ -44,6 +44,11 @@ From the page you can:
 - watch a service's logs live, or see its errors grouped by message
 - compare what's deployed in each environment
 
+For a screen on the wall there is `/kiosk`: the headline, what's firing and every service worst first, in type you
+can read across a room, with nothing to press. Set `kiosk.token` and open `/kiosk?token=…` once on the screen; it
+signs in for 30 days and can read but never change anything. Environments take turns, `?team=payments` shows only
+the services that team owns, and if the screen stops hearing from Estate it says so in red.
+
 ![A service page](docs/service.png)
 
 ## Why it's built this way

@@ -14,6 +14,7 @@ import "./styles/map.css"
 import "./styles/pages.css"
 import "./styles/service.css"
 import "./styles/logs.css"
+import "./styles/kiosk.css"
 import { App } from "./App"
 import { openEvents, serverActions } from "./connect"
 import { createLive } from "./live"
@@ -59,11 +60,23 @@ const boot = async () => {
   if (me === undefined) return show(() => <SignIn returnTo={here()} />)
 
   const params = new URLSearchParams(window.location.search)
-  const environment = chooseEnvironment(params.get("env"), storage.read(), me.environments) ?? ""
+  // A screen starts at the first of its own environments, whatever this browser last chose.
+  const screen = pageOf(window.location.pathname).page === "kiosk"
+  const environment =
+    chooseEnvironment(
+      params.get("env"),
+      screen ? null : storage.read(),
+      screen ? (me.screen?.environments ?? me.environments) : me.environments,
+    ) ?? ""
   const live = createLive(openEvents, environment)
-  const withEnvironment = (path: string) => `${path}?env=${encodeURIComponent(live.snapshot().environment)}`
+  /** The path with the environment chosen; the page's own other parameters, a screen's `team`, kept where it stays. */
+  const withEnvironment = (path: string) => {
+    const kept = new URLSearchParams(path === window.location.pathname ? window.location.search : "")
+    kept.set("env", live.snapshot().environment)
+    return `${path}?${kept}`
+  }
 
-  const [page, setPage] = createSignal(pageOf(window.location.pathname))
+  const [page, setPage] = createSignal(pageOf(window.location.pathname, window.location.search))
   const actions = serverActions(() => live.snapshot().environment, {
     navigate: (path) => {
       window.history.pushState(null, "", withEnvironment(path))
@@ -76,7 +89,7 @@ const boot = async () => {
       window.history.replaceState(null, "", withEnvironment(window.location.pathname))
     },
   })
-  window.addEventListener("popstate", () => setPage(pageOf(window.location.pathname)))
+  window.addEventListener("popstate", () => setPage(pageOf(window.location.pathname, window.location.search)))
   storage.write(environment)
   window.history.replaceState(null, "", withEnvironment(window.location.pathname))
   show(() => <App estate={{ live, me, page, actions, now: Date.now }} />)

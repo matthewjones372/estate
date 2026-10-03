@@ -11,6 +11,7 @@ export const openEvents: Open = (environment, handlers) => {
   const source = new EventSource(`/events?env=${encodeURIComponent(environment)}`)
   source.onopen = handlers.onOpen
   source.onerror = handlers.onLost
+  source.addEventListener("beat", handlers.onBeat)
   for (const name of names) {
     source.addEventListener(name, (event) => handlers.onEvent(name, (event as MessageEvent<string>).data))
   }

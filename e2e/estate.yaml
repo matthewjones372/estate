@@ -7,6 +7,9 @@ auth:
   roles: { viewer: [ developers ], operator: [ ops ] }
   anonymous: { name: visitor, role: operator }
 
+# A screen on the wall signs in at /kiosk?token=e2e-screen, and shows each environment for a few seconds.
+kiosk: { token: e2e-screen, environments: [ production, staging ], every: 5s }
+
 sources:
   staging:
     prometheus: { url: http://127.0.0.1:8282 }

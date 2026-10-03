@@ -1,0 +1,134 @@
+/* The estate on a screen: type sized from the screen's width, nothing to press, the worst first. */
+.kiosk {
+  font-size: clamp(14px, 1.15vw, 32px);
+  padding: 1.5em 2em;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25em;
+  cursor: none;
+}
+.kiosk-top {
+  display: flex;
+  align-items: baseline;
+  gap: 1em;
+  color: var(--ink-2);
+}
+.kiosk-environment {
+  font-size: 1.6em;
+  font-weight: 700;
+  color: var(--ink);
+}
+.kiosk-team {
+  font-size: 1.2em;
+  color: var(--ink-3);
+}
+.kiosk-clock {
+  margin-left: auto;
+  font-size: 1.6em;
+  color: var(--ink);
+}
+.kiosk-stale {
+  background: var(--critical-panel);
+  border: 2px solid var(--critical);
+  color: var(--critical);
+  font-size: 2em;
+  font-weight: 700;
+  padding: 0.5em 0.75em;
+  border-radius: 12px;
+}
+.kiosk-now h1 {
+  margin: 0;
+  font-size: 3.5em;
+  line-height: 1.05;
+}
+.kiosk-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--healthy);
+}
+.kiosk-now.attention .kiosk-kicker {
+  color: var(--amber-text);
+}
+.kiosk-now.critical .kiosk-kicker {
+  color: var(--critical);
+}
+.kiosk-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(26em, 1fr));
+  gap: 1em;
+}
+.kiosk-card {
+  background: var(--amber-panel);
+  border: 1px solid var(--amber-line);
+  border-radius: 14px;
+  padding: 1em 1.25em;
+}
+.kiosk-card.critical {
+  background: var(--critical-panel);
+  border-color: var(--critical-line);
+}
+.kiosk-card h2 {
+  margin: 0.35em 0 0.5em;
+  font-size: 1.6em;
+}
+.kiosk-card-top {
+  display: flex;
+  gap: 0.75em;
+  color: var(--amber-muted);
+}
+.kiosk-severity {
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--amber-text);
+}
+.kiosk-card.critical .kiosk-severity {
+  color: var(--critical);
+}
+.kiosk-since {
+  margin-left: auto;
+}
+.kiosk-note {
+  margin: 0.5em 0 0;
+  color: var(--amber-ink);
+}
+.kiosk-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16em, 1fr));
+  gap: 0.75em;
+}
+.kiosk-tile {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.75em 1em;
+}
+.kiosk-tile.attention {
+  border-color: var(--amber-line);
+}
+.kiosk-tile.critical {
+  border-color: var(--critical-line);
+}
+.kiosk-tile-name {
+  font-size: 1.3em;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.kiosk-tile-health {
+  margin: 0.2em 0 0.4em;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kiosk-tile-health.attention {
+  color: var(--amber-text);
+}
+.kiosk-tile-health.critical {
+  color: var(--critical);
+}
+.kiosk-reason {
+  color: var(--ink-3);
+}

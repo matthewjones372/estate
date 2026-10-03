@@ -151,7 +151,8 @@ export const eventStream = (
             changes,
             Stream.tick(heartbeat).pipe(
               Stream.drop(1),
-              Stream.map(() => ": still here\n\n"),
+              // An event rather than a comment, so a page knows it is still being told even when nothing changes.
+              Stream.map(() => "event: beat\ndata: {}\n\n"),
             ),
           ),
         ),

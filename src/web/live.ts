@@ -16,6 +16,8 @@ export interface Snapshot {
 export interface Handlers {
   readonly onOpen: () => void
   readonly onEvent: (name: EventName, data: string) => void
+  /** The server is still there, with nothing new to say. */
+  readonly onBeat: () => void
   readonly onLost: () => void
 }
 
@@ -58,6 +60,7 @@ export const createLive = (open: Open, environment: string, now: () => number = 
     open(chosen, {
       onOpen: () => set({ ...snapshot, connection: "open" }),
       onLost: () => set({ ...snapshot, connection: "lost" }),
+      onBeat: () => set({ ...snapshot, connection: "open", heardAt: now() }),
       onEvent: (name, data) => {
         const decoded = decoders[name](parse(data))
         if (Option.isSome(decoded)) {

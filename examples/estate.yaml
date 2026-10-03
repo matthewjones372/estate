@@ -2,6 +2,8 @@
 # An estate people use signs in with OIDC; see deploy/ for the settings it mounts.
 port: 8080
 # readOnly: true   # write to no tool (no silences, no debug, notes in memory), for trying Estate on real tools
+# A screen on the wall: open /kiosk?token=… once on it (and ?team=… for one team's services).
+# kiosk: { token: ${KIOSK_TOKEN}, environments: [ production, staging ], every: 30s }
 catalog: /etc/estate/catalog.yaml
 
 auth:

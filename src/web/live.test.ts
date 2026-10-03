@@ -37,6 +37,12 @@ describe("the page's store", () => {
     expect(told).toBe(2)
   })
 
+  test("hears the server's beat as being told, though nothing changed", () => {
+    const { live, streams } = opened()
+    streams[0]?.handlers.onBeat()
+    expect(live.snapshot()).toMatchObject({ connection: "open", heardAt: 42, events: {} })
+  })
+
   test("merges a partial services event into the services it has, by name", () => {
     const { live, streams } = opened()
     streams[0]?.handlers.onEvent("services", JSON.stringify(events.services))
@@ -92,6 +98,8 @@ describe("where the page is", () => {
     expect(pageOf("/services/orders%20api")).toEqual({ page: "service", name: "orders api" })
     expect(pageOf("/nowhere")).toEqual({ page: "missing" })
     expect(pathOf({ page: "missing" })).toBe("/")
+    expect(pageOf("/kiosk", "?team=payments&env=production")).toEqual({ page: "kiosk", team: "payments" })
+    expect(pathOf(pageOf("/kiosk"))).toBe("/kiosk")
   })
 
   test("the environment is the address's, then the one remembered, then the first", () => {

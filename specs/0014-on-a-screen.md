@@ -37,7 +37,8 @@ https://estate.example/kiosk?team=payments      only the services whose catalog 
   no buttons, boxes or links.
 - Environments take turns every `every`, an environment with something firing staying twice as long.
 - When nothing has been heard for two minutes, the whole screen says "Not updated since 09:41" in red, until it
-  is again.
+  is again. The stream's keep-alive is a `beat` event every five seconds rather than a comment, so a calm estate is
+  heard as well as a busy one.
 - The page asks the browser to keep the screen awake.
 
 ## Why this shape
@@ -56,9 +57,9 @@ Nothing.
 
 - [x] **`kiosk-session`** — `kiosk` in the settings, `/kiosk?token=…`, the kiosk person, and writes refused to them.
       Done when: a wrong token is refused with 403, and a kiosk session's silence, note and debug calls get 403.
-- [ ] **`kiosk-page`** — the page: headline, cards, tiles worst first, `?team=`, turns, the stale banner, wake lock.
+- [x] **`kiosk-page`** — the page: headline, cards, tiles worst first, `?team=`, turns, the stale banner, wake lock.
       Done when: a page test shows tiles in order of health and the stale banner after two quiet minutes.
-- [ ] **`kiosk-e2e`** — Playwright signs a screen in with the token and sees the environments take turns, with no
+- [x] **`kiosk-e2e`** — Playwright signs a screen in with the token and sees the environments take turns, with no
       buttons on the page and no accessibility violations.
       Done when: `bunx playwright test` passes with it.
 
