@@ -8,9 +8,14 @@
 ![Solid](https://img.shields.io/badge/Solid-1.9-2c4f7c?logo=solid&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-3dd68c)](LICENSE)
 
-Estate is a single page that shows the state of your services across environments: what's alerting, what's
-deployed where, how busy things are, and what changed today. It doesn't store any of that. It reads it from the tools
-you already run and puts it in one place.
+Estate answers one question in five seconds: **how is our stack doing right now?**
+
+It doesn't replace your DevOps tools. Alerts stay in Alertmanager or Datadog, deploys in Flux or Argo CD, builds in
+GitHub Actions or Jenkins, logs in Loki. Estate reads them all live and puts the answer on one page: what's firing,
+what's deployed where, whether a pipeline is stuck, and how busy each service is. Everything on it links back to the
+tool it came from, so when you need to dig in, the right place is one click away.
+
+It keeps none of that data. It reads it again whenever it shows it.
 
 ![The overview page](docs/overview.png)
 
@@ -77,6 +82,8 @@ logging. With impersonation turned on, debug changes go to the cluster as the pe
 Estate exposes its own metrics on `:9464/metrics`, logs JSON, and sends traces over OTLP if you configure a collector.
 
 ### How it compares
+
+Estate sits beside these tools rather than instead of them, and links into each.
 
 - **Backstage, Port, Cortex** catalog what you own. Estate shows how it's doing right now.
 - **Grafana** can chart anything, but someone has to build and maintain the boards. Estate needs none.
