@@ -6,76 +6,66 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
 ![Effect](https://img.shields.io/badge/Effect-4-0b0d12)
 ![Solid](https://img.shields.io/badge/Solid-1.9-2c4f7c?logo=solid&logoColor=white)
-![Memory](https://img.shields.io/badge/memory-~120%20MB-2a3247)
 [![License: MIT](https://img.shields.io/badge/license-MIT-3dd68c)](LICENSE)
 
-**Is the estate well, and if not, where do I look?** Estate answers that on one page, for every service your team
-runs, in every environment, without anyone building a dashboard.
+Estate is a single page that shows the state of your services across environments: what's alerting, what's
+deployed where, how busy things are, and what changed today. It doesn't store any of that. It reads it from the tools
+you already run and puts it in one place.
 
-![The overview: what needs you, the estate drawn live, each service's lane, and what changed today](docs/overview.png)
+![The overview page](docs/overview.png)
 
-Your team already has the answers. The alerts are in Alertmanager, Grafana or CloudWatch, what runs where is in
-Kubernetes and Flux or Argo CD, or ECS, the builds are in GitHub or GitLab, the load is in Prometheus or CloudWatch.
-Each morning, and at every alert, someone joins them up in their head across five tabs. Estate does the joining:
+## What it reads
 
-- **What needs you now**, at the top, in plain words: "Two things need you." Each alert as a card drawing the metric
-  that fired against its threshold, with the runbook, its errors from then, and the traces one click away.
-- **Notes on alerts**, so the person who looks next sees "on it, it's the vacuum" instead of starting again.
-- **Silences with a reason**: an hour, four, or until nine tomorrow, written to Alertmanager under your name, and
-  shown to everyone while they last.
-- **Every service as a lane**: its health and why, its pipeline from commit to build to what Flux chose to what is
-  running, its last hour of requests, errors and p99, and its links (the app, its API docs, logs, traces, dashboard,
-  repository, runbook).
-- **Deploys across environments** side by side, so a version moving from staging to production is one row, and a
-  stalled step says why in the words Flux, Argo CD, GitHub or GitLab used.
-- **Debug logging with an off switch**: turn it on for fifteen minutes from the page, under your name; it turns
-  itself off, and a restart of Estate forgets nothing.
-- **Jobs and CronJobs**: last runs, how they ended, the next one, and the run that should have happened and didn't.
-- **Stats for the process behind each service**: heap, GC pauses, threads and CPU for a JVM, or memory and CPU for
-  any container, from presets, beside queries of your own.
-- **Stores**: databases, queues and caches beside the services, read from the exporters you already run (Postgres,
-  CloudNativePG, MySQL, Redis, Kafka): connections, lag, memory, backups, under-replicated partitions, amber past
-  each engine's thresholds, with a page each and their alerts.
-- **Logs on the page**: a service's lines as they arrive, filtered by level or text, paused when you scroll up; its
-  errors over the last hour or day grouped by message, so 4,000 lines read as the three faults behind them; and on
-  each alert, the errors from the minutes before it started. From Loki, Elasticsearch or OpenSearch, or the pods
-  themselves, masked.
-- **Charts you can read**: point at any chart, or step through it with the arrow keys, for the time and value of
-  each point, marked on every chart of the service at once; drag across one to zoom them all.
-- **What changed today**: deploys, builds, alerts, silences, notes, debug and jobs, in one feed.
+| | |
+|---|---|
+| Alerts | Alertmanager, Grafana alerting, CloudWatch alarms |
+| Metrics | Prometheus (or anything with its query API), CloudWatch |
+| Runtime | Kubernetes, ECS |
+| Deploys | Flux, Argo CD, ECS deployments |
+| Builds | GitHub Actions, GitLab CI |
+| Logs | Loki, Elasticsearch/OpenSearch, or pod logs straight from the cluster |
+| Notes | Postgres, DynamoDB, or memory |
 
-![A service: its load over a chosen range, its stats, pods, jobs, alerts today, debug switch and builds](docs/service.png)
+## What's on the page
 
-## Why Estate
+The overview starts with whatever is firing, each alert drawn against its threshold with a link to its runbook.
+Below that, each service gets a row: health, the path from commit to build to deployed version, the last hour of
+requests, errors and p99, and links to its logs, traces and dashboards. Databases, queues and caches get rows too,
+using stats from the exporters you probably already have (Postgres, CloudNativePG, MySQL, Redis, Kafka).
 
-- **Small.** One container, about 120 MB of memory. It keeps almost nothing: everything it shows is read live from
-  the tools you already run, so there is nothing to back up and nothing to drift. Postgres only if you want notes kept
-  across restarts.
-- **Yours, in Git.** What Estate shows is a `catalog.yaml` in your repository: the environments, the services, their
-  queries and links. Adding a service to the page is a commit, reviewed like any other, and `estate check` runs in
-  your CI so a broken catalog never reaches the page.
-- **Live.** The page is a stream: a change reaches every open page within seconds, with no refreshing, and only what
-  changed is redrawn. The whole page is about 110 KB gzipped.
-- **Observable itself.** Prometheus metrics on `:9464/metrics` (reads by source and outcome, upstream latency by host,
-  open streams), JSON logs, and traces over OTLP when `telemetry.otlp` names a collector.
-- **Honest.** A tool that does not answer is named, with its own words and how old its last answer is. A part you
-  have not set up says so. The page never claims "all quiet" before something has said so.
-- **Safe to hand out.** Sign-in with any OIDC provider (Pocket ID, Keycloak, Dex, Google); viewers see everything and
-  add notes, operators silence and switch debug. With impersonation, debug is switched as the person, so the cluster's
-  own RBAC decides and its audit names them.
-- **Calm.** Dark and quiet when all is well. Amber is the only colour that asks for attention, spent on exactly what
-  needs someone. It works at phone width, and stops moving under reduced motion.
+From the page you can:
 
-### Compared with
+- add a note to an alert so the next person knows someone's on it
+- silence an alert for a while, with a reason everyone can see
+- turn on debug logging for a service for 15 minutes; it switches itself back off
+- watch a service's logs live, or see its errors grouped by message
+- compare what's deployed in each environment
 
-| | What it is good at | Why Estate beside it, or instead |
-|---|---|---|
-| **Backstage, Port, Cortex** | A catalog of everything an organisation owns | They know what exists, not how it is doing this minute; Backstage needs a database and a plugin per tool, the others are paid services. Estate is the live page, in one container. |
-| **Grafana** | Any chart you can build | Someone has to build and keep each board, and it does not act. Estate needs no boards, and silences, notes and debug happen on the page. |
-| **Headlamp, k9s, Lens** | The cluster, in depth | One cluster, no alerts, builds or other environments. Estate links into them, already filtered. |
-| **Weave GitOps, Argo CD's UI** | Flux's or Argo's own state | The deploy tool alone. Estate puts it in the pipeline beside the build and what is running. |
-| **Karma, Keep** | Alerts, in depth | Alerts alone. Estate puts each beside the service it is about. |
-| **Homepage, Homarr** | A start page of links | Tiles and links, not health, pipelines or alerts. |
+![A service page](docs/service.png)
+
+## Why it's built this way
+
+It runs as one container using about 120 MB. Since it reads everything live, there's nothing to back up. The only
+thing it keeps is notes, and only if you give it a database.
+
+What it shows comes from a `catalog.yaml` in your repo, so adding a service is a pull request. `estate check
+catalog.yaml` validates the file, so you can run it in CI.
+
+The page updates over server-sent events and redraws only what changed. If a source stops answering, the page says
+which one and when it last heard from it, rather than showing stale data as if it were current.
+
+Sign-in is OIDC. Viewers can see everything and add notes; operators can also silence alerts and switch debug
+logging. With impersonation turned on, debug changes go to the cluster as the person who made them.
+
+Estate exposes its own metrics on `:9464/metrics`, logs JSON, and sends traces over OTLP if you configure a collector.
+
+### How it compares
+
+- **Backstage, Port, Cortex** catalog what you own. Estate shows how it's doing right now.
+- **Grafana** can chart anything, but someone has to build and maintain the boards. Estate needs none.
+- **k9s, Lens, Headlamp** go deep on one cluster. Estate covers several environments and links into them.
+- **Argo CD's UI, Weave GitOps** show the deploy tool. Estate puts that next to the build and what's running.
+- **Karma, Keep** handle alerts on their own. Estate shows each one next to the service it's about.
 
 ## Try it
 
@@ -83,37 +73,34 @@ Each morning, and at every alert, someone joins them up in their head across fiv
 docker run -v ./examples:/etc/estate -p 8080:8080 ghcr.io/matthewjones372/estate:main
 ```
 
-Open <http://localhost:8080>: the example shop's services, with its tools not there, so every part says why. Point
-`examples/estate.yaml` at your own Prometheus, Alertmanager, cluster and GitHub to see your estate.
+Then open <http://localhost:8080>. The example points at tools that don't exist, so each part of the page tells you
+what it couldn't reach. Edit `examples/estate.yaml` to point it at your own.
 
-## Using it
+## Running it
 
-Two files, mounted at `/etc/estate`:
+Estate reads two files from `/etc/estate`:
 
-- **`catalog.yaml`**, the estate: environments, services (workloads, Flux objects, load queries, links, runbook,
-  debug ConfigMap, jobs, stats), vitals and the map. [`examples/catalog.yaml`](examples/catalog.yaml) has every part.
-- **`estate.yaml`**, the settings: sign-in and roles, each environment's sources, the notes database, GitHub's token.
-  Secrets are `${NAMES}` read from the environment.
+- `catalog.yaml` describes your environments and services. [`examples/catalog.yaml`](examples/catalog.yaml) uses
+  every option.
+- `estate.yaml` holds settings: sign-in, roles, where each environment's tools are, and where to keep notes. Secrets
+  can be written as `${NAME}` and are read from the environment.
 
-Once the gate passes on `main`, `.github/workflows/image.yml` builds the image for amd64 and arm64 and publishes it
-as `ghcr.io/matthewjones372/estate`, tagged `main`, `main-<run>-<sha>` and the commit. [`deploy/`](deploy) is a
-Kubernetes base to overlay with those two files, your ingress and your secrets. The design,
-and why it is shaped this way, is [spec 0001](specs/0001-the-estate-on-one-page.md).
+Images for amd64 and arm64 are published to `ghcr.io/matthewjones372/estate` from `main`. [`deploy/`](deploy) has a
+Kubernetes base you can overlay with those two files, an ingress and your secrets.
 
-## Working on it
+## Development
 
-TypeScript on Bun, the server in [Effect](https://effect.website), the pages in [Solid](https://www.solidjs.com),
-which redraws only the text or chart an event changed. The pages are compiled by Solid's Babel preset in a Bun plugin
-when the image is built; run from source, Estate bundles them as it starts.
+The server is TypeScript on Bun using [Effect](https://effect.website); the pages use
+[Solid](https://www.solidjs.com).
 
 ```bash
 bun install
-bun run gate          # typecheck, lint, unused, layers, slop, test: nothing is done until it passes
-bunx playwright test  # the pages in Chromium against e2e/tools.ts, a fake estate's tools, with axe
+bun run gate          # typecheck, lint, unused code, layering, tests
+bunx playwright test  # browser tests against fake tools in e2e/
 ```
 
-[AGENTS.md](AGENTS.md) says how the code is written; the gate holds it to that.
+[AGENTS.md](AGENTS.md) covers code conventions. Design decisions are written up in [specs/](specs).
 
 ## License
 
-[MIT](LICENSE).
+[MIT](LICENSE)
