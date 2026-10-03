@@ -120,8 +120,9 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
             {shown.node.title}
           </span>
           <span class="mono map-node-sub">
-            {`${shown.node.members} node${shown.node.members === 1 ? "" : "s"}`}
-            {shown.node.needing === 0 ? "" : ` · ${shown.node.needing} need${shown.node.needing === 1 ? "s" : ""} you`}
+            {shown.node.beside === 0
+              ? `${shown.node.members} node${shown.node.members === 1 ? "" : "s"}`
+              : `${shown.node.members} more`}
           </span>
         </button>
       )}

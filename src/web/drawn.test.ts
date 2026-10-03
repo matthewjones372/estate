@@ -62,8 +62,8 @@ describe("the map drawn", () => {
   test("past twelve, is a node a category with its count and worst health, and the edges between them summed", () => {
     const drawn = drawnOf(big, servicesOf({ shop0: "healthy", orders: "unknown" }, flows), new Set())
     expect(drawn.nodes).toEqual([
-      { id: categoryId("Shop"), kind: "category", title: "Shop", members: 7, needing: 0, health: "unknown" },
-      { id: categoryId("Payments"), kind: "category", title: "Payments", members: 6, needing: 0, health: "unknown" },
+      { id: categoryId("Shop"), kind: "category", title: "Shop", members: 7, beside: 0, health: "unknown" },
+      { id: categoryId("Payments"), kind: "category", title: "Payments", members: 6, beside: 0, health: "unknown" },
       { id: "provider", title: "Card provider", kind: "external" },
     ])
     expect(drawn.edges).toEqual([
@@ -73,7 +73,7 @@ describe("the map drawn", () => {
     expect(drawn.closed).toEqual(["Shop", "Payments"])
   })
 
-  test("opens a category the viewer opened, and one that holds something that needs someone, by itself", () => {
+  test("opens a category the viewer opened, and draws what needs someone on its own beside its closed category", () => {
     const opened = drawnOf(big, servicesOf({}, flows), new Set(["Payments"]))
     expect(opened.nodes.map((node) => node.id)).toEqual([categoryId("Shop"), ...payments, "provider"])
     expect(opened.edges).toContainEqual({
@@ -84,9 +84,15 @@ describe("the map drawn", () => {
       alerting: false,
     })
     expect([opened.closed, opened.opened]).toEqual([["Shop"], ["Payments"]])
-    const urgent = drawnOf(big, servicesOf({ shop3: "critical" }, flows), new Set())
-    expect(urgent.closed).toEqual(["Payments"])
-    expect(urgent.opened).toEqual([])
+    const urgent = drawnOf(big, servicesOf({ shop3: "critical", shop4: "healthy" }, flows), new Set())
+    expect(urgent.nodes.map((node) => node.id)).toEqual([
+      categoryId("Shop"),
+      "shop3",
+      categoryId("Payments"),
+      "provider",
+    ])
+    expect(urgent.nodes[0]).toMatchObject({ members: 6, beside: 1 })
+    expect(urgent.closed).toEqual(["Shop", "Payments"])
   })
 
   test("never collapses when the catalog says never, or names no categories", () => {

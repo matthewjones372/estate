@@ -55,6 +55,21 @@ describe("the map's layout", () => {
     ).toEqual([])
   })
 
+  test("draws each node level with what calls it", () => {
+    const { at } = layout(
+      ["gateway", "a", "b", "b1", "b2", "a1"],
+      [
+        { from: "gateway", to: "a" },
+        { from: "gateway", to: "b" },
+        { from: "b", to: "b1" },
+        { from: "b", to: "b2" },
+        { from: "a", to: "a1" },
+      ],
+    )
+    const order = ["a1", "b1", "b2"].toSorted((x, y) => (at.get(x)?.y ?? 0) - (at.get(y)?.y ?? 0))
+    expect(order).toEqual(["a1", "b1", "b2"])
+  })
+
   test("is empty for no nodes, and survives a cycle", () => {
     expect(layout([], [])).toEqual({ at: new Map(), rows: 0, columns: 1 })
     expect(

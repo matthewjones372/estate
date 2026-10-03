@@ -1,4 +1,7 @@
-/** Where the map's nodes go: in layers, left to right, each after everything that calls it, spread down the height. */
+/**
+ * Where the map's nodes go: in layers, left to right, each after everything that calls it, spread down the height in
+ * the order of what calls them.
+ */
 
 interface Placed {
   readonly id: string
@@ -35,6 +38,21 @@ export const layout = (
   for (const id of ids) {
     const column = layer.get(id) ?? 0
     columns.set(column, [...(columns.get(column) ?? []), id])
+  }
+  // Each column in the order of where its callers sit, so a node is drawn level with what calls it and lines cross
+  // as little as one pass can make them.
+  const row = new Map<string, number>()
+  for (const column of [...columns.keys()].sort((a, b) => a - b)) {
+    const members = columns.get(column) ?? []
+    const callers = (id: string) =>
+      edges.flatMap((edge) => (edge.to === id && row.has(edge.from) ? [row.get(edge.from) ?? 0] : []))
+    const level = (id: string) => {
+      const from = callers(id)
+      return from.length === 0 ? Number.POSITIVE_INFINITY : from.reduce((total, each) => total + each, 0) / from.length
+    }
+    const ordered = members.toSorted((a, b) => level(a) - level(b) || members.indexOf(a) - members.indexOf(b))
+    columns.set(column, ordered)
+    for (const [index, id] of ordered.entries()) row.set(id, (index + 0.5) / ordered.length)
   }
   const placed = new Map<string, Placed>()
   for (const [column, members] of columns) {

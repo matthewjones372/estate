@@ -26,17 +26,19 @@ map:
 
 ```text
 Up to 12 nodes        as now, but each column as tall as its nodes need: nothing overlaps
-More than 12 nodes,   one node a category: "Payments · 9 · 1 needs you", amber when one does
+More than 12 nodes,   one node a category: "Payments · 9 nodes", its worst health
 with categories       edges between categories, their rates summed, amber when any edge in them alerts
                       a category opened (click, or Enter) shows its own nodes in place; the others stay closed
-                      a node that needs someone is never hidden: its category opens itself while it does
+                      a node that needs someone is never hidden: it is drawn on its own beside its closed category
 More than 12 nodes,   as now, each column as tall as its nodes need, and the map scrolls inside its box
 no categories         after the first 12 rows, with how many more there are
 ```
 
 - **Spacing** comes from the nodes, not the box: each node gets the room its label needs, and a column of ten is
   taller than a column of three, up to the map's maximum height.
-- **Category nodes** sum what their members say: how many there are, how many need someone, and the worst health.
+- **Category nodes** sum what their members say: how many there are, and the worst health. A member that needs
+  someone is drawn on its own beside its category, so one firing alert in each of five categories is five nodes and
+  five categories, not every node.
   An edge between two categories is drawn once, its rate the sum of the edges it stands for. It is amber when any of
   them is alerting.
 - **Opening** a category is remembered for the viewer, as the environment is.
@@ -59,7 +61,7 @@ Spec 0018's categories.
 - [x] **`map-spacing`** — each column as tall as its nodes need, within a maximum, scrolling past it.
       Done when: a layout test of 40 nodes has no two nodes overlapping.
 - [x] **`map-categories`** — past 12 nodes, a node per category with its count and worst health, edges summed,
-      a category opened in place, and one that needs someone open by itself.
+      a category opened in place, and what needs someone drawn on its own beside it.
       Done when: the bench's 50-service estate draws as its categories, and opening one shows its nodes.
 
 ## Acceptance

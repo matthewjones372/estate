@@ -26,13 +26,13 @@ const catalogOf = (services: number) => {
       p99: histogram_quantile(0.99, sum by (le) (rate(duration_bucket{app="svc-${index}"}[5m])))
     links: { logs: "https://logs.example/{env}/{service}" }`,
   )
-  // A map of every service, each calling the next in its area and the first of the next area: past twelve nodes it
-  // draws as its areas.
+  // A map of every service, shaped as an estate is: the first service calls the front service of each area, which
+  // calls the rest of its area. Past twelve nodes it draws as its areas.
   const nodes = Array.from({ length: services }, (_, index) => `    - { id: svc-${index}, service: svc-${index} }`)
-  const edges = Array.from(
-    { length: Math.max(0, services - 1) },
-    (_, index) => `    - { from: svc-${index}, to: svc-${index + 1} }`,
-  )
+  const front = (index: number) => index % areas.length
+  const edges = Array.from({ length: services }, (_, index) => index)
+    .filter((index) => index > 0)
+    .map((index) => `    - { from: svc-${index < areas.length ? 0 : front(index)}, to: svc-${index} }`)
   return `environments:
   - { name: staging, sources: staging }
   - { name: production, sources: production }

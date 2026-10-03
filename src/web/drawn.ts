@@ -1,7 +1,7 @@
 /**
  * What the map draws: the catalog's nodes, or past `collapse` of them, one node a category, its members' count and
- * worst health on it, and the edges between what is drawn, their rates summed. A category opened by the viewer, or
- * holding something that needs someone, is drawn as its own nodes.
+ * worst health on it, and the edges between what is drawn, their rates summed. A category the viewer opened is drawn as
+ * its own nodes; in one still closed, what needs someone is drawn on its own beside the rest.
  */
 import type { CatalogEvent, Health, ServicesEvent } from "../shared/events"
 
@@ -13,8 +13,9 @@ export interface DrawnCategory {
   readonly id: string
   readonly kind: "category"
   readonly title: string
+  /** Its nodes folded into it, and those drawn on their own beside it because they need someone. */
   readonly members: number
-  readonly needing: number
+  readonly beside: number
   readonly health: Health
 }
 
@@ -34,7 +35,7 @@ export interface Drawn {
   readonly edges: ReadonlyArray<DrawnEdge>
   /** The categories drawn as one node, which the viewer can open. */
   readonly closed: ReadonlyArray<string>
-  /** The categories opened, which the viewer can close; those that need someone stay open. */
+  /** The categories opened, which the viewer can close. */
   readonly opened: ReadonlyArray<string>
 }
 
@@ -83,29 +84,33 @@ export const drawnOf = (
   const { nodes, edges } = catalog.map
   const categories = [...new Set(nodes.flatMap((node) => nodeCategory(node) ?? []))]
   const collapsing = collapse !== "never" && nodes.length > collapse && categories.length > 0
-  const urgent = new Set(nodes.filter((node) => needs(nodeHealth(node))).flatMap((node) => nodeCategory(node) ?? []))
-  const shut = new Set(collapsing ? categories.filter((each) => !opened.has(each) && !urgent.has(each)) : [])
+  const shut = new Set(collapsing ? categories.filter((each) => !opened.has(each)) : [])
+  /** A node folded into its category's: in a closed one, and not needing someone, who is never hidden. */
+  const folded = (node: MapNode) => {
+    const within = nodeCategory(node)
+    return within !== undefined && shut.has(within) && !needs(nodeHealth(node)) ? within : undefined
+  }
   const drawnId = (id: string) => {
     const node = nodes.find((each) => each.id === id)
-    const within = node === undefined ? undefined : nodeCategory(node)
-    return within !== undefined && shut.has(within) ? categoryId(within) : id
+    const within = node === undefined ? undefined : folded(node)
+    return within === undefined ? id : categoryId(within)
   }
   const drawnNodes: DrawnNode[] = []
   for (const node of nodes) {
-    const within = nodeCategory(node)
-    if (within === undefined || !shut.has(within)) {
+    const within = folded(node)
+    if (within === undefined) {
       drawnNodes.push(node)
       continue
     }
     if (drawnNodes.some((each) => each.id === categoryId(within))) continue
-    const members = nodes.filter((each) => nodeCategory(each) === within)
+    const members = nodes.filter((each) => folded(each) === within)
     const healths = members.map(nodeHealth)
     drawnNodes.push({
       id: categoryId(within),
       kind: "category",
       title: within,
       members: members.length,
-      needing: healths.filter(needs).length,
+      beside: nodes.filter((each) => nodeCategory(each) === within).length - members.length,
       health: worstOf(healths),
     })
   }
@@ -139,6 +144,6 @@ export const drawnOf = (
       alerting,
     })),
     closed: [...shut],
-    opened: collapsing ? categories.filter((each) => opened.has(each) && !urgent.has(each)) : [],
+    opened: collapsing ? categories.filter((each) => opened.has(each)) : [],
   }
 }
