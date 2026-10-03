@@ -1,5 +1,5 @@
 /** A cluster's API: where it is and how Estate signs in to it, from inside the cluster or from settings. */
-import { Effect, Schema } from "effect"
+import { Context, Effect, Schema } from "effect"
 import { callJson, type Remote } from "../remote"
 import type { Kubernetes } from "../settings"
 import type { Failure } from "./run"
@@ -9,6 +9,10 @@ export interface Cluster {
   readonly headers: Readonly<Record<string, string>>
   readonly ca?: string
 }
+
+/** The environment Estate runs with, where a cluster's address is found from inside it. */
+export type Host = Readonly<Record<string, string | undefined>>
+export const Host = Context.Service<Host>("estate/Host")
 
 const serviceAccount = "/var/run/secrets/kubernetes.io/serviceaccount"
 

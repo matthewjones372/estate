@@ -175,7 +175,8 @@ the entry that first draws one.
 are Alertmanager's, written through its API with the person's name and reason.
 
 **Debug mode**: the catalog names a service's ConfigMap and the key its level is read from. Estate writes the higher
-level with a `debug-until` time beside it, and puts it back when that passes, so a restart of Estate loses nothing. How
+level with a `debug-until` annotation beside it, and puts it back when that passes, so a restart of Estate loses
+nothing. How
 a service rereads its level is the service's own concern; a service that cannot is shown as "takes effect on restart".
 
 ## Why this shape
@@ -257,7 +258,12 @@ Nothing. Its first estate, lark-bank, adopts it in its own spec 0026.
       *Notes:* for operators, in an environment with an Alertmanager: a silence matches the alert's every label,
       lasts a minute to a week, and carries the person's name and reason; the page shows it at once, and lifting it
       expires it in Alertmanager. What Alertmanager answers when it refuses is shown in its words.
-- [ ] **`debug`** — the debug switch and its revert.
+- [x] **`debug`** — the debug switch and its revert.
+      *Notes:* an operator turns it on for a minute to a day: the catalog's last level is written to the key it names,
+      with `estate.dev/debug-until`, `-since` and `-by` annotations beside it (a merge patch); every minute Estate puts
+      the first level back wherever `debug-until` has passed. With `kubernetes.impersonate`, the patch is made as the
+      person and their groups, so the cluster's RBAC decides and its audit names them; `deploy/rbac.yaml` gives Estate
+      `patch` on ConfigMaps for the rest.
 - [ ] **`feed`** — what changed today, from the sources and Estate's own records.
 
 ## Acceptance
