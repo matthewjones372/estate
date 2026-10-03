@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, Result, SubscriptionRef } from "effect"
+import { Effect, Layer, Redacted, Result, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
 import { catalog, environment, estate, settings, storefront } from "../fixture"
 import { type Call, type Remote, stubRemote } from "../remote"
@@ -132,7 +132,7 @@ describe("the cluster", () => {
   test("is found from inside it, or from the settings", () =>
     Promise.all([
       Effect.runPromise(Effect.result(clusterOf({}, {}))),
-      Effect.runPromise(Effect.result(clusterOf({ url: "https://cluster/", token: "t" }, {}))),
+      Effect.runPromise(Effect.result(clusterOf({ url: "https://cluster/", token: Redacted.make("t") }, {}))),
       Effect.runPromise(Effect.result(clusterOf({ inCluster: true }, { KUBERNETES_SERVICE_HOST: "10.0.0.1" }))),
       Effect.runPromise(Effect.result(clusterOf({ url: "https://cluster", caFile: "/nowhere/ca.crt" }, {}))),
     ]).then(([nowhere, named, inside, noCa]) => {
@@ -240,7 +240,7 @@ describe("every source", () => {
       sources: {
         staging: {
           alertmanager: { url: "http://alertmanager" },
-          kubernetes: { url: "https://cluster", token: "t" },
+          kubernetes: { url: "https://cluster", token: Redacted.make("t") },
           flux: {},
         },
         production: {},

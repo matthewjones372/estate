@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Result } from "effect"
+import { Effect, Redacted, Result } from "effect"
 import { readSettings, substitute } from "./settings"
 
 const secretOf = (name: string) => `\${${name}}`
@@ -21,7 +21,9 @@ describe("the settings", () => {
     Effect.runPromise(
       Effect.gen(function* () {
         const read1 = yield* read(good, { SECRET: "s".repeat(32), CLIENT_SECRET: "c" })
-        expect(Result.isSuccess(read1) && read1.success.auth.oidc?.clientSecret).toBe("c")
+        const secret = Result.isSuccess(read1) ? read1.success.auth.oidc?.clientSecret : undefined
+        expect(secret === undefined ? undefined : Redacted.value(secret)).toBe("c")
+        expect(String(secret)).toBe("<redacted>")
       }),
     ))
 

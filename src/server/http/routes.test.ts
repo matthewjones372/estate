@@ -1,11 +1,16 @@
 import { describe, expect, test } from "bun:test"
-import { Effect } from "effect"
+import { Effect, Redacted } from "effect"
 import { seal } from "../auth/session"
 import { ask, type Server, secret, serverFor, settings } from "../fixture"
 
 const anonymous = settings({ anonymous: { name: "visitor", role: "viewer" } })
 const oidc = settings({
-  oidc: { issuer: "https://id.example", clientId: "estate", clientSecret: "s", publicUrl: "https://estate.example" },
+  oidc: {
+    issuer: "https://id.example",
+    clientId: "estate",
+    clientSecret: Redacted.make("s"),
+    publicUrl: "https://estate.example",
+  },
 })
 
 const sessionFor = (name: string, groups: ReadonlyArray<string>, expires = Date.now() + 60_000, key = secret) =>

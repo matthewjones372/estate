@@ -1,5 +1,5 @@
 /** Who is asking: the person in the sealed session cookie, or the anonymous person when Estate runs without sign-in. */
-import { Clock, Effect, Option, Schema } from "effect"
+import { Clock, Effect, Option, Redacted, Schema } from "effect"
 import { HttpServerRequest } from "effect/http"
 import { type Role, roleOf } from "../auth/roles"
 import { unseal } from "../auth/session"
@@ -31,7 +31,7 @@ export const personAsking: Effect.Effect<
   const cookie = request.cookies[sessionCookie]
   if (cookie === undefined) return Option.none()
   const now = yield* Clock.currentTimeMillis
-  const opened = yield* unseal(cookie, auth.sessionSecret, now)
+  const opened = yield* unseal(cookie, Redacted.value(auth.sessionSecret), now)
   return Option.flatMap(opened, decodeSealed).pipe(
     Option.map((sealed) => ({ name: sealed.name, groups: sealed.groups, role: roleOf(sealed.groups, auth.roles) })),
   )

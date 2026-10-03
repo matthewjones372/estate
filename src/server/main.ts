@@ -4,7 +4,7 @@
  */
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun"
 import { SQL } from "bun"
-import { Console, Effect, Layer, Result } from "effect"
+import { Console, Effect, Layer, Redacted, Result } from "effect"
 import { HttpRouter } from "effect/http"
 import type { Mistake } from "../shared/shape"
 import { application, background, prepare, services } from "./app"
@@ -43,7 +43,7 @@ const serve = Effect.gen(function* () {
   const { ESTATE_SETTINGS } = process.env
   const started = yield* prepare(ESTATE_SETTINGS ?? "/etc/estate/estate.yaml", process.env)
   const database = started.settings.notes?.postgres
-  const notes = database === undefined ? memoryNotes : postgresNotes(sqlOf(database))
+  const notes = database === undefined ? memoryNotes : postgresNotes(sqlOf(Redacted.value(database)))
   const provided = services(started, builtWeb, liveRemote, notes, process.env)
   const server = HttpRouter.serve(application).pipe(
     Layer.provide(

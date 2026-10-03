@@ -1,12 +1,12 @@
 import { beforeAll, describe, expect, test } from "bun:test"
-import { Effect } from "effect"
+import { Effect, Redacted } from "effect"
 import { exportJWK, generateKeyPair, type JWK, SignJWT } from "jose"
 import { ask, type Server, serverFor, settings } from "../fixture"
 import { type Call, reply } from "../remote"
 
 const issuer = "https://id.example"
 const configured = settings({
-  oidc: { issuer, clientId: "estate", clientSecret: "secret", publicUrl: "https://estate.example/" },
+  oidc: { issuer, clientId: "estate", clientSecret: Redacted.make("secret"), publicUrl: "https://estate.example/" },
 })
 
 let privateKey: CryptoKey

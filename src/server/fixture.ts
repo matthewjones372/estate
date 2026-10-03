@@ -1,5 +1,5 @@
 /** A small estate for tests: two environments, four services, and a server answering from stubs. */
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Redacted } from "effect"
 import { HttpRouter } from "effect/http"
 import type { Catalog } from "../shared/catalog"
 import { application, type Started, services } from "./app"
@@ -47,7 +47,7 @@ export const secret = "a-session-secret-of-at-least-32-characters"
 
 export const settings = (auth: Partial<Settings["auth"]> = {}): Settings => ({
   catalog: "catalog.yaml",
-  auth: { sessionSecret: secret, roles: { viewer: ["developers"], operator: ["ops"] }, ...auth },
+  auth: { sessionSecret: Redacted.make(secret), roles: { viewer: ["developers"], operator: ["ops"] }, ...auth },
   sources: { staging: {}, production: {} },
 })
 
