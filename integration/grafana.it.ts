@@ -161,12 +161,13 @@ describe("a real Grafana", () => {
     )
     const alert = alerts.find((each) => each.name === "CheckoutUp")
     expect(alert).toMatchObject({ severity: "warning", labels: { service: "checkout" } })
-    // Grafana's ruler lists a folder's rules to a new service account only once its folder permissions apply, a
-    // few seconds after it is made, though the rule fires before then; Estate reads the rules again each read.
+    // Grafana keeps what a service account's first request may see of its folders for about a minute: an account
+    // first used just after Grafana starts is shown no rules for that long, though they fire. Estate reads the
+    // rules again each read, so its charts gain their thresholds within a minute; the test waits as long.
     const rules = await eventually(
       () => real(grafanaRules(sources.grafana)),
       (found) => found.has("CheckoutUp"),
-      30,
+      90,
     )
     expect(rules.get("CheckoutUp")).toBe('up{job="prometheus"} > 0.5')
     const prometheusBehind = prometheusOf(sources)

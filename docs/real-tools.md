@@ -84,6 +84,7 @@ Grafana refuses a viewer's silence with 403. `bun run integration` checks both a
 | Line | Right when |
 |---|---|
 | `alerts` | It counts what Grafana's Alerting page shows as firing and pending. |
+| `charts` | Each firing Grafana rule has a threshold. For about a minute after a new service account's first request Grafana shows it no rules, so run the doctor twice if this line says none have. |
 | `metrics` | Values match Explore for the same queries. |
 | `logs` | `Loki: checkout N lines in 15 min`. |
 
