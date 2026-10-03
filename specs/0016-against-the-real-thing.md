@@ -53,7 +53,7 @@ Docker where the suite runs.
       Done when: a Grafana-managed rule fires and Estate charts it against its threshold, through a service account.
 - [x] **`real-logs`** — Loki and Elasticsearch.
       Done when: a line pushed to each is read back, masked, and an error grouped.
-- [ ] **`real-notes`** — Postgres and DynamoDB Local.
+- [x] **`real-notes`** — Postgres and DynamoDB Local.
       Done when: a note survives a restart of Estate's notes against each.
 - [ ] **`real-jenkins`** — Jenkins.
       Done when: a job built three times reads as its three builds.
