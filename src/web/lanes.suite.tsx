@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { events } from "./fixture"
 import { mount } from "./harness"
 import { Overview } from "./pages/Overview"
+import { scaled, shareOf } from "./parts/AgentLane"
 import { chatOf, teamOf } from "./teams"
 
 describe("an overview of a catalog with categories", () => {
@@ -163,5 +164,67 @@ describe("a team", () => {
       undefined,
       undefined,
     ])
+  })
+})
+
+describe("an agent", () => {
+  test("has a lane: its health, model and since when, its tokens against its budget, its usage and its team", () => {
+    const catalog = events.catalog
+    if (catalog === undefined || events.services === undefined) throw new Error("no catalog")
+    const series = (now: number) => ({ now, points: [now, now] })
+    const page = mount(() => <Overview />, {
+      sent: {
+        ...events,
+        catalog: {
+          ...catalog,
+          agents: [
+            { name: "triage", links: [], owner: "web", budget: { tokens: 20_000_000, per: "day" } },
+            { name: "summariser", links: [], budget: { tokens: 1_000_000, per: "month" } },
+          ],
+          teams: [{ name: "web", title: "Web", links: [] }],
+        },
+        services: {
+          ...events.services,
+          agents: [
+            {
+              name: "triage",
+              health: "attention",
+              reasons: ["on course for 24M tokens a day, over its 20M"],
+              usage: {
+                runs: series(4),
+                tokens: series(1_000_000),
+                spent: 6_100_000,
+                model: "claude-b",
+                modelSince: "2026-10-03T11:00:00Z",
+              },
+              pods: [{ name: "p0", ready: true }],
+            },
+            { name: "summariser", health: "healthy", reasons: [], usage: {} },
+          ],
+        },
+      },
+    })
+    const triage = page.container.querySelector('[aria-label="triage, an agent"]')?.textContent ?? ""
+    expect(triage).toContain("on course for 24M tokens a day")
+    expect(triage).toContain("claude-b · since")
+    expect(triage).toContain("1/1 pods")
+    expect(triage).toContain("6.1M of 20M tokens today")
+    expect(triage).toContain("Owned by Web")
+    const summariser = page.container.querySelector('[aria-label="summariser, an agent"]')?.textContent ?? ""
+    expect(summariser).toContain("model not read")
+    expect(summariser).toContain("budget 1M tokens a month")
+    expect([...page.container.querySelectorAll("h2")].map((heading) => heading.textContent)).toContain("Agents")
+  })
+
+  test("says its runs a minute, its failing as a share of its runs, and its tokens in thousands", () => {
+    const runs = { now: 0.25, points: [0.25, 0, null] }
+    expect(scaled(runs, 60)).toEqual({ now: 15, points: [15, 0, null] })
+    expect(shareOf({ now: 0.01, points: [0.01, 0.01, 0.01] }, runs)).toEqual({ now: 4, points: [4, null, null] })
+    expect([scaled(undefined, 60), shareOf(undefined, runs), shareOf(runs, undefined)]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ])
+    expect(shareOf({ now: null, points: [] }, runs)?.now).toBeNull()
   })
 })

@@ -16,6 +16,10 @@ const Matrix = Schema.Struct({
   }),
 })
 
+const Instant = Schema.Struct({
+  data: Schema.Struct({ result: Schema.Array(Schema.Struct({ metric: Schema.Record(Schema.String, Schema.String) })) }),
+})
+
 const Rules = Schema.Struct({
   data: Schema.Struct({
     groups: Schema.Array(
@@ -114,6 +118,8 @@ export interface Ranges {
     labels?: Readonly<Record<string, string>>,
   ) => Effect.Effect<Series, Failure, Remote>
   readonly rules: Effect.Effect<ReadonlyMap<string, string>, Failure, Remote>
+  /** A query now, as the labels of each series it gives: where a source can say which, such as a model's name. */
+  readonly labels?: (query: string) => Effect.Effect<ReadonlyArray<Readonly<Record<string, string>>>, Failure, Remote>
   /** How many queries a read asks at once: all of them, where the source batches them itself. */
   readonly concurrency?: number | "unbounded"
 }
@@ -124,6 +130,15 @@ export const prometheusRanges = (
   more: Effect.Effect<ReadonlyMap<string, string>, never, Remote> = Effect.succeed(new Map()),
 ): Ranges => ({
   range: (query, span, now, labels) => rangeOf(prometheus, query, span, now, labels),
+  labels: (query) =>
+    callJson({
+      url: `${prometheus.url}/api/v1/query?${new URLSearchParams({ query })}`,
+      headers: prometheus.headers,
+    }).pipe(
+      Effect.mapError(failure),
+      Effect.flatMap(decoded(Instant)),
+      Effect.map((answer) => answer.data.result.map((each) => each.metric)),
+    ),
   rules: Effect.gen(function* () {
     return new Map([...(yield* alertingRules(prometheus)), ...(yield* more)])
   }),

@@ -5,7 +5,8 @@ import { makeAwsJson } from "../aws/json"
 import type { Remote } from "../remote"
 import type { Settings } from "../settings"
 import { Estate, updateEnvironment } from "../state"
-import { inEnvironment, jobsIn } from "../views/catalog"
+import { agentsIn, inEnvironment, jobsIn } from "../views/catalog"
+import { withModels } from "./agents"
 import { readAlerts, withResolved } from "./alerts"
 import { readArgo } from "./argo"
 import { runBuilds } from "./builds"
@@ -31,6 +32,17 @@ const servicesIn = (environment: string): Effect.Effect<ReadonlyArray<Service>, 
   Effect.gen(function* () {
     const { catalog } = yield* SubscriptionRef.get(yield* Estate)
     return inEnvironment(catalog, environment)
+  })
+
+/** What the cluster is asked about: the services, and each agent that names where it runs, as a service would. */
+const workloadsIn = (environment: string): Effect.Effect<ReadonlyArray<Service>, never, Estate> =>
+  Effect.gen(function* () {
+    const { catalog } = yield* SubscriptionRef.get(yield* Estate)
+    const agents = agentsIn(catalog, environment).flatMap((agent) => {
+      const kubernetes = agent.runtime?.kubernetes
+      return kubernetes === undefined ? [] : [{ name: agent.name, environments: agent.environments, kubernetes }]
+    })
+    return [...inEnvironment(catalog, environment), ...agents]
   })
 
 /** The jobs no service owns in an environment, as the catalog says now. */
@@ -125,14 +137,15 @@ const readersFor = (
         const now = yield* Clock.currentTimeMillis
         const here = environment.name
         const stores = (estate.catalog.stores ?? []).filter((store) => store.environments.includes(here))
-        return yield* readMetrics(ranges, estate.catalog, inEnvironment(estate.catalog, here), stores, firing, now)
+        const services = inEnvironment(estate.catalog, here)
+        return yield* readMetrics(ranges, estate.catalog, services, stores, firing, now, agentsIn(estate.catalog, here))
       })
       readers.push(chartNewlyFiring(environment.name, ranges))
       // The first read waits a little for the alerts, so those firing as Estate starts are charted on it.
       readers.push(
         Effect.andThen(
           alertsHeard(environment.name).pipe(Effect.timeout("10 seconds"), Effect.ignore),
-          runSource(environment.name, "metrics", everyOf(section, "metrics"), read),
+          runSource(environment.name, "metrics", everyOf(section, "metrics"), read, withModels),
         ),
       )
     }
@@ -195,7 +208,7 @@ const readersFor = (
             ) => Effect.Effect<A, Failure, Remote | Estate>,
           ) =>
             Effect.gen(function* () {
-              return yield* read(yield* cluster, yield* servicesIn(environment.name))
+              return yield* read(yield* cluster, yield* workloadsIn(environment.name))
             })
           const reading = [
             runSource(

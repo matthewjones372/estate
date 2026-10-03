@@ -5,7 +5,8 @@
 import { compact } from "../../shared/compact"
 import type { ServicesEvent, SourceKind, SourceStatus } from "../../shared/events"
 import type { EnvironmentState, EstateState, Part } from "../state"
-import { inEnvironment, jobsIn } from "./catalog"
+import { agentStateOf } from "./agents"
+import { agentsIn, inEnvironment, jobsIn } from "./catalog"
 import { healthOf, worst } from "./health"
 import { jobHealthOf } from "./jobs"
 import { storeHealthOf, storesIn } from "./stores"
@@ -29,6 +30,7 @@ const environmentWorst = (estate: EstateState, name: string, state: EnvironmentS
       (store) => storeHealthOf(store, state, storesIn(estate.catalog, name)).health,
     ),
     ...jobsIn(estate.catalog, name).map((job) => jobHealthOf(job, state).health),
+    ...agentsIn(estate.catalog, name).map((agent) => agentStateOf(agent, state).health),
   ])
 
 export const servicesView = (estate: EstateState, environment: string): ServicesEvent => {
@@ -73,6 +75,9 @@ export const servicesView = (estate: EstateState, environment: string): Services
             stats: (metrics?.stores?.[store.name] ?? []).map(({ key: _, ...stat }) => stat),
           })),
         }),
+    ...(estate.catalog.agents === undefined
+      ? {}
+      : { agents: agentsIn(estate.catalog, environment).map((agent) => agentStateOf(agent, state)) }),
     ...(estate.catalog.jobs === undefined
       ? {}
       : { jobs: jobsIn(estate.catalog, environment).map((job) => ({ name: job.name, ...jobHealthOf(job, state) })) }),

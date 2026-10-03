@@ -94,7 +94,7 @@ Spec 0019 for spend in money: this spec's budget is in tokens. The team's agents
       Done when: the e2e estate's lanes sit under Payments and Support headings, and a kiosk shows one category.
 - [x] **`standalone-jobs`** — top-level `jobs:` on Kubernetes and ECS, each with its own lane.
       Done when: a CronJob that no service owns shows its runs and a missed run, and needs someone when it fails.
-- [ ] **`agent-usage`** — top-level `agents:`, their lane from `usage:` queries, the model in use, the budget.
+- [x] **`agent-usage`** — top-level `agents:`, their lane from `usage:` queries, the model in use, the budget.
       Done when: an agent over its token budget needs someone, and its model changing is on the feed.
 - [ ] **`agent-runs`** — an agent's recent runs from Langfuse, each linking to its trace.
       Done when: a test against Langfuse's API shows a failed and a succeeded run with tokens, cost and a link.

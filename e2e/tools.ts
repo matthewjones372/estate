@@ -11,6 +11,12 @@ const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).
 const wave = (base: number, swing: number, phase: number) => (at: number) => base + swing * Math.sin(at / 600 + phase)
 
 const series: Array<[RegExp, (at: number) => number]> = [
+  // The support agent, in OpenTelemetry's GenAI metrics: a run every few seconds, a few failing, within its budget.
+  [/increase\(gen_ai_client_token_usage_sum/, () => 6_100_000],
+  [/gen_ai_client_token_usage_sum/, wave(420_000, 60_000, 3)],
+  [/^histogram_quantile.*gen_ai_client_operation_duration/, wave(14, 3, 4)],
+  [/gen_ai_client_operation_duration_seconds_count.*error_type/, wave(0.004, 0.002, 5)],
+  [/gen_ai_client_operation_duration_seconds_count/, wave(0.3, 0.05, 6)],
   // The stores' exporters: postgres_exporter, redis_exporter and kafka_exporter, every store well.
   [/pg_stat_activity_count/, wave(38, 6, 1)],
   [/pg_stat_database_xact_commit/, wave(120, 25, 2)],
@@ -149,6 +155,15 @@ const server = Bun.serve({
     const url = new URL(request.url)
     const path = url.pathname
     if (path === "/api/v1/query_range") return json(queryRange(url))
+    // The model the support agent uses, as the label of the series its query groups by.
+    if (path === "/api/v1/query")
+      return json({
+        status: "success",
+        data: {
+          resultType: "vector",
+          result: [{ metric: { gen_ai_response_model: "claude-sonnet" }, value: [0, "1"] }],
+        },
+      })
     if (path === "/api/v1/rules")
       return json({
         status: "success",

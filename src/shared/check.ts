@@ -38,6 +38,7 @@ const servicePlaceholders = ["env", "namespace", "service"]
 const storePlaceholders = ["env", "store"]
 const jobPlaceholders = ["env", "job", "namespace"]
 const teamPlaceholders = ["env", "team"]
+const agentPlaceholders = ["env", "agent", "namespace"]
 
 const duplicates = (names: ReadonlyArray<string>): ReadonlyArray<string> =>
   [...new Set(names.filter((name, index) => names.indexOf(name) !== index))].sort()
@@ -155,6 +156,23 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
     links(at, job.environments, job.links, jobPlaceholders)
   })
 
+  for (const name of duplicates((catalog.agents ?? []).map((agent) => agent.name)))
+    mistake("agents", `"${name}" is named twice`)
+  catalog.agents?.forEach((agent, index) => {
+    const at = `agents[${index}] (${agent.name})`
+    if (services.has(agent.name) || stores.has(agent.name))
+      mistake(at, `"${agent.name}" is also a service's or store's name`)
+    for (const environment of agent.environments) {
+      if (!environments.has(environment)) mistake(`${at}.environments`, `"${environment}" is not an environment`)
+    }
+    for (const [kind, text] of Object.entries(agent.usage ?? {})) query(`${at}.usage.${kind}`, text)
+    if (agent.budget !== undefined && agent.usage?.spent === undefined)
+      mistake(`${at}.budget`, "needs usage.spent, the tokens spent over its period, to be held to")
+    if (agent.failing !== undefined && !(agent.failing > 0 && agent.failing <= 1))
+      mistake(`${at}.failing`, "is a share of runs, above 0 and at most 1")
+    links(at, agent.environments, agent.links, agentPlaceholders)
+  })
+
   const teams = catalog.teams
   if (teams !== undefined) {
     for (const name of duplicates(teams.map((team) => team.name))) mistake("teams", `"${name}" is named twice`)
@@ -162,6 +180,7 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
     const owned = [
       ...catalog.services.map((each, index) => [`services[${index}] (${each.name}).owner`, each.owner] as const),
       ...(catalog.jobs ?? []).map((each, index) => [`jobs[${index}] (${each.name}).owner`, each.owner] as const),
+      ...(catalog.agents ?? []).map((each, index) => [`agents[${index}] (${each.name}).owner`, each.owner] as const),
     ]
     for (const [at, owner] of owned) {
       if (owner !== undefined && !known.has(owner)) mistake(at, `"${owner}" is not one of the teams`)

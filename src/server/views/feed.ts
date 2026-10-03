@@ -45,6 +45,15 @@ export const feedView = (estate: EstateState, environment: string, now: number):
       }),
     )
   }
+  for (const [agent, usage] of Object.entries(state.metrics.value?.agents ?? {})) {
+    if (usage.modelSince !== undefined && usage.model !== undefined)
+      add({
+        at: usage.modelSince,
+        kind: "deploy",
+        service: agent,
+        text: `${agent} now uses ${usage.model}${usage.modelWas === undefined ? "" : `, not ${usage.modelWas}`}`,
+      })
+  }
   for (const note of estate.notes.filter((each) => each.environment === environment)) {
     add({ at: note.at, kind: "note", who: note.by, text: note.text })
   }

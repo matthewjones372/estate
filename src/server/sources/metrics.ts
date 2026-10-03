@@ -4,13 +4,14 @@
  * leaves its line empty; Prometheus not answering fails the read.
  */
 import { Effect } from "effect"
-import type { Catalog, Service, Store } from "../../shared/catalog"
+import type { Agent, Catalog, Service, Store } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Series } from "../../shared/events"
 import { statsOf } from "../../shared/stats"
 import { storeStatsOf } from "../../shared/stores"
 import type { Remote } from "../remote"
 import type { Metrics, ServiceLoad, SourcedAlert, StoreReading } from "../state"
+import { agentUsageOf } from "./agents"
 import { lastHour, type Ranges, type Span, thresholdOf } from "./prometheus"
 import type { Failure } from "./run"
 
@@ -103,6 +104,7 @@ export const readMetrics = (
   stores: ReadonlyArray<Store>,
   firing: ReadonlyArray<SourcedAlert>,
   now: number,
+  agents: ReadonlyArray<Agent> = [],
 ): Effect.Effect<Metrics, Failure, Remote> =>
   Effect.gen(function* () {
     const rules = yield* ranges.rules
@@ -131,8 +133,14 @@ export const readMetrics = (
       { concurrency: ranges.concurrency ?? 4 },
     )
     const charts = yield* chartsOf(ranges, rules, firing, now)
+    const usage = yield* Effect.forEach(
+      agents,
+      (agent) => Effect.map(agentUsageOf(ranges, agent, now), (read) => [agent.name, read] as const),
+      { concurrency: ranges.concurrency ?? 4 },
+    )
     return {
       services: Object.fromEntries(loads),
+      ...(agents.length === 0 ? {} : { agents: Object.fromEntries(usage) }),
       ...(stores.length === 0 ? {} : { stores: Object.fromEntries(storeLoads) }),
       vitals,
       edges,

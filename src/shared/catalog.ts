@@ -179,6 +179,38 @@ export const Store = Schema.Struct({
 })
 export type Store = typeof Store.Type
 
+/**
+ * An AI agent run in production: its usage as queries of the environment's metrics (the examples in the README use
+ * OpenTelemetry's GenAI metrics), its token budget, and where it runs, if Estate should show its pods.
+ */
+export const Agent = Schema.Struct({
+  name: Schema.String,
+  description: optional(Schema.String),
+  owner: optional(Schema.String),
+  category: optional(Schema.String),
+  runbook: optional(Schema.String),
+  environments: Schema.Array(Schema.String),
+  runtime: optional(Schema.Struct({ kubernetes: optional(Kubernetes) })),
+  usage: optional(
+    Schema.Struct({
+      /** Runs a second, those that failed a second, and how long the slowest take. */
+      runs: optional(Schema.String),
+      errors: optional(Schema.String),
+      p99: optional(Schema.String),
+      /** Tokens an hour now, and tokens spent over the budget's period: the last day or month. */
+      tokens: optional(Schema.String),
+      spent: optional(Schema.String),
+      /** A query grouped by the model's label, such as `group by (gen_ai_response_model) (…)`: the model in use. */
+      model: optional(Schema.String),
+    }),
+  ),
+  budget: optional(Schema.Struct({ tokens: Schema.Number, per: Schema.Literals(["day", "month"]) })),
+  /** The share of runs failing that needs someone: 0.1 unless set. */
+  failing: optional(Schema.Number),
+  links: optional(Schema.Record(Schema.String, Schema.String)),
+})
+export type Agent = typeof Agent.Type
+
 /** A team, by the name an owner gives: where to reach it, its chat, its pages and its on-call. */
 const Team = Schema.Struct({
   name: Schema.String,
@@ -240,6 +272,7 @@ export const Catalog = Schema.Struct({
   services: Schema.Array(Service),
   stores: optional(Schema.Array(Store)),
   jobs: optional(Schema.Array(StandaloneJob)),
+  agents: optional(Schema.Array(Agent)),
   teams: optional(Schema.Array(Team)),
   /** What each alert, by name, means for the people using the product, kept in code beside the services. */
   alerts: optional(Schema.Record(Schema.String, Schema.Struct({ impact: optional(Schema.String) }))),

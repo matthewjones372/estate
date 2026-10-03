@@ -3,6 +3,7 @@
  * and the pages decode with them, so neither can drift from the other.
  */
 import { Schema } from "effect"
+import { AgentState, DescribedAgent } from "./agents"
 import { Debug, Job, Pod, Series } from "./workloads"
 
 const optional = Schema.optionalKey
@@ -57,6 +58,7 @@ export const CatalogEvent = Schema.Struct({
   teams: optional(
     Schema.Array(Schema.Struct({ name: Schema.String, title: Schema.String, links: Schema.Array(Link) })),
   ),
+  agents: optional(Schema.Array(DescribedAgent)),
   jobs: optional(
     Schema.Array(
       Schema.Struct({
@@ -144,6 +146,7 @@ export const ServicesEvent = Schema.Struct({
       }),
     ),
   ),
+  agents: optional(Schema.Array(AgentState)),
   /** Jobs no service owns: each one's health, and what its runtime last said of it. */
   jobs: optional(
     Schema.Array(

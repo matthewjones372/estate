@@ -28,6 +28,7 @@ export const headlineOf = (events: Partial<Events>): Headline => {
     ...(events.services?.services ?? []),
     ...(events.services?.stores ?? []),
     ...(events.services?.jobs ?? []),
+    ...(events.services?.agents ?? []),
   ]
   const troubled = services.filter((service) => service.health === "attention" || service.health === "critical")
   const critical =

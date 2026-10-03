@@ -3,6 +3,7 @@
  * Sources write their part; the event stream reads the whole and sends what changed.
  */
 import { Context, Effect, Layer, SubscriptionRef } from "effect"
+import type { AgentUsage } from "../shared/agents"
 import type { Catalog } from "../shared/catalog"
 import type { Alert, Build, Debug, Job, Load, Note, Pod, Series, SourceKind } from "../shared/events"
 
@@ -28,6 +29,7 @@ export interface StoreReading {
 
 export interface Metrics {
   readonly services: Readonly<Record<string, ServiceLoad>>
+  readonly agents?: Readonly<Record<string, AgentUsage>>
   readonly stores?: Readonly<Record<string, ReadonlyArray<StoreReading>>>
   readonly vitals: ReadonlyArray<Series>
   readonly edges: ReadonlyArray<number | null>

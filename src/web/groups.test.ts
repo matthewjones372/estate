@@ -27,8 +27,8 @@ const catalog = (
 describe("the overview's groups", () => {
   test("are one, untitled, when the catalog names no category", () => {
     const listed = catalog([service("a"), service("b")], [store("db")])
-    expect(groupsOf(listed)).toEqual([{ services: listed.services, stores: listed.stores, jobs: [] }])
-    expect(groupsOf(undefined)).toEqual([{ services: [], stores: [], jobs: [] }])
+    expect(groupsOf(listed)).toEqual([{ services: listed.services, stores: listed.stores, jobs: [], agents: [] }])
+    expect(groupsOf(undefined)).toEqual([{ services: [], stores: [], jobs: [], agents: [] }])
   })
 
   test("are a category each, in the order first named, services and stores together, and the rest last", () => {
@@ -57,6 +57,17 @@ describe("the overview's groups", () => {
         { name: "export", kind: "Job" as const, links: [] },
       ],
     }
+    const withAgents = {
+      ...withJobs,
+      agents: [
+        { name: "triage", links: [], category: "Data" },
+        { name: "summariser", links: [] },
+      ],
+    }
+    expect(groupsOf(withAgents).map((group) => [group.title, group.agents.map((each) => each.name)])).toEqual([
+      ["Data", ["triage"]],
+      [otherwise, ["summariser"]],
+    ])
     expect(groupsOf(withJobs).map((group) => [group.title, group.jobs.map((each) => each.name)])).toEqual([
       ["Data", ["settle"]],
       [otherwise, ["export"]],

@@ -1,5 +1,6 @@
 /** The `catalog` event: the chosen environment's services with their links filled in, the vitals and the map. */
 import {
+  type Agent,
   type Catalog,
   type Environment,
   kubernetesOf,
@@ -19,7 +20,7 @@ interface Named {
 const fillLink = (template: string, environment: Environment, named: Named): string =>
   template.replace(/\{(\w+)\}/g, (whole, name: string) => {
     if (name === "env") return environment.name
-    if (name === "service" || name === "store" || name === "job" || name === "team") return named.name
+    if (["service", "store", "job", "team", "agent"].includes(name)) return named.name
     if (name === "namespace") return named.namespace ?? named.name
     return environment.values?.[name] ?? whole
   })
@@ -36,6 +37,10 @@ const linksOf = (catalog: Catalog, environment: string, named: Named, links: Rea
 
 export const inEnvironment = (catalog: Catalog, environment: string): ReadonlyArray<Service> =>
   catalog.services.filter((service) => service.environments.includes(environment))
+
+/** The AI agents that run in an environment. */
+export const agentsIn = (catalog: Catalog, environment: string): ReadonlyArray<Agent> =>
+  (catalog.agents ?? []).filter((agent) => agent.environments.includes(environment))
 
 /** The jobs no service owns that run in an environment. */
 export const jobsIn = (catalog: Catalog, environment: string): ReadonlyArray<StandaloneJob> =>
@@ -91,6 +96,26 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
           title: team.title ?? team.name,
           links: linksOf(catalog, environment, team, team.links),
         })),
+      }),
+  ...(catalog.agents === undefined
+    ? {}
+    : {
+        agents: agentsIn(catalog, environment).map((agent) =>
+          compact({
+            name: agent.name,
+            description: agent.description,
+            owner: agent.owner,
+            category: agent.category,
+            runbook: agent.runbook,
+            budget: agent.budget,
+            links: linksOf(
+              catalog,
+              environment,
+              { name: agent.name, ...compact({ namespace: agent.runtime?.kubernetes?.namespace }) },
+              agent.links,
+            ),
+          }),
+        ),
       }),
   ...(catalog.jobs === undefined
     ? {}

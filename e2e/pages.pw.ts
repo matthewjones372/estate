@@ -30,6 +30,10 @@ test("the overview says what needs someone, with each service's lane and what ch
   // The catalog's categories, in its order, and what has none last.
   await expect(services(page).getByRole("heading", { level: 2 })).toHaveText(["Shop", "Payments", "Everything else"])
   await expect(page.getByRole("region", { name: "Payments" }).getByRole("link", { name: "orders-db" })).toBeVisible()
+  // An AI agent beside the services it helps: its model, its tokens against its budget.
+  const agent = page.getByRole("article", { name: "support-triage, an agent" })
+  await expect(agent).toContainText("claude-sonnet")
+  await expect(agent).toContainText("6.1M of 20M tokens today")
   // A job no service owns, in its category, with its schedule and last run.
   const settlement = page.getByRole("article", { name: "settlement, a job" })
   await expect(settlement).toContainText("0 1 * * *")
