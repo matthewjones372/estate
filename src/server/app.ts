@@ -18,6 +18,7 @@ import { backOff } from "./schedule"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
 import { startSources } from "./sources/start"
 import { type Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
+import { sharedViewsLayer } from "./stream"
 import type { Web } from "./web"
 
 export const StartError = Data.TaggedError("StartError")<{
@@ -106,7 +107,7 @@ export const services = <E, F, R>(
   remote: Layer.Layer<Remote>,
   notes: Layer.Layer<Notes, F> = memoryNotes,
 ) =>
-  logHubLayer.pipe(
+  Layer.merge(logHubLayer, sharedViewsLayer).pipe(
     Layer.provideMerge(
       Layer.mergeAll(
         estateLayer(started.initial),

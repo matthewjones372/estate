@@ -56,7 +56,7 @@ Nothing.
 
 ## Stack
 
-- [ ] **`shared-views`** — one stream of frames per environment, shared and replayed, rebuilt only when that
+- [x] **`shared-views`** — one stream of frames per environment, shared and replayed, rebuilt only when that
       environment's part of the state changes.
       Done when: at 1,000 services, twenty pages cost under 1.5 times the CPU of one.
 - [ ] **`changed-services`** — the `services` event as the services that changed, merged by the page; numbers to four

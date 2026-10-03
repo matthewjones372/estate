@@ -6,7 +6,7 @@ import { streamClosed, streamOpened } from "../observed"
 import { Configured } from "../settings"
 import { managerOf } from "../sources/grafana"
 import { Estate } from "../state"
-import { eventStream } from "../stream"
+import { eventStream, SharedViews } from "../stream"
 import { Web } from "../web"
 import { type Person, personAsking } from "./people"
 
@@ -87,7 +87,7 @@ const events = HttpRouter.add("GET", "/events", (request) =>
     const lastEventId = request.headers["last-event-id"]
     yield* streamOpened
     const body = eventStream({ environment, silences }, lastEventId).pipe(
-      Stream.provideService(Estate, ref),
+      Stream.provideService(SharedViews, yield* SharedViews),
       Stream.encodeText,
       Stream.ensuring(streamClosed),
     )
