@@ -2,8 +2,9 @@ import { describe, expect, test } from "bun:test"
 import { mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Effect, Fiber, Result } from "effect"
+import { Effect, Fiber, Layer, Result } from "effect"
 import { background, prepare, services } from "./app"
+import { Notes } from "./notes"
 import { stubRemote } from "./remote"
 import { stubWeb } from "./web"
 
@@ -98,6 +99,10 @@ describe("running", () => {
                 started.success,
                 stubWeb(""),
                 stubRemote(() => undefined),
+                Layer.succeed(Notes)({
+                  all: Effect.fail({ message: "the notes database: down" }),
+                  add: () => Effect.void,
+                }),
               ),
             ),
           ),
