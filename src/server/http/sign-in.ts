@@ -1,9 +1,10 @@
 /** The sign-in routes: off to the provider, back with a code, and out again. */
-import { Clock, Effect, Layer, Option, Redacted, Schema } from "effect"
+import { Clock, Duration, Effect, Layer, Option, Redacted, Schema } from "effect"
 import { HttpRouter, type HttpServerRequest, HttpServerResponse } from "effect/http"
 import { type Attempt, authorizationUrl, completeSignIn, discover, newAttempt } from "../auth/oidc"
 import { seal, unseal } from "../auth/session"
 import { Configured } from "../settings"
+import { after } from "../time"
 import { attemptCookie, sessionCookie } from "./people"
 
 const sessionHours = 12
@@ -40,7 +41,11 @@ const login = HttpRouter.add("GET", "/auth/login", (request) =>
     const discovery = yield* discover(auth.oidc)
     const url = yield* authorizationUrl(auth.oidc, discovery, attempt)
     const now = yield* Clock.currentTimeMillis
-    const sealed = yield* seal(attempt, now + attemptMinutes * 60_000, Redacted.value(auth.sessionSecret))
+    const sealed = yield* seal(
+      attempt,
+      after(now, Duration.minutes(attemptMinutes)),
+      Redacted.value(auth.sessionSecret),
+    )
     return HttpServerResponse.redirect(url).pipe(
       HttpServerResponse.setCookieUnsafe(attemptCookie, sealed, cookieOptions(attemptMinutes * 60)),
     )
@@ -62,7 +67,7 @@ const callback = HttpRouter.add("GET", "/auth/callback", (request) =>
       return failurePage(query(request, "error_description") ?? "this sign-in was not started here, or took too long")
     }
     const person = yield* completeSignIn(auth.oidc, attempt.value, code)
-    const sealed = yield* seal(person, now + sessionHours * 3_600_000, Redacted.value(auth.sessionSecret))
+    const sealed = yield* seal(person, after(now, Duration.hours(sessionHours)), Redacted.value(auth.sessionSecret))
     return HttpServerResponse.redirect(attempt.value.returnTo).pipe(
       HttpServerResponse.setCookieUnsafe(sessionCookie, sealed, cookieOptions(sessionHours * 3600)),
       HttpServerResponse.expireCookieUnsafe(attemptCookie, { path: "/" }),

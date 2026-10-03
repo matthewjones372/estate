@@ -2,11 +2,12 @@
  * A service's Jobs and CronJobs: each one's schedule, its last runs and how they ended, its next run, and a run its
  * schedule says should have started and did not.
  */
-import { Cron, Effect, Result, Schema } from "effect"
+import { Cron, Duration, Effect, Result, Schema } from "effect"
 import type { Service } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Job } from "../../shared/events"
 import type { Remote } from "../remote"
+import { after, epoch, iso, isoOf } from "../time"
 import { type Cluster, Condition, kube, Metadata } from "./kubernetes"
 import type { Failure } from "./run"
 
@@ -39,7 +40,7 @@ const CronJobObject = Schema.Struct({
 })
 
 const kept = 5
-const grace = 5 * 60_000
+const grace = Duration.minutes(5)
 
 /** A Job as a run: running, or how it ended, in the cluster's words when it failed. */
 export const runOf = (job: JobObject): Job["runs"][number] => {
@@ -48,7 +49,7 @@ export const runOf = (job: JobObject): Job["runs"][number] => {
   return compact({
     name: job.metadata.name,
     outcome,
-    startedAt: job.status?.startTime ?? new Date(0).toISOString(),
+    startedAt: job.status?.startTime ?? epoch,
     finishedAt: failed?.lastTransitionTime ?? job.status?.completionTime,
     message: failed?.message ?? failed?.reason,
   })
@@ -87,14 +88,14 @@ const jobFor = (
     const { schedule, timeZone, suspend = false } = cronJob.spec
     const last = cronJob.status?.lastScheduleTime
     const due = last === undefined ? undefined : nextRun(schedule, timeZone, new Date(last))
-    const missed = !suspend && due !== undefined && due.getTime() + grace < now ? due.toISOString() : undefined
+    const missed = !suspend && due !== undefined && after(due.getTime(), grace) < now ? iso(due) : undefined
     return compact({
       name: wanted.name,
       kind: "CronJob",
       schedule,
       suspended: suspend,
       runs,
-      next: suspend ? undefined : nextRun(schedule, timeZone, new Date(now))?.toISOString(),
+      next: suspend ? undefined : isoOf(nextRun(schedule, timeZone, new Date(now))),
       missed,
     })
   })

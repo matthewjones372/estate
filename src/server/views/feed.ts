@@ -1,16 +1,17 @@
 /** The `feed` event: what changed in the last day, read from the sources' own times and Estate's records. */
+import { Duration } from "effect"
 import { compact } from "../../shared/compact"
 import type { FeedEvent, FeedItem } from "../../shared/events"
 import type { EstateState } from "../state"
+import { before, iso } from "../time"
 import { serviceOf } from "./health"
 
-const day = 24 * 60 * 60 * 1000
 const shown = 60
 
 export const feedView = (estate: EstateState, environment: string, now: number): FeedEvent => {
   const state = estate.environments[environment]
   if (state === undefined) return { items: [] }
-  const since = new Date(now - day).toISOString()
+  const since = iso(before(now, Duration.days(1)))
   const services = estate.catalog.services
   const items: FeedItem[] = []
   const add = (item: FeedItem) => {

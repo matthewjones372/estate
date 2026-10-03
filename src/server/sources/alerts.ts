@@ -2,11 +2,12 @@
  * Alerts from Alertmanager (firing, and silenced with who and why) and Prometheus (pending, or everything when there is
  * no Alertmanager). An alert is known by its labels, the same from either, so its notes follow it.
  */
-import { Effect, Schema } from "effect"
+import { Duration, Effect, Schema } from "effect"
 import { compact } from "../../shared/compact"
 import { callJson, type Remote } from "../remote"
 import type { Sources } from "../settings"
 import type { EnvironmentState, SourcedAlert } from "../state"
+import { before as earlier, epoch, iso } from "../time"
 import { type Failure, SourceFailure } from "./run"
 
 const Labels = Schema.Record(Schema.String, Schema.String)
@@ -129,7 +130,7 @@ const prometheusAlerts = (
             alert.labels,
             alert.annotations,
             alert.state === "pending" ? "pending" : "firing",
-            alert.activeAt ?? new Date(0).toISOString(),
+            alert.activeAt ?? epoch,
           ),
         ),
     ),
@@ -146,8 +147,6 @@ export const readAlerts = (sources: Sources): Effect.Effect<ReadonlyArray<Source
     return [...manager, ...prometheus]
   })
 
-const day = 24 * 3_600_000
-
 /** Alerts that fired before this read and do not now have resolved; a day of them is kept. */
 export const withResolved = (
   before: EnvironmentState,
@@ -157,7 +156,7 @@ export const withResolved = (
 ): EnvironmentState => {
   const now = new Set(alerts.map((alert) => alert.id))
   const gone = (before.alerts.value ?? []).filter((alert) => alert.state !== "pending" && !now.has(alert.id))
-  const since = new Date(Date.parse(at) - day).toISOString()
+  const since = iso(earlier(Date.parse(at), Duration.days(1)))
   return {
     ...after,
     resolved: [

@@ -2,11 +2,12 @@
  * Silences, written through Alertmanager with who and why: `POST /api/silences` and `DELETE /api/silences/:id`, for
  * operators. The page sees the change at once; Alertmanager's next answer confirms it.
  */
-import { Clock, Effect, Schema, SubscriptionRef } from "effect"
+import { Clock, Duration, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Remote } from "../remote"
 import { Configured } from "../settings"
 import { Estate, type SourcedAlert, updateEnvironment } from "../state"
+import { after, iso } from "../time"
 import { EnvParam, json, Refusal, refused, searchParams, withRole } from "./routes"
 
 const Asked = Schema.Struct({
@@ -76,8 +77,8 @@ export const silenceRoute = HttpRouter.add(
     const alert = environments[asked.environment]?.alerts.value?.find((each) => each.id === asked.alert)
     if (alert === undefined) return yield* refuse(404, "that alert is not firing here")
     const now = yield* Clock.currentTimeMillis
-    const startsAt = new Date(now).toISOString()
-    const endsAt = new Date(now + asked.minutes * 60_000).toISOString()
+    const startsAt = iso(now)
+    const endsAt = iso(after(now, Duration.minutes(asked.minutes)))
     const remote = yield* Remote
     const answered = yield* remote.call({
       url: `${url}/api/v2/silences`,

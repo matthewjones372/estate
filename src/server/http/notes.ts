@@ -1,8 +1,9 @@
 /** `POST /api/notes`: anyone who may see the estate adds a note to an alert, under their own name. */
-import { Clock, Effect, Schedule, Schema, SubscriptionRef } from "effect"
+import { Clock, Duration, Effect, Schedule, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Notes } from "../notes"
 import { Estate, updateEstate } from "../state"
+import { before, iso, isoNow } from "../time"
 import { json, Refusal, refused, withRole } from "./routes"
 
 const Asked = Schema.Struct({ environment: Schema.String, alert: Schema.String, text: Schema.String })
@@ -29,7 +30,7 @@ export const notesRoute = HttpRouter.add(
       id: crypto.randomUUID(),
       environment: asked.environment,
       alert: asked.alert,
-      at: new Date(yield* Clock.currentTimeMillis).toISOString(),
+      at: yield* isoNow,
       by: person.name,
       text,
     }
@@ -61,12 +62,10 @@ export const removeNoteRoute = HttpRouter.add(
   }).pipe(Effect.catchTag("Refusal", refused)),
 )
 
-const day = 24 * 3_600_000
-
 /** Every hour, notes older than `keepDays` removed, from the database and the page. */
 export const sweepNotes = (keepDays: number) =>
   Effect.gen(function* () {
-    const cutoff = new Date((yield* Clock.currentTimeMillis) - keepDays * day).toISOString()
+    const cutoff = iso(before(yield* Clock.currentTimeMillis, Duration.days(keepDays)))
     const notes = yield* Notes
     yield* notes.removeBefore(cutoff)
     yield* updateEstate((estate) => ({ ...estate, notes: estate.notes.filter((note) => note.at >= cutoff) }))

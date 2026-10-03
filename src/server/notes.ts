@@ -5,6 +5,7 @@
 import { Context, Data, Effect, Layer } from "effect"
 import type { Note } from "../shared/events"
 import { type Failure, SourceFailure } from "./sources/run"
+import { iso } from "./time"
 
 export type StoredNote = Note & { readonly environment: string; readonly alert: string }
 
@@ -46,7 +47,7 @@ const asNote = ({ id, environment, alert, at, by, text }: Record<string, unknown
   id: String(id),
   environment: String(environment),
   alert: String(alert),
-  at: (at instanceof Date ? at : new Date(String(at))).toISOString(),
+  at: iso(at instanceof Date ? at : String(at)),
   by: String(by),
   text: String(text),
 })

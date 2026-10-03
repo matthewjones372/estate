@@ -2,11 +2,12 @@
  * Builds from GitHub Actions: each service's workflow runs on its branch, newest first. Asked with the ETag of the last
  * answer, so a quiet repository costs a 304 and nothing of the rate limit.
  */
-import { Clock, type Duration, Effect, Redacted, Schedule, Schema, SubscriptionRef } from "effect"
+import { type Duration, Effect, Redacted, Schedule, Schema, SubscriptionRef } from "effect"
 import type { Service } from "../../shared/catalog"
 import type { Build } from "../../shared/events"
 import { Remote } from "../remote"
 import { Estate, updateEstate } from "../state"
+import { isoNow } from "../time"
 import { afterRead, type Failure, SourceFailure } from "./run"
 
 const Runs = Schema.Struct({
@@ -105,7 +106,7 @@ export const runBuilds = (
         },
       ),
     )
-    const at = new Date(yield* Clock.currentTimeMillis).toISOString()
+    const at = yield* isoNow
     yield* updateEstate((estate) => ({
       ...estate,
       builds: afterRead(

@@ -2,8 +2,9 @@
  * A source read on its own schedule for one environment. What it reads becomes its part of the state; when it does
  * not answer, its part keeps what it last read, marked failing with the words it failed with, and the rest carries on.
  */
-import { Clock, Data, type Duration, Effect, Schedule } from "effect"
+import { Data, type Duration, Effect, Schedule } from "effect"
 import { type EnvironmentState, type Estate, type Part, updateEnvironment } from "../state"
+import { isoNow } from "../time"
 
 /** Why a source did not answer, in the words it failed with. */
 export const SourceFailure = Data.TaggedError("SourceFailure")<{ readonly message: string }>
@@ -41,7 +42,7 @@ export const runSource = <K extends Parts, R>(
 ): Effect.Effect<never, never, R | Estate> => {
   const once = Effect.gen(function* () {
     const result = yield* Effect.result(read)
-    const at = new Date(yield* Clock.currentTimeMillis).toISOString()
+    const at = yield* isoNow
     yield* updateEnvironment(environment, (state) => {
       const next = {
         ...state,

@@ -3,12 +3,13 @@
  * beside it, and the usual level put back when that time passes. Everything is on the ConfigMap, so Estate restarting
  * loses nothing.
  */
-import { Clock, Effect, Schedule, SubscriptionRef } from "effect"
+import { Duration, Effect, Schedule, SubscriptionRef } from "effect"
 import type { Service } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Debug } from "../../shared/events"
 import { Remote } from "../remote"
 import { Estate, updateEnvironment } from "../state"
+import { after, iso, isoNow } from "../time"
 import { inEnvironment } from "../views/catalog"
 import type { Cluster } from "./kubernetes"
 import { type Failure, SourceFailure } from "./run"
@@ -70,8 +71,8 @@ export const switchOn = (
 ): Effect.Effect<Debug, Failure, Remote> => {
   const levels = service.debug?.levels ?? []
   const level = levels.at(-1) ?? "DEBUG"
-  const since = new Date(now).toISOString()
-  const until = new Date(now + minutes * 60_000).toISOString()
+  const since = iso(now)
+  const until = iso(after(now, Duration.minutes(minutes)))
   return patch(
     cluster,
     service,
@@ -118,7 +119,7 @@ export const revertExpired = (
 ): Effect.Effect<never, never, Estate | Remote> => {
   const once = Effect.gen(function* () {
     const estate = yield* SubscriptionRef.get(yield* Estate)
-    const now = new Date(yield* Clock.currentTimeMillis).toISOString()
+    const now = yield* isoNow
     const debug = estate.environments[environment]?.cluster.value?.debug ?? {}
     const expired = inEnvironment(estate.catalog, environment).filter((service) => {
       const until = debug[service.name]?.until
