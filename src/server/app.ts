@@ -5,10 +5,12 @@ import { providerLayer } from "./auth/oidc"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
 import { loadRoute } from "./http/load"
+import { errorsRoute, logsRoute } from "./http/logs"
 import { loadNotes, notesRoute, removeNoteRoute, sweepNotes } from "./http/notes"
 import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
 import { silenceRoute, unsilenceRoute } from "./http/silences"
+import { logHubLayer } from "./log-hub"
 import { memoryNotes, type Notes } from "./notes"
 import { platform, readText } from "./platform"
 import type { Remote } from "./remote"
@@ -74,6 +76,8 @@ export const application = Layer.mergeAll(
   unsilenceRoute,
   debugOnRoute,
   debugOffRoute,
+  logsRoute,
+  errorsRoute,
 )
 
 /** What runs beside the routes for as long as Estate does. */
@@ -101,11 +105,16 @@ export const services = <E, F, R>(
   remote: Layer.Layer<Remote>,
   notes: Layer.Layer<Notes, F> = memoryNotes,
 ) =>
-  Layer.mergeAll(
-    estateLayer(started.initial),
-    web,
-    remote,
-    notes,
-    Layer.succeed(Configured)(started.settings),
-    providerLayer,
-  ).pipe(Layer.provideMerge(platform))
+  logHubLayer.pipe(
+    Layer.provideMerge(
+      Layer.mergeAll(
+        estateLayer(started.initial),
+        web,
+        remote,
+        notes,
+        Layer.succeed(Configured)(started.settings),
+        providerLayer,
+      ),
+    ),
+    Layer.provideMerge(platform),
+  )

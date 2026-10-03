@@ -1,5 +1,5 @@
 /** A small estate for tests: two environments, four services, and a server answering from stubs. */
-import { Effect, Layer, Redacted } from "effect"
+import { Effect, Layer, Redacted, Scope } from "effect"
 import { HttpRouter } from "effect/http"
 import type { Catalog } from "../shared/catalog"
 import { application, type Started, services } from "./app"
@@ -81,9 +81,10 @@ export const serverFor = (
     "main.js": { body: new TextEncoder().encode("run()"), type: "text/javascript" },
   })
   const { handler } = HttpRouter.toWebHandler(application, { disableLogger: true })
-  return Effect.scoped(Layer.build(services(started(configured, initial), web, stubRemote(answer), notes))).pipe(
-    Effect.map((context) => ({ handler: (request: Request) => handler(request, context), context })),
-  )
+  // The services live as long as the test: a scope left open, as a server's would be while it runs.
+  return Effect.flatMap(Scope.make(), (scope) =>
+    Layer.buildWithScope(services(started(configured, initial), web, stubRemote(answer), notes), scope),
+  ).pipe(Effect.map((context) => ({ handler: (request: Request) => handler(request, context), context })))
 }
 
 export type Server = Effect.Success<ReturnType<typeof serverFor>>

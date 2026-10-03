@@ -41,7 +41,8 @@ const lokiLines = (
       start: nanos(from),
       end: nanos(to),
       limit: String(limit),
-      direction: "forward",
+      // The newest lines in the window, so that a busy service skips its older lines rather than its latest.
+      direction: "backward",
     })
     const answered = yield* remote
       .call({
