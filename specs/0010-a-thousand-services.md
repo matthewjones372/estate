@@ -65,7 +65,7 @@ Nothing.
       Done when: at 1,000 services, a page receives under 1 MB a minute once loaded.
 - [x] **`namespace-lists`** — the cluster and Flux read a namespace at a time.
       Done when: at 1,000 services in one namespace, calls to the tools fall below 250 a second.
-- [ ] **`streams`** — `Stream.paginate` for paged reads, the log hub's polling a stream.
+- [x] **`streams`** — `Stream.paginate` for paged reads, the log hub's polling a stream.
       Done when: nothing in `src/server` pages or polls by hand.
 - [ ] **`bench`** — `bench/` and the README's table, re-measured after the above.
       Done when: the README states the numbers `bun bench/run.ts` prints.

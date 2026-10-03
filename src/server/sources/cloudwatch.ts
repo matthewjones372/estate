@@ -3,7 +3,7 @@
  * INSUFFICIENT_DATA is pending), and GetMetricData as the query over a range, the catalog's queries being CloudWatch's
  * own expressions. An alarm on one metric carries a Metrics Insights expression for its chart and its threshold.
  */
-import { Effect, Schema } from "effect"
+import { Effect, Option, Schema, Stream } from "effect"
 import { compact } from "../../shared/compact"
 import type { AwsCallError, AwsJson } from "../aws/json"
 import type { SourcedAlert } from "../state"
@@ -104,23 +104,23 @@ const alertOf = (alarm: Alarm, state: SourcedAlert["state"]): SourcedAlert => {
 }
 
 /** Every metric alarm in ALARM or INSUFFICIENT_DATA, page by page. */
-export const readAlarms = (cloudwatch: AwsJson, from?: string): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure> =>
-  ask(
-    cloudwatch,
-    "DescribeAlarms",
-    { AlarmTypes: ["MetricAlarm"], MaxRecords: 100, ...(from === undefined ? {} : { NextToken: from }) },
-    Alarms,
-  ).pipe(
-    Effect.flatMap((page) => {
-      const alerts = page.MetricAlarms.flatMap((alarm) => {
-        const state = states[alarm.StateValue]
-        return state === undefined ? [] : [alertOf(alarm, state)]
-      })
-      return page.NextToken === undefined
-        ? Effect.succeed(alerts)
-        : Effect.map(readAlarms(cloudwatch, page.NextToken), (rest) => [...alerts, ...rest])
-    }),
-  )
+export const readAlarms = (cloudwatch: AwsJson): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure> =>
+  Stream.paginate(undefined as string | undefined, (from) =>
+    ask(
+      cloudwatch,
+      "DescribeAlarms",
+      { AlarmTypes: ["MetricAlarm"], MaxRecords: 100, ...(from === undefined ? {} : { NextToken: from }) },
+      Alarms,
+    ).pipe(
+      Effect.map((page) => {
+        const alerts = page.MetricAlarms.flatMap((alarm) => {
+          const state = states[alarm.StateValue]
+          return state === undefined ? [] : [alertOf(alarm, state)]
+        })
+        return [alerts, Option.fromUndefinedOr(page.NextToken)] as const
+      }),
+    ),
+  ).pipe(Stream.runCollect)
 
 /** GetMetricData as the query over a range: the catalog's query is CloudWatch's expression, a point a step. */
 export const cloudwatchRanges = (cloudwatch: AwsJson): Ranges => ({

@@ -2,7 +2,7 @@
  * Notes kept in a DynamoDB table, for an estate on AWS with no database of its own: the environment and alert as the
  * partition key, the time as the sort key. The table is made, paid per request, if it is not there and the role may.
  */
-import { Effect, Layer, Schedule, Schema } from "effect"
+import { Effect, Layer, Option, Schedule, Schema, Stream } from "effect"
 import { type AwsCallError, type AwsJson, makeAwsJson } from "./aws/json"
 import { Notes, NotesError, type StoredNote } from "./notes"
 import { SourceFailure } from "./sources/run"
@@ -67,16 +67,13 @@ const scan = (
   dynamo: Dynamo,
   table: string,
   filter: object,
-  from?: unknown,
 ): Effect.Effect<ReadonlyArray<typeof Item.Type>, AwsCallError | Schema.SchemaError> =>
-  dynamo("Scan", { TableName: table, ...filter, ...(from === undefined ? {} : { ExclusiveStartKey: from }) }).pipe(
-    Effect.flatMap(decodePage),
-    Effect.flatMap((page) =>
-      page.LastEvaluatedKey === undefined
-        ? Effect.succeed(page.Items)
-        : Effect.map(scan(dynamo, table, filter, page.LastEvaluatedKey), (rest) => [...page.Items, ...rest]),
+  Stream.paginate(undefined as unknown, (from) =>
+    dynamo("Scan", { TableName: table, ...filter, ...(from === undefined ? {} : { ExclusiveStartKey: from }) }).pipe(
+      Effect.flatMap(decodePage),
+      Effect.map((page) => [page.Items, Option.fromUndefinedOr(page.LastEvaluatedKey)] as const),
     ),
-  )
+  ).pipe(Stream.runCollect)
 
 const remove = (dynamo: Dynamo, table: string, items: ReadonlyArray<typeof Item.Type>) =>
   Effect.forEach(items, (item) => dynamo("DeleteItem", { TableName: table, Key: { pk: item.pk, sk: item.sk } }), {
