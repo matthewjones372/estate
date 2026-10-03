@@ -180,6 +180,15 @@ export const Alert = Schema.Struct({
     Schema.Struct({ id: Schema.String, by: Schema.String, reason: Schema.String, startsAt: Instant, endsAt: Instant }),
   ),
   notes: Schema.Array(Note),
+  /** What it means for the people using the product: written on the page, in the catalog, or on its rule. */
+  impact: optional(
+    Schema.Struct({
+      text: Schema.String,
+      from: Schema.Literals(["page", "catalog", "rule"]),
+      by: optional(Schema.String),
+      at: optional(Instant),
+    }),
+  ),
   chart: optional(Schema.Struct({ points: Schema.Array(Schema.NullOr(Schema.Number)), threshold: Schema.Number })),
 })
 export type Alert = typeof Alert.Type

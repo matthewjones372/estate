@@ -38,6 +38,7 @@ const Card = (props: { readonly alert: Alert; readonly now: number }) => {
         <span class="kiosk-since">firing {since(props.alert.startsAt, props.now)}</span>
       </div>
       <h2>{props.alert.summary ?? props.alert.name}</h2>
+      <Show when={props.alert.impact}>{(impact) => <p class="kiosk-impact">{impact().text}</p>}</Show>
       <Show when={props.alert.chart}>
         {(chart) => (
           <Plot

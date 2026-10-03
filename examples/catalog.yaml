@@ -127,6 +127,11 @@ jobs:
     run: { kubernetes: { namespace: batch, cronJob: payments-settlement } }
     links: { logs: 'https://grafana.example.com/explore?var-env={env}&namespace={namespace}&job={job}' }
 
+# What an alert means for the people using the shop, by its name, kept in code. A rule's own `impact` annotation
+# says it too, and an operator can write it on the page, which comes first.
+alerts:
+  OrdersSlow: { impact: "Customers wait to place orders, and some give up." }
+
 vitals:
   - title: Orders
     query: sum(rate(orders_placed_total[5m]))

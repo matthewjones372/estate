@@ -38,7 +38,9 @@ const fakeDynamo = (calls: Call[], refuse?: string) => {
           ? item["id"]?.S === values[":id"].S
           : body.FilterExpression === "#time < :at"
             ? (item["time"]?.S ?? "") < values[":at"].S
-            : true,
+            : body.FilterExpression === "begins_with(pk, :impact)"
+              ? (item["pk"]?.S ?? "").startsWith(values[":impact"].S)
+              : true,
       )
       const from = Number(body.ExclusiveStartKey?.index ?? 0)
       const next = from + 2 < kept.length ? { LastEvaluatedKey: { index: from + 2 } } : {}
@@ -81,6 +83,40 @@ const withNotes = <A>(
       ),
     ),
   )
+
+describe("impacts in DynamoDB", () => {
+  test("are kept beside the notes, one an alert, and neither read nor swept as notes", () => {
+    const calls: Call[] = []
+    const impact = { alert: "OrdersSlow", text: "Orders take minutes to place.", by: "ada", at: "2026-10-03T12:00:00Z" }
+    return withNotes(
+      (notes) =>
+        Effect.gen(function* () {
+          yield* notes.add(note("n1", "2026-10-01T00:00:00Z"))
+          yield* notes.setImpact(impact)
+          yield* notes.setImpact({ ...impact, text: "Orders fail.", at: "2026-10-03T13:00:00Z" })
+          yield* notes.setImpact({
+            alert: "SearchSlow",
+            text: "Search is slow.",
+            by: "gil",
+            at: "2026-10-01T00:00:00Z",
+          })
+          yield* notes.removeBefore("2026-10-02T00:00:00Z")
+          const kept = { impacts: yield* notes.impacts, notes: yield* notes.all }
+          yield* notes.setImpact({ ...impact, text: "" })
+          return { ...kept, after: yield* notes.impacts }
+        }),
+      stubRemote(fakeDynamo(calls)),
+    ).then((result) => {
+      const read = Result.isSuccess(result) ? result.success : undefined
+      expect(read?.impacts.map((each) => [each.alert, each.text]).sort()).toEqual([
+        ["OrdersSlow", "Orders fail."],
+        ["SearchSlow", "Search is slow."],
+      ])
+      expect(read?.notes).toEqual([])
+      expect(read?.after.map((each) => each.alert)).toEqual(["SearchSlow"])
+    })
+  })
+})
 
 describe("notes in DynamoDB", () => {
   test("make the table on demand, and keep notes across a restart, newest first, signed for DynamoDB", () => {

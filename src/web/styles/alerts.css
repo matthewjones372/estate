@@ -66,6 +66,15 @@
   color: var(--amber-quiet);
   margin-top: 4px;
 }
+.alert-impact {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: baseline;
+  color: var(--ink);
+  font-size: 14px;
+}
 .alert-notes {
   border-top: 1px solid #3a2a0e;
   padding-top: 12px;

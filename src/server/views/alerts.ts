@@ -20,9 +20,19 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
       .filter((note) => note.environment === environment && note.alert === alert.id)
       .map(({ id, at, by, text }) => ({ id, at, by, text }))
       .sort((a, b) => b.at.localeCompare(a.at))
-    const { expression: _, ...shown } = alert
+    const { expression: _, impact: said, ...shown } = alert
+    const onPage = estate.impacts?.find((each) => each.alert === alert.name)
+    const written = estate.catalog.alerts?.[alert.name]?.impact
     return compact({
       ...shown,
+      impact:
+        onPage !== undefined
+          ? { text: onPage.text, from: "page" as const, by: onPage.by, at: onPage.at }
+          : written !== undefined
+            ? { text: written, from: "catalog" as const }
+            : said === undefined
+              ? undefined
+              : { text: said, from: "rule" as const },
       service,
       store: storeOf(alert.labels, stores),
       runbook,

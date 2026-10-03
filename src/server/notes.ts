@@ -9,12 +9,23 @@ import { iso } from "./time"
 
 export type StoredNote = Note & { readonly environment: string; readonly alert: string }
 
+/** What an alert, by its name, means for the people using the product, as an operator wrote it on the page. */
+export interface StoredImpact {
+  readonly alert: string
+  readonly text: string
+  readonly by: string
+  readonly at: string
+}
+
 export interface Notes {
   readonly all: Effect.Effect<ReadonlyArray<StoredNote>, Failure>
   readonly add: (note: StoredNote) => Effect.Effect<void, Failure>
   readonly remove: (id: string) => Effect.Effect<void, Failure>
   /** Removes every note written before `at`. */
   readonly removeBefore: (at: string) => Effect.Effect<void, Failure>
+  readonly impacts: Effect.Effect<ReadonlyArray<StoredImpact>, Failure>
+  /** Keeps an alert's impact in place of the one before, or forgets it when its text is empty. */
+  readonly setImpact: (impact: StoredImpact) => Effect.Effect<void, Failure>
 }
 export const Notes = Context.Service<Notes>("estate/Notes")
 
@@ -37,6 +48,13 @@ const create = `create table if not exists estate_notes (
   text text not null
 )`
 
+const createImpacts = `create table if not exists estate_impacts (
+  alert text primary key,
+  text text not null,
+  by text not null,
+  at timestamptz not null
+)`
+
 const run = (query: Query, statement: string, parameters: ReadonlyArray<unknown> = []) =>
   Effect.tryPromise({
     try: () => query(statement, parameters),
@@ -56,6 +74,7 @@ const asNote = ({ id, environment, alert, at, by, text }: Record<string, unknown
 export const postgresNotes = (query: Query) =>
   Layer.effect(Notes)(
     run(query, create).pipe(
+      Effect.andThen(run(query, createImpacts)),
       Effect.mapError((failure) => new NotesError(failure)),
       Effect.as({
         all: run(
@@ -70,16 +89,44 @@ export const postgresNotes = (query: Query) =>
           ).pipe(Effect.asVoid),
         remove: (id: string) => run(query, "delete from estate_notes where id = $1", [id]).pipe(Effect.asVoid),
         removeBefore: (at: string) => run(query, "delete from estate_notes where at < $1", [at]).pipe(Effect.asVoid),
+        impacts: run(query, "select alert, text, by, at from estate_impacts").pipe(
+          Effect.map((rows) =>
+            rows.map(({ alert, text, by, at }) => ({
+              alert: String(alert),
+              text: String(text),
+              by: String(by),
+              at: iso(at instanceof Date ? at : String(at)),
+            })),
+          ),
+        ),
+        setImpact: (impact: StoredImpact) =>
+          (impact.text === ""
+            ? run(query, "delete from estate_impacts where alert = $1", [impact.alert])
+            : run(
+                query,
+                "insert into estate_impacts (alert, text, by, at) values ($1, $2, $3, $4) on conflict (alert) do update set text = $2, by = $3, at = $4",
+                [impact.alert, impact.text, impact.by, impact.at],
+              )
+          ).pipe(Effect.asVoid),
       }),
     ),
   )
 
 /** Notes for as long as Estate runs. */
 export const memoryNotes = Layer.effect(Notes)(
-  Effect.map(Ref.make<ReadonlyArray<StoredNote>>([]), (notes) => ({
-    all: Effect.map(Ref.get(notes), (kept) => [...kept].reverse()),
-    add: (note: StoredNote) => Ref.update(notes, (kept) => [...kept, note]),
-    remove: (id: string) => Ref.update(notes, (kept) => kept.filter((note) => note.id !== id)),
-    removeBefore: (at: string) => Ref.update(notes, (kept) => kept.filter((note) => note.at >= at)),
-  })),
+  Effect.map(
+    Effect.all([Ref.make<ReadonlyArray<StoredNote>>([]), Ref.make<ReadonlyArray<StoredImpact>>([])]),
+    ([notes, impacts]) => ({
+      all: Effect.map(Ref.get(notes), (kept) => [...kept].reverse()),
+      add: (note: StoredNote) => Ref.update(notes, (kept) => [...kept, note]),
+      remove: (id: string) => Ref.update(notes, (kept) => kept.filter((note) => note.id !== id)),
+      removeBefore: (at: string) => Ref.update(notes, (kept) => kept.filter((note) => note.at >= at)),
+      impacts: Ref.get(impacts),
+      setImpact: (impact: StoredImpact) =>
+        Ref.update(impacts, (kept) => [
+          ...kept.filter((each) => each.alert !== impact.alert),
+          ...(impact.text === "" ? [] : [impact]),
+        ]),
+    }),
+  ),
 )

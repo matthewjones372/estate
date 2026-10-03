@@ -211,6 +211,20 @@ describe("Datadog's monitors", () => {
     )
   })
 
+  test("say what they mean for users on a line of their message beginning Impact:, apart from the summary", () => {
+    const told = {
+      ...monitor(1, "Checkout errors", { "env:production,service:checkout": "Alert" }),
+      message:
+        "{{#is_alert}}\nImpact: customers cannot pay.\nCheckout is failing payments\n{{/is_alert}} @slack-payments",
+    }
+    return run(datadogAlerts(datadog).pipe(Effect.provide(stubRemote(fakeDatadog([[told]]).answer)))).then((read) =>
+      expect(Result.isSuccess(read) && read.success[0]).toMatchObject({
+        summary: "Checkout is failing payments",
+        impact: "customers cannot pay.",
+      }),
+    )
+  })
+
   test("make Datadog where alerts are read, and what silences them when there is no Alertmanager", () => {
     expect(alertsOf({ datadog })).toEqual(["datadog"])
     expect(silencerOf({ datadog })?.name).toBe("Datadog")

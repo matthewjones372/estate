@@ -113,6 +113,8 @@ describe("running", () => {
                   add: () => Effect.void,
                   remove: () => Effect.void,
                   removeBefore: () => Effect.fail(new SourceFailure({ message: "the notes database: down" })),
+                  impacts: Effect.succeed([]),
+                  setImpact: () => Effect.void,
                 }),
               ),
             ),

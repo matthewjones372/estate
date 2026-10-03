@@ -114,6 +114,9 @@ export const Alerts = () => {
                     </td>
                     <td>
                       <div style={{ "font-weight": 600 }}>{alert.summary ?? alert.name}</div>
+                      <Show when={alert.impact}>
+                        {(impact) => <div class="cell-note">Impact: {impact().text}</div>}
+                      </Show>
                       <div class="cell-note mono">
                         {alert.name} · {alert.severity}
                       </div>

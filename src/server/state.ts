@@ -36,9 +36,11 @@ export interface Metrics {
   >
 }
 
-export type SourcedAlert = Omit<Alert, "notes" | "service" | "runbook" | "chart"> & {
+export type SourcedAlert = Omit<Alert, "notes" | "service" | "runbook" | "chart" | "impact"> & {
   readonly runbook?: string
   readonly expression?: string
+  /** What its rule says it means for users: an `impact` annotation, or an `Impact:` line in a monitor's message. */
+  readonly impact?: string
 }
 
 export interface Workloads {
@@ -87,6 +89,13 @@ export interface EstateState {
   readonly environments: Readonly<Record<string, EnvironmentState>>
   readonly builds: Part<Readonly<Record<string, ReadonlyArray<Build>>>>
   readonly notes: ReadonlyArray<Note & { readonly environment: string; readonly alert: string }>
+  /** What alerts mean for users, by alert name, as operators wrote it on the page. */
+  readonly impacts?: ReadonlyArray<{
+    readonly alert: string
+    readonly text: string
+    readonly by: string
+    readonly at: string
+  }>
 }
 
 export type Tools = Readonly<Partial<Record<SourceKind, string>>>

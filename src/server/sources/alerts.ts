@@ -70,7 +70,7 @@ const fromLabels = (
   startsAt: string,
 ): SourcedAlert => {
   const { alertname = "unnamed", severity = "warning" } = labels
-  const { summary, description, runbook_url, runbook } = annotations
+  const { summary, description, runbook_url, runbook, impact } = annotations
   return compact({
     id: alertId(labels),
     name: alertname,
@@ -78,6 +78,7 @@ const fromLabels = (
     severity,
     summary: summary ?? description,
     runbook: runbook_url ?? runbook,
+    impact,
     startsAt,
     labels,
   })

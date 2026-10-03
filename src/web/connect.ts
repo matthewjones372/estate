@@ -18,7 +18,7 @@ export const openEvents: Open = (environment, handlers) => {
   return () => source.close()
 }
 
-const send = (method: "POST" | "DELETE", path: string, body?: unknown): Promise<boolean> =>
+const send = (method: "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<boolean> =>
   fetch(path, {
     method,
     headers: { "content-type": "application/json" },
@@ -64,6 +64,7 @@ export const serverActions = (
 ): Actions => ({
   ...navigation,
   addNote: (alert, text) => send("POST", "/api/notes", { environment: environment(), alert, text }),
+  setImpact: (alert, text) => send("PUT", `/api/impacts/${encodeURIComponent(alert)}`, { text }),
   removeNote: (note) => send("DELETE", `/api/notes/${encodeURIComponent(note)}`),
   silence: (alert, minutes, reason) =>
     send("POST", "/api/silences", { environment: environment(), alert, minutes, reason }),

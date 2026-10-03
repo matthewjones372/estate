@@ -51,6 +51,7 @@ using stats from the exporters you probably already have (Postgres, CloudNativeP
 From the page you can:
 
 - add a note to an alert so the next person knows someone's on it
+- say what an alert means for the people using the product, kept for every time it fires
 - silence an alert for a while, with a reason everyone can see
 - turn on debug logging for a service for 15 minutes; it switches itself back off
 - watch a service's logs live, or see its errors grouped by message

@@ -241,6 +241,8 @@ export const Catalog = Schema.Struct({
   stores: optional(Schema.Array(Store)),
   jobs: optional(Schema.Array(StandaloneJob)),
   teams: optional(Schema.Array(Team)),
+  /** What each alert, by name, means for the people using the product, kept in code beside the services. */
+  alerts: optional(Schema.Record(Schema.String, Schema.Struct({ impact: optional(Schema.String) }))),
   vitals: optional(Schema.Array(Vital)),
   map: optional(
     Schema.Struct({

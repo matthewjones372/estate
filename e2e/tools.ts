@@ -91,7 +91,10 @@ const firing = [
   },
   {
     labels: { alertname: "SearchIndexStale", severity: "warning", app: "search" },
-    annotations: { summary: "Search has not indexed for 40 minutes" },
+    annotations: {
+      summary: "Search has not indexed for 40 minutes",
+      impact: "New products can't be found in search; existing ones still can.",
+    },
     startsAt: minutesAgo(41),
   },
 ]

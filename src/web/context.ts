@@ -10,6 +10,8 @@ export interface Actions {
   readonly navigate: (path: string) => void
   readonly choose: (environment: string) => void
   readonly addNote: (alert: string, text: string) => Promise<boolean>
+  /** Writes what an alert, by its name, means for users; empty text forgets it. */
+  readonly setImpact: (alert: string, text: string) => Promise<boolean>
   readonly removeNote: (note: string) => Promise<boolean>
   readonly silence: (alert: string, minutes: number, reason: string) => Promise<boolean>
   readonly unsilence: (silence: string) => Promise<boolean>

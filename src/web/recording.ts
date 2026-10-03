@@ -30,6 +30,7 @@ export const recording = (): Recorded => {
         calls.push(["choose", environment])
       },
       addNote: record("addNote"),
+      setImpact: record("setImpact"),
       removeNote: record("removeNote"),
       silence: record("silence"),
       unsilence: record("unsilence"),

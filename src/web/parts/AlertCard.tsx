@@ -7,6 +7,7 @@ import { useEstate } from "../context"
 import { amount, clock, initials, since } from "../format"
 import { chatOf, teamOf } from "../teams"
 import { A, Out } from "./A"
+import { Impact } from "./Impact"
 import { Icon } from "./icons"
 import { ErrorList } from "./Logs"
 import { Plot } from "./Plot"
@@ -212,6 +213,7 @@ export const AlertCard = (props: {
         <h3 class="alert-title">{props.alert.summary ?? props.alert.name}</h3>
         <Show when={props.alert.service}>{(name) => <p class="alert-detail">{name()}</p>}</Show>
       </div>
+      <Impact alert={props.alert} />
       <Show when={props.alert.chart}>{(chart) => <Chart name={props.alert.name} chart={chart()} />}</Show>
       <Notes alert={props.alert} />
       <Show when={choosing()}>

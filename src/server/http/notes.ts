@@ -77,9 +77,10 @@ export const sweepNotes = (keepDays: number) =>
     (sweep) => forEver(sweep, "1 hour"),
   )
 
-/** The notes already kept, into the state as Estate starts; tried again until the database answers. */
+/** The notes and impacts already kept, into the state as Estate starts; tried again until the database answers. */
 export const loadNotes = Effect.gen(function* () {
   const notes = yield* Notes
   const all = yield* notes.all
-  yield* updateEstate((estate) => ({ ...estate, notes: all }))
+  const impacts = yield* notes.impacts
+  yield* updateEstate((estate) => ({ ...estate, notes: all, impacts }))
 })

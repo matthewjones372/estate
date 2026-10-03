@@ -34,7 +34,7 @@ const answer = (calls: Call[]) => (call: Call) => {
     return reply([
       {
         labels,
-        annotations: { summary: "Orders are slow" },
+        annotations: { summary: "Orders are slow", impact: "Orders take minutes to place." },
         startsAt: "2026-10-03T11:46:00Z",
         status: { state: "active", silencedBy: [], inhibitedBy: [] },
       },
@@ -92,9 +92,9 @@ describe("Grafana's alerting", () => {
   test("gives firing alerts from its Alertmanager and pending ones from its rules, with its token", () => {
     const calls: Call[] = []
     return Effect.runPromise(Effect.provide(readAlerts({ grafana }), stubRemote(answer(calls)))).then((alerts) => {
-      expect(alerts.map((alert) => [alert.name, alert.state])).toEqual([
-        ["OrdersSlow", "firing"],
-        ["DiskFilling", "pending"],
+      expect(alerts.map((alert) => [alert.name, alert.state, alert.impact])).toEqual([
+        ["OrdersSlow", "firing", "Orders take minutes to place."],
+        ["DiskFilling", "pending", undefined],
       ])
       expect(calls.every((call) => call.headers?.["authorization"] === "Bearer glsa_secret")).toBe(true)
     })

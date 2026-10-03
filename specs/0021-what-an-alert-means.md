@@ -74,11 +74,6 @@ History of SearchIndexStale in production
 - **Before Estate kept them**, where the alerts come from Prometheus, the firings of the last 30 days are read once
   from its `ALERTS` series, without notes.
 
-### Both
-
-- **`estate check`** names an impact in the catalog for an alert that no rule Estate has read defines, as a
-  warning, since the rule may be in an environment not yet read.
-
 ## Why this shape
 
 The impact belongs with the alert, not a firing, so it is kept by the alert's name. The rule annotation and the
@@ -94,9 +89,9 @@ Nothing. Stores keep a second kind of record beside notes.
 
 ## Stack
 
-- [ ] **`impact-read`** — impact from the rule's annotation, Datadog's message and the catalog, on every card.
+- [x] **`impact-read`** — impact from the rule's annotation, Datadog's message and the catalog, on every card.
       Done when: a Prometheus rule with an `impact` annotation shows it on its card and on the kiosk.
-- [ ] **`impact-written`** — written and edited on the page by operators, kept in memory, Postgres and DynamoDB.
+- [x] **`impact-written`** — written and edited on the page by operators, kept in memory, Postgres and DynamoDB.
       Done when: an impact written on a firing alert is on its next firing, with who wrote it, after a restart.
 - [ ] **`alert-history`** — each firing kept with its silences and notes, in memory, Postgres and DynamoDB.
       Done when: an alert that fired, resolved and fired again shows its first firing's note, after a restart.

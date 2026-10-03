@@ -141,3 +141,8 @@
 .kiosk-tile .spark svg {
   height: 2.6em;
 }
+.kiosk-impact {
+  margin: 0;
+  font-size: 22px;
+  color: var(--ink-soft);
+}

@@ -41,6 +41,22 @@ test("the overview says what needs someone, with each service's lane and what ch
   await accessible(page)
 })
 
+test("an alert says what it means for users, from its rule or the catalog, and an operator rewrites it", async ({
+  page,
+}) => {
+  await page.goto("/?env=production")
+  const search = page.getByRole("article").filter({ hasText: "Search has not indexed" })
+  await expect(search).toContainText("New products can't be found in search", { timeout: 20_000 })
+  const orders = page.getByRole("article").filter({ hasText: "Orders are slow to place" })
+  await expect(orders).toContainText("Customers wait to place orders")
+  await orders.getByRole("button", { name: "Edit" }).click()
+  await orders.getByLabel("What OrdersSlow means for users").fill("Orders take minutes; card payments time out.")
+  await orders.getByRole("button", { name: "Save impact" }).click()
+  await expect(orders).toContainText("Orders take minutes; card payments time out.")
+  await expect(orders).toContainText("visitor")
+  await accessible(page)
+})
+
 test("a note added to an alert is there for everyone", async ({ page }) => {
   await page.goto("/?env=production")
   const card = page.getByRole("article").filter({ hasText: "Orders are slow to place" })

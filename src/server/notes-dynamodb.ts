@@ -4,7 +4,7 @@
  */
 import { Effect, Layer, Option, Schedule, Schema, Stream } from "effect"
 import { type AwsCallError, type AwsJson, makeAwsJson } from "./aws/json"
-import { Notes, NotesError, type StoredNote } from "./notes"
+import { Notes, NotesError, type StoredImpact, type StoredNote } from "./notes"
 import { SourceFailure } from "./sources/run"
 
 export interface DynamoNotes {
@@ -45,6 +45,11 @@ const itemOf = (note: StoredNote) => ({
   by: { S: note.by },
   text: { S: note.text },
 })
+
+/** Items that are not notes, an alert's impact, say, have keys beginning with this, which no note's has. */
+const other = "!"
+const impactKey = (alert: string) => ({ pk: { S: `${other}impact#${alert}` }, sk: { S: "-" } })
+const isNote = (item: typeof Item.Type) => !item.pk.S.startsWith(other)
 
 const noteOf = (item: typeof Item.Type): StoredNote => ({
   id: item.id.S,
@@ -133,6 +138,7 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
         all: scan(dynamo, table, {}).pipe(
           Effect.map((items) =>
             items
+              .filter(isNote)
               .map(noteOf)
               .sort((a, b) => b.at.localeCompare(a.at))
               .slice(0, kept),
@@ -143,7 +149,7 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
           dynamo("PutItem", { TableName: table, Item: itemOf(note) }).pipe(Effect.asVoid, Effect.mapError(failure)),
         remove: (id: string) =>
           scan(dynamo, table, { FilterExpression: "id = :id", ExpressionAttributeValues: { ":id": { S: id } } }).pipe(
-            Effect.flatMap((items) => remove(dynamo, table, items)),
+            Effect.flatMap((items) => remove(dynamo, table, items.filter(isNote))),
             Effect.mapError(failure),
           ),
         removeBefore: (at: string) =>
@@ -152,9 +158,34 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
             ExpressionAttributeNames: { "#time": "time" },
             ExpressionAttributeValues: { ":at": { S: at } },
           }).pipe(
-            Effect.flatMap((items) => remove(dynamo, table, items)),
+            Effect.flatMap((items) => remove(dynamo, table, items.filter(isNote))),
             Effect.mapError(failure),
           ),
+        impacts: scan(dynamo, table, {
+          FilterExpression: "begins_with(pk, :impact)",
+          ExpressionAttributeValues: { ":impact": { S: `${other}impact#` } },
+        }).pipe(
+          Effect.map((items) =>
+            items.map((item) => ({ alert: item.alert.S, text: item.text.S, by: item.by.S, at: item.time.S })),
+          ),
+          Effect.mapError(failure),
+        ),
+        setImpact: (impact: StoredImpact) =>
+          (impact.text === ""
+            ? dynamo("DeleteItem", { TableName: table, Key: impactKey(impact.alert) })
+            : dynamo("PutItem", {
+                TableName: table,
+                Item: {
+                  ...impactKey(impact.alert),
+                  id: { S: `impact#${impact.alert}` },
+                  environment: { S: "*" },
+                  alert: { S: impact.alert },
+                  time: { S: impact.at },
+                  by: { S: impact.by },
+                  text: { S: impact.text },
+                },
+              })
+          ).pipe(Effect.asVoid, Effect.mapError(failure)),
       }
     }),
   )

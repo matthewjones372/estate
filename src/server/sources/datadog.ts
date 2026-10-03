@@ -171,14 +171,25 @@ const silenceOf = (downtime: Downtime, creator: string | undefined): NonNullable
   }
 }
 
-/** The first line of a monitor's message, without its notifications and template tags. */
-const summaryOf = (message: string | null | undefined) =>
+const impactLine = /^impact:\s*/i
+
+/** A monitor's message as lines, without its notifications and template tags. */
+const linesOf = (message: string | null | undefined) =>
   (message ?? "")
     .replace(/\{\{[^}]*\}\}/g, "")
     .replace(/@\S+/g, "")
     .split("\n")
     .map((line) => line.trim())
-    .find((line) => line !== "")
+
+/** The first line of a monitor's message that says what is wrong, not what it means. */
+const summaryOf = (message: string | null | undefined) =>
+  linesOf(message).find((line) => line !== "" && !impactLine.test(line))
+
+/** What a monitor's message says it means for users, on a line of its own beginning `Impact:`. */
+const impactOf = (message: string | null | undefined) =>
+  linesOf(message)
+    .find((line) => impactLine.test(line))
+    ?.replace(impactLine, "")
 
 const alertsOf = (
   monitor: Monitor,
@@ -211,6 +222,7 @@ const alertsOf = (
         state: found === undefined ? ("firing" as const) : ("silenced" as const),
         severity,
         summary: summaryOf(monitor.message),
+        impact: impactOf(monitor.message),
         startsAt: triggered === undefined || triggered === null ? epoch : iso(triggered * 1000),
         labels,
         silence: found === undefined ? undefined : silenceOf(found.downtime, found.creator),
