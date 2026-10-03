@@ -221,7 +221,8 @@ describe("reading on a schedule", () => {
         ),
       )
       yield* TestClock.adjust("41 seconds")
-      return (yield* SubscriptionRef.get(ref)).environments["staging"]?.alerts
+      const { staging } = (yield* SubscriptionRef.get(ref)).environments
+      return staging?.alerts
     })
     return Effect.runPromise(program.pipe(Effect.provide(Layer.merge(estateLayer(estate()), TestClock.layer())))).then(
       (part) => {
@@ -255,11 +256,11 @@ describe("every source", () => {
     })
     return Effect.runPromise(
       program.pipe(Effect.provide(Layer.mergeAll(estateLayer(shopEstate), TestClock.layer(), stubRemote(answering())))),
-    ).then((environments) => {
-      expect(environments["staging"]?.alerts.state).toBe("ok")
-      expect(environments["staging"]?.cluster.value?.pods["storefront"]).toHaveLength(2)
-      expect(environments["staging"]?.deploys.value?.["storefront"]?.version).toBe("v3")
-      expect(environments["production"]?.alerts.state).toBe("off")
+    ).then(({ staging, production }) => {
+      expect(staging?.alerts.state).toBe("ok")
+      expect(staging?.cluster.value?.pods).toMatchObject({ storefront: [{ ready: true }, { ready: false }] })
+      expect(staging?.deploys.value).toMatchObject({ storefront: { version: "v3" } })
+      expect(production?.alerts.state).toBe("off")
     })
   })
 })
