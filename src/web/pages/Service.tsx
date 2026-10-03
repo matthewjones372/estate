@@ -4,6 +4,7 @@ import { since } from "../format"
 import { A, Out } from "../parts/A"
 import { Load, Timeline } from "../parts/Charts"
 import { DebugPanel } from "../parts/Debug"
+import { Jobs } from "../parts/Jobs"
 import { HealthLine, Links } from "../parts/Lane"
 
 export const ServicePage = (props: { readonly name: string }) => {
@@ -77,6 +78,12 @@ export const ServicePage = (props: { readonly name: string }) => {
                 </div>
               ))}
             </div>
+          </section>
+          <section aria-labelledby="jobs" className="stack">
+            <h2 id="jobs" className="section-title">
+              Jobs
+            </h2>
+            <Jobs jobs={state?.jobs ?? []} />
           </section>
           <section aria-labelledby="today" className="panel section-box">
             <h2 id="today" className="section-title">

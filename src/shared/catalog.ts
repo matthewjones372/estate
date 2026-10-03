@@ -37,6 +37,7 @@ export const Service = Schema.Struct({
   ),
   links: optional(Schema.Record(Schema.String, Schema.String)),
   debug: optional(Schema.Struct({ configMap: Schema.String, key: Schema.String, levels: Schema.Array(Schema.String) })),
+  jobs: optional(Schema.Array(Schema.Struct({ kind: Schema.Literals(["CronJob", "Job"]), name: Schema.String }))),
   stats: optional(
     Schema.Struct({
       preset: optional(Schema.Literals(["jvm", "process", "container"])),

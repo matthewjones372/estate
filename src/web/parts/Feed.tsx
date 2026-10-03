@@ -11,6 +11,7 @@ const dots: Readonly<Record<FeedItem["kind"], string>> = {
   debug: "var(--debug)",
   deploy: "var(--ink-soft)",
   build: "var(--link)",
+  job: "var(--ink-3)",
 }
 
 export const Feed = (props: { readonly feed: FeedEvent | undefined }) => {

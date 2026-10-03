@@ -36,6 +36,7 @@ services:
     build: { workflow: build.yml }
     environments: [ staging, production ]
     kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: orders } ] }
+    jobs: [ { kind: CronJob, name: orders-nightly-export } ]
     deploy: { flux: { kustomization: shop, imagePolicy: orders } }
     load:
       requests: sum(rate(http_requests_total{app="orders"}[1m]))

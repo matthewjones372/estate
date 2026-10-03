@@ -242,9 +242,12 @@ Nothing. Its first estate, lark-bank, adopts it in its own spec 0026.
       *Notes:* a preset is narrowed by `selector`, or by `app="<service>"` (a container's by its namespace and pods
       named after it). Stats are read with the load, every 30 s and over the service page's ranges; their queries are
       checked with the rest of the catalog. Units the page knows: `bytes`, `cores`, `s`, `%`, and rates as `/s`.
-- [ ] **`jobs`** — Jobs and CronJobs from Kubernetes: schedule, last run, its outcome and duration, whether one runs
+- [x] **`jobs`** — Jobs and CronJobs from Kubernetes: schedule, last run, its outcome and duration, whether one runs
       now; a failed or missed run in the service's health and the feed. Done when: a CronJob whose last Job failed
       makes its service need attention, naming the job.
+      *Notes:* read with the cluster every 15 s: a CronJob's schedule and its last five Jobs (found by their owner),
+      a Job by name. A run is missed when the schedule's next time after the last scheduled run is more than five
+      minutes past; schedules are read in the CronJob's `timeZone`, or UTC.
 - [ ] **`notes`** — notes on alerts, kept in Postgres.
 - [ ] **`silences`** — silences through Alertmanager, with a reason.
 - [ ] **`debug`** — the debug switch and its revert.

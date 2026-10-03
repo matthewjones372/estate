@@ -75,6 +75,31 @@ export const events: Events = {
           },
         ],
         version: "v2",
+        jobs: [
+          {
+            name: "storefront-sitemap",
+            kind: "CronJob",
+            schedule: "0 * * * *",
+            suspended: false,
+            runs: [
+              {
+                name: "storefront-sitemap-29",
+                outcome: "failed",
+                startedAt: "2026-10-03T11:00:00Z",
+                finishedAt: "2026-10-03T11:02:00Z",
+                message: "BackoffLimitExceeded",
+              },
+              {
+                name: "storefront-sitemap-28",
+                outcome: "succeeded",
+                startedAt: "2026-10-03T10:00:00Z",
+                finishedAt: "2026-10-03T10:01:30Z",
+              },
+            ],
+            next: "2026-10-03T13:00:00Z",
+            missed: "2026-10-03T12:00:00Z",
+          },
+        ],
         load: {
           requests: series([10, 12, 14]),
           errors: series([0, 0, 0]),
@@ -86,7 +111,7 @@ export const events: Events = {
         },
         debug: { level: "DEBUG", on: true, since: "2026-10-03T11:50:00Z", until: "2026-10-03T12:05:00Z", by: "ada" },
       },
-      { name: "orders", health: "healthy", reasons: [], pods: [], load: {} },
+      { name: "orders", health: "healthy", reasons: [], pods: [], jobs: [], load: {} },
     ],
     vitals: [{ title: "Orders", unit: "/s", series: series([3, 4, 5]) }],
     edges: [

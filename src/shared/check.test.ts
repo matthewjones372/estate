@@ -102,3 +102,14 @@ describe("the catalog's check", () => {
     expect(queryMistake("sum(x]")).toBe("has an unmatched ]")
   })
 })
+
+describe("a service's jobs", () => {
+  test("need the namespace they run in", () => {
+    expect(
+      mistakes({
+        environments: [{ name: "a", sources: "a" }],
+        services: [{ name: "s", environments: ["a"], jobs: [{ kind: "CronJob", name: "backup" }] }],
+      }),
+    ).toEqual([{ at: "services[0] (s).jobs", message: "needs kubernetes.namespace, where its jobs run" }])
+  })
+})

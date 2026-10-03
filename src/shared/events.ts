@@ -73,6 +73,25 @@ export const Pod = Schema.Struct({
 })
 export type Pod = typeof Pod.Type
 
+const JobRun = Schema.Struct({
+  name: Schema.String,
+  outcome: Schema.Literals(["running", "succeeded", "failed"]),
+  startedAt: Instant,
+  finishedAt: optional(Instant),
+  message: optional(Schema.String),
+})
+
+export const Job = Schema.Struct({
+  name: Schema.String,
+  kind: Schema.Literals(["CronJob", "Job"]),
+  schedule: optional(Schema.String),
+  suspended: Schema.Boolean,
+  runs: Schema.Array(JobRun),
+  next: optional(Instant),
+  missed: optional(Instant),
+})
+export type Job = typeof Job.Type
+
 export const Debug = Schema.Struct({
   level: Schema.String,
   on: Schema.Boolean,
@@ -101,6 +120,7 @@ export const ServicesEvent = Schema.Struct({
       health: Health,
       reasons: Schema.Array(Schema.String),
       pods: Schema.Array(Pod),
+      jobs: Schema.Array(Job),
       version: optional(Schema.String),
       load: Load,
       debug: optional(Debug),
@@ -179,7 +199,7 @@ export type DeploysEvent = typeof DeploysEvent.Type
 
 export const FeedItem = Schema.Struct({
   at: Instant,
-  kind: Schema.Literals(["deploy", "build", "alert", "resolved", "silence", "note", "debug"]),
+  kind: Schema.Literals(["deploy", "build", "alert", "resolved", "silence", "note", "debug", "job"]),
   service: optional(Schema.String),
   text: Schema.String,
   who: optional(Schema.String),
