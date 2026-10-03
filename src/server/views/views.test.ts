@@ -199,8 +199,8 @@ describe("the deploys event", () => {
     const view = deploysView(state)
     expect(view.environments).toEqual(["staging", "production"])
     expect(view.services[0]?.environments).toEqual([
-      { environment: "staging", running: "v2", chosen: { version: "v2", ready: true } },
-      { environment: "production", chosen: { version: "v1", ready: false }, stalled: "no image" },
+      { environment: "staging", seen: true, running: "v2", chosen: { version: "v2", ready: true } },
+      { environment: "production", seen: false, chosen: { version: "v1", ready: false }, stalled: "no image" },
     ])
     expect(
       view.services.find((service) => service.name === "payments")?.environments.map((each) => each.environment),

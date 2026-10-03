@@ -1,24 +1,20 @@
-# Estate's settings for trying it out: no sign-in, and sources that are not there, so every part says why.
-# An estate people use signs in with OIDC; see deploy/ for the settings it mounts.
+# Estate against the fake tools in e2e/tools.ts, for the pages' tests.
 port: 8181
 catalog: examples/catalog.yaml
 
 auth:
   sessionSecret: an-example-secret-for-trying-estate-out-only
-  roles:
-    viewer: [ developers ]
-    operator: [ ops ]
+  roles: { viewer: [ developers ], operator: [ ops ] }
   anonymous: { name: visitor, role: operator }
 
 sources:
   staging:
-    prometheus: { url: http://prometheus.staging.invalid:9090 }
-    alertmanager: { url: http://alertmanager.staging.invalid:9093 }
+    prometheus: { url: http://127.0.0.1:8282 }
   production:
-    prometheus: { url: http://prometheus.production.invalid:9090 }
-    alertmanager: { url: http://alertmanager.production.invalid:9093 }
-    kubernetes: { url: https://kubernetes.production.invalid:6443 }
+    prometheus: { url: http://127.0.0.1:8282 }
+    alertmanager: { url: http://127.0.0.1:8282 }
+    kubernetes: { url: http://127.0.0.1:8282, token: fake }
     flux: {}
 
 builds:
-  github: {}
+  github: { url: http://127.0.0.1:8282 }

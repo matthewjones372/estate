@@ -10,37 +10,82 @@ const accessible = async (page: Page) => {
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screenshots/${name}.png`, fullPage: true })
 
-test("the overview lists the environment's services with their links, and reads the sources", async ({ page }) => {
-  await page.goto("/?env=staging")
-  const services = page.getByRole("region", { name: "Services" })
-  await expect(services.getByRole("link", { name: "storefront", exact: true })).toBeVisible()
-  await expect(page.getByRole("link", { name: "Logs" }).first()).toHaveAttribute("href", /env=staging/)
-  await expect(services.getByRole("link", { name: "payments" })).toHaveCount(0)
-  await expect(page.getByRole("heading", { name: "Reading the estate" })).toBeVisible()
+const services = (page: Page) => page.getByRole("region", { name: "Services" })
+
+test("the overview says what needs someone, with each service's lane and what changed", async ({ page }) => {
+  await page.goto("/?env=production")
+  await expect(page.getByRole("heading", { name: /Two things\s*need you\./ })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole("heading", { name: "Orders are slow to place" })).toBeVisible()
+  await expect(services(page).getByRole("link", { name: "storefront", exact: true })).toBeVisible()
+  await expect(page.getByRole("link", { name: "API" })).toHaveAttribute(
+    "href",
+    "https://storefront.production.example.com/swagger-ui",
+  )
+  await expect(page.getByText("orders job orders-nightly-export succeeded")).toBeVisible()
   await shot(page, "overview")
   await accessible(page)
 })
 
-test("switching environment changes what is listed, and is remembered", async ({ page }) => {
-  await page.goto("/?env=staging")
-  await page.getByRole("button", { name: /Environment: staging/ }).click()
-  await page.getByRole("button", { name: /production/ }).click()
+test("a note added to an alert is there for everyone", async ({ page }) => {
+  await page.goto("/?env=production")
+  const card = page.getByRole("article").filter({ hasText: "Orders are slow to place" })
+  await card.getByRole("textbox", { name: /Add a note/ }).fill("Looking: the payment provider is slow")
+  await card.getByRole("button", { name: "Add note" }).click()
+  await expect(card.getByText("Looking: the payment provider is slow")).toBeVisible()
+  await page.reload()
   await expect(
-    page.getByRole("region", { name: "Services" }).getByRole("link", { name: "payments", exact: true }),
+    page
+      .getByRole("article")
+      .filter({ hasText: "Orders are slow to place" })
+      .getByText("Looking: the payment provider is slow"),
   ).toBeVisible()
-  await expect(page).toHaveURL(/env=production/)
+})
+
+test("an alert silenced with a reason leaves the cards, and comes back when unsilenced", async ({ page }) => {
+  await page.goto("/?env=production")
+  const card = page.getByRole("article").filter({ hasText: "Search has not indexed" })
+  await card.getByRole("button", { name: "Silence…" }).click()
+  await card.getByRole("button", { name: "4 hours" }).click()
+  await card.getByRole("textbox", { name: /Why/ }).fill("reindexing tonight")
+  await card.getByRole("button", { name: /Silence until/ }).click()
+  await expect(page.getByText(/silenced until .* by visitor: “reindexing tonight”/)).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Search has not indexed for 40 minutes" })).toHaveCount(0)
+  await page.getByRole("button", { name: "Unsilence" }).click()
+  await expect(page.getByRole("heading", { name: "Search has not indexed for 40 minutes" })).toBeVisible()
+})
+
+test("debug is turned on for a while, under your name, and off again", async ({ page }) => {
+  await page.goto("/services/storefront?env=production")
+  await expect(page.getByText("Off: it logs at INFO.")).toBeVisible({ timeout: 20_000 })
+  await page.getByRole("button", { name: "15 min" }).click()
+  await page.getByRole("button", { name: "Turn on debug…" }).click()
+  await page.getByRole("button", { name: "Turn on", exact: true }).click()
+  await expect(page.getByText(/On until/)).toBeVisible()
+  await expect(page.getByText(/Turned on by visitor/)).toBeVisible()
+  await shot(page, "service")
+  await accessible(page)
+  await page.getByRole("button", { name: "Turn off now" }).click()
+  await expect(page.getByText("Off: it logs at INFO.")).toBeVisible()
+})
+
+test("switching environment changes what is listed, and is remembered", async ({ page }) => {
+  await page.goto("/?env=production")
+  await page.getByRole("button", { name: /Environment: production/ }).click()
+  await page.getByRole("button", { name: /^staging/ }).click()
+  await expect(services(page).getByRole("link", { name: "payments" })).toHaveCount(0)
+  await expect(page).toHaveURL(/env=staging/)
   await page.goto("/")
-  await expect(page).toHaveURL(/env=production/)
+  await expect(page).toHaveURL(/env=staging/)
+  await expect(page.getByText(/Not set up here:/)).toBeVisible()
 })
 
 for (const [name, path, heading] of [
-  ["deploys", "/deploys", "Across environments"],
+  ["deploys", "/deploys", "One deploy is stuck."],
   ["alerts", "/alerts", "Alerts"],
-  ["service", "/services/storefront", "Debug logging"],
 ] as const) {
   test(`the ${name} page draws, and is accessible`, async ({ page }) => {
     await page.goto(`${path}?env=production`)
-    await expect(page.getByRole("heading", { name: heading })).toBeVisible()
+    await expect(page.getByRole("heading", { name: heading })).toBeVisible({ timeout: 20_000 })
     await shot(page, name)
     await accessible(page)
   })
