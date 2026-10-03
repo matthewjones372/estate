@@ -2,7 +2,7 @@
  * Sign-in with any OIDC provider: the authorization code flow with PKCE, the ID token verified against the provider's
  * keys, and the person's name and groups read from its claims.
  */
-import { Data, Effect, Schema } from "effect"
+import { Data, Effect, Redacted, Schema } from "effect"
 import { createLocalJWKSet, type JSONWebKeySet, jwtVerify } from "jose"
 import { callJson, type Remote, type RemoteError } from "../remote"
 import type { AuthSettings } from "../settings"
@@ -113,7 +113,7 @@ export const completeSignIn = (
         code,
         redirect_uri: callbackUrl(oidc),
         client_id: oidc.clientId,
-        client_secret: oidc.clientSecret,
+        client_secret: Redacted.value(oidc.clientSecret),
         code_verifier: attempt.verifier,
       }).toString(),
     }).pipe(Effect.flatMap(decodeTokens), Effect.mapError(failed("the provider sent no ID token")))

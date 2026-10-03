@@ -2,10 +2,13 @@
  * `estate.yaml`: where Estate listens, its sign-in, its notes database, and each environment's sources. `${NAME}` is
  * read from the environment, so secrets stay out of the file.
  */
-import { Context, Data, Effect, Result, Schema } from "effect"
+import { Context, Data, Effect, Redacted, Result, Schema } from "effect"
 import { checkShape, type Mistake } from "../shared/shape"
 
 const optional = Schema.optionalKey
+
+/** A secret: read as text, kept `Redacted` so it cannot reach a log line or an error, unwrapped only where it is sent. */
+const Secret = Schema.RedactedFromValue(Schema.String)
 
 const Roles = Schema.Struct({
   viewer: Schema.Array(Schema.String),
@@ -15,7 +18,7 @@ const Roles = Schema.Struct({
 const Oidc = Schema.Struct({
   issuer: Schema.String,
   clientId: Schema.String,
-  clientSecret: Schema.String,
+  clientSecret: Secret,
   publicUrl: Schema.String,
   groupsClaim: optional(Schema.String),
   nameClaim: optional(Schema.String),
@@ -23,7 +26,7 @@ const Oidc = Schema.Struct({
 })
 
 const Auth = Schema.Struct({
-  sessionSecret: Schema.String,
+  sessionSecret: Secret,
   roles: Roles,
   oidc: optional(Oidc),
   /** Without OIDC, everyone is this person in this role: for trying Estate out, never for an estate people use. */
@@ -34,7 +37,7 @@ const Url = Schema.Struct({ url: Schema.String })
 
 export const Kubernetes = Schema.Struct({
   url: optional(Schema.String),
-  token: optional(Schema.String),
+  token: optional(Secret),
   caFile: optional(Schema.String),
   inCluster: optional(Schema.Boolean),
   impersonate: optional(Schema.Boolean),
@@ -57,11 +60,9 @@ export const Settings = Schema.Struct({
   host: optional(Schema.String),
   catalog: Schema.String,
   auth: Auth,
-  notes: optional(Schema.Struct({ postgres: optional(Schema.String), keepDays: optional(Schema.Number) })),
+  notes: optional(Schema.Struct({ postgres: optional(Secret), keepDays: optional(Schema.Number) })),
   sources: Schema.Record(Schema.String, Sources),
-  builds: optional(
-    Schema.Struct({ github: Schema.Struct({ token: optional(Schema.String), url: optional(Schema.String) }) }),
-  ),
+  builds: optional(Schema.Struct({ github: Schema.Struct({ token: optional(Secret), url: optional(Schema.String) }) })),
 })
 export type Settings = typeof Settings.Type
 export type AuthSettings = typeof Auth.Type
@@ -104,7 +105,7 @@ export const readSettings = (
     if (settings.auth.oidc === undefined && settings.auth.anonymous === undefined) {
       sense.push({ at: "auth", message: "needs oidc, or anonymous for trying Estate out" })
     }
-    if (settings.auth.sessionSecret.length < 32) {
+    if (Redacted.value(settings.auth.sessionSecret).length < 32) {
       sense.push({ at: "auth.sessionSecret", message: "needs at least 32 characters" })
     }
     return sense.length === 0 ? settings : yield* new SettingsError({ mistakes: sense })

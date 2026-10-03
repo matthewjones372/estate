@@ -1,7 +1,10 @@
 /** Sealed cookies: a JSON payload with an HMAC beside it, so the server keeps no sessions and trusts what it sealed. */
-import { Effect, Option } from "effect"
+import { Effect, Option, Schema } from "effect"
 
 const encoder = new TextEncoder()
+
+const Opened = Schema.fromJsonString(Schema.Struct({ payload: Schema.Unknown, expires: Schema.Number }))
+const open = Schema.decodeUnknownOption(Opened)
 
 const base64url = (bytes: Uint8Array): string => Buffer.from(bytes).toString("base64url")
 
@@ -32,6 +35,7 @@ export const unseal = (sealed: string, secret: string, now: number): Effect.Effe
       crypto.subtle.verify("HMAC", hmac, Buffer.from(signature, "base64url"), encoder.encode(body)),
     )
     if (!valid) return Option.none()
-    const opened: { payload: unknown; expires: number } = JSON.parse(Buffer.from(body, "base64url").toString())
-    return opened.expires > now ? Option.some(opened.payload) : Option.none()
+    return Option.flatMap(open(Buffer.from(body, "base64url").toString()), (opened) =>
+      opened.expires > now ? Option.some(opened.payload) : Option.none(),
+    )
   })

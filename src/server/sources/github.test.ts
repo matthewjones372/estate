@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, SubscriptionRef } from "effect"
+import { Effect, Layer, Redacted, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
 import { catalog, estate } from "../fixture"
 import { type Call, type Reply, reply, stubRemote } from "../remote"
@@ -56,7 +56,7 @@ const read = (answer: (call: Call) => Reply, minutes = 0) =>
   Effect.runPromise(
     Effect.gen(function* () {
       const ref = yield* Estate
-      yield* Effect.forkChild(runBuilds({ token: "secret" }))
+      yield* Effect.forkChild(runBuilds({ token: Redacted.make("secret") }))
       yield* TestClock.adjust(`${minutes * 60 + 1} seconds`)
       return (yield* SubscriptionRef.get(ref)).builds
     }).pipe(
