@@ -27,3 +27,4 @@ entries, one per pull request, each with what proves it done.
 | [0020](0020-a-map-for-many.md) | a map for many: columns as tall as their nodes need, and past twelve nodes one node a category, opened in place, one that needs someone opening itself; done |
 | [0021](0021-what-an-alert-means.md) | what an alert means, and has meant: an alert's impact on users, from its rule, the catalog, or written on the page by an operator; and its history, each past firing with its silences and notes, on its card; done |
 | [0022](0022-who-to-ask.md) | who to ask: the catalog's teams with their Slack or Teams channel, Confluence or Notion pages and on-call, on service pages, job lanes and the cards of alerts about what they own; done |
+| [0023](0023-tell-the-team.md) | tell the team: an alert posted to its team's Slack channel from its card, once a firing, and its notes, silences and resolution following in the thread; proposed |
