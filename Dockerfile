@@ -1,5 +1,5 @@
 # Estate: the pages bundled as the image is built, then Bun, the production dependencies and the source.
-FROM oven/bun:1.3.11-alpine AS pages
+FROM oven/bun:1.4.2-alpine AS pages
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --ignore-scripts
@@ -7,7 +7,7 @@ COPY tsconfig.json ./
 COPY src ./src
 RUN mkdir -p dist && bun src/server/bundle.ts src/web dist/pages.json && grep -q '^{"ok":true' dist/pages.json
 
-FROM oven/bun:1.3.11-alpine
+FROM oven/bun:1.4.2-alpine
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production --ignore-scripts
