@@ -1,3 +1,4 @@
+/** @jsxImportSource solid-js */
 /** Small line icons, as SVG paths in a 14 by 14 box, for the links a service has. */
 const paths: Readonly<Record<string, string>> = {
   logs: "M2 3h10M2 6h10M2 9h7M2 12h5",
@@ -43,9 +44,9 @@ export const Icon = (props: { readonly name: string }) => (
     viewBox="0 0 14 14"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
+    stroke-width="1.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
     aria-hidden="true"
   >
     <path d={iconFor(props.name)} />

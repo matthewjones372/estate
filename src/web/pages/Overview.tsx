@@ -1,4 +1,6 @@
+/** @jsxImportSource solid-js */
 /** The overview: the headline, the vitals, the map, what needs someone, a lane per service, and what changed. */
+import { For, Show } from "solid-js"
 import type { Alert, Events } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock, counted, measured } from "../format"
@@ -119,115 +121,128 @@ export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
 const Silenced = (props: { readonly alerts: ReadonlyArray<Alert>; readonly canSilence: boolean }) => {
   const { actions } = useEstate()
   return (
-    <div className="stack" style={{ gap: 8 }}>
-      {props.alerts.map((alert) =>
-        alert.silence === undefined ? null : (
-          <div key={alert.id} className="silenced-row">
-            <Icon name="silence" />
-            <span className="mono" style={{ color: "var(--ink-soft)" }}>
-              {alert.name}
-            </span>
-            <span>
-              silenced until {clock(alert.silence.endsAt)} by {alert.silence.by}: “{alert.silence.reason}”
-            </span>
-            {props.canSilence && (
-              <button
-                type="button"
-                className="plain-button push-right"
-                onClick={() => void actions.unsilence(alert.silence?.id ?? "")}
-              >
-                Unsilence
-              </button>
+    <div class="stack" style={{ gap: "8px" }}>
+      <For each={props.alerts}>
+        {(alert) => (
+          <Show when={alert.silence}>
+            {(silence) => (
+              <div class="silenced-row">
+                <Icon name="silence" />
+                <span class="mono" style={{ color: "var(--ink-soft)" }}>
+                  {alert.name}
+                </span>
+                <span>
+                  silenced until {clock(silence().endsAt)} by {silence().by}: “{silence().reason}”
+                </span>
+                <Show when={props.canSilence}>
+                  <button
+                    type="button"
+                    class="plain-button push-right"
+                    onClick={() => void actions.unsilence(silence().id)}
+                  >
+                    Unsilence
+                  </button>
+                </Show>
+              </div>
             )}
-          </div>
-        ),
-      )}
+          </Show>
+        )}
+      </For>
     </div>
   )
 }
 
 export const Overview = () => {
   const { me, now } = useEstate()
-  const { events, environment } = useSnapshot()
-  const headline = headlineOf(events)
-  const alerts = events.alerts?.alerts ?? []
-  const firing = alerts.filter((alert) => alert.state === "firing")
-  const silenced = alerts.filter((alert) => alert.state === "silenced")
-  const canSilence = me.role === "operator" && events.alerts?.silences === true
-  const waiting = events.services === undefined || events.services.sources.some((source) => source.state === "waiting")
+  const snapshot = useSnapshot()
+  const events = () => snapshot.events
+  const headline = () => headlineOf(events())
+  const alerts = () => events().alerts?.alerts ?? []
+  const firing = () => alerts().filter((alert) => alert.state === "firing")
+  const silenced = () => alerts().filter((alert) => alert.state === "silenced")
+  const canSilence = () => me.role === "operator" && events().alerts?.silences === true
+  const waiting = () =>
+    events().services === undefined || (events().services?.sources ?? []).some((source) => source.state === "waiting")
   return (
-    <main className="main">
-      {waiting && <Reading sources={events.services?.sources} />}
-      <SourceNotices services={events.services} now={now()} />
-      <section aria-label="The estate now" className="now">
-        <div className="now-words">
-          <div className="stack">
-            <span className={`kicker ${headline.tone === "healthy" ? "" : headline.tone}`}>
-              <span className={`dot ${headline.tone} ${headline.tone === "healthy" ? "" : "hot"}`} />
-              {headline.kicker}
+    <main class="main">
+      <Show when={waiting()}>
+        <Reading sources={events().services?.sources} />
+      </Show>
+      <SourceNotices services={events().services} now={now()} />
+      <section aria-label="The estate now" class="now">
+        <div class="now-words">
+          <div class="stack">
+            <span class={`kicker ${headline().tone === "healthy" ? "" : headline().tone}`}>
+              <span class={`dot ${headline().tone} ${headline().tone === "healthy" ? "" : "hot"}`} />
+              {headline().kicker}
             </span>
-            <h1 className="headline">
-              {headline.top}
+            <h1 class="headline">
+              {headline().top}
               <br />
-              {headline.bottom}
+              {headline().bottom}
             </h1>
-            <p className="lede">{headline.lede}</p>
+            <p class="lede">{headline().lede}</p>
           </div>
-          <div className="vitals">
-            {tilesOf(events).map((tile) => (
-              <div key={tile.label} className="vital">
-                <span className="muted" style={{ fontSize: 12 }}>
-                  {tile.label}
-                </span>
-                <span className="vital-value" style={{ color: tile.alarm ? "var(--amber-text)" : undefined }}>
-                  {tile.value}
-                </span>
-                <span className="muted" style={{ fontSize: 12 }}>
-                  {tile.note}
-                </span>
-              </div>
-            ))}
+          <div class="vitals">
+            <For each={tilesOf(events())}>
+              {(tile) => (
+                <div class="vital">
+                  <span class="muted" style={{ "font-size": "12px" }}>
+                    {tile.label}
+                  </span>
+                  <span class="vital-value" style={{ color: tile.alarm ? "var(--amber-text)" : undefined }}>
+                    {tile.value}
+                  </span>
+                  <span class="muted" style={{ "font-size": "12px" }}>
+                    {tile.note}
+                  </span>
+                </div>
+              )}
+            </For>
           </div>
         </div>
-        {events.catalog !== undefined && <EstateMap catalog={events.catalog} services={events.services} />}
+        <Show when={events().catalog}>
+          {(catalog) => <EstateMap catalog={catalog()} services={events().services} />}
+        </Show>
       </section>
-      <section aria-labelledby="needs" className="stack">
-        <h2 id="needs" className="section-title">
+      <section aria-labelledby="needs" class="stack">
+        <h2 id="needs" class="section-title">
           Needs you now
         </h2>
-        {firing.length === 0 && (
-          <p className="muted" style={{ margin: 0 }}>
+        <Show when={firing().length === 0}>
+          <p class="muted" style={{ margin: 0 }}>
             Nothing. When something does, it appears here, above the services.
           </p>
-        )}
-        <div className="cards">
-          {firing.map((alert) => (
-            <AlertCard key={alert.id} alert={alert} catalog={events.catalog} canSilence={canSilence} />
-          ))}
+        </Show>
+        <div class="cards">
+          <For each={firing()}>
+            {(alert) => <AlertCard alert={alert} catalog={events().catalog} canSilence={canSilence()} />}
+          </For>
         </div>
-        <Silenced alerts={silenced} canSilence={canSilence} />
+        <Silenced alerts={silenced()} canSilence={canSilence()} />
       </section>
-      <div className="row">
-        <section aria-labelledby="services-title" className="services">
-          <div className="spread">
-            <h2 id="services-title" className="section-title">
+      <div class="row">
+        <section aria-labelledby="services-title" class="services">
+          <div class="spread">
+            <h2 id="services-title" class="section-title">
               Services
             </h2>
-            <span className="muted" style={{ fontSize: 12 }}>
+            <span class="muted" style={{ "font-size": "12px" }}>
               Last hour · pipeline: commit, build, chosen, running
             </span>
           </div>
-          {(events.catalog?.services ?? []).map((service) => (
-            <Lane
-              key={service.name}
-              service={service}
-              state={events.services?.services.find((each) => each.name === service.name)}
-              deploys={events.deploys}
-              environment={environment}
-            />
-          ))}
+          <For each={events().catalog?.services ?? []}>
+            {(service) => (
+              <Lane
+                service={service}
+                state={events().services?.services.find((each) => each.name === service.name)}
+                deploys={events().deploys}
+                environment={snapshot.environment}
+              />
+            )}
+          </For>
         </section>
-        <Feed feed={events.feed} />
+        <Feed feed={events().feed} />
       </div>
     </main>
   )

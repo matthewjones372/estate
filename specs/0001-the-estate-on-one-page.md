@@ -47,22 +47,22 @@ that an estate owner overlays with their catalog, their ingress and their secret
 
 ```yaml
 environments:
-  - name: home
-    title: Home, 3 machines
-    sources: home                      # a section of estate.conf: which Prometheus, cluster, CI
+  - name: production
+    title: Production, 3 machines
+    sources: production                    # a section of estate.conf: which Prometheus, cluster, CI
   - name: staging
     sources: staging
     values: { grafana: https://grafana.staging.example }   # what {grafana} is in this environment's links
 
 services:
   - name: orders
-    description: Accounts, money and transfers
-    owner: bank
+    description: Baskets become orders, tracked to the door
+    owner: shop
     repository: github:example/orders
     build: { workflow: build.yml }
     runbook: https://github.com/example/orders/blob/main/docs/runbook.md
-    environments: [ home, staging ]
-    kubernetes: { namespace: orders, workloads: [ { kind: StatefulSet, name: orders } ] }
+    environments: [ production, staging ]
+    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: orders } ] }
     deploy: { flux: { kustomization: apps, imagePolicy: orders } }
     load:                               # PromQL, asked of each environment's own Prometheus
       requests: sum(rate(http_server_requests_total{app="orders"}[1m]))
@@ -72,29 +72,29 @@ services:
       logs: https://grafana.{env}.example/explore?logs={service}
       traces: https://grafana.{env}.example/explore?traces={service}
       dashboard: https://grafana.{env}.example/d/orders
-      api: https://orders.{env}.example/swagger-ui   # its OpenAPI page, if it has one
-      app: https://bank.{env}.example                   # its front end, if it has one
+      api: https://orders.{env}.example/swagger-ui      # its OpenAPI page, if it has one
+      app: https://shop.{env}.example                   # its front end, if it has one
     debug: { configMap: orders-logging, key: level, levels: [ INFO, DEBUG ] }
     jobs:                               # Kubernetes Jobs and CronJobs that belong to it
-      - { kind: CronJob, name: orders-backup }
+      - { kind: CronJob, name: orders-export }
     stats:                              # how the process is doing, beside how its traffic is
       preset: jvm                       # jvm, process or container: the usual queries for that kind
       selector: 'app="orders"'       # the labels the preset's queries are narrowed by
       extra:
-        - { title: Mailbox depth, query: 'max(orders_queue_depth{app="orders"})' }
+        - { title: Orders waiting, query: 'max(orders_queue_depth{app="orders"})' }
 
 vitals:                                 # the overview's tiles, per environment
-  - title: Transfers
-    query: sum(rate(bank_transfers_total[1m]))
+  - title: Orders
+    query: sum(rate(orders_placed_total[1m]))
     unit: /s
 
 map:                                    # the estate drawn live: nodes are services or stores, edges are rates
   nodes:
-    - { id: bank, service: orders }
-    - { id: checks, service: bank-checks }
+    - { id: orders, service: orders }
+    - { id: payments, service: payments }
     - { id: kafka, title: Kafka, kind: store }
   edges:
-    - { from: bank, to: checks, label: screen, rate: sum(rate(screening_calls_total[1m])), alert: ScreeningSlow }
+    - { from: orders, to: payments, label: pay, rate: sum(rate(payments_requested_total[1m])), alert: PaymentsSlow }
 ```
 
 The catalog is checked as Estate starts: an unknown environment, a duplicate service, a map edge to a node that is not
@@ -115,7 +115,7 @@ its parts greyed with their age, and the rest carries on.
 
 **The pages**: an overview, a page per service, deploys and alerts, each for the environment chosen in the header,
 which remembers the choice. The deploys page shows every environment side by side, so a version moving from staging
-to home is one row. Notes and silences, debug, and the states are as in the Design notes below.
+to production is one row. Notes and silences, debug, and the states are as in the Design notes below.
 
 **Sign-in** with any OIDC provider (Pocket ID, Keycloak, Dex, Google): the authorization code flow with PKCE, the ID
 token checked against the provider's keys, and the session a sealed cookie, so Estate keeps no sessions. Roles come
@@ -145,13 +145,14 @@ for its stub in a test by providing a different layer.
   every 15 to 30 s, GitHub every 60 s with ETags. A source that fails is retried with backoff and
   its parts marked unknown; it never takes the snapshot down. HTTP is `effect/http` served by `@effect/platform-bun`; configuration is
   Effect's `Config`.
-- *Server-sent events* carry it to the pages: one stream per environment, `GET /events?env=home`, a `Stream` of the
+- *Server-sent events* carry it to the pages: one stream per environment, `GET /events?env=production`, a `Stream` of the
   snapshot's changes sent as named events (`catalog`, `services`, `alerts`, `deploys`, `feed`) with ids, so a
   reconnect resumes from `Last-Event-ID` or is sent the whole snapshot; a heartbeat every 15 s keeps proxies from
   closing it. Changes (notes, silences, debug) are plain `POST`s, and their effect arrives on the stream like anything
   else.
-- *The pages* (`src/web`) are React, bundled by Bun: the stream feeds one small store read with
-  `useSyncExternalStore`, each event decoded with the same schema the server encoded it with; charts are SVG drawn by
+- *The pages* (`src/web`) are Solid (spec 0006), bundled by Bun when the image is built (or as Estate starts, when
+  it runs from source): the stream feeds one store that each event is
+  reconciled into, each event decoded with the same schema the server encoded it with; charts are SVG drawn by
   hand to the design, with no chart library; the design's tokens are CSS variables.
 - *The catalog's and the events' schemas* (`src/shared`) are Effect `Schema`; `estate check catalog.yaml` runs the
   catalog's check from the command line, for an estate's own CI.
@@ -195,7 +196,7 @@ retrying and timing out, and Effect makes those failures part of each function's
 
 ## Depends on
 
-Nothing. Its first estate, orders, adopts it in its own spec 0026.
+Nothing.
 
 ## Stack
 
@@ -290,7 +291,7 @@ bunx playwright test                                       # the pages against e
 
 ## Design notes
 
-The design is a canvas: https://claude.ai/artifact/CH96MB3RQrsthLVtWKNi4p, drawn for orders's estate with its real
+The design is a canvas: https://claude.ai/artifact/CH96MB3RQrsthLVtWKNi4p, drawn for an example estate with its
 services, alerts and commits. Where this section and the canvas disagree, the canvas wins.
 
 **The look: a control room at night.** Dark and calm when all is well; amber is the only colour that asks for
@@ -311,7 +312,7 @@ down or critical, always with the word. Debug is violet, so it never reads as a 
 | Type | Instrument Sans for the UI; JetBrains Mono for numbers, versions and shas |
 
 **The environment** is chosen in the header: a switcher that shows each environment with a dot for its worst state,
-so trouble in staging is visible from home. Every page is for the chosen one, except Deploys, which shows them all.
+so trouble in staging is visible from production. Every page is for the chosen one, except Deploys, which shows them all.
 
 **Overview**: a headline written from the state ("All quiet." / "Two things need you."); the vitals; the map, live;
 the alerts that need someone as cards that draw the metric that fired against its threshold, with notes and Silence;

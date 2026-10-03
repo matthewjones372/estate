@@ -1,11 +1,7 @@
-/** A page's worth of events, and a way to render a part of the page with them, for tests. */
-
-import type { ReactNode } from "react"
-import { renderToStaticMarkup } from "react-dom/server"
+/** A page's worth of events, a store that has heard them, and actions that record what they were asked, for tests. */
 import type { Events, Me } from "../shared/events"
-import { type Actions, EstateContext } from "./context"
+import type { Actions } from "./context"
 import { createLive, type Handlers } from "./live"
-import type { Page } from "./route"
 
 export const now = Date.parse("2026-10-03T12:00:00Z")
 
@@ -261,13 +257,32 @@ export const recording = (): Recorded => {
   }
 }
 
+/** A store for production, and a way to send it an event. */
+const closed = () => undefined
+
+export const listening = () => {
+  let handlers: Handlers | undefined
+  const live = createLive(
+    (_, given) => {
+      handlers = given
+      return closed
+    },
+    "production",
+    () => now,
+  )
+  handlers?.onOpen()
+  const send = <Name extends keyof Events>(name: Name, data: Events[Name]) =>
+    handlers?.onEvent(name, JSON.stringify(data))
+  return { live, send }
+}
+
 /** A store that has heard `heard` for production. */
 export const heard = (sent: Partial<Events> = events) => {
   let handlers: Handlers | undefined
   const live = createLive(
     (_, given) => {
       handlers = given
-      return () => undefined
+      return closed
     },
     "production",
     () => now,
@@ -278,21 +293,3 @@ export const heard = (sent: Partial<Events> = events) => {
 }
 
 export const operator: Me = { name: "ada lovelace", role: "operator", environments: ["staging", "production"] }
-
-export const render = (
-  node: ReactNode,
-  options: { readonly page?: Page; readonly me?: Me; readonly sent?: Partial<Events>; readonly actions?: Actions } = {},
-) =>
-  renderToStaticMarkup(
-    <EstateContext.Provider
-      value={{
-        live: heard(options.sent),
-        me: options.me ?? operator,
-        page: options.page ?? { page: "overview" },
-        actions: options.actions ?? recording().actions,
-        now: () => now,
-      }}
-    >
-      {node}
-    </EstateContext.Provider>,
-  )

@@ -5,7 +5,7 @@
 ![Bun](https://img.shields.io/badge/Bun-1.3-14151a?logo=bun&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
 ![Effect](https://img.shields.io/badge/Effect-4-0b0d12)
-![React](https://img.shields.io/badge/React-19-20232a?logo=react&logoColor=61dafb)
+![Solid](https://img.shields.io/badge/Solid-1.9-2c4f7c?logo=solid&logoColor=white)
 ![Image](https://img.shields.io/badge/memory-~120%20MB-2a3247)
 
 **Is the estate well, and if not, where do I look?** Estate answers that on one page, for every service your team
@@ -46,7 +46,8 @@ head across five tabs. Estate does the joining:
 - **Yours, in Git.** What Estate shows is a `catalog.yaml` in your repository: the environments, the services, their
   queries and links. Adding a service to the page is a commit, reviewed like any other, and `estate check` runs in
   your CI so a broken catalog never reaches the page.
-- **Live.** The page is a stream: a change reaches every open page within seconds, with no refreshing.
+- **Live.** The page is a stream: a change reaches every open page within seconds, with no refreshing, and only what
+  changed is redrawn. The whole page is about 110 KB gzipped.
 - **Honest.** A tool that does not answer is named, with its own words and how old its last answer is. A part you
   have not set up says so. The page never claims "all quiet" before something has said so.
 - **Safe to hand out.** Sign-in with any OIDC provider (Pocket ID, Keycloak, Dex, Google); viewers see everything and
@@ -87,12 +88,13 @@ Two files, mounted at `/etc/estate`:
 
 The image is built by `.github/workflows/image.yml` on a runner at home and pushed to its registry as
 `estate:main-<run>-<sha>`. [`deploy/`](deploy) is a Kubernetes base to overlay with those two files, your ingress and your secrets. The design,
-and why it is shaped this way, is [spec 0001](specs/0001-the-estate-on-one-page.md). Its first estate is
-[orders](https://github.com/example/orders).
+and why it is shaped this way, is [spec 0001](specs/0001-the-estate-on-one-page.md).
 
 ## Working on it
 
-TypeScript on Bun, the server in [Effect](https://effect.website), the pages in React.
+TypeScript on Bun, the server in [Effect](https://effect.website), the pages in [Solid](https://www.solidjs.com),
+which redraws only the text or chart an event changed. The pages are compiled by Solid's Babel preset in a Bun plugin
+when the image is built; run from source, Estate bundles them as it starts.
 
 ```bash
 bun install

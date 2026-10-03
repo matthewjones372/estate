@@ -20,14 +20,14 @@ The catalog names stores beside services, each with the preset for its engine:
 
 ```yaml
 stores:
-  - name: bank-db-0
-    description: The journal's first database, with the read models
+  - name: orders-db
+    description: The orders database
     environments: [ home, kind ]
     engine: cnpg                          # postgres, cnpg, mysql, redis, kafka
-    selector: 'database="bank-db-0"'      # the labels its exporter's series carry
+    selector: 'database="orders-db"'      # the labels its exporter's series carry
     links: { dashboard: https://grafana.{env}.example/d/cnpg }
     extra:
-      - { title: Journal lag, query: 'max(bank_journal_lag{database="bank-db-0"})' }
+      - { title: Outbox lag, query: 'max(orders_outbox_lag{database="orders-db"})' }
 ```
 
 Each preset gives a store's stats, and its health from them:

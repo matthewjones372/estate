@@ -1,4 +1,6 @@
+/** @jsxImportSource solid-js */
 /** The states that are not the estate: signed out, signed in with no role, and the sources as they answer. */
+import { For, Show } from "solid-js"
 import type { ServicesEvent, SourceKind, SourceStatus } from "../../shared/events"
 import { clock, since } from "../format"
 
@@ -19,27 +21,27 @@ const parts: Readonly<Record<SourceKind, string>> = {
 }
 
 export const SignIn = (props: { readonly returnTo: string }) => (
-  <main className="state-page">
+  <main class="state-page">
     <h1>Sign in to see the estate.</h1>
-    <p className="lede">Estate shows versions, alerts and logs, so it asks who you are first.</p>
-    <a className="primary-button" href={`/auth/login?returnTo=${encodeURIComponent(props.returnTo)}`}>
+    <p class="lede">Estate shows versions, alerts and logs, so it asks who you are first.</p>
+    <a class="primary-button" href={`/auth/login?returnTo=${encodeURIComponent(props.returnTo)}`}>
       Sign in
     </a>
   </main>
 )
 
 export const NoAccess = (props: { readonly name: string; readonly groups: ReadonlyArray<string> }) => (
-  <main className="state-page">
+  <main class="state-page">
     <h1>
       You are signed in as {props.name},<br />
       but not in a group that may see the estate.
     </h1>
-    <p className="lede">
+    <p class="lede">
       It is open to {props.groups.length === 0 ? "nobody yet" : props.groups.join(", ")}. Ask an admin to add you to
       one; it takes effect when you next sign in.
     </p>
     <form method="post" action="/auth/logout">
-      <button type="submit" className="primary-button">
+      <button type="submit" class="primary-button">
         Sign in as someone else
       </button>
     </form>
@@ -53,8 +55,8 @@ const Tick = (props: { readonly done: boolean }) => (
     viewBox="0 0 12 12"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
+    stroke-width="1.6"
+    stroke-linecap="round"
     aria-hidden="true"
   >
     <path d={props.done ? "M2 6.2 4.6 8.6 10 3" : "M6 1.5a4.5 4.5 0 1 0 4.5 4.5"} />
@@ -70,27 +72,32 @@ const stateWords: Readonly<Record<SourceStatus["state"], string>> = {
 
 /** The first load: each source ticked off as it answers, so the page is never blank. */
 export const Reading = (props: { readonly sources: ReadonlyArray<SourceStatus> | undefined }) => (
-  <section aria-labelledby="loading" className="panel reading">
-    <h2 id="loading" className="section-title">
+  <section aria-labelledby="loading" class="panel reading">
+    <h2 id="loading" class="section-title">
       Reading the estate
     </h2>
-    {props.sources === undefined ? (
-      <p className="muted" style={{ margin: 0 }}>
-        Connecting to Estate…
-      </p>
-    ) : (
-      <ul className="source-list">
-        {props.sources
-          .filter((source) => source.state !== "off")
-          .map((source) => (
-            <li key={source.kind} style={{ color: source.state === "ok" ? "var(--ink)" : "var(--ink-2)" }}>
-              <Tick done={source.state === "ok"} />
-              {sourceNames[source.kind]} <span className="muted">{stateWords[source.state]}</span>
-            </li>
-          ))}
-      </ul>
-    )}
-    <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+    <Show
+      when={props.sources}
+      fallback={
+        <p class="muted" style={{ margin: 0 }}>
+          Connecting to Estate…
+        </p>
+      }
+    >
+      {(sources) => (
+        <ul class="source-list">
+          <For each={sources().filter((source) => source.state !== "off")}>
+            {(source) => (
+              <li style={{ color: source.state === "ok" ? "var(--ink)" : "var(--ink-2)" }}>
+                <Tick done={source.state === "ok"} />
+                {sourceNames[source.kind]} <span class="muted">{stateWords[source.state]}</span>
+              </li>
+            )}
+          </For>
+        </ul>
+      )}
+    </Show>
+    <p class="muted" style={{ margin: 0, "font-size": "13px" }}>
       Each part appears as its source answers. Never a blank page.
     </p>
   </section>
@@ -98,29 +105,35 @@ export const Reading = (props: { readonly sources: ReadonlyArray<SourceStatus> |
 
 /** A line for each source that did not answer, and one for those not set up. */
 export const SourceNotices = (props: { readonly services: ServicesEvent | undefined; readonly now: number }) => {
-  const sources = props.services?.sources ?? []
-  const failing = sources.filter((source) => source.state === "failing")
-  const off = sources.filter((source) => source.state === "off")
+  const sources = () => props.services?.sources ?? []
+  const failing = () => sources().filter((source) => source.state === "failing")
+  const off = () => sources().filter((source) => source.state === "off")
   return (
     <>
-      {failing.map((source) => (
-        <div key={source.kind} role="status" className="notice">
-          <strong style={{ color: "var(--ink)" }}>{sourceNames[source.kind]} did not answer.</strong>
-          <span>
-            {parts[source.kind]}{" "}
-            {source.answeredAt === undefined
-              ? "are not known yet"
-              : `are as of ${clock(source.answeredAt)}, ${since(source.answeredAt, props.now)} ago`}
-            , and greyed until it answers.
-            {source.message === undefined ? "" : ` It said: ${source.message}`}
-          </span>
+      <For each={failing()}>
+        {(source) => (
+          <div role="status" class="notice">
+            <strong style={{ color: "var(--ink)" }}>{sourceNames[source.kind]} did not answer.</strong>
+            <span>
+              {parts[source.kind]}{" "}
+              {source.answeredAt === undefined
+                ? "are not known yet"
+                : `are as of ${clock(source.answeredAt)}, ${since(source.answeredAt, props.now)} ago`}
+              , and greyed until it answers.
+              {source.message === undefined ? "" : ` It said: ${source.message}`}
+            </span>
+          </div>
+        )}
+      </For>
+      <Show when={off().length > 0}>
+        <div class="notice">
+          Not set up here:{" "}
+          {off()
+            .map((source) => `${sourceNames[source.kind]} (${parts[source.kind]})`)
+            .join(", ")}
+          .
         </div>
-      ))}
-      {off.length > 0 && (
-        <div className="notice">
-          Not set up here: {off.map((source) => `${sourceNames[source.kind]} (${parts[source.kind]})`).join(", ")}.
-        </div>
-      )}
+      </Show>
     </>
   )
 }
