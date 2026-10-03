@@ -51,7 +51,7 @@ Docker where the suite runs.
       Done when: a rule firing in a real Prometheus is silenced and unsilenced by Estate in a real Alertmanager.
 - [x] **`real-grafana`** — Grafana's data source proxy, its alerting and its silences.
       Done when: a Grafana-managed rule fires and Estate charts it against its threshold, through a service account.
-- [ ] **`real-logs`** — Loki and Elasticsearch.
+- [x] **`real-logs`** — Loki and Elasticsearch.
       Done when: a line pushed to each is read back, masked, and an error grouped.
 - [ ] **`real-notes`** — Postgres and DynamoDB Local.
       Done when: a note survives a restart of Estate's notes against each.
