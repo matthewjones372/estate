@@ -5,7 +5,7 @@ import { timeCall } from "./observed"
 
 export interface Call {
   readonly url: string
-  readonly method?: "GET" | "POST" | "PATCH" | "DELETE"
+  readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
   readonly headers?: Readonly<Record<string, string>>
   readonly body?: string
   /** A CA to trust beyond the system's, as for a cluster's API server. */

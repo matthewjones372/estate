@@ -98,8 +98,8 @@ Two alternatives were considered:
 
 ## Depends on
 
-Nothing. ECS and CloudWatch need AWS's request signing (SigV4), done here with WebCrypto rather than the AWS SDK, so
-the image stays small.
+Nothing. ECS and CloudWatch need AWS's request signing (SigV4), done here with the runtime's own SHA-256 and HMAC
+rather than the AWS SDK, so the image stays small.
 
 ## Stack
 
@@ -120,7 +120,8 @@ the image stays small.
       Done when: an Application out of sync shows its rail stalled with Argo's message.
 - [x] **`gitlab`** — GitLab CI pipelines on a ref, with ETags.
       Done when: a running pipeline shows the build step in progress, and a failed one names its job.
-- [ ] **`aws-signing`** — SigV4 for AWS's JSON APIs, from the task role, instance role or environment.
+- [x] **`aws-signing`** — SigV4 for AWS's JSON APIs, from the environment, the container's role (ECS task roles,
+      EKS Pod Identity) or the instance's (IMDSv2).
       Done when: signed against AWS's published test suite.
 - [ ] **`dynamodb-notes`** — notes kept in a DynamoDB table (`notes: { dynamodb: { table, region } }`), beside
       Postgres and memory: the environment and alert as the key, the time as the sort key, made on demand if the role
