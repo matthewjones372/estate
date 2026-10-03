@@ -1,5 +1,5 @@
 /** A service's stats: the usual queries for its kind of process, narrowed to it, and any of its own. */
-import type { Service } from "./catalog"
+import { kubernetesOf, type Service } from "./catalog"
 
 export interface Stat {
   readonly title: string
@@ -38,7 +38,7 @@ const presets: Readonly<Record<Preset, (selector: string) => ReadonlyArray<Stat>
 /** The labels a preset is narrowed by when the catalog names none. */
 const defaultSelector = (service: Service, preset: Preset): string =>
   preset === "container"
-    ? `namespace="${service.kubernetes?.namespace ?? service.name}",pod=~"${service.name}-.*"`
+    ? `namespace="${kubernetesOf(service)?.namespace ?? service.name}",pod=~"${service.name}-.*"`
     : `app="${service.name}"`
 
 export const statsOf = (service: Service): ReadonlyArray<Stat> => {

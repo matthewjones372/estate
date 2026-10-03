@@ -17,15 +17,22 @@ const Workload = Schema.Struct({
   name: Schema.String,
 })
 
+const Kubernetes = Schema.Struct({ namespace: Schema.String, workloads: Schema.Array(Workload) })
+const Workflow = Schema.Struct({ workflow: Schema.String, branch: optional(Schema.String) })
+
 export const Service = Schema.Struct({
   name: Schema.String,
   description: optional(Schema.String),
   owner: optional(Schema.String),
   repository: optional(Schema.String),
-  build: optional(Schema.Struct({ workflow: Schema.String, branch: optional(Schema.String) })),
+  /** Its builds: `{ github: { workflow, branch } }`, or the workflow alone, meaning GitHub Actions. */
+  build: optional(Schema.Union([Workflow, Schema.Struct({ github: Workflow })])),
   runbook: optional(Schema.String),
   environments: Schema.Array(Schema.String),
-  kubernetes: optional(Schema.Struct({ namespace: Schema.String, workloads: Schema.Array(Workload) })),
+  /** What it runs on, by that runtime's own names: `{ kubernetes: { namespace, workloads } }`. */
+  runtime: optional(Schema.Struct({ kubernetes: optional(Kubernetes) })),
+  /** The same as `runtime.kubernetes`, as catalogs written before `runtime` name it. */
+  kubernetes: optional(Kubernetes),
   deploy: optional(
     Schema.Struct({
       flux: Schema.Struct({
@@ -70,6 +77,14 @@ export const Service = Schema.Struct({
   ),
 })
 export type Service = typeof Service.Type
+
+/** Where a service runs on Kubernetes, however the catalog names it. */
+export const kubernetesOf = (service: Service): typeof Kubernetes.Type | undefined =>
+  service.runtime?.kubernetes ?? service.kubernetes
+
+/** The GitHub Actions workflow that builds a service, however the catalog names it. */
+export const workflowOf = (service: Service): typeof Workflow.Type | undefined =>
+  service.build === undefined ? undefined : "github" in service.build ? service.build.github : service.build
 
 const Vital = Schema.Struct({ title: Schema.String, query: Schema.String, unit: optional(Schema.String) })
 

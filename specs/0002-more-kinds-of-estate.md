@@ -112,7 +112,7 @@ the image stays small.
       `_search`, sorted by `@timestamp`, filtered by the service's fields and the time; an API key or a user.
       Done when: the logs panel shows a service's live lines and grouped errors from Elasticsearch, as it does from
       Loki.
-- [ ] **`ports`** — the runtime, deploys and builds parts as ports, with today's kinds behind them, and the catalog
+- [x] **`ports`** — the runtime, deploys and builds parts as ports, with today's kinds behind them, and the catalog
       keys above beside today's.
       Done when: every existing test passes through the ports, and a catalog using the new keys for today's kinds
       is the same page.

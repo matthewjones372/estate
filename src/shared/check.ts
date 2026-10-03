@@ -3,7 +3,7 @@
  * is, so a broken catalog is fixed in one pass.
  */
 import { Result } from "effect"
-import { Catalog } from "./catalog"
+import { Catalog, kubernetesOf } from "./catalog"
 import { checkShape, type Mistake } from "./shape"
 import { statsOf } from "./stats"
 import { rulesOf } from "./stores"
@@ -90,7 +90,10 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
       query(`${at}.stats (${stat.title})`, stat.query)
     })
     links(at, service.environments, service.links, servicePlaceholders)
-    if ((service.jobs ?? []).length > 0 && service.kubernetes === undefined) {
+    if (service.kubernetes !== undefined && service.runtime?.kubernetes !== undefined) {
+      mistake(at, "names Kubernetes twice, as kubernetes and as runtime.kubernetes; keep one")
+    }
+    if ((service.jobs ?? []).length > 0 && kubernetesOf(service) === undefined) {
       mistake(`${at}.jobs`, "needs kubernetes.namespace, where its jobs run")
     }
     if (service.debug !== undefined && service.debug.levels.length < 2) {

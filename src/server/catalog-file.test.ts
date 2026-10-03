@@ -29,11 +29,13 @@ describe("the catalog file", () => {
         a: { prometheus: { url: "p" } },
         b: { alertmanager: { url: "a" }, kubernetes: {}, flux: {} },
         c: { flux: {} },
+        d: { grafana: { url: "g" } },
       },
     }
     expect([...configuredKinds(configured, "a")]).toEqual(["metrics", "alerts"])
     expect([...configuredKinds(configured, "b")]).toEqual(["alerts", "cluster", "deploys"])
     expect([...configuredKinds(configured, "c")]).toEqual([])
+    expect([...configuredKinds(configured, "d")]).toEqual(["alerts"])
   })
 
   test("a new catalog keeps what is known of environments it keeps, and forgets the rest", () => {

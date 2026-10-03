@@ -4,7 +4,7 @@
  * collector's; a service shipped otherwise names its own.
  */
 import { Effect, Redacted, Schema } from "effect"
-import type { Service } from "../../shared/catalog"
+import { kubernetesOf, type Service } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import { Remote } from "../remote"
 import type { Sources } from "../settings"
@@ -37,10 +37,12 @@ const headersOf = (elastic: Elastic): Readonly<Record<string, string>> => {
   return { authorization: `Basic ${Buffer.from(`${elastic.username}:${password}`).toString("base64")}` }
 }
 
+const namespaceOf = (service: Service) => kubernetesOf(service)?.namespace
+
 /** The fields a service's lines carry: the catalog's, or its namespace and its name as the app label. */
 export const matchOf = (service: Service): Readonly<Record<string, string>> =>
   service.logs?.elastic?.match ?? {
-    ...(service.kubernetes?.namespace === undefined ? {} : { "kubernetes.namespace": service.kubernetes.namespace }),
+    ...compact({ "kubernetes.namespace": namespaceOf(service) }),
     "kubernetes.labels.app": service.name,
   }
 

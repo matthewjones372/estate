@@ -1,6 +1,6 @@
 /** What the cluster says of each service: its workloads' pods, and its debug level from its logging ConfigMap. */
 import { Clock, Effect, Schema } from "effect"
-import type { Service } from "../../shared/catalog"
+import { kubernetesOf, type Service } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Debug, Pod } from "../../shared/events"
 import type { Remote } from "../remote"
@@ -42,7 +42,7 @@ const ConfigMap = Schema.Struct({
 const plural = { Deployment: "deployments", StatefulSet: "statefulsets", DaemonSet: "daemonsets" } as const
 
 export const podsOf = (cluster: Cluster, service: Service): Effect.Effect<ReadonlyArray<Pod>, Failure, Remote> => {
-  const kubernetes = service.kubernetes
+  const kubernetes = kubernetesOf(service)
   if (kubernetes === undefined) return Effect.succeed([])
   const namespace = encodeURIComponent(kubernetes.namespace)
   return Effect.forEach(kubernetes.workloads, (workload) =>
@@ -94,7 +94,8 @@ export const debugOf = (
 }
 
 const debugFor = (cluster: Cluster, service: Service): Effect.Effect<Debug | undefined, Failure, Remote> => {
-  const { debug, kubernetes } = service
+  const { debug } = service
+  const kubernetes = kubernetesOf(service)
   if (debug === undefined || kubernetes === undefined) return Effect.succeed(undefined)
   return kube(
     cluster,

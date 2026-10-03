@@ -163,3 +163,34 @@ describe("a link's values", () => {
     ])
   })
 })
+
+describe("a service's runtime and builds", () => {
+  test("may be named by kind, as runtime.kubernetes and build.github, but Kubernetes not both ways", () => {
+    const kubernetes = { namespace: "shop", workloads: [{ kind: "Deployment", name: "orders" }] }
+    const environments = [{ name: "a", sources: "a" }]
+    expect(
+      mistakes({
+        environments,
+        services: [
+          {
+            name: "orders",
+            environments: ["a"],
+            runtime: { kubernetes },
+            build: { github: { workflow: "build.yml" } },
+          },
+        ],
+      }),
+    ).toEqual([])
+    expect(
+      mistakes({
+        environments,
+        services: [{ name: "orders", environments: ["a"], kubernetes, runtime: { kubernetes } }],
+      }),
+    ).toEqual([
+      {
+        at: "services[0] (orders)",
+        message: "names Kubernetes twice, as kubernetes and as runtime.kubernetes; keep one",
+      },
+    ])
+  })
+})

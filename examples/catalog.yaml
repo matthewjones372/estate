@@ -33,9 +33,9 @@ services:
     description: Baskets become orders, and orders are tracked to the door
     owner: orders
     repository: github:example/orders
-    build: { workflow: build.yml }
+    build: { github: { workflow: build.yml } }
     environments: [ staging, production ]
-    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: orders } ] }
+    runtime: { kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: orders } ] } }
     jobs: [ { kind: CronJob, name: orders-nightly-export } ]
     deploy: { flux: { kustomization: shop, imagePolicy: orders } }
     load:

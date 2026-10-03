@@ -94,6 +94,17 @@ describe("alerts", () => {
 })
 
 describe("the cluster", () => {
+  test("reads a service the same whether the catalog names it by kubernetes or runtime.kubernetes", () => {
+    const { kubernetes, ...rest } = shop
+    return Promise.all([
+      run(readCluster(cluster, [shop])),
+      run(readCluster(cluster, [{ ...rest, runtime: { kubernetes } }])),
+    ]).then(([before, after]) => {
+      expect(Result.isSuccess(after)).toBe(true)
+      expect(after).toEqual(before)
+    })
+  })
+
   test("gives each workload's pods by its selector, and the debug level from its ConfigMap", () =>
     run(readCluster(cluster, [shop, { name: "search", environments: [] }])).then((read) => {
       const workloads = Result.isSuccess(read) ? read.success : { pods: {}, debug: {} }

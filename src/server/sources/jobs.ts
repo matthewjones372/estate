@@ -3,7 +3,7 @@
  * schedule says should have started and did not.
  */
 import { Cron, Duration, Effect, Result, Schema } from "effect"
-import type { Service } from "../../shared/catalog"
+import { kubernetesOf, type Service } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Job } from "../../shared/events"
 import type { Remote } from "../remote"
@@ -108,7 +108,7 @@ export const jobsOf = (
   service: Service,
   now: number,
 ): Effect.Effect<ReadonlyArray<Job>, Failure, Remote> => {
-  const namespace = service.kubernetes?.namespace
+  const namespace = kubernetesOf(service)?.namespace
   if (namespace === undefined) return Effect.succeed([])
   // The namespace's Jobs are listed once per read, however many of its CronJobs the catalog names.
   const path = `/apis/batch/v1/namespaces/${encodeURIComponent(namespace)}/jobs`

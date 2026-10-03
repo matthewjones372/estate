@@ -52,7 +52,7 @@ const github =
       : reply(runs, 200, { etag: '"one"' })
   }
 
-const read = (answer: (call: Call) => Reply, minutes = 0) =>
+const read = (answer: (call: Call) => Reply, minutes = 0, catalogRead = withBuilds) =>
   Effect.runPromise(
     Effect.gen(function* () {
       const ref = yield* Estate
@@ -61,12 +61,26 @@ const read = (answer: (call: Call) => Reply, minutes = 0) =>
       return (yield* SubscriptionRef.get(ref)).builds
     }).pipe(
       Effect.provide(
-        Layer.mergeAll(estateLayer(estate({ catalog: withBuilds })), TestClock.layer(), stubRemote(answer)),
+        Layer.mergeAll(estateLayer(estate({ catalog: catalogRead })), TestClock.layer(), stubRemote(answer)),
       ),
     ),
   )
 
 describe("builds from GitHub", () => {
+  test("are read the same when the catalog names the workflow as build.github", () => {
+    const calls: Call[] = []
+    const byKind = {
+      ...withBuilds,
+      services: withBuilds.services.map((service) =>
+        service.name === "orders" ? { ...service, build: { github: { workflow: "build.yml" } } } : service,
+      ),
+    }
+    return read(github(calls), 0, byKind).then((builds) => {
+      expect(builds.value?.["orders"]?.[0]?.title).toBe("New basket")
+      expect(calls[0]?.url).toContain("/repos/example/orders/actions/workflows/build.yml/runs?branch=main")
+    })
+  })
+
   test("are each service's workflow runs on its branch, newest first", () => {
     const calls: Call[] = []
     return read(github(calls)).then((builds) => {

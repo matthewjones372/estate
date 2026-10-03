@@ -3,7 +3,7 @@
  * cluster's API, masked as the catalog says before they go anywhere.
  */
 import { Effect, type FileSystem, Schema } from "effect"
-import type { Service } from "../../shared/catalog"
+import { kubernetesOf, type Service } from "../../shared/catalog"
 import { Remote } from "../remote"
 import type { Sources } from "../settings"
 import { iso } from "../time"
@@ -116,7 +116,7 @@ export interface ServiceLogs {
 export const logsFor = (section: Sources, service: Service): ServiceLogs | undefined => {
   const mask = masking(service.logs?.mask)
   const isError = errorTest(service.logs?.errors)
-  const namespace = service.kubernetes?.namespace
+  const namespace = kubernetesOf(service)?.namespace
   const { loki, elasticsearch, kubernetes } = section
   if (loki !== undefined) {
     const selector =

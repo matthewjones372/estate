@@ -1,18 +1,19 @@
 /** The `catalog` event: the chosen environment's services with their links filled in, the vitals and the map. */
-import type { Catalog, Environment, Service } from "../../shared/catalog"
+import { type Catalog, type Environment, kubernetesOf, type Service } from "../../shared/catalog"
+import { compact } from "../../shared/compact"
 import type { CatalogEvent } from "../../shared/events"
 import { storesIn } from "./stores"
 
 interface Named {
   readonly name: string
-  readonly kubernetes?: { readonly namespace?: string }
+  readonly namespace?: string
 }
 
 const fillLink = (template: string, environment: Environment, named: Named): string =>
   template.replace(/\{(\w+)\}/g, (whole, name: string) => {
     if (name === "env") return environment.name
     if (name === "service" || name === "store") return named.name
-    if (name === "namespace") return named.kubernetes?.namespace ?? named.name
+    if (name === "namespace") return named.namespace ?? named.name
     return environment.values?.[name] ?? whole
   })
 
@@ -47,7 +48,12 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
     ...(service.owner === undefined ? {} : { owner: service.owner }),
     ...(service.runbook === undefined ? {} : { runbook: service.runbook }),
     ...(service.repository === undefined ? {} : { repository: service.repository }),
-    links: linksOf(catalog, environment, service, service.links),
+    links: linksOf(
+      catalog,
+      environment,
+      { name: service.name, ...compact({ namespace: kubernetesOf(service)?.namespace }) },
+      service.links,
+    ),
     ...(service.debug === undefined ? {} : { debug: { levels: service.debug.levels } }),
   })),
   vitals: (catalog.vitals ?? []).map((vital) => ({

@@ -4,7 +4,7 @@
  * loses nothing.
  */
 import { Duration, Effect, type FileSystem, SubscriptionRef } from "effect"
-import type { Service } from "../../shared/catalog"
+import { kubernetesOf, type Service } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Debug } from "../../shared/events"
 import { Remote } from "../remote"
@@ -35,7 +35,8 @@ const patch = (
   acting?: Acting,
 ) =>
   Effect.gen(function* () {
-    const { debug, kubernetes } = service
+    const { debug } = service
+    const kubernetes = kubernetesOf(service)
     if (debug === undefined || kubernetes === undefined)
       return yield* new SourceFailure({ message: `the catalog names no log level for ${service.name}` })
     const remote = yield* Remote

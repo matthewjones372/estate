@@ -13,6 +13,7 @@ import { runBuilds } from "./github"
 import { grafanaRules } from "./grafana"
 import { clusterOf } from "./kubernetes"
 import { readMetrics } from "./metrics"
+import { alertsOf, buildsOf, deploysOf, metricsOf, runtimeOf } from "./ports"
 import { type Failure, runSource } from "./run"
 
 /** The services in an environment as the catalog says now, so a reloaded catalog is read from the next time. */
@@ -31,11 +32,11 @@ const readersFor = (
 ): Effect.Effect<never, never, Estate | Remote | FileSystem.FileSystem> => {
   const readers: Array<Effect.Effect<never, never, Estate | Remote | FileSystem.FileSystem>> = []
   const section = settings.sources[environment.sources] ?? {}
-  if (section.alertmanager !== undefined || section.grafana !== undefined || section.prometheus !== undefined) {
+  if (alertsOf(section).length > 0) {
     readers.push(runSource(environment.name, "alerts", "20 seconds", readAlerts(section), withResolved))
   }
   const { prometheus } = section
-  if (prometheus !== undefined) {
+  if (metricsOf(section) === "prometheus" && prometheus !== undefined) {
     const url = prometheus.url.replace(/\/$/, "")
     const read = Effect.gen(function* () {
       const estate = yield* SubscriptionRef.get(yield* Estate)
@@ -49,7 +50,7 @@ const readersFor = (
     readers.push(runSource(environment.name, "metrics", "30 seconds", read))
   }
   const { kubernetes } = section
-  if (kubernetes !== undefined) {
+  if (runtimeOf(section) === "kubernetes" && kubernetes !== undefined) {
     // The cluster's address and credentials are read again at most once a minute, not for every read.
     const cached = Effect.cachedWithTTL(clusterOf(kubernetes), "1 minute")
     readers.push(
@@ -65,9 +66,9 @@ const readersFor = (
           })
         const reading = [
           runSource(environment.name, "cluster", "15 seconds", withCluster(readCluster)),
-          ...(section.flux === undefined
-            ? []
-            : [runSource(environment.name, "deploys", "30 seconds", withCluster(readDeploys))]),
+          ...(deploysOf(section) === "flux"
+            ? [runSource(environment.name, "deploys", "30 seconds", withCluster(readDeploys))]
+            : []),
           revertExpired(environment.name, cluster),
         ]
         return Effect.all(reading, { concurrency: "unbounded" }).pipe(Effect.andThen(Effect.never))
@@ -100,7 +101,8 @@ export const startSources = (
           yield* FiberMap.run(fibers, key, readersFor(settings, environment), { onlyIfMissing: true })
       })
     yield* follow((yield* SubscriptionRef.get(ref)).catalog.environments)
-    if (settings.builds !== undefined) yield* Effect.forkScoped(runBuilds(settings.builds.github))
+    if (buildsOf(settings) === "github" && settings.builds !== undefined)
+      yield* Effect.forkScoped(runBuilds(settings.builds.github))
     return yield* SubscriptionRef.changes(ref).pipe(
       Stream.map((estate) => estate.catalog.environments),
       Stream.changes,

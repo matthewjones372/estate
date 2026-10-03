@@ -3,7 +3,7 @@
  * answer, so a quiet repository costs a 304 and nothing of the rate limit.
  */
 import { type Duration, Effect, Redacted, Schema, SubscriptionRef } from "effect"
-import type { Service } from "../../shared/catalog"
+import { type Service, workflowOf } from "../../shared/catalog"
 import type { Build } from "../../shared/events"
 import { Remote } from "../remote"
 import { forEver } from "../schedule"
@@ -50,9 +50,9 @@ const buildsOf = (
   remembered: Map<string, Remembered>,
 ): Effect.Effect<ReadonlyArray<Build>, Failure, Remote> => {
   const repository = service.repository?.replace(/^github:/, "")
-  const workflow = service.build?.workflow
+  const workflow = workflowOf(service)?.workflow
   if (repository === undefined || workflow === undefined) return Effect.succeed([])
-  const branch = encodeURIComponent(service.build?.branch ?? "main")
+  const branch = encodeURIComponent(workflowOf(service)?.branch ?? "main")
   const url = `${(github.url ?? "https://api.github.com").replace(/\/$/, "")}/repos/${repository}/actions/workflows/${encodeURIComponent(workflow)}/runs?branch=${branch}&per_page=${shown}`
   const last = remembered.get(url)
   const headers = {

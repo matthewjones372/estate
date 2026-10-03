@@ -7,6 +7,7 @@ import type { Mistake } from "../shared/shape"
 import { readText } from "./platform"
 import { forEver } from "./schedule"
 import type { Settings } from "./settings"
+import { alertsOf, deploysOf, metricsOf, runtimeOf } from "./sources/ports"
 import { type Estate, type EstateState, emptyEnvironment, updateEstate } from "./state"
 
 export const CatalogError = Data.TaggedError("CatalogError")<{
@@ -30,13 +31,13 @@ export const readCatalogText = (path: string): Effect.Effect<string, CatalogErro
 
 /** The kinds of source an environment's section of the settings configures. */
 export const configuredKinds = (settings: Settings, sources: string): ReadonlySet<SourceKind> => {
-  const section = settings.sources[sources]
-  const kinds = new Set<SourceKind>()
-  if (section?.prometheus !== undefined) kinds.add("metrics").add("alerts")
-  if (section?.alertmanager !== undefined) kinds.add("alerts")
-  if (section?.kubernetes !== undefined) kinds.add("cluster")
-  if (section?.kubernetes !== undefined && section.flux !== undefined) kinds.add("deploys")
-  return kinds
+  const section = settings.sources[sources] ?? {}
+  return new Set<SourceKind>([
+    ...(metricsOf(section) === undefined ? [] : ["metrics" as const]),
+    ...(alertsOf(section).length === 0 ? [] : ["alerts" as const]),
+    ...(runtimeOf(section) === undefined ? [] : ["cluster" as const]),
+    ...(deploysOf(section) === undefined ? [] : ["deploys" as const]),
+  ])
 }
 
 /** Mistakes between the catalog and the settings: an environment whose sources are not configured. */
