@@ -46,7 +46,7 @@ agents:
       p99: histogram_quantile(0.99, sum by (le) (rate(gen_ai_client_operation_duration_seconds_bucket{gen_ai_agent_name="support-triage"}[5m])))
       tokens: sum(rate(gen_ai_client_token_usage_sum{gen_ai_agent_name="support-triage"}[5m])) * 3600
       model: group by (gen_ai_response_model) (gen_ai_client_token_usage_count{gen_ai_agent_name="support-triage"})
-    budget: { tokens: 20M, per: day }  # or { cost: 150, currency: USD, per: day } with a `cost` query
+    budget: { tokens: 20M, per: day }  # a budget in money, and what an agent costs, are spec 0019's
     runs: { langfuse: { project: support, name: support-triage } }
 ```
 
@@ -85,7 +85,7 @@ the runs, Langfuse first.
 
 ## Depends on
 
-The team's agents emitting GenAI metrics, or any metrics Estate can query, and a tracing tool for the runs. Until a
+Spec 0019 for spend in money: this spec's budget is in tokens. The team's agents emitting GenAI metrics, or any metrics Estate can query, and a tracing tool for the runs. Until a
 `runs:` tool is named, the agent's page shows its usage, alerts and logs, without runs.
 
 ## Stack
@@ -119,3 +119,4 @@ bun run perf
 - **Evaluation scores?** A score from the team's evaluation tool on the lane. Recommended: leave it out until a team
   names the tool.
 - **Budget by day or month?** Recommended: `per: day | month`, the lane showing today's or the month's share.
+  Spec 0019 uses the same for budgets in money.
