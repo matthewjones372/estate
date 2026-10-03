@@ -4,8 +4,9 @@
  */
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun"
 import { SQL } from "bun"
-import { Config, Console, Effect, Layer, Redacted, Result } from "effect"
-import { HttpRouter } from "effect/http"
+import { Config, Console, Effect, Layer, Logger, Redacted, Result } from "effect"
+import { FetchHttpClient, HttpRouter } from "effect/http"
+import { Otlp, OtlpSerialization, PrometheusMetrics } from "effect/observability"
 import type { Mistake } from "../shared/shape"
 import { application, background, prepare, services } from "./app"
 import { parseCatalog, readCatalogText } from "./catalog-file"
@@ -50,14 +51,23 @@ const serve = Effect.gen(function* () {
   const database = started.settings.notes?.postgres
   const notes = database === undefined ? memoryNotes : postgresNotes(sqlOf(Redacted.value(database)))
   const provided = services(started, builtWeb, liveRemote, notes)
+  const hostname = started.settings.host ?? "0.0.0.0"
   const server = HttpRouter.serve(application).pipe(
-    Layer.provide(
-      BunHttpServer.layer({ port: started.settings.port ?? 8080, hostname: started.settings.host ?? "0.0.0.0" }),
-    ),
+    Layer.provide(BunHttpServer.layer({ port: started.settings.port ?? 8080, hostname })),
   )
-  return yield* Effect.all([Layer.launch(server), background(started)], { concurrency: "unbounded" }).pipe(
-    Effect.provide(provided),
+  const metrics = HttpRouter.serve(PrometheusMetrics.layerHttp()).pipe(
+    Layer.provide(BunHttpServer.layer({ port: started.settings.metrics?.port ?? 9464, hostname })),
   )
+  const otlp = started.settings.telemetry?.otlp
+  const telemetry =
+    otlp === undefined
+      ? Layer.empty
+      : Otlp.layer({ baseUrl: otlp, resource: { serviceName: "estate" } }).pipe(
+          Layer.provide([FetchHttpClient.layer, OtlpSerialization.layerJson]),
+        )
+  return yield* Effect.all([Layer.launch(server), Layer.launch(metrics), background(started)], {
+    concurrency: "unbounded",
+  }).pipe(Effect.provide(provided), Effect.provide(telemetry))
 }).pipe(
   Effect.catchTags({
     StartError: (error) => listMistakes(error.file, error.mistakes),
@@ -66,5 +76,16 @@ const serve = Effect.gen(function* () {
   Effect.provide(platform),
 )
 
+/** Log lines as JSON, for a log store to read, unless ESTATE_LOG_FORMAT=pretty asks for ones a person reads. */
+const logs = Layer.unwrap(
+  Effect.map(
+    Config.Literals(["json", "pretty"], "ESTATE_LOG_FORMAT").pipe(
+      Config.withDefault("json"),
+      Effect.orElseSucceed(() => "json" as const),
+    ),
+    (format) => Logger.layer([format === "json" ? Logger.consoleJson : Logger.consolePretty()]),
+  ),
+)
+
 const [command, file] = process.argv.slice(2)
-BunRuntime.runMain(command === "check" && file !== undefined ? check(file) : serve)
+BunRuntime.runMain(command === "check" && file !== undefined ? check(file) : serve.pipe(Effect.provide(logs)))

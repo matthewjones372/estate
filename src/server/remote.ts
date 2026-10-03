@@ -1,6 +1,7 @@
 /** Every call Estate makes to another tool, behind one service, so a test answers them from a table. */
 import { Context, Data, Duration, Effect, Layer, Schedule } from "effect"
 import { FetchHttpClient, HttpClient, type HttpClientError, HttpClientRequest } from "effect/http"
+import { timeCall } from "./observed"
 
 export interface Call {
   readonly url: string
@@ -61,7 +62,7 @@ export const liveRemote = Layer.effect(Remote)(
     )
     return {
       call: (call: Call) =>
-        ((call.method ?? "GET") === "GET" ? reading : client).execute(requestOf(call)).pipe(
+        timeCall(hostOf(call.url), ((call.method ?? "GET") === "GET" ? reading : client).execute(requestOf(call))).pipe(
           Effect.flatMap((response) =>
             Effect.map(response.text, (text) => ({ status: response.status, headers: { ...response.headers }, text })),
           ),
@@ -74,6 +75,7 @@ export const liveRemote = Layer.effect(Remote)(
             duration: timeout,
             orElse: () => Effect.fail(new RemoteError({ url: call.url, message: "did not answer in 10 s" })),
           }),
+          Effect.withSpan("upstream", { attributes: { host: hostOf(call.url), method: call.method ?? "GET" } }),
         ),
     }
   }),

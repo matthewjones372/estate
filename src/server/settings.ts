@@ -62,6 +62,10 @@ export const Settings = Schema.Struct({
   auth: Auth,
   notes: optional(Schema.Struct({ postgres: optional(Secret), keepDays: optional(Schema.Number) })),
   sources: Schema.Record(Schema.String, Sources),
+  /** Estate's own metrics, for Prometheus to scrape, on a port of their own without sign-in (9464 unless set). */
+  metrics: optional(Schema.Struct({ port: optional(Schema.Number) })),
+  /** Estate's own traces and logs, sent over OTLP to a collector when one is named. */
+  telemetry: optional(Schema.Struct({ otlp: optional(Schema.String) })),
   builds: optional(Schema.Struct({ github: Schema.Struct({ token: optional(Secret), url: optional(Schema.String) }) })),
 })
 export type Settings = typeof Settings.Type

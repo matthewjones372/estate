@@ -88,9 +88,10 @@ Nothing.
       Done when: an environment added by a catalog reload is read, and one removed stops being read.
 - [x] **`caches`** — OIDC discovery and keys, the cluster's credentials, Jobs per namespace.
       Done when: ten sign-ins fetch discovery once.
-- [ ] **`observability`** — JSON logs annotated with environment and part; `/metrics`; spans, exported over OTLP
-      when `telemetry.otlp` is set.
-      Done when: `/metrics` counts a failing source, and a span names the call that timed out.
+- [x] **`observability`** — JSON logs (`ESTATE_LOG_FORMAT=pretty` for people), a source's failures logged once as it
+      stops answering, annotated with environment and part; `/metrics` on `metrics.port` (9464); spans for each source
+      read and upstream call, exported over OTLP when `telemetry.otlp` is set.
+      Done when: `/metrics` counts a failing source, times calls by host, and gauges open streams.
 
 ## Acceptance
 

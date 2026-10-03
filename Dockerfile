@@ -16,6 +16,6 @@ COPY src ./src
 COPY --from=pages /app/dist ./dist
 USER bun
 ENV ESTATE_SETTINGS=/etc/estate/estate.yaml
-EXPOSE 8080
+EXPOSE 8080 9464
 HEALTHCHECK CMD wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1
 ENTRYPOINT ["bun", "src/server/main.ts"]

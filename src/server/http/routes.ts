@@ -2,6 +2,7 @@
 import { Data, Effect, Layer, Option, Schema, Stream, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 import type { Me } from "../../shared/events"
+import { streamClosed, streamOpened } from "../observed"
 import { Configured } from "../settings"
 import { Estate } from "../state"
 import { eventStream } from "../stream"
@@ -78,9 +79,11 @@ const events = HttpRouter.add("GET", "/events", (request) =>
     const settings = yield* Configured
     const silences = person.role === "operator" && settings.sources[found.sources]?.alertmanager !== undefined
     const lastEventId = request.headers["last-event-id"]
+    yield* streamOpened
     const body = eventStream({ environment, silences }, lastEventId).pipe(
       Stream.provideService(Estate, ref),
       Stream.encodeText,
+      Stream.ensuring(streamClosed),
     )
     return HttpServerResponse.stream(body, {
       headers: { "content-type": "text/event-stream", "cache-control": "no-cache", "x-accel-buffering": "no" },

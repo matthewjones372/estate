@@ -49,6 +49,8 @@ head across five tabs. Estate does the joining:
   your CI so a broken catalog never reaches the page.
 - **Live.** The page is a stream: a change reaches every open page within seconds, with no refreshing, and only what
   changed is redrawn. The whole page is about 110 KB gzipped.
+- **Observable itself.** Prometheus metrics on `:9464/metrics` (reads by source and outcome, upstream latency by host,
+  open streams), JSON logs, and traces over OTLP when `telemetry.otlp` names a collector.
 - **Honest.** A tool that does not answer is named, with its own words and how old its last answer is. A part you
   have not set up says so. The page never claims "all quiet" before something has said so.
 - **Safe to hand out.** Sign-in with any OIDC provider (Pocket ID, Keycloak, Dex, Google); viewers see everything and

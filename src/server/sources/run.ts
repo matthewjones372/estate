@@ -2,9 +2,10 @@
  * A source read on its own schedule for one environment. What it reads becomes its part of the state; when it does
  * not answer, its part keeps what it last read, marked failing with the words it failed with, and the rest carries on.
  */
-import { Data, type Duration, Effect } from "effect"
+import { Data, type Duration, Effect, SubscriptionRef } from "effect"
+import { countRead } from "../observed"
 import { forEver } from "../schedule"
-import { type EnvironmentState, type Estate, type Part, updateEnvironment } from "../state"
+import { type EnvironmentState, Estate, type Part, updateEnvironment } from "../state"
 import { isoNow } from "../time"
 
 /** Why a source did not answer, in the words it failed with. */
@@ -42,8 +43,13 @@ export const runSource = <K extends Parts, R>(
   ) => after,
 ): Effect.Effect<never, never, R | Estate> => {
   const once = Effect.gen(function* () {
-    const result = yield* Effect.result(read)
+    const result = yield* Effect.result(read.pipe(Effect.withSpan(`source.${part}`, { attributes: { environment } })))
     const at = yield* isoNow
+    yield* countRead(environment, part, result._tag === "Success")
+    const was = (yield* SubscriptionRef.get(yield* Estate)).environments[environment]?.[part].state
+    if (result._tag === "Failure" && was !== "failing")
+      yield* Effect.logWarning("a source stopped answering", result.failure.message)
+    if (result._tag === "Success" && was === "failing") yield* Effect.logInfo("a source is answering again")
     yield* updateEnvironment(environment, (state) => {
       const next = {
         ...state,
@@ -56,5 +62,5 @@ export const runSource = <K extends Parts, R>(
       return result._tag === "Success" ? also(state, next, result.success, at) : next
     })
   })
-  return forEver(once, every)
+  return forEver(once, every).pipe(Effect.annotateLogs({ environment, part }))
 }

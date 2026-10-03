@@ -21,6 +21,7 @@ spec:
           image: estate
           ports:
             - { name: http, containerPort: 8080 }
+            - { name: metrics, containerPort: 9464 }
           envFrom:
             - secretRef: { name: estate, optional: true }
           volumeMounts:

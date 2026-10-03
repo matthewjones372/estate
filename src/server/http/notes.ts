@@ -2,6 +2,7 @@
 import { Clock, Duration, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Notes } from "../notes"
+import { noteWritten } from "../observed"
 import { forEver } from "../schedule"
 import { Estate, updateEstate } from "../state"
 import { before, iso, isoNow } from "../time"
@@ -38,6 +39,7 @@ export const notesRoute = HttpRouter.add(
     const notes = yield* Notes
     const added = yield* Effect.result(notes.add(note))
     if (added._tag === "Failure") return json({ message: added.failure.message }, 503)
+    yield* noteWritten
     yield* updateEstate((estate) => ({ ...estate, notes: [note, ...estate.notes].slice(0, kept) }))
     return json(note, 201)
   }).pipe(Effect.catchTag("Refusal", refused)),
