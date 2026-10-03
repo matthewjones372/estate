@@ -22,7 +22,7 @@ The catalog names stores beside services, each with the preset for its engine:
 stores:
   - name: orders-db
     description: The orders database
-    environments: [ home, kind ]
+    environments: [ production, staging ]
     engine: cnpg                          # postgres, cnpg, mysql, redis, kafka
     selector: 'database="orders-db"'      # the labels its exporter's series carry
     links: { dashboard: https://grafana.{env}.example/d/cnpg }

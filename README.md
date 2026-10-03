@@ -1,7 +1,7 @@
 # Estate
 
 [![gate](https://github.com/matthewjones372/estate/actions/workflows/gate.yml/badge.svg)](https://github.com/matthewjones372/estate/actions/workflows/gate.yml)
-[![image](https://github.com/matthewjones372/estate/actions/workflows/image.yml/badge.svg)](https://github.com/matthewjones372/estate/actions/workflows/image.yml)
+[![image](https://github.com/matthewjones372/estate/actions/workflows/image.yml/badge.svg)](https://github.com/matthewjones372/estate/pkgs/container/estate)
 ![Bun](https://img.shields.io/badge/Bun-1.3-14151a?logo=bun&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
 ![Effect](https://img.shields.io/badge/Effect-4-0b0d12)
@@ -70,8 +70,7 @@ head across five tabs. Estate does the joining:
 ## Try it
 
 ```bash
-docker build -t estate .
-docker run -v ./examples:/etc/estate -p 8080:8080 estate
+docker run -v ./examples:/etc/estate -p 8080:8080 ghcr.io/matthewjones372/estate:main
 ```
 
 Open <http://localhost:8080>: the example shop's services, with its tools not there, so every part says why. Point
@@ -86,8 +85,9 @@ Two files, mounted at `/etc/estate`:
 - **`estate.yaml`**, the settings: sign-in and roles, each environment's sources, the notes database, GitHub's token.
   Secrets are `${NAMES}` read from the environment.
 
-The image is built by `.github/workflows/image.yml` on a runner at home and pushed to its registry as
-`estate:main-<run>-<sha>`. [`deploy/`](deploy) is a Kubernetes base to overlay with those two files, your ingress and your secrets. The design,
+Once the gate passes on `main`, `.github/workflows/image.yml` builds the image for amd64 and arm64 and publishes it
+as `ghcr.io/matthewjones372/estate`, tagged `main`, `main-<run>-<sha>` and the commit. [`deploy/`](deploy) is a
+Kubernetes base to overlay with those two files, your ingress and your secrets. The design,
 and why it is shaped this way, is [spec 0001](specs/0001-the-estate-on-one-page.md).
 
 ## Working on it
