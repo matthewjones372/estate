@@ -62,7 +62,7 @@ kafka_exporter) are the estate's; Estate names the series they publish.
 
 ## Stack
 
-- [ ] **`stores-catalog`** — `stores` in the catalog with engines, selectors, links and their own queries; checked
+- [x] **`stores-catalog`** — `stores` in the catalog with engines, selectors, links and their own queries; checked
       like the rest; map nodes may name a store.
       Done when: a broken store query or an unknown engine is a named mistake.
 - [ ] **`store-presets`** — the five presets, their stats read with the load, and health from their thresholds.

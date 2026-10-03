@@ -6,6 +6,7 @@ import { Result } from "effect"
 import { Catalog } from "./catalog"
 import { checkShape, type Mistake } from "./shape"
 import { statsOf } from "./stats"
+import { rulesOf } from "./stores"
 
 const pairs: Readonly<Record<string, string>> = { "(": ")", "[": "]", "{": "}" }
 
@@ -101,12 +102,40 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
     query(`vitals[${index}] (${vital.title})`, vital.query)
   })
 
+  const stores = new Set((catalog.stores ?? []).map((store) => store.name))
+  for (const name of duplicates((catalog.stores ?? []).map((store) => store.name))) {
+    mistake("stores", `"${name}" is named twice`)
+  }
+  catalog.stores?.forEach((store, index) => {
+    const at = `stores[${index}] (${store.name})`
+    if (services.has(store.name)) mistake(at, `"${store.name}" is also a service's name`)
+    for (const environment of store.environments) {
+      if (!environments.has(environment)) mistake(`${at}.environments`, `"${environment}" is not an environment`)
+    }
+    if (store.selector.trim() === "") mistake(`${at}.selector`, "is empty")
+    store.extra?.forEach((extra, extraIndex) => {
+      query(`${at}.extra[${extraIndex}] (${extra.title})`, extra.query)
+    })
+    const known = new Set(rulesOf(store).map((rule) => rule.key))
+    for (const key of Object.keys(store.attention ?? {})) {
+      if (!known.has(key)) {
+        mistake(`${at}.attention.${key}`, `is not one of ${store.engine}'s: ${[...known].join(", ")}`)
+      }
+    }
+  })
+
   const nodes = catalog.map?.nodes ?? []
   const ids = new Set(nodes.map((node) => node.id))
   for (const id of duplicates(nodes.map((node) => node.id))) mistake("map.nodes", `"${id}" is named twice`)
   nodes.forEach((node, index) => {
     if (node.service !== undefined && !services.has(node.service)) {
       mistake(`map.nodes[${index}] (${node.id})`, `"${node.service}" is not a service`)
+    }
+    if (node.store !== undefined && !stores.has(node.store)) {
+      mistake(`map.nodes[${index}] (${node.id})`, `"${node.store}" is not a store`)
+    }
+    if (node.service !== undefined && node.store !== undefined) {
+      mistake(`map.nodes[${index}] (${node.id})`, "names a service and a store; a node is one or the other")
     }
   })
   catalog.map?.edges.forEach((edge, index) => {

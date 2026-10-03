@@ -69,8 +69,20 @@ describe("the catalog's check", () => {
         { name: "orders", environments: [] },
       ],
       vitals: [{ title: "Orders", query: "sum(rate(orders_total[1m])))" }],
+      stores: [
+        {
+          name: "orders-db",
+          environments: ["qa"],
+          engine: "postgres",
+          selector: " ",
+          extra: [{ title: "Outbox", query: "max(outbox_lag" }],
+          attention: { connections: 90, memory: 95 },
+        },
+        { name: "orders-db", environments: [], engine: "redis", selector: 'instance="cache"' },
+        { name: "orders", environments: [], engine: "kafka", selector: 'job="kafka"' },
+      ],
       map: {
-        nodes: [{ id: "a", service: "carts" }, { id: "a" }],
+        nodes: [{ id: "a", service: "carts" }, { id: "a" }, { id: "db", store: "nothing", service: "orders" }],
         edges: [{ from: "a", to: "b", rate: "sum(x" }],
       },
     }
@@ -87,8 +99,16 @@ describe("the catalog's check", () => {
       'services[0] (orders).logs.errors: "ERROR|(" is not a pattern',
       'services[0] (orders).logs.mask[1]: "[card" is not a pattern',
       "vitals[0] (Orders): the query has an unmatched )",
+      'stores: "orders-db" is named twice',
+      'stores[0] (orders-db).environments: "qa" is not an environment',
+      "stores[0] (orders-db).selector: is empty",
+      "stores[0] (orders-db).extra[0] (Outbox): the query is missing a )",
+      "stores[0] (orders-db).attention.memory: is not one of postgres's: connections, lag",
+      'stores[2] (orders): "orders" is also a service\'s name',
       'map.nodes: "a" is named twice',
       'map.nodes[0] (a): "carts" is not a service',
+      'map.nodes[2] (db): "nothing" is not a store',
+      "map.nodes[2] (db): names a service and a store; a node is one or the other",
       'map.edges[0] (a → b): "b" is not a node',
       "map.edges[0] (a → b): the query is missing a )",
     ])

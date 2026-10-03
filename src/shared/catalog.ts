@@ -66,9 +66,27 @@ export type Service = typeof Service.Type
 
 const Vital = Schema.Struct({ title: Schema.String, query: Schema.String, unit: optional(Schema.String) })
 
+/** A database, queue or cache, read through its exporter's series with the preset for its engine. */
+export const Store = Schema.Struct({
+  name: Schema.String,
+  description: optional(Schema.String),
+  environments: Schema.Array(Schema.String),
+  engine: Schema.Literals(["postgres", "cnpg", "mysql", "redis", "kafka"]),
+  /** The labels its exporter's series carry, as PromQL matchers. */
+  selector: Schema.String,
+  links: optional(Schema.Record(Schema.String, Schema.String)),
+  extra: optional(
+    Schema.Array(Schema.Struct({ title: Schema.String, query: Schema.String, unit: optional(Schema.String) })),
+  ),
+  /** The preset's thresholds, overridden for a store sized close to its limits on purpose. */
+  attention: optional(Schema.Record(Schema.String, Schema.Number)),
+})
+export type Store = typeof Store.Type
+
 const MapNode = Schema.Struct({
   id: Schema.String,
   service: optional(Schema.String),
+  store: optional(Schema.String),
   title: optional(Schema.String),
   kind: optional(Schema.Literals(["service", "store", "external"])),
 })
@@ -84,6 +102,7 @@ const MapEdge = Schema.Struct({
 export const Catalog = Schema.Struct({
   environments: Schema.Array(Environment),
   services: Schema.Array(Service),
+  stores: optional(Schema.Array(Store)),
   vitals: optional(Schema.Array(Vital)),
   map: optional(Schema.Struct({ nodes: Schema.Array(MapNode), edges: Schema.Array(MapEdge) })),
 })
