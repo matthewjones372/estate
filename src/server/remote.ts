@@ -1,5 +1,6 @@
 /** Every call Estate makes to another tool, behind one service, so a test answers them from a table. */
-import { Context, Data, Duration, Effect, Layer } from "effect"
+import { Context, Data, Duration, Effect, Layer, Schedule } from "effect"
+import { FetchHttpClient, HttpClient, type HttpClientError, HttpClientRequest } from "effect/http"
 
 export interface Call {
   readonly url: string
@@ -28,35 +29,55 @@ const timeout = Duration.seconds(10)
 
 const hostOf = (url: string): string => URL.parse(url)?.host ?? url
 
-export const liveRemote = Layer.succeed(Remote)({
-  call: (call) =>
-    Effect.tryPromise({
-      try: (signal) => {
-        const init: RequestInit & { tls?: { ca: string } } = {
-          method: call.method ?? "GET",
-          headers: call.headers ?? {},
-          signal,
-          ...(call.body === undefined ? {} : { body: call.body }),
-          ...(call.ca === undefined ? {} : { tls: { ca: call.ca } }),
-        }
-        return fetch(call.url, init).then((response) =>
-          response
-            .text()
-            .then((text) => ({ status: response.status, headers: Object.fromEntries(response.headers), text })),
-        )
-      },
-      catch: (error) =>
-        new RemoteError({
-          url: call.url,
-          message: `could not reach ${hostOf(call.url)}: ${error instanceof Error ? error.message : String(error)}`,
-        }),
-    }).pipe(
-      Effect.timeoutOrElse({
-        duration: timeout,
-        orElse: () => Effect.fail(new RemoteError({ url: call.url, message: "did not answer in 10 s" })),
-      }),
-    ),
-})
+const requestOf = (call: Call) => {
+  const request = HttpClientRequest.make(call.method ?? "GET")(call.url).pipe(
+    HttpClientRequest.setHeaders(call.headers ?? {}),
+  )
+  return call.body === undefined ? request : HttpClientRequest.bodyText(request, call.body)
+}
+
+/** Bun's fetch takes `tls`, beyond the standard's options. */
+const trusting = (ca: string | undefined): RequestInit => {
+  const init: RequestInit & { readonly tls?: { readonly ca: string } } = ca === undefined ? {} : { tls: { ca } }
+  return init
+}
+
+/** Why a call did not get through, in the words of what refused it. */
+const reasonOf = (error: HttpClientError.HttpClientError): string => {
+  const cause = error.reason.cause
+  return cause instanceof Error ? cause.message : error.message
+}
+
+/**
+ * Calls through Effect's HTTP client: a read that could not get through is tried twice more, backing off, while a
+ * write is tried once; every call is given up on after ten seconds, and a CA, as for a cluster's API server, is
+ * trusted beyond the system's for that call alone.
+ */
+export const liveRemote = Layer.effect(Remote)(
+  Effect.gen(function* () {
+    const client = yield* HttpClient.HttpClient
+    const reading = client.pipe(
+      HttpClient.retryTransient({ retryOn: "errors-only", times: 2, schedule: Schedule.exponential("200 millis") }),
+    )
+    return {
+      call: (call: Call) =>
+        ((call.method ?? "GET") === "GET" ? reading : client).execute(requestOf(call)).pipe(
+          Effect.flatMap((response) =>
+            Effect.map(response.text, (text) => ({ status: response.status, headers: { ...response.headers }, text })),
+          ),
+          Effect.provideService(FetchHttpClient.RequestInit, trusting(call.ca)),
+          Effect.mapError(
+            (error) =>
+              new RemoteError({ url: call.url, message: `could not reach ${hostOf(call.url)}: ${reasonOf(error)}` }),
+          ),
+          Effect.timeoutOrElse({
+            duration: timeout,
+            orElse: () => Effect.fail(new RemoteError({ url: call.url, message: "did not answer in 10 s" })),
+          }),
+        ),
+    }
+  }),
+).pipe(Layer.provide(FetchHttpClient.layer))
 
 /** A Remote answering from `answer`; a call it has no answer for is a 404, as from a tool without that path. */
 export const stubRemote = (answer: (call: Call) => Reply | undefined) =>

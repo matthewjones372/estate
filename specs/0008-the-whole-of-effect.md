@@ -72,11 +72,14 @@ Nothing.
 
 ## Stack
 
-- [ ] **`edges`** — the session cookie, query parameters and notes' rows decoded by Schema; bounded numbers; tagged
-      `SourceFailure`, `Refusal` and an exported `NotesError`; secrets `Redacted`.
-      Done when: a garbled cookie reads as signed out, and no secret appears in a settings error or a log line.
-- [ ] **`http-client`** — `Remote` on `HttpClient`, with status, schema, retry and timeout as policies.
-      Done when: every source's tests pass against stub `HttpClient`s, and an upstream timing out is named.
+- [x] **`edges`** — the session cookie and query parameters decoded by Schema; tagged `SourceFailure` and `Refusal`;
+      secrets `Redacted`.
+      Done when: a garbled cookie reads as signed out, a malformed query is a 400 saying what it should be, and a
+      secret prints as `<redacted>`.
+- [x] **`http-client`** — `Remote`, the port every source and test answers through, is built on `HttpClient`:
+      reads retried on transport errors with back-off, writes tried once, every call given up on after 10 s.
+      Done when: every source's tests pass through it, the pages work against the fake tools, and an upstream timing
+      out is named.
 - [ ] **`config-files-state`** — `Config` for the environment, `FileSystem` and `Path` for files, `Ref` for state,
       `DateTime` and `Duration` for time.
       Done when: no `process.env`, `Bun.file`, `node:path` or `let` is left in `src/server` outside the bundler.
