@@ -101,8 +101,9 @@ docker run -v ./my-estate:/etc/estate --env-file my-estate/.env ghcr.io/matthewj
 ```
 
 It asks each tool once and prints a line per part: what answered, how many alerts matched a service, which services
-have no running pods or no log lines, and which setting would fix it. It exits non-zero if anything failed. Tokens referenced as `${NAME}` in `estate.yaml` come
-from the env file.
+have no running pods or no log lines, and which setting would fix it. It exits non-zero if anything failed. Tokens
+referenced as `${NAME}` in `estate.yaml` come from the env file. [docs/real-tools.md](docs/real-tools.md) has the
+settings for each kind of tool, and what each line should say when it is right.
 
 ## Running it
 
