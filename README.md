@@ -29,6 +29,13 @@ you already run and puts it in one place.
 Where Grafana sits in front of Prometheus and Loki, Estate can reach them through Grafana's data source proxy with
 one service account token, rather than with addresses and credentials of their own.
 
+The same page on other tools: EKS with Grafana's alerting, Argo CD and Elasticsearch; and an environment read wholly
+from Datadog, its service built by Jenkins.
+
+![An environment on Grafana, Argo CD and Elasticsearch](docs/eks.png)
+![An environment on Datadog](docs/datadog.png)
+![A service whose lines come from Datadog and builds from Jenkins](docs/datadog-service.png)
+
 ## What's on the page
 
 The overview starts with whatever is firing, each alert drawn against its threshold with a link to its runbook.
@@ -44,12 +51,14 @@ From the page you can:
 - watch a service's logs live, or see its errors grouped by message
 - compare what's deployed in each environment
 
+![A service page](docs/service.png)
+
 For a screen on the wall there is `/kiosk`: the headline, what's firing and every service worst first, in type you
 can read across a room, with nothing to press. Set `kiosk.token` and open `/kiosk?token=…` once on the screen; it
 signs in for 30 days and can read but never change anything. Environments take turns, `?team=payments` shows only
 the services that team owns, and if the screen stops hearing from Estate it says so in red.
 
-![A service page](docs/service.png)
+![The kiosk on a 1080p screen](docs/kiosk.png)
 
 ## Why it's built this way
 
