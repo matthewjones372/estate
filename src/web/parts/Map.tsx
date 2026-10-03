@@ -3,6 +3,7 @@
 import { createMemo, For, Show } from "solid-js"
 import type { CatalogEvent, ServicesEvent } from "../../shared/events"
 import { amount } from "../format"
+import { byName, indexed } from "../indexed"
 import { layout } from "../layout"
 import { A } from "./A"
 
@@ -16,9 +17,15 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
       props.catalog.map.edges,
     ),
   )
-  const flow = (edge: MapEdge) => props.services?.edges.find((each) => each.from === edge.from && each.to === edge.to)
-  const stateOf = (service: string | undefined) => props.services?.services.find((each) => each.name === service)
-  const storeStateOf = (store: string | undefined) => props.services?.stores?.find((each) => each.name === store)
+  const flows = indexed(
+    () => props.services?.edges,
+    (edge) => `${edge.from}\u0000${edge.to}`,
+  )
+  const states = byName(() => props.services?.services)
+  const storeStates = byName(() => props.services?.stores)
+  const flow = (edge: MapEdge) => flows().get(`${edge.from}\u0000${edge.to}`)
+  const stateOf = (service: string | undefined) => (service === undefined ? undefined : states().get(service))
+  const storeStateOf = (store: string | undefined) => (store === undefined ? undefined : storeStates().get(store))
   const ends = (edge: MapEdge) => {
     const from = placed().get(edge.from)
     const to = placed().get(edge.to)

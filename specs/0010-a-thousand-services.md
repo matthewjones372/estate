@@ -18,7 +18,9 @@ queries, a Deployment and a Flux image policy, the tools answering in 20 ms:
 
 Reading scales: a thousand services' metrics take 7 s of their 30. Viewing does not. Every open page builds every
 view of the whole estate, and serialises it to compare with what it sent, on every change to any environment's
-state, about ten times every 30 s; so twenty pages cost twenty times the work, and a single core is spent. Each time a
+state, about ten times every 30 s; so twenty pages cost twenty times the work, and a single core is spent. The page
+itself holds 880 MB at a thousand services, because each lane searched the whole list for its own state and so read
+every service. Each time a
 service's numbers move, every service is sent again, with every number at full precision (`73.48573829174563`). And
 the cluster is asked about each service on its own, two calls a service every 15 s, where one list a namespace would
 do.
@@ -39,6 +41,8 @@ do.
   any of its last points revised by late samples. Numbers are sent to four significant figures.
 - The cluster is read a namespace at a time: its Deployments, StatefulSets, DaemonSets, pods and Flux image policies
   listed once per read, whatever number of services live there.
+- The page finds each lane's state, pipeline and map flow in a map built once per change, not by searching every
+  service, and holds each series whole rather than tracking it point by point.
 - Paged reads (CloudWatch's alarms, DynamoDB's scans) are `Stream.paginate`, and the log hub's polling is a stream
   into its `PubSub`, so every flow of data in Estate is a `Stream`.
 - `bench/` holds the measurement, run with `bun bench/run.ts`, and the README states its results.
@@ -65,6 +69,8 @@ Nothing.
       Done when: at 1,000 services, a page receives under 1 MB a minute once loaded.
 - [x] **`namespace-lists`** — the cluster and Flux read a namespace at a time.
       Done when: at 1,000 services in one namespace, calls to the tools fall below 250 a second.
+- [x] **`page-lookups`** — lanes and the map look services up by name, series are held whole by the page's store.
+      Done when: at 1,000 services, a page's heap after a collection is under 150 MB.
 - [x] **`streams`** — `Stream.paginate` for paged reads, the log hub's polling a stream.
       Done when: nothing in `src/server` pages or polls by hand.
 - [ ] **`bench`** — `bench/` and the README's table, re-measured after the above.

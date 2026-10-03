@@ -83,15 +83,14 @@ export const HealthLine = (props: {
 export const Lane = (props: {
   readonly service: Described
   readonly state: ServiceState | undefined
-  readonly deploys: DeploysEvent | undefined
+  readonly deployed: DeploysEvent["services"][number] | undefined
   readonly environment: string
 }) => {
   const { now } = useEstate()
   const pipeline = () => {
-    const deployed = props.deploys?.services.find((each) => each.name === props.service.name)
     return pipelineOf(
-      deployed?.builds ?? [],
-      deployed?.environments.find((each) => each.environment === props.environment),
+      props.deployed?.builds ?? [],
+      props.deployed?.environments.find((each) => each.environment === props.environment),
       now(),
     )
   }

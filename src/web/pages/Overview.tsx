@@ -7,6 +7,7 @@ import { For, Show } from "solid-js"
 import type { Alert, Events } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock, counted, measured } from "../format"
+import { byName } from "../indexed"
 import { AlertCard } from "../parts/AlertCard"
 import { Feed } from "../parts/Feed"
 import { Icon } from "../parts/icons"
@@ -160,6 +161,9 @@ export const Overview = () => {
   const { me, now } = useEstate()
   const snapshot = useSnapshot()
   const events = () => snapshot.events
+  const states = byName(() => events().services?.services)
+  const storeStates = byName(() => events().services?.stores)
+  const deployed = byName(() => events().deploys?.services)
   const headline = () => headlineOf(events())
   const alerts = () => events().alerts?.alerts ?? []
   const firing = () => alerts().filter((alert) => alert.state === "firing")
@@ -239,8 +243,8 @@ export const Overview = () => {
             {(service) => (
               <Lane
                 service={service}
-                state={events().services?.services.find((each) => each.name === service.name)}
-                deploys={events().deploys}
+                state={states().get(service.name)}
+                deployed={deployed().get(service.name)}
                 environment={snapshot.environment}
               />
             )}
@@ -255,9 +259,7 @@ export const Overview = () => {
               </span>
             </div>
             <For each={events().catalog?.stores ?? []}>
-              {(store) => (
-                <StoreLane store={store} state={events().services?.stores?.find((each) => each.name === store.name)} />
-              )}
+              {(store) => <StoreLane store={store} state={storeStates().get(store.name)} />}
             </For>
           </Show>
         </section>

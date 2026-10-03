@@ -56,6 +56,26 @@ export const useEstate = (): Estate => {
 const stores = new WeakMap<Live, Snapshot>()
 
 /**
+ * A series the store holds whole: made from `whole` rather than a plain object, so the store does not track it point
+ * by point, and a part that reads it is told when it is replaced. Sixty points in each of a lane's series, tracked one
+ * by one, were most of a page's memory at a thousand services.
+ */
+const whole = {}
+const wholes = new WeakMap<object, object>()
+
+/** What the server sent, copied for the store to hold: each series in it held whole, and the same one if unchanged. */
+const held = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(held)
+  if (value === null || typeof value !== "object") return value
+  if (Array.isArray((value as { readonly points?: unknown }).points)) {
+    const kept = wholes.get(value) ?? Object.assign(Object.create(whole), value)
+    wholes.set(value, kept)
+    return kept
+  }
+  return Object.fromEntries(Object.entries(value).map(([key, each]) => [key, held(each)]))
+}
+
+/**
  * What the server last sent, as a store: each event is reconciled into it, so a part that reads one field updates
  * when that field changes, and an alert or a service keeps its place, and its part's state, across events. One store
  * per page, living as long as the page does.
@@ -64,8 +84,8 @@ export const useSnapshot = (): Snapshot => {
   const { live } = useEstate()
   const kept = stores.get(live)
   if (kept !== undefined) return kept
-  const [snapshot, setSnapshot] = createStore<Snapshot>(structuredClone(live.snapshot()))
-  live.subscribe(() => setSnapshot(reconcile(structuredClone(live.snapshot()), { key: "id", merge: true })))
+  const [snapshot, setSnapshot] = createStore<Snapshot>(held(live.snapshot()) as Snapshot)
+  live.subscribe(() => setSnapshot(reconcile(held(live.snapshot()) as Snapshot, { key: "id", merge: true })))
   stores.set(live, snapshot)
   return snapshot
 }
