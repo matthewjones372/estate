@@ -2,7 +2,7 @@
 /** What each page draws from the fixture's events: run by \`pages.test.ts\` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
 import { App } from "./App"
-import { events, heard, now, operator, recording } from "./fixture"
+import { events, heard, now, operator } from "./fixture"
 import { render } from "./harness"
 import { Alerts, alertsSummary } from "./pages/Alerts"
 import { Deploys, summaryOf } from "./pages/Deploys"
@@ -10,6 +10,7 @@ import { headlineOf, Overview, tilesOf } from "./pages/Overview"
 import { ServicePage } from "./pages/Service"
 import { NoAccess, Reading, SignIn } from "./pages/States"
 import { pipelineOf } from "./parts/Rail"
+import { recording } from "./recording"
 
 const text = (html: string) =>
   html

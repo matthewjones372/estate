@@ -4,8 +4,9 @@ import type { JSX } from "solid-js"
 import { delegateEvents, render as draw } from "solid-js/web"
 import type { Events, Me } from "../shared/events"
 import { type Actions, EstateContext } from "./context"
-import { events, heard, now, operator, recording } from "./fixture"
+import { events, heard, now, operator } from "./fixture"
 import type { Live } from "./live"
+import { recording } from "./recording"
 import type { Page } from "./route"
 
 interface Options {
@@ -49,10 +50,11 @@ export const mount = (node: () => JSX.Element, options: Options = {}) => {
   const container = document.createElement("div")
   document.body.append(container)
   const dispose = draw(within(node, options, options.actions ?? recorded.actions), container)
-  const button = (name: string | RegExp) => {
-    const found = [...container.querySelectorAll("button")].find((each) =>
+  /** The button named `name`, or the `nth` of several so named, in the order they are on the page. */
+  const button = (name: string | RegExp, nth = 0) => {
+    const found = [...container.querySelectorAll("button")].filter((each) =>
       typeof name === "string" ? each.textContent?.trim() === name : name.test(each.textContent ?? ""),
-    )
+    )[nth]
     if (found === undefined) throw new Error(`no button ${name} in ${container.textContent}`)
     return found
   }
@@ -63,5 +65,5 @@ export const mount = (node: () => JSX.Element, options: Options = {}) => {
     element.dispatchEvent(new Event(element instanceof HTMLSelectElement ? "change" : "input", { bubbles: true }))
   }
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
-  return { container, calls: recorded.calls, button, click, type, settle, dispose }
+  return { container, calls: recorded.calls, sendLines: recorded.sendLines, button, click, type, settle, dispose }
 }

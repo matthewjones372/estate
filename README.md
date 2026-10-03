@@ -19,7 +19,7 @@ builds are in GitHub, the load is in Prometheus. Each morning, and at every aler
 head across five tabs. Estate does the joining:
 
 - **What needs you now**, at the top, in plain words: "Two things need you." Each alert as a card drawing the metric
-  that fired against its threshold, with the runbook, the logs and the traces one click away.
+  that fired against its threshold, with the runbook, its errors from then, and the traces one click away.
 - **Notes on alerts**, so the person who looks next sees "on it, it's the vacuum" instead of starting again.
 - **Silences with a reason**: an hour, four, or until nine tomorrow, written to Alertmanager under your name, and
   shown to everyone while they last.
@@ -33,6 +33,9 @@ head across five tabs. Estate does the joining:
 - **Jobs and CronJobs**: last runs, how they ended, the next one, and the run that should have happened and didn't.
 - **Stats for the process behind each service**: heap, GC pauses, threads and CPU for a JVM, or memory and CPU for
   any container, from presets, beside queries of your own.
+- **Logs on the page**: a service's lines as they arrive, filtered by level or text, paused when you scroll up; its
+  errors over the last hour or day grouped by message, so 4,000 lines read as the three faults behind them; and on
+  each alert, the errors from the minutes before it started. From Loki, or from the pods themselves, masked.
 - **Charts you can read**: point at any chart, or step through it with the arrow keys, for the time and value of
   each point, marked on every chart of the service at once; drag across one to zoom them all.
 - **What changed today**: deploys, builds, alerts, silences, notes, debug and jobs, in one feed.

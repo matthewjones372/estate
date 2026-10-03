@@ -7,6 +7,7 @@ import { useEstate } from "../context"
 import { amount, clock, initials, since } from "../format"
 import { A, Out } from "./A"
 import { Icon } from "./icons"
+import { ErrorList } from "./Logs"
 import { Plot } from "./Plot"
 
 const minutesUntilNine = (now: number): number => {
@@ -25,6 +26,8 @@ const spansFrom = (now: number) =>
   ] as const
 
 const hour = 3_600_000
+
+const tenMinutesBefore = (iso: string) => new Date(Date.parse(iso) - 10 * 60_000).toISOString()
 
 type AlertChart = NonNullable<Alert["chart"]>
 
@@ -193,6 +196,7 @@ export const AlertCard = (props: {
 }) => {
   const { now } = useEstate()
   const [choosing, setChoosing] = createSignal(false)
+  const [lines, setLines] = createSignal(false)
   const service = () => props.catalog?.services.find((each) => each.name === props.alert.service)
   const link = (name: string) => service()?.links.find((each) => each.name === name)
   return (
@@ -210,6 +214,14 @@ export const AlertCard = (props: {
       <Notes alert={props.alert} />
       <Show when={choosing()}>
         <Silencing alert={props.alert} close={() => setChoosing(false)} />
+      </Show>
+      <Show when={lines() ? props.alert.service : undefined}>
+        {(name) => (
+          <div class="alert-lines">
+            <span class="alert-label">Errors from ten minutes before it started</span>
+            <ErrorList service={name()} window={{ since: tenMinutesBefore(props.alert.startsAt) }} most={3} />
+          </div>
+        )}
       </Show>
       <div class="choices">
         <Show when={props.alert.runbook}>
@@ -239,6 +251,11 @@ export const AlertCard = (props: {
               Traces
             </Out>
           )}
+        </Show>
+        <Show when={props.alert.service !== undefined}>
+          <button type="button" class="amber-button ghost" aria-pressed={lines()} onClick={() => setLines(!lines())}>
+            Lines from then
+          </button>
         </Show>
         <Show when={props.canSilence && !choosing()}>
           <button type="button" class="amber-button ghost push-right" onClick={() => setChoosing(true)}>

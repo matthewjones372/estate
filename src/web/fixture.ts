@@ -1,11 +1,10 @@
 /** A page's worth of events, a store that has heard them, and actions that record what they were asked, for tests. */
 import type { Events, Me } from "../shared/events"
-import type { Actions } from "./context"
 import { createLive, type Handlers } from "./live"
 
 export const now = Date.parse("2026-10-03T12:00:00Z")
 
-const series = (points: ReadonlyArray<number>) => ({ now: points.at(-1) ?? null, points })
+export const series = (points: ReadonlyArray<number>) => ({ now: points.at(-1) ?? null, points })
 
 export const events: Events = {
   catalog: {
@@ -221,43 +220,6 @@ export const events: Events = {
   },
 }
 
-export interface Recorded {
-  readonly calls: Array<readonly [string, ...ReadonlyArray<unknown>]>
-  readonly actions: Actions
-}
-
-export const recording = (): Recorded => {
-  const calls: Array<readonly [string, ...ReadonlyArray<unknown>]> = []
-  const record =
-    (name: string) =>
-    (...args: ReadonlyArray<unknown>) => {
-      calls.push([name, ...args])
-      return Promise.resolve(true)
-    }
-  return {
-    calls,
-    actions: {
-      navigate: (path) => {
-        calls.push(["navigate", path])
-      },
-      choose: (environment) => {
-        calls.push(["choose", environment])
-      },
-      addNote: record("addNote"),
-      removeNote: record("removeNote"),
-      silence: record("silence"),
-      unsilence: record("unsilence"),
-      debug: record("debug"),
-      undebug: record("undebug"),
-      load: (service, range) => {
-        calls.push(["load", service, range])
-        return Promise.resolve({ requests: series([1, 2]) })
-      },
-    },
-  }
-}
-
-/** A store for production, and a way to send it an event. */
 const closed = () => undefined
 
 export const listening = () => {

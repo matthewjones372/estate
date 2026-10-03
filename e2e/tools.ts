@@ -1,6 +1,7 @@
 /**
  * A small estate's tools on one port, answering in their own shapes, for the pages' tests and screenshots:
- * Prometheus, Alertmanager (silences kept), a Kubernetes API with Flux (ConfigMaps patched), and GitHub Actions.
+ * Prometheus, Alertmanager (silences kept), a Kubernetes API with Flux (ConfigMaps patched, pods logging), and GitHub
+ * Actions.
  */
 const now = () => Math.floor(Date.now() / 1000)
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
@@ -25,6 +26,22 @@ const series: Array<[RegExp, (at: number) => number]> = [
   [/app="storefront"/, wave(118, 14, 0)],
   [/app="orders"/, wave(42, 6, 3)],
 ]
+
+/** A pod's latest lines, with the timestamps the cluster puts in front: a few each read, now and then an error. */
+let logged = 0
+const podLog = (pod: string) => {
+  logged += 1
+  const at = (back: number) => new Date(Date.now() - back).toISOString()
+  return [
+    `${at(1500)} INFO served /products in ${10 + (logged % 7)} ms`,
+    `${at(1000)} INFO basket ${4000 + logged} updated`,
+    ...(logged % 3 === 0 || pod.endsWith("-a")
+      ? [`${at(500)} ERROR payment provider timed out after 3000 ms for order ${logged}`]
+      : []),
+  ]
+    .map((line) => `${line}\n`)
+    .join("")
+}
 
 const queryRange = (url: URL) => {
   const query = url.searchParams.get("query") ?? ""
@@ -228,6 +245,8 @@ const server = Bun.serve({
       silences.delete(path.slice("/api/v2/silence/".length))
       return json({})
     }
+    const logging = /^\/api\/v1\/namespaces\/[\w-]+\/pods\/([\w-]+)\/log$/.exec(path)?.[1]
+    if (logging !== undefined) return new Response(podLog(logging))
     const map = /^\/api\/v1\/namespaces\/shop\/configmaps\/([\w-]+)$/.exec(path)?.[1]
     if (map !== undefined) {
       const found = configMaps.get(map)

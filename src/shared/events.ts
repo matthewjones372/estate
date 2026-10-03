@@ -229,12 +229,14 @@ export const Me = Schema.Struct({
 export type Me = typeof Me.Type
 
 /** A service's log line, as the page shows it. */
-const LogLine = Schema.Struct({
+export const LogLine = Schema.Struct({
   at: Instant,
   pod: optional(Schema.String),
   level: optional(Schema.String),
   text: Schema.String,
 })
+
+export type LogLine = typeof LogLine.Type
 
 /** What `GET /logs` sends each time it reads: the new lines, whether it had to skip some, or why it could not read. */
 export const LogBatch = Schema.Struct({

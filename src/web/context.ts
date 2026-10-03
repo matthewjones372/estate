@@ -1,7 +1,7 @@
 /** What every part of the page can reach: the store, the person, where we are, and the actions they may take. */
 import { createContext, useContext } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
-import type { Me, ServiceState } from "../shared/events"
+import type { ErrorGroups, LogBatch, Me, ServiceState } from "../shared/events"
 import type { Live, Snapshot } from "./live"
 import type { Page } from "./route"
 
@@ -15,7 +15,21 @@ export interface Actions {
   readonly debug: (service: string, minutes: number) => Promise<boolean>
   readonly undebug: (service: string) => Promise<boolean>
   readonly load: (service: string, range: Range) => Promise<ServiceState["load"] | undefined>
+  /** A service's live lines; the returned function stops watching. */
+  readonly watchLogs: (service: string, handlers: LogHandlers) => () => void
+  /** A service's errors grouped, over a range or since a time: "none" where it has no logs to read. */
+  readonly errors: (service: string, window: ErrorWindow) => Promise<ErrorGroups | "none" | undefined>
 }
+
+export interface LogHandlers {
+  /** Where its lines come from, once the stream is open. */
+  readonly from: (from: string) => void
+  readonly batch: (batch: LogBatch) => void
+  /** The stream was refused or there is nothing to read: no logs for this service here, or not for this person. */
+  readonly missing: () => void
+}
+
+export type ErrorWindow = { readonly range: "1h" | "6h" | "24h" } | { readonly since: string }
 
 export type Range = "1h" | "6h" | "24h" | "7d"
 

@@ -8,6 +8,7 @@ import { Load, Timeline } from "../parts/Charts"
 import { DebugPanel } from "../parts/Debug"
 import { Jobs } from "../parts/Jobs"
 import { HealthLine, Links } from "../parts/Lane"
+import { LogsPanel } from "../parts/Logs"
 
 export const ServicePage = (props: { readonly name: string }) => {
   const { now } = useEstate()
@@ -54,6 +55,7 @@ export const ServicePage = (props: { readonly name: string }) => {
         <div class="row">
           <div class="stack" style={{ flex: "999 1 640px", "min-width": 0, gap: "24px" }}>
             <Load name={props.name} state={state()} alerts={alerts()} />
+            <LogsPanel service={props.name} />
             <section aria-labelledby="pods" class="stack">
               <h2 id="pods" class="section-title">
                 Pods

@@ -208,3 +208,8 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.alert-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
