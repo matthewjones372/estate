@@ -26,5 +26,7 @@ export const metricsOf = (section: Sources): "prometheus" | undefined =>
   section.prometheus === undefined ? undefined : "prometheus"
 
 /** Where each service's builds are read, for the whole estate rather than per environment. */
-export const buildsOf = (settings: Settings): "github" | undefined =>
-  settings.builds === undefined ? undefined : "github"
+export const buildsOf = (settings: Settings): ReadonlyArray<"github" | "gitlab"> => [
+  ...(settings.builds?.github === undefined ? [] : ["github" as const]),
+  ...(settings.builds?.gitlab === undefined ? [] : ["gitlab" as const]),
+]

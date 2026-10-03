@@ -7,10 +7,10 @@ import { Estate } from "../state"
 import { inEnvironment } from "../views/catalog"
 import { readAlerts, withResolved } from "./alerts"
 import { readArgo } from "./argo"
+import { runBuilds } from "./builds"
 import { readCluster } from "./cluster"
 import { revertExpired } from "./debug"
 import { readDeploys } from "./flux"
-import { runBuilds } from "./github"
 import { grafanaRules } from "./grafana"
 import { clusterOf } from "./kubernetes"
 import { readMetrics } from "./metrics"
@@ -107,8 +107,8 @@ export const startSources = (
           yield* FiberMap.run(fibers, key, readersFor(settings, environment), { onlyIfMissing: true })
       })
     yield* follow((yield* SubscriptionRef.get(ref)).catalog.environments)
-    if (buildsOf(settings) === "github" && settings.builds !== undefined)
-      yield* Effect.forkScoped(runBuilds(settings.builds.github))
+    if (settings.builds !== undefined && buildsOf(settings).length > 0)
+      yield* Effect.forkScoped(runBuilds(settings.builds))
     return yield* SubscriptionRef.changes(ref).pipe(
       Stream.map((estate) => estate.catalog.environments),
       Stream.changes,

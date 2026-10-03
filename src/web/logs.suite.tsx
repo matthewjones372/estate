@@ -46,8 +46,9 @@ describe("a service's live lines", () => {
     expect(texts(page.container)).toHaveLength(4)
     const list = page.container.querySelector(".log-lines")
     if (list === null) throw new Error("no lines")
+    // Writable, as a browser's are: the scroll to the end that resuming queued still lands after this.
     Object.defineProperties(list, {
-      scrollTop: { value: 0 },
+      scrollTop: { value: 0, writable: true },
       clientHeight: { value: 100 },
       scrollHeight: { value: 400 },
     })

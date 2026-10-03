@@ -2,14 +2,13 @@
  * Builds from GitHub Actions: each service's workflow runs on its branch, newest first. Asked with the ETag of the last
  * answer, so a quiet repository costs a 304 and nothing of the rate limit.
  */
-import { type Duration, Effect, Redacted, Schema, SubscriptionRef } from "effect"
+import { Effect, Redacted, Schema } from "effect"
 import { type Service, workflowOf } from "../../shared/catalog"
 import type { Build } from "../../shared/events"
 import { Remote } from "../remote"
-import { forEver } from "../schedule"
-import { Estate, updateEstate } from "../state"
-import { isoNow } from "../time"
-import { afterRead, type Failure, SourceFailure } from "./run"
+import type { Remembered } from "./remembered"
+import { shown } from "./remembered"
+import { type Failure, SourceFailure } from "./run"
 
 const Runs = Schema.Struct({
   workflow_runs: Schema.Array(
@@ -36,15 +35,8 @@ export interface GitHub {
   readonly token?: Redacted.Redacted<string>
 }
 
-interface Remembered {
-  readonly etag: string
-  readonly builds: ReadonlyArray<Build>
-}
-
-const shown = 8
-
 /** A service's builds, or what it last had when GitHub says nothing changed. */
-const buildsOf = (
+export const githubBuilds = (
   github: GitHub,
   service: Service,
   remembered: Map<string, Remembered>,
@@ -87,35 +79,4 @@ const buildsOf = (
     if (etag !== undefined) remembered.set(url, { etag, builds })
     return builds
   })
-}
-
-/** Every service's builds, read now and every minute into the estate. */
-export const runBuilds = (
-  github: GitHub,
-  every: Duration.Input = "60 seconds",
-): Effect.Effect<never, never, Estate | Remote> => {
-  const remembered = new Map<string, Remembered>()
-  const once = Effect.gen(function* () {
-    const { catalog } = yield* SubscriptionRef.get(yield* Estate)
-    const read = yield* Effect.result(
-      Effect.forEach(
-        catalog.services,
-        (service) =>
-          buildsOf(github, service, remembered).pipe(Effect.map((builds) => [service.name, builds] as const)),
-        {
-          concurrency: 4,
-        },
-      ),
-    )
-    const at = yield* isoNow
-    yield* updateEstate((estate) => ({
-      ...estate,
-      builds: afterRead(
-        estate.builds,
-        read._tag === "Success" ? { value: Object.fromEntries(read.success) } : read.failure,
-        at,
-      ),
-    }))
-  })
-  return forEver(once, every)
 }

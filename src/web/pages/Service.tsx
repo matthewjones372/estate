@@ -131,7 +131,8 @@ export const ServicePage = (props: { readonly name: string }) => {
                       <div style={{ "min-width": 0 }}>
                         <Out href={build.url}>{build.title}</Out>
                         <div class="muted mono" style={{ "font-size": "12px" }}>
-                          {build.sha.slice(0, 7)} · {build.status} · {since(build.at, now())} ago
+                          {build.sha.slice(0, 7)} · {build.status}
+                          {build.job === undefined ? "" : ` at ${build.job}`} · {since(build.at, now())} ago
                         </div>
                       </div>
                     </li>

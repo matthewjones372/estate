@@ -208,6 +208,8 @@ const Build = Schema.Struct({
   status: Schema.Literals(["success", "failure", "running", "queued", "cancelled"]),
   at: Instant,
   url: Schema.String,
+  /** The job that failed, where the tool names it. */
+  job: optional(Schema.String),
 })
 export type Build = typeof Build.Type
 

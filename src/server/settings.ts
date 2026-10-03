@@ -84,7 +84,13 @@ export const Settings = Schema.Struct({
   metrics: optional(Schema.Struct({ port: optional(Schema.Number) })),
   /** Estate's own traces and logs, sent over OTLP to a collector when one is named. */
   telemetry: optional(Schema.Struct({ otlp: optional(Schema.String) })),
-  builds: optional(Schema.Struct({ github: Schema.Struct({ token: optional(Secret), url: optional(Schema.String) }) })),
+  /** Where builds are read, for the whole estate: GitHub Actions, GitLab CI, or both. */
+  builds: optional(
+    Schema.Struct({
+      github: optional(Schema.Struct({ token: optional(Secret), url: optional(Schema.String) })),
+      gitlab: optional(Schema.Struct({ token: optional(Secret), url: optional(Schema.String) })),
+    }),
+  ),
 })
 export type Settings = typeof Settings.Type
 export type AuthSettings = typeof Auth.Type

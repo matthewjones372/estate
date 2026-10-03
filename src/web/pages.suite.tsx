@@ -119,6 +119,15 @@ describe("the pipeline rail", () => {
     expect(
       pipelineOf([{ sha: "a", title: "t", status: "failure", at: "2026-10-03T11:00:00Z", url: "u" }], undefined, now),
     ).toMatchObject({ note: "build failed" })
+    const failedAt = {
+      sha: "a",
+      title: "t",
+      status: "failure",
+      at: "2026-10-03T11:00:00Z",
+      url: "u",
+      job: "test",
+    } as const
+    expect(pipelineOf([failedAt], undefined, now)).toMatchObject({ note: "build failed at test" })
     expect(
       pipelineOf([], { environment: "x", seen: true, running: "v1", chosen: { version: "v2", ready: false } }, now),
     ).toMatchObject({ note: "rolling out" })

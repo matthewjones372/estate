@@ -2,9 +2,10 @@ import { describe, expect, test } from "bun:test"
 import { Effect, Layer, Redacted, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
 import { catalog, estate } from "../fixture"
-import { type Call, type Reply, reply, stubRemote } from "../remote"
+import { type Call, Remote, RemoteError, type Reply, reply, stubRemote } from "../remote"
 import { Estate, estateLayer } from "../state"
-import { runBuilds, statusOf } from "./github"
+import { runBuilds } from "./builds"
+import { statusOf } from "./github"
 
 const runs = {
   total_count: 2,
@@ -56,7 +57,7 @@ const read = (answer: (call: Call) => Reply, minutes = 0, catalogRead = withBuil
   Effect.runPromise(
     Effect.gen(function* () {
       const ref = yield* Estate
-      yield* Effect.forkChild(runBuilds({ token: Redacted.make("secret") }))
+      yield* Effect.forkChild(runBuilds({ github: { token: Redacted.make("secret") } }))
       yield* TestClock.adjust(`${minutes * 60 + 1} seconds`)
       return (yield* SubscriptionRef.get(ref)).builds
     }).pipe(
@@ -139,4 +140,26 @@ describe("builds from GitHub", () => {
     expect(statusOf({ status: "completed", conclusion: "timed_out" })).toBe("failure")
     expect(statusOf({ status: "completed", conclusion: "skipped" })).toBe("cancelled")
   })
+
+  test("say when GitHub cannot be reached", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        yield* Effect.forkChild(runBuilds({ github: {} }))
+        yield* TestClock.adjust("1 second")
+        return (yield* SubscriptionRef.get(yield* Estate)).builds
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            estateLayer(estate({ catalog: withBuilds })),
+            TestClock.layer(),
+            Layer.succeed(Remote)({
+              call: (call) =>
+                Effect.fail(new RemoteError({ url: call.url, message: "could not reach api.github.com" })),
+            }),
+          ),
+        ),
+      ),
+    ).then((builds) => {
+      expect(builds.message).toBe("GitHub could not reach api.github.com")
+    }))
 })

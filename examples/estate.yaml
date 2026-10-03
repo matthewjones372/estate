@@ -28,3 +28,5 @@ sources:
 
 builds:
   github: {}
+  # And GitLab CI, for services whose catalog entry names build: { gitlab: { project, ref } }:
+  # gitlab: { url: https://gitlab.example.com, token: ${GITLAB_TOKEN} }

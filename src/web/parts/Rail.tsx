@@ -43,7 +43,13 @@ export const pipelineOf = (builds: ReadonlyArray<Build>, deployed: Deployed | un
   const steps = [build === undefined ? "waiting" : "done", buildStep(build), chosenStep, runningStep] as const
   const sha = build?.sha.slice(0, 7)
   if (stalled !== undefined) return { steps, note: `stalled: ${stalled}`, tone: "attention", sha }
-  if (build?.status === "failure") return { steps, note: "build failed", tone: "attention", sha }
+  if (build?.status === "failure")
+    return {
+      steps,
+      note: build.job === undefined ? "build failed" : `build failed at ${build.job}`,
+      tone: "attention",
+      sha,
+    }
   if (build?.status === "running" || build?.status === "queued")
     return { steps, note: `building, ${since(build.at, now)}`, tone: "active", sha }
   if (runningStep === "active") return { steps, note: "rolling out", tone: "active", sha }

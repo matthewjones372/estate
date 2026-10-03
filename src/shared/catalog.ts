@@ -19,14 +19,18 @@ const Workload = Schema.Struct({
 
 const Kubernetes = Schema.Struct({ namespace: Schema.String, workloads: Schema.Array(Workload) })
 const Workflow = Schema.Struct({ workflow: Schema.String, branch: optional(Schema.String) })
+const Pipelines = Schema.Struct({ project: Schema.String, ref: optional(Schema.String) })
 
 export const Service = Schema.Struct({
   name: Schema.String,
   description: optional(Schema.String),
   owner: optional(Schema.String),
   repository: optional(Schema.String),
-  /** Its builds: `{ github: { workflow, branch } }`, or the workflow alone, meaning GitHub Actions. */
-  build: optional(Schema.Union([Workflow, Schema.Struct({ github: Workflow })])),
+  /**
+   * Its builds: `{ github: { workflow, branch } }` or the workflow alone, meaning GitHub Actions; or
+   * `{ gitlab: { project, ref } }`.
+   */
+  build: optional(Schema.Union([Workflow, Schema.Struct({ github: Workflow }), Schema.Struct({ gitlab: Pipelines })])),
   runbook: optional(Schema.String),
   environments: Schema.Array(Schema.String),
   /** What it runs on, by that runtime's own names: `{ kubernetes: { namespace, workloads } }`. */
@@ -87,8 +91,15 @@ export const kubernetesOf = (service: Service): typeof Kubernetes.Type | undefin
   service.runtime?.kubernetes ?? service.kubernetes
 
 /** The GitHub Actions workflow that builds a service, however the catalog names it. */
-export const workflowOf = (service: Service): typeof Workflow.Type | undefined =>
-  service.build === undefined ? undefined : "github" in service.build ? service.build.github : service.build
+export const workflowOf = (service: Service): typeof Workflow.Type | undefined => {
+  const { build } = service
+  if (build === undefined || "gitlab" in build) return undefined
+  return "github" in build ? build.github : build
+}
+
+/** The GitLab project whose pipelines build a service. */
+export const pipelinesOf = (service: Service): typeof Pipelines.Type | undefined =>
+  service.build !== undefined && "gitlab" in service.build ? service.build.gitlab : undefined
 
 const Vital = Schema.Struct({ title: Schema.String, query: Schema.String, unit: optional(Schema.String) })
 
