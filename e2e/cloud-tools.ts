@@ -1,8 +1,9 @@
 /**
  * Other kinds of tool on one port, answering in their own shapes, for the pages' tests: Grafana's alerting (silences
- * kept), Elasticsearch, Argo CD, GitLab, ECS and CloudWatch behind one AWS endpoint, Datadog and Jenkins.
+ * kept), Elasticsearch, Argo CD, GitLab, ECS and CloudWatch behind one AWS endpoint, Datadog, Jenkins, TeamCity and Harness.
  */
 import { datadog } from "./datadog-tools"
+import { harness, teamcity } from "./harness-tools"
 import { jenkins } from "./jenkins-tools"
 
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
@@ -271,6 +272,8 @@ const server = Bun.serve({
     if (path.startsWith("/aws")) return aws(request)
     if (path.startsWith("/datadog/")) return datadog(request, path.slice("/datadog".length))
     if (path.startsWith("/jenkins/")) return jenkins(request, path.slice("/jenkins".length))
+    if (path.startsWith("/teamcity/")) return teamcity(request, path.slice("/teamcity".length))
+    if (path.startsWith("/harness/")) return harness(request, path.slice("/harness".length))
     if (path.endsWith("/_search")) return elasticsearch(request)
     const answered =
       (["/api/alertmanager/", "/api/prometheus/", "/api/ruler/", "/api/datasources/"].some((prefix) =>

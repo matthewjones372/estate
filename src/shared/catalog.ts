@@ -22,6 +22,15 @@ const Workflow = Schema.Struct({ workflow: Schema.String, branch: optional(Schem
 const Pipelines = Schema.Struct({ project: Schema.String, ref: optional(Schema.String) })
 const JenkinsJob = Schema.Struct({ job: Schema.String, branch: optional(Schema.String) })
 const TeamCityBuildType = Schema.Struct({ buildType: Schema.String, branch: optional(Schema.String) })
+const HarnessPipeline = Schema.Struct({ org: Schema.String, project: Schema.String, pipeline: Schema.String })
+/** A Harness CD pipeline, the service it deploys by Harness's identifier, and the environment's, where they differ. */
+const HarnessDeploy = Schema.Struct({
+  org: Schema.String,
+  project: Schema.String,
+  pipeline: Schema.String,
+  service: optional(Schema.String),
+  environment: optional(Schema.String),
+})
 
 export const Service = Schema.Struct({
   name: Schema.String,
@@ -31,7 +40,7 @@ export const Service = Schema.Struct({
   /**
    * Its builds: `{ github: { workflow, branch } }` or the workflow alone, meaning GitHub Actions; or
    * `{ gitlab: { project, ref } }`; `{ jenkins: { job, branch } }`, the job by its folders and a multibranch job's
-   * branch; or `{ teamcity: { buildType, branch } }`.
+   * branch; `{ teamcity: { buildType, branch } }`; or `{ harness: { org, project, pipeline } }`.
    */
   build: optional(
     Schema.Union([
@@ -40,6 +49,7 @@ export const Service = Schema.Struct({
       Schema.Struct({ gitlab: Pipelines }),
       Schema.Struct({ jenkins: JenkinsJob }),
       Schema.Struct({ teamcity: TeamCityBuildType }),
+      Schema.Struct({ harness: HarnessPipeline }),
     ]),
   ),
   runbook: optional(Schema.String),
@@ -53,7 +63,10 @@ export const Service = Schema.Struct({
   ),
   /** The same as `runtime.kubernetes`, as catalogs written before `runtime` name it. */
   kubernetes: optional(Kubernetes),
-  /** What deploys it, by that tool's own names: Flux's Kustomization and ImagePolicy, or Argo CD's Application. */
+  /**
+   * What deploys it, by that tool's own names: Flux's Kustomization and ImagePolicy, Argo CD's Application, or Harness
+   * CD's pipeline.
+   */
   deploy: optional(
     Schema.Struct({
       flux: optional(
@@ -64,6 +77,7 @@ export const Service = Schema.Struct({
         }),
       ),
       argo: optional(Schema.Struct({ application: Schema.String })),
+      harness: optional(HarnessDeploy),
     }),
   ),
   load: optional(
@@ -118,13 +132,21 @@ export const ecsOf = (service: Service) => service.runtime?.ecs
 /** The GitHub Actions workflow that builds a service, however the catalog names it. */
 export const workflowOf = (service: Service): typeof Workflow.Type | undefined => {
   const { build } = service
-  if (build === undefined || "gitlab" in build || "jenkins" in build || "teamcity" in build) return undefined
+  if (build === undefined || "gitlab" in build || "jenkins" in build || "teamcity" in build || "harness" in build)
+    return undefined
   return "github" in build ? build.github : build
 }
 
 /** The Jenkins job that builds a service. */
 export const jenkinsOf = (service: Service): typeof JenkinsJob.Type | undefined =>
   service.build !== undefined && "jenkins" in service.build ? service.build.jenkins : undefined
+
+/** The Harness CI pipeline that builds a service. */
+export const harnessBuildOf = (service: Service): typeof HarnessPipeline.Type | undefined =>
+  service.build !== undefined && "harness" in service.build ? service.build.harness : undefined
+
+/** The Harness CD pipeline that deploys a service. */
+export const harnessDeployOf = (service: Service): typeof HarnessDeploy.Type | undefined => service.deploy?.harness
 
 /** The TeamCity build type that builds a service. */
 export const teamcityOf = (service: Service): typeof TeamCityBuildType.Type | undefined =>

@@ -1,4 +1,4 @@
-/** Every service's builds, from the tool its catalog entry names: GitHub Actions, GitLab CI, Jenkins or TeamCity. */
+/** Every service's builds, from the tool its catalog entry names: GitHub Actions, GitLab CI, Jenkins, TeamCity or Harness CI. */
 import { type Duration, Effect, SubscriptionRef } from "effect"
 import type { Service } from "../../shared/catalog"
 import type { Build } from "../../shared/events"
@@ -9,6 +9,7 @@ import { Estate, updateEstate } from "../state"
 import { isoNow } from "../time"
 import { githubBuilds } from "./github"
 import { gitlabBuilds } from "./gitlab"
+import { harnessBuilds } from "./harness"
 import { jenkinsBuilds } from "./jenkins"
 import type { Remembered } from "./remembered"
 import { afterRead, type Failure } from "./run"
@@ -27,6 +28,8 @@ const buildsOf = (
     return tools.gitlab === undefined ? Effect.succeed([]) : gitlabBuilds(tools.gitlab, service, remembered)
   if ("jenkins" in build)
     return tools.jenkins === undefined ? Effect.succeed([]) : jenkinsBuilds(tools.jenkins, service)
+  if ("harness" in build)
+    return tools.harness === undefined ? Effect.succeed([]) : harnessBuilds(tools.harness, service)
   if ("teamcity" in build)
     return tools.teamcity === undefined ? Effect.succeed([]) : teamcityBuilds(tools.teamcity, service)
   return tools.github === undefined ? Effect.succeed([]) : githubBuilds(tools.github, service, remembered)

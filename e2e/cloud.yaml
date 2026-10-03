@@ -19,7 +19,9 @@ sources:
     aws: { region: eu-west-2, endpoint: http://127.0.0.1:8283/aws }
   datadog:
     datadog: { url: http://127.0.0.1:8283/datadog, apiKey: e2e-api, appKey: e2e-app, tags: [ "env:production" ] }
+    harness: { url: http://127.0.0.1:8283/harness, account: e2e, apiKey: harness-e2e }
 
 builds:
   gitlab: { url: http://127.0.0.1:8283, token: glpat-e2e }
   jenkins: { url: http://127.0.0.1:8283/jenkins, user: estate, token: jenkins-e2e }
+  teamcity: { url: http://127.0.0.1:8283/teamcity, token: teamcity-e2e }

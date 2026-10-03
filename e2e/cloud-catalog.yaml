@@ -38,3 +38,9 @@ services:
     load:
       requests: sum:trace.http.request.hits{service:payments}.as_rate()
       p99: p99:trace.http.request{service:payments}
+
+  - name: ledger
+    description: Keeps the books, built by TeamCity and deployed by Harness
+    environments: [ datadog ]
+    build: { teamcity: { buildType: Shop_Ledger, branch: main } }
+    deploy: { harness: { org: default, project: shop, pipeline: ledger_cd } }

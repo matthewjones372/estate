@@ -15,8 +15,9 @@ export const runtimeOf = (section: Sources): "kubernetes" | "ecs" | undefined =>
  * What chose each version and applied it: Argo CD through its own API, Flux through the cluster it runs in, or ECS's
  * own deployments.
  */
-export const deploysOf = (section: Sources): "argo" | "flux" | "ecs" | undefined => {
+export const deploysOf = (section: Sources): "argo" | "harness" | "flux" | "ecs" | undefined => {
   if (section.argo !== undefined) return "argo"
+  if (section.harness !== undefined) return "harness"
   if (runtimeOf(section) === "ecs") return "ecs"
   return section.flux !== undefined && runtimeOf(section) === "kubernetes" ? "flux" : undefined
 }
@@ -40,9 +41,12 @@ export const metricsOf = (section: Sources): "prometheus" | "datadog" | "cloudwa
 }
 
 /** Where each service's builds are read, for the whole estate rather than per environment. */
-export const buildsOf = (settings: Settings): ReadonlyArray<"github" | "gitlab" | "jenkins" | "teamcity"> => [
+export const buildsOf = (
+  settings: Settings,
+): ReadonlyArray<"github" | "gitlab" | "jenkins" | "teamcity" | "harness"> => [
   ...(settings.builds?.github === undefined ? [] : ["github" as const]),
   ...(settings.builds?.gitlab === undefined ? [] : ["gitlab" as const]),
   ...(settings.builds?.jenkins === undefined ? [] : ["jenkins" as const]),
   ...(settings.builds?.teamcity === undefined ? [] : ["teamcity" as const]),
+  ...(settings.builds?.harness === undefined ? [] : ["harness" as const]),
 ]

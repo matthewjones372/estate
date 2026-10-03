@@ -66,3 +66,14 @@ test("on Datadog: a monitor with its chart, silenced with a downtime, a service'
   await expect(page.getByText("card ••• declined by the provider").first()).toBeVisible()
   await expect(page.getByRole("link", { name: "Retry the card provider" })).toBeVisible()
 })
+
+test("on Datadog: a service built by TeamCity, and Harness's failed deployment as a stall", async ({ page }) => {
+  await page.goto(`${cloud}/?env=datadog`)
+  await expect(page.getByText("stalled: Deployment exceeded progress deadline").first()).toBeVisible({
+    timeout: 20_000,
+  })
+  await page.goto(`${cloud}/services/ledger?env=datadog`)
+  await expect(page.getByRole("link", { name: "Post refunds to the ledger" })).toBeVisible({ timeout: 20_000 })
+  await page.goto(`${cloud}/deploys?env=datadog`)
+  await expect(page.getByText("v4.1.9").first()).toBeVisible({ timeout: 20_000 })
+})

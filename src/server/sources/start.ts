@@ -16,6 +16,7 @@ import { revertExpired } from "./debug"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./ecs"
 import { buildsEvery, everyOf } from "./every"
 import { readDeploys } from "./flux"
+import { readHarnessDeploys } from "./harness"
 import { clusterOf } from "./kubernetes"
 import { chartsOf, readMetrics } from "./metrics"
 import { alertsOf, buildsOf, deploysOf, runtimeOf } from "./ports"
@@ -123,6 +124,13 @@ const readersFor = (
     const { argo } = section
     if (deploysOf(section) === "argo" && argo !== undefined) {
       const read = Effect.flatMap(servicesIn(environment.name), (services) => readArgo(argo, services))
+      readers.push(runSource(environment.name, "deploys", everyOf(section, "deploys"), read))
+    }
+    const { harness } = section
+    if (deploysOf(section) === "harness" && harness !== undefined) {
+      const read = Effect.flatMap(servicesIn(environment.name), (services) =>
+        readHarnessDeploys(harness, services, environment.name),
+      )
       readers.push(runSource(environment.name, "deploys", everyOf(section, "deploys"), read))
     }
     if (runtimeOf(section) === "ecs" && ecs !== undefined) {

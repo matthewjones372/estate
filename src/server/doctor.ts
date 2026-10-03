@@ -19,6 +19,7 @@ import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./sources/ecs"
 import { matchOf } from "./sources/elastic"
 import { intervalsOf } from "./sources/every"
 import { readDeploys } from "./sources/flux"
+import { readHarnessDeploys } from "./sources/harness"
 import { clusterOf } from "./sources/kubernetes"
 import { logsFor } from "./sources/logs"
 import { loadOf } from "./sources/metrics"
@@ -190,6 +191,12 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
     const deploys = deploysOf(section)
     if (deploys === "argo" && argo !== undefined)
       findings.push(yield* finding("deploys", readArgo(argo, services), (found) => deploysSaid("argo", found)))
+    if (deploys === "harness" && section.harness !== undefined)
+      findings.push(
+        yield* finding("deploys", readHarnessDeploys(section.harness, services, environment), (found) =>
+          deploysSaid("harness", found),
+        ),
+      )
     if (deploys === "flux" && cluster !== undefined)
       findings.push(
         yield* finding(

@@ -57,11 +57,11 @@ Nothing.
 
 - [x] **`teamcity-builds`** — builds from a TeamCity build type and branch.
       Done when: a test against TeamCity's own JSON shows a running, a failed and a passing build.
-- [ ] **`harness-builds`** — builds from a Harness CI pipeline's executions.
+- [x] **`harness-builds`** — builds from a Harness CI pipeline's executions.
       Done when: a test against Harness's execution summaries shows a running, a failed and a passing build.
-- [ ] **`harness-deploys`** — what Harness CD last deployed to each environment, and its failure as a stall.
+- [x] **`harness-deploys`** — what Harness CD last deployed to each environment, and its failure as a stall.
       Done when: a failed deployment shows the last good version with Harness's message as the stall.
-- [ ] **`harness-e2e`** — the cloud estate's payments built by TeamCity and deployed by Harness, against fakes; the
+- [x] **`harness-e2e`** — the cloud estate's ledger built by TeamCity and deployed by Harness, against fakes; the
       README and the doctor list both.
       Done when: `bunx playwright test` passes with it.
 

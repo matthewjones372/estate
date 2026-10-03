@@ -38,6 +38,9 @@ services:
     # build: { gitlab: { project: shop/orders, ref: main } }
     # build: { jenkins: { job: shop/orders, branch: main } }
     # build: { teamcity: { buildType: Shop_Orders, branch: main } }
+    # build: { harness: { org: default, project: shop, pipeline: orders_ci } }
+    # And deployed by Harness CD, where an environment's sources name harness:
+    # deploy: { harness: { org: default, project: shop, pipeline: orders_cd } }
     environments: [ staging, production ]
     runtime: { kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: orders } ] } }
     jobs: [ { kind: CronJob, name: orders-nightly-export } ]

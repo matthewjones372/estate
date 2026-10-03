@@ -36,6 +36,8 @@ sources:
     # aws: { region: eu-west-2 }
     # Datadog's monitors as alerts, silenced with downtimes, for the groups in this environment's tags:
     # datadog: { site: datadoghq.eu, apiKey: ${DD_API_KEY}, appKey: ${DD_APP_KEY}, tags: [ "env:production" ] }
+    # Or Harness CD, in place of Flux, reading what each service's CD pipeline last deployed here:
+    # harness: { account: ${HARNESS_ACCOUNT}, apiKey: ${HARNESS_API_KEY} }
     # Or Argo CD, in place of Flux, with a token that may read its Applications:
     # argo: { url: https://argocd.production.invalid, token: ${ARGO_TOKEN} }
     # How often each part is read, where the usual is too often for a tool's limits or its bill
@@ -50,5 +52,7 @@ builds:
   # jenkins: { url: https://jenkins.example.com, user: estate, token: ${JENKINS_TOKEN} }
   # And TeamCity, for services whose catalog entry names build: { teamcity: { buildType, branch } }:
   # teamcity: { url: https://teamcity.example.com, token: ${TEAMCITY_TOKEN} }
+  # And Harness CI, for services whose catalog entry names build: { harness: { org, project, pipeline } }:
+  # harness: { account: ${HARNESS_ACCOUNT}, apiKey: ${HARNESS_API_KEY} }
   # How often builds are read; once a minute unless set:
   # every: 5m

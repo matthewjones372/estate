@@ -37,6 +37,9 @@ const Auth = Schema.Struct({
 
 const Url = Schema.Struct({ url: Schema.String })
 
+/** Harness's NextGen API: the account, an API key, and its URL unless it is app.harness.io. */
+const Harness = Schema.Struct({ url: optional(Schema.String), account: Schema.String, apiKey: Secret })
+
 /** How often a part is read, as `30s`, `2m` or `1h`. */
 const Every = Schema.String
 
@@ -107,6 +110,8 @@ const Sources = Schema.Struct({
   flux: optional(Schema.Struct({})),
   /** AWS, for services on ECS: the region, through the credentials AWS's tools would find. */
   aws: optional(Schema.Struct({ region: Schema.String, endpoint: optional(Schema.String) })),
+  /** Harness CD, in place of Flux or Argo CD: the account and an API key. */
+  harness: optional(Harness),
   /** Argo CD, in place of Flux: its URL and a token that may read its Applications. */
   argo: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
   /** Datadog, for monitors, downtimes, load and lines: its site, its keys, and the tags that are this environment. */
@@ -166,6 +171,8 @@ export const Settings = Schema.Struct({
       gitlab: optional(Schema.Struct({ token: optional(Secret), url: optional(Schema.String) })),
       /** Jenkins, for services whose catalog entry names a job: its URL, and a user and their API token. */
       jenkins: optional(Schema.Struct({ url: Schema.String, user: optional(Schema.String), token: optional(Secret) })),
+      /** Harness CI, for services whose catalog entry names a pipeline: the account and an API key. */
+      harness: optional(Harness),
       /** TeamCity, for services whose catalog entry names a build type: its URL and an access token. */
       teamcity: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
       every: optional(Every),

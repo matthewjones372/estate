@@ -170,12 +170,15 @@ describe("a link's values", () => {
 })
 
 describe("a service's deploy tool", () => {
-  test("is Flux or Argo CD, one of them", () => {
+  test("is Flux, Argo CD or Harness, one of them", () => {
     const environments = [{ name: "a", sources: "a" }]
     const deployed = (deploy: unknown) =>
       mistakes({ environments, services: [{ name: "s", environments: ["a"], deploy }] })
     expect(deployed({ argo: { application: "shop-s" } })).toEqual([])
-    expect(deployed({})).toEqual([{ at: "services[0] (s).deploy", message: "names one deploy tool, flux or argo" }])
+    expect(deployed({ harness: { org: "o", project: "p", pipeline: "cd" } })).toEqual([])
+    expect(deployed({})).toEqual([
+      { at: "services[0] (s).deploy", message: "names one deploy tool: flux, argo or harness" },
+    ])
     expect(deployed({ argo: { application: "a" }, flux: { kustomization: "k" } })).toHaveLength(1)
   })
 })
