@@ -1,6 +1,7 @@
 /** Estate assembled: settings and catalog read and checked, the routes, the catalog's reload and the sources. */
 import { Data, Effect, type FileSystem, Layer, Result } from "effect"
 import type { Mistake } from "../shared/shape"
+import { providerLayer } from "./auth/oidc"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
 import { loadRoute } from "./http/load"
@@ -100,6 +101,11 @@ export const services = <E, F, R>(
   remote: Layer.Layer<Remote>,
   notes: Layer.Layer<Notes, F> = memoryNotes,
 ) =>
-  Layer.mergeAll(estateLayer(started.initial), web, remote, notes, Layer.succeed(Configured)(started.settings)).pipe(
-    Layer.provideMerge(platform),
-  )
+  Layer.mergeAll(
+    estateLayer(started.initial),
+    web,
+    remote,
+    notes,
+    Layer.succeed(Configured)(started.settings),
+    providerLayer,
+  ).pipe(Layer.provideMerge(platform))

@@ -46,20 +46,29 @@ const readersFor = (
   }
   const { kubernetes } = section
   if (kubernetes !== undefined) {
-    const withCluster = <A>(
-      read: (
-        cluster: Parameters<typeof readCluster>[0],
-        services: ReadonlyArray<Service>,
-      ) => Effect.Effect<A, Failure, Remote>,
-    ) =>
-      Effect.gen(function* () {
-        const cluster = yield* clusterOf(kubernetes)
-        return yield* read(cluster, yield* servicesIn(environment.name))
-      })
-    readers.push(runSource(environment.name, "cluster", "15 seconds", withCluster(readCluster)))
-    if (section.flux !== undefined)
-      readers.push(runSource(environment.name, "deploys", "30 seconds", withCluster(readDeploys)))
-    readers.push(revertExpired(environment.name, clusterOf(kubernetes)))
+    // The cluster's address and credentials are read again at most once a minute, not for every read.
+    const cached = Effect.cachedWithTTL(clusterOf(kubernetes), "1 minute")
+    readers.push(
+      Effect.flatMap(cached, (cluster) => {
+        const withCluster = <A>(
+          read: (
+            cluster: Parameters<typeof readCluster>[0],
+            services: ReadonlyArray<Service>,
+          ) => Effect.Effect<A, Failure, Remote>,
+        ) =>
+          Effect.gen(function* () {
+            return yield* read(yield* cluster, yield* servicesIn(environment.name))
+          })
+        const reading = [
+          runSource(environment.name, "cluster", "15 seconds", withCluster(readCluster)),
+          ...(section.flux === undefined
+            ? []
+            : [runSource(environment.name, "deploys", "30 seconds", withCluster(readDeploys))]),
+          revertExpired(environment.name, cluster),
+        ]
+        return Effect.all(reading, { concurrency: "unbounded" }).pipe(Effect.andThen(Effect.never))
+      }),
+    )
   }
   return Effect.all(readers, { concurrency: "unbounded" }).pipe(Effect.andThen(Effect.never))
 }

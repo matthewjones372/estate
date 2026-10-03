@@ -68,6 +68,7 @@ const jobFor = (
   namespace: string,
   wanted: NonNullable<Service["jobs"]>[number],
   now: number,
+  listed: Effect.Effect<typeof Jobs.Type, Failure, Remote>,
 ): Effect.Effect<Job, Failure, Remote> => {
   const path = `/apis/batch/v1/namespaces/${encodeURIComponent(namespace)}`
   if (wanted.kind === "Job") {
@@ -77,7 +78,7 @@ const jobFor = (
   }
   return Effect.gen(function* () {
     const cronJob = yield* kube(cluster, `${path}/cronjobs/${encodeURIComponent(wanted.name)}`, CronJobObject)
-    const jobs = yield* kube(cluster, `${path}/jobs`, Jobs)
+    const jobs = yield* listed
     const runs = jobs.items
       .filter((job) =>
         (job.metadata.ownerReferences ?? []).some((owner) => owner.kind === "CronJob" && owner.name === wanted.name),
@@ -109,5 +110,9 @@ export const jobsOf = (
 ): Effect.Effect<ReadonlyArray<Job>, Failure, Remote> => {
   const namespace = service.kubernetes?.namespace
   if (namespace === undefined) return Effect.succeed([])
-  return Effect.forEach(service.jobs ?? [], (wanted) => jobFor(cluster, namespace, wanted, now), { concurrency: 2 })
+  // The namespace's Jobs are listed once per read, however many of its CronJobs the catalog names.
+  const path = `/apis/batch/v1/namespaces/${encodeURIComponent(namespace)}/jobs`
+  return Effect.flatMap(Effect.cached(kube(cluster, path, Jobs)), (listed) =>
+    Effect.forEach(service.jobs ?? [], (wanted) => jobFor(cluster, namespace, wanted, now, listed), { concurrency: 2 }),
+  )
 }

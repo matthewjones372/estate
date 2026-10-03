@@ -2,7 +2,7 @@
  * Sign-in with any OIDC provider: the authorization code flow with PKCE, the ID token verified against the provider's
  * keys, and the person's name and groups read from its claims.
  */
-import { Data, Effect, Redacted, Schema } from "effect"
+import { Cache, Context, Data, Effect, Exit, Layer, Redacted, Schema } from "effect"
 import { createLocalJWKSet, type JSONWebKeySet, jwtVerify } from "jose"
 import { callJson, type Remote, type RemoteError } from "../remote"
 import type { AuthSettings } from "../settings"
@@ -25,8 +25,8 @@ const decodeTokens = Schema.decodeUnknownEffect(Schema.Struct({ id_token: Schema
 
 const failed = (message: string) => () => new SignInError({ message })
 
-export const discover = (oidc: OidcSettings): Effect.Effect<Discovery, SignInError | RemoteError, Remote> =>
-  callJson({ url: `${oidc.issuer.replace(/\/$/, "")}/.well-known/openid-configuration` }).pipe(
+const fetchDiscovery = (issuer: string): Effect.Effect<Discovery, SignInError | RemoteError, Remote> =>
+  callJson({ url: `${issuer.replace(/\/$/, "")}/.well-known/openid-configuration` }).pipe(
     Effect.flatMap(decodeDiscovery),
     Effect.mapError((error) =>
       error._tag === "RemoteError"
@@ -34,6 +34,44 @@ export const discover = (oidc: OidcSettings): Effect.Effect<Discovery, SignInErr
         : new SignInError({ message: "the provider's discovery document is not OIDC" }),
     ),
   )
+
+/**
+ * What a provider publishes about itself, its discovery document and its signing keys, remembered for an hour, so a
+ * sign-in does not fetch them every time; a failure to fetch is not remembered.
+ */
+export interface Provider {
+  readonly discover: (oidc: OidcSettings) => Effect.Effect<Discovery, SignInError | RemoteError, Remote>
+  readonly keys: (url: string) => Effect.Effect<unknown, RemoteError, Remote>
+}
+export const Provider = Context.Service<Provider>("estate/Provider")
+
+const forAnHour = (exit: Exit.Exit<unknown, unknown>) => (Exit.isSuccess(exit) ? "1 hour" : 0)
+
+export const providerLayer = Layer.effect(Provider)(
+  Effect.gen(function* () {
+    const discoveries = yield* Cache.makeWith(fetchDiscovery, {
+      capacity: 4,
+      timeToLive: forAnHour,
+      requireServicesAt: "lookup",
+    })
+    const keySets = yield* Cache.makeWith((url: string) => callJson({ url }), {
+      capacity: 4,
+      timeToLive: forAnHour,
+      requireServicesAt: "lookup",
+    })
+    return {
+      discover: (oidc: OidcSettings) => Cache.get(discoveries, oidc.issuer),
+      keys: (url: string) => Cache.get(keySets, url),
+    }
+  }),
+)
+
+/** The provider's discovery document, as remembered. */
+export const discover = (oidc: OidcSettings): Effect.Effect<Discovery, SignInError | RemoteError, Remote | Provider> =>
+  Effect.gen(function* () {
+    const provider = yield* Provider
+    return yield* provider.discover(oidc)
+  })
 
 const callbackUrl = (oidc: OidcSettings): string => `${oidc.publicUrl.replace(/\/$/, "")}/auth/callback`
 
@@ -101,7 +139,7 @@ export const completeSignIn = (
   oidc: OidcSettings,
   attempt: Attempt,
   code: string,
-): Effect.Effect<Person, SignInError | RemoteError, Remote> =>
+): Effect.Effect<Person, SignInError | RemoteError, Remote | Provider> =>
   Effect.gen(function* () {
     const discovery = yield* discover(oidc)
     const tokens = yield* callJson({
@@ -117,7 +155,7 @@ export const completeSignIn = (
         code_verifier: attempt.verifier,
       }).toString(),
     }).pipe(Effect.flatMap(decodeTokens), Effect.mapError(failed("the provider sent no ID token")))
-    const keys = yield* callJson({ url: discovery.jwks_uri })
+    const keys = yield* (yield* Provider).keys(discovery.jwks_uri)
     const verified = yield* Effect.tryPromise({
       try: () =>
         jwtVerify(tokens.id_token, createLocalJWKSet(keys as JSONWebKeySet), {

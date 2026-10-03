@@ -114,6 +114,21 @@ describe("signing in with OIDC", () => {
       }),
     ))
 
+  test("asks the provider for its discovery document once an hour, not at every sign-in", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const calls: Call[] = []
+        const server = yield* serverFor(
+          configured,
+          undefined,
+          provider(() => "", calls),
+        )
+        for (let started = 0; started < 10; started++) yield* start(server)
+        const discovered = calls.filter((call) => call.url === `${issuer}/.well-known/openid-configuration`)
+        expect(discovered).toHaveLength(1)
+      }),
+    ))
+
   test("refuses a callback whose state is not the one it started", () =>
     Effect.runPromise(
       Effect.gen(function* () {

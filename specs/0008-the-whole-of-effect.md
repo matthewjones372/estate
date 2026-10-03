@@ -86,7 +86,7 @@ Nothing.
 - [x] **`supervised`** — sources in a `FiberMap` per environment, following the catalog; the schedule helper;
       back-off where a dependency is down.
       Done when: an environment added by a catalog reload is read, and one removed stops being read.
-- [ ] **`caches`** — OIDC discovery and keys, the cluster's credentials, Jobs per namespace.
+- [x] **`caches`** — OIDC discovery and keys, the cluster's credentials, Jobs per namespace.
       Done when: ten sign-ins fetch discovery once.
 - [ ] **`observability`** — JSON logs annotated with environment and part; `/metrics`; spans, exported over OTLP
       when `telemetry.otlp` is set.
