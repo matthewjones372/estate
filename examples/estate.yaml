@@ -19,6 +19,8 @@ sources:
     alertmanager: { url: http://alertmanager.production.invalid:9093 }
     # Or Grafana's alerting, in place of alertmanager, with a service account's token:
     # grafana: { url: https://grafana.production.invalid, token: ${GRAFANA_TOKEN} }
+    # Services' lines from Elasticsearch or OpenSearch, in place of Loki:
+    # elasticsearch: { url: https://logs.production.invalid:9200, index: "logs-*", apiKey: ${ELASTIC_API_KEY} }
     kubernetes: { url: https://kubernetes.production.invalid:6443 }
     flux: {}
 

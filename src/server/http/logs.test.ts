@@ -126,4 +126,35 @@ describe("a service's errors", () => {
       expect(malformed.status).toBe(400)
       expect(noLive).toBe(404)
     }))
+
+  test("are grouped the same from Elasticsearch", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const configured = {
+          ...settings({ anonymous: { name: "visitor", role: "viewer" } }),
+          sources: { staging: { elasticsearch: { url: "http://es:9200" } }, production: {} },
+        }
+        const server = yield* serverFor(configured, undefined, (call) =>
+          call.url === "http://es:9200/logs-*/_search"
+            ? reply({
+                hits: {
+                  hits: [3, 2, 1].map((order) => ({
+                    _source: {
+                      "@timestamp": `2026-10-03T11:5${order}:00Z`,
+                      message: `ERROR order ${order} lost`,
+                      kubernetes: { pod: { name: "storefront-1" } },
+                    },
+                  })),
+                },
+              })
+            : undefined,
+        )
+        return yield* ask(server, new Request("http://estate/api/logs/errors?env=staging&service=storefront&range=1h"))
+      }),
+    ).then((grouped) => {
+      expect(grouped.json()).toMatchObject({
+        from: "Elasticsearch",
+        groups: [{ shape: "ERROR order ‹n› lost", count: 3, pods: ["storefront-1"] }],
+      })
+    }))
 })

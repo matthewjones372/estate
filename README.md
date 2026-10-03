@@ -38,7 +38,8 @@ head across five tabs. Estate does the joining:
   each engine's thresholds, with a page each and their alerts.
 - **Logs on the page**: a service's lines as they arrive, filtered by level or text, paused when you scroll up; its
   errors over the last hour or day grouped by message, so 4,000 lines read as the three faults behind them; and on
-  each alert, the errors from the minutes before it started. From Loki, or from the pods themselves, masked.
+  each alert, the errors from the minutes before it started. From Loki, Elasticsearch or OpenSearch, or the pods
+  themselves, masked.
 - **Charts you can read**: point at any chart, or step through it with the arrow keys, for the time and value of
   each point, marked on every chart of the service at once; drag across one to zoom them all.
 - **What changed today**: deploys, builds, alerts, silences, notes, debug and jobs, in one feed.

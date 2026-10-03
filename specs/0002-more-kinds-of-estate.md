@@ -108,7 +108,7 @@ the image stays small.
       `/api/prometheus/grafana/api/v1/rules`, with a service account's token.
       Done when: a firing Grafana alert shows on the page with its chart, and a silence written on the page is in
       Grafana.
-- [ ] **`elastic-logs`** — `elasticsearch:` as an environment's logs: live lines and errors over a range from
+- [x] **`elastic-logs`** — `elasticsearch:` as an environment's logs: live lines and errors over a range from
       `_search`, sorted by `@timestamp`, filtered by the service's fields and the time; an API key or a user.
       Done when: the logs panel shows a service's live lines and grouped errors from Elasticsearch, as it does from
       Loki.

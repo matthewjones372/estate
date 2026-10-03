@@ -1,6 +1,6 @@
 /**
- * A service's lines, read from its environment's Loki, or else from its pods' own logs through the cluster's API,
- * masked as the catalog says before they go anywhere.
+ * A service's lines, read from its environment's Loki or Elasticsearch, or else from its pods' own logs through the
+ * cluster's API, masked as the catalog says before they go anywhere.
  */
 import { Effect, type FileSystem, Schema } from "effect"
 import type { Service } from "../../shared/catalog"
@@ -8,6 +8,7 @@ import { Remote } from "../remote"
 import type { Sources } from "../settings"
 import { iso } from "../time"
 import { podsOf } from "./cluster"
+import { elasticLines } from "./elastic"
 import { type Cluster, clusterOf } from "./kubernetes"
 import { errorTest, type Line, lineOf, masking } from "./lines"
 import { type Failure, SourceFailure } from "./run"
@@ -101,7 +102,7 @@ const podLines = (
 
 export interface ServiceLogs {
   /** Where the lines come from, as the page names it. */
-  readonly from: "Loki" | "the cluster"
+  readonly from: "Loki" | "Elasticsearch" | "the cluster"
   /** Lines from `from` to `to` (milliseconds), at most `limit`, oldest first, masked. */
   readonly read: (
     from: number,
@@ -111,12 +112,12 @@ export interface ServiceLogs {
   readonly isError: (line: Line) => boolean
 }
 
-/** A service's lines in an environment, if it has a Loki, or a cluster and a namespace to read pods in. */
+/** A service's lines in an environment, if it has a Loki or Elasticsearch, or a cluster and a namespace to read pods in. */
 export const logsFor = (section: Sources, service: Service): ServiceLogs | undefined => {
   const mask = masking(service.logs?.mask)
   const isError = errorTest(service.logs?.errors)
   const namespace = service.kubernetes?.namespace
-  const { loki, kubernetes } = section
+  const { loki, elasticsearch, kubernetes } = section
   if (loki !== undefined) {
     const selector =
       service.logs?.selector ??
@@ -127,6 +128,13 @@ export const logsFor = (section: Sources, service: Service): ServiceLogs | undef
       read: (from, to, limit) => Effect.map(lokiLines(loki, selector, from, to, limit), (lines) => lines.map(mask)),
     }
   }
+  if (elasticsearch !== undefined)
+    return {
+      from: "Elasticsearch",
+      isError,
+      read: (from, to, limit) =>
+        Effect.map(elasticLines(elasticsearch, service, from, to, limit), (lines) => lines.map(mask)),
+    }
   if (kubernetes === undefined || namespace === undefined) return undefined
   return {
     from: "the cluster",

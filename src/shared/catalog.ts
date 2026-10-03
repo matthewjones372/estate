@@ -50,6 +50,13 @@ export const Service = Schema.Struct({
       errors: optional(Schema.String),
       /** Patterns for what must not leave Estate, each replaced with •••. */
       mask: optional(Schema.Array(Schema.String)),
+      /** In Elasticsearch: the fields its lines carry, and the field its message is in. */
+      elastic: optional(
+        Schema.Struct({
+          match: optional(Schema.Record(Schema.String, Schema.String)),
+          message: optional(Schema.String),
+        }),
+      ),
     }),
   ),
   stats: optional(

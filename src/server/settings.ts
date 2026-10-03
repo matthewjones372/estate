@@ -51,6 +51,16 @@ const Sources = Schema.Struct({
   prometheus: optional(Url),
   /** Loki, for services' lines; without it, the cluster's own pod logs. */
   loki: optional(Schema.Struct({ url: Schema.String, tenant: optional(Schema.String) })),
+  /** Elasticsearch or OpenSearch, for services' lines in place of Loki: an index pattern, and an API key or a user. */
+  elasticsearch: optional(
+    Schema.Struct({
+      url: Schema.String,
+      index: optional(Schema.String),
+      apiKey: optional(Secret),
+      username: optional(Schema.String),
+      password: optional(Secret),
+    }),
+  ),
   alertmanager: optional(Url),
   /** Grafana's alerting, in place of Alertmanager: its URL and a service account's token. */
   grafana: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
