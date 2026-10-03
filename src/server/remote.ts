@@ -18,7 +18,12 @@ export interface Reply {
   readonly text: string
 }
 
-export const RemoteError = Data.TaggedError("RemoteError")<{ readonly url: string; readonly message: string }>
+export const RemoteError = Data.TaggedError("RemoteError")<{
+  readonly url: string
+  readonly message: string
+  /** The status it answered with, when it answered. */
+  readonly status?: number
+}>
 export type RemoteError = InstanceType<typeof RemoteError>
 
 export interface Remote {
@@ -109,6 +114,7 @@ export const callJson = (call: Call): Effect.Effect<unknown, RemoteError, Remote
       return yield* new RemoteError({
         url: call.url,
         message: `answered ${answered.status}: ${answered.text.slice(0, 200)}`,
+        status: answered.status,
       })
     }
     return yield* Effect.try({

@@ -107,6 +107,8 @@ export const Job = Schema.Struct({
   runs: Schema.Array(JobRun),
   next: optional(Instant),
   missed: optional(Instant),
+  /** Why it has no runs to show: the catalog names it, and the cluster has no such thing. */
+  absent: optional(Schema.String),
 })
 export type Job = typeof Job.Type
 

@@ -1,5 +1,5 @@
 /** What the cluster says of each service: its workloads' pods, and its debug level from its logging ConfigMap. */
-import { Clock, Effect, Schema } from "effect"
+import { Clock, Effect, Option, Schema } from "effect"
 import { kubernetesOf, type Service } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Debug, Pod } from "../../shared/events"
@@ -7,7 +7,7 @@ import type { Remote } from "../remote"
 import type { Workloads } from "../state"
 import { debugAnnotations } from "./debug"
 import { jobsOf } from "./jobs"
-import { type Cluster, Condition, kube, Metadata } from "./kubernetes"
+import { type Cluster, Condition, kube, kubeIfThere, Metadata } from "./kubernetes"
 import type { Failure } from "./run"
 
 const WorkloadList = Schema.Struct({
@@ -126,11 +126,19 @@ const debugFor = (cluster: Cluster, service: Service): Effect.Effect<Debug | und
   const { debug } = service
   const kubernetes = kubernetesOf(service)
   if (debug === undefined || kubernetes === undefined) return Effect.succeed(undefined)
-  return kube(
+  // A ConfigMap that is not there gives that service no switch, as a workload that is not there gives it no pods.
+  return kubeIfThere(
     cluster,
     `/api/v1/namespaces/${encodeURIComponent(kubernetes.namespace)}/configmaps/${encodeURIComponent(debug.configMap)}`,
     ConfigMap,
-  ).pipe(Effect.map((map) => debugOf(debug.levels, map.data ?? {}, debug.key, map.metadata.annotations ?? {})))
+  ).pipe(
+    Effect.map(
+      Option.match({
+        onNone: () => undefined,
+        onSome: (map) => debugOf(debug.levels, map.data ?? {}, debug.key, map.metadata.annotations ?? {}),
+      }),
+    ),
+  )
 }
 
 /** Every service's pods, jobs and debug, read side by side. */

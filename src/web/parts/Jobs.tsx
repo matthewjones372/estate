@@ -56,6 +56,7 @@ export const Jobs = (props: { readonly jobs: ReadonlyArray<Job> }) => {
                 </span>
               </span>
               {job.suspended && <span class="muted">suspended</span>}
+              <Show when={job.absent}>{(absent) => <span class="rail-note attention">{absent()}</span>}</Show>
               <Show when={job.missed}>
                 {(missed) => <span class="rail-note attention">missed its run at {clock(missed())}</span>}
               </Show>
@@ -67,7 +68,7 @@ export const Jobs = (props: { readonly jobs: ReadonlyArray<Job> }) => {
                 )}
               </Show>
               <ol class="job-runs">
-                {job.runs.length === 0 && <li class="muted">no runs kept</li>}
+                {job.runs.length === 0 && job.absent === undefined && <li class="muted">no runs kept</li>}
                 <For each={job.runs}>{(run) => <Run run={run} now={now()} />}</For>
               </ol>
             </div>

@@ -1,7 +1,7 @@
 /** A cluster's API: where it is and how Estate signs in to it, from inside the cluster or from settings. */
 import { Config, Effect, type FileSystem, Option, Redacted, Schema } from "effect"
 import { readText } from "../platform"
-import { callJson, type Remote } from "../remote"
+import { callJson, type Remote, type RemoteError } from "../remote"
 import type { Kubernetes } from "../settings"
 import { type Failure, SourceFailure } from "./run"
 
@@ -43,26 +43,49 @@ export const clusterOf = (settings: Kubernetes): Effect.Effect<Cluster, Failure,
     }
   })
 
+const get = (cluster: Cluster, path: string) =>
+  callJson({
+    url: `${cluster.url}${path}`,
+    headers: cluster.headers,
+    ...(cluster.ca === undefined ? {} : { ca: cluster.ca }),
+  })
+
+const decodedAs =
+  <S extends Schema.Decoder<unknown>>(path: string, schema: S) =>
+  (body: unknown): Effect.Effect<S["Type"], Failure> =>
+    Schema.decodeUnknownEffect(schema)(body).pipe(
+      Effect.mapError(
+        () => new SourceFailure({ message: `the cluster answered ${path} in a shape Estate does not know` }),
+      ),
+    )
+
+const inClusterWords = (error: RemoteError): Failure => new SourceFailure({ message: `the cluster ${error.message}` })
+
 /** A GET of the cluster's API, decoded; a failure in the words the cluster used. */
 export const kube = <S extends Schema.Decoder<unknown>>(
   cluster: Cluster,
   path: string,
   schema: S,
 ): Effect.Effect<S["Type"], Failure, Remote> =>
-  callJson({
-    url: `${cluster.url}${path}`,
-    headers: cluster.headers,
-    ...(cluster.ca === undefined ? {} : { ca: cluster.ca }),
-  }).pipe(
-    Effect.mapError((error) => new SourceFailure({ message: `the cluster ${error.message}` })),
-    Effect.flatMap((body) =>
-      Schema.decodeUnknownEffect(schema)(body).pipe(
-        Effect.mapError(
-          () => new SourceFailure({ message: `the cluster answered ${path} in a shape Estate does not know` }),
-        ),
+  get(cluster, path).pipe(Effect.mapError(inClusterWords), Effect.flatMap(decodedAs(path, schema)))
+
+/** As `kube`, but an object the cluster does not have is none, for the one service that names it to say so. */
+export const kubeIfThere = <S extends Schema.Decoder<unknown>>(
+  cluster: Cluster,
+  path: string,
+  schema: S,
+): Effect.Effect<Option.Option<S["Type"]>, Failure, Remote> =>
+  Effect.gen(function* () {
+    const body = yield* get(cluster, path).pipe(
+      Effect.map(Option.some<unknown>),
+      Effect.catchIf(
+        (error) => error.status === 404,
+        () => Effect.succeed(Option.none<unknown>()),
       ),
-    ),
-  )
+      Effect.mapError(inClusterWords),
+    )
+    return Option.isNone(body) ? Option.none() : Option.some(yield* decodedAs(path, schema)(body.value))
+  })
 
 export const Condition = Schema.Struct({
   type: Schema.String,

@@ -32,8 +32,14 @@ a log line, an index), and then asks Estate's own readers and writers, the same 
 | Logs | Loki, Elasticsearch | a service's lines, newest first in the window, masked, and its errors grouped |
 | Notes | Postgres, DynamoDB Local | notes kept across a restart, and ended after `keepDays` |
 | Jenkins | Jenkins | a job's running, failed and passing builds |
+| Kubernetes | k3s's control plane, Flux's CRDs | a Deployment's pods by its selector; the debug switch under `deploy/rbac.yaml` alone; a CronJob's runs as the Job controller ended them; the tag an ImagePolicy chose and a policy's stall; a CronJob or ConfigMap the catalog names and the cluster lacks, said for that service alone |
 
 ## Why this shape
+
+k3s runs without its agent, so no pod runs and no image is pulled: Kubernetes' controllers make the ReplicaSets, Pods
+and Jobs, and the suite says how each pod is through the status subresource, as a kubelet would, and how each of
+Flux's resources is, as Flux's controllers would. What is proved is Estate against the real API, its objects and its
+RBAC; Flux's and the kubelet's own behaviour are theirs.
 
 Testcontainers starts each tool from its published image and throws it away afterwards, so a suite needs nothing
 installed but Docker, and runs the same on a laptop and in CI. Calling Estate's readers directly, rather than
@@ -57,6 +63,8 @@ Docker where the suite runs.
       Done when: a note survives a restart of Estate's notes against each.
 - [x] **`real-jenkins`** — Jenkins.
       Done when: a job built three times reads as its three builds.
+- [x] **`real-kubernetes`** — Kubernetes and Flux's resources, Estate signed in with a token held to its own RBAC.
+      Done when: a Deployment's pods, the debug switch, a CronJob's runs and Flux's choice read as the cluster has them.
 
 ## Acceptance
 

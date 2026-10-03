@@ -4,6 +4,7 @@ import { environment, estate, storefront } from "../fixture"
 import { reply, stubRemote } from "../remote"
 import { feedView } from "../views/feed"
 import { healthOf } from "../views/health"
+import { readCluster } from "./cluster"
 import { jobsOf, nextRun, runOf } from "./jobs"
 
 const now = Date.parse("2026-10-03T12:20:00Z")
@@ -140,5 +141,34 @@ describe("jobs", () => {
       (jobs) => {
         expect(jobs).toEqual([])
       },
+    ))
+})
+
+describe("what the catalog names and the cluster does not have", () => {
+  const notFound = reply({ kind: "Status", reason: "NotFound" }, 404)
+  const readWith = (answer: (url: string) => ReturnType<typeof reply> | undefined) =>
+    Effect.runPromise(
+      Effect.result(
+        Effect.all([jobsOf(cluster, shop, now), readCluster(cluster, [storefront])]).pipe(
+          Effect.provide(stubRemote((call) => answer(call.url))),
+        ),
+      ),
+    )
+
+  test("is said on its own row, and every other part of the read stands", () =>
+    readWith((url) =>
+      url.endsWith("/jobs") || url.includes("/pods") || url.includes("/deployments") ? reply({ items: [] }) : notFound,
+    ).then((result) => {
+      const [jobs, workloads] = Result.isSuccess(result) ? result.success : [[], undefined]
+      expect(jobs.map((each) => each.absent)).toEqual([
+        "the cluster has no CronJob storefront-sitemap in shop",
+        "the cluster has no Job storefront-migrate in shop",
+      ])
+      expect(workloads?.debug).toEqual({})
+    }))
+
+  test("is not mistaken for a cluster that fails to answer", () =>
+    readWith(() => reply("etcd is unavailable", 500)).then((result) =>
+      expect(Result.isFailure(result) && result.failure.message).toStartWith("the cluster answered 500"),
     ))
 })

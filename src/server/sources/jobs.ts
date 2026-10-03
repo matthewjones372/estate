@@ -2,13 +2,13 @@
  * A service's Jobs and CronJobs: each one's schedule, its last runs and how they ended, its next run, and a run its
  * schedule says should have started and did not.
  */
-import { Cron, Duration, Effect, Result, Schema } from "effect"
+import { Cron, Duration, Effect, Option, Result, Schema } from "effect"
 import { kubernetesOf, type Service } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Job } from "../../shared/events"
 import type { Remote } from "../remote"
 import { after, epoch, iso, isoOf } from "../time"
-import { type Cluster, Condition, kube, Metadata } from "./kubernetes"
+import { type Cluster, Condition, kube, kubeIfThere, Metadata } from "./kubernetes"
 import type { Failure } from "./run"
 
 const JobObject = Schema.Struct({
@@ -71,13 +71,27 @@ const jobFor = (
   listed: Effect.Effect<typeof Jobs.Type, Failure, Remote>,
 ): Effect.Effect<Job, Failure, Remote> => {
   const path = `/apis/batch/v1/namespaces/${encodeURIComponent(namespace)}`
+  const absent: Job = {
+    name: wanted.name,
+    kind: wanted.kind,
+    suspended: false,
+    runs: [],
+    absent: `the cluster has no ${wanted.kind} ${wanted.name} in ${namespace}`,
+  }
   if (wanted.kind === "Job") {
-    return kube(cluster, `${path}/jobs/${encodeURIComponent(wanted.name)}`, JobObject).pipe(
-      Effect.map((job) => ({ name: wanted.name, kind: "Job", suspended: false, runs: [runOf(job)] })),
+    return kubeIfThere(cluster, `${path}/jobs/${encodeURIComponent(wanted.name)}`, JobObject).pipe(
+      Effect.map(
+        Option.match({
+          onNone: () => absent,
+          onSome: (job): Job => ({ name: wanted.name, kind: "Job", suspended: false, runs: [runOf(job)] }),
+        }),
+      ),
     )
   }
   return Effect.gen(function* () {
-    const cronJob = yield* kube(cluster, `${path}/cronjobs/${encodeURIComponent(wanted.name)}`, CronJobObject)
+    const found = yield* kubeIfThere(cluster, `${path}/cronjobs/${encodeURIComponent(wanted.name)}`, CronJobObject)
+    if (Option.isNone(found)) return absent
+    const cronJob = found.value
     const jobs = yield* listed
     const runs = jobs.items
       .filter((job) =>
