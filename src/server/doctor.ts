@@ -13,6 +13,7 @@ import { readArgo } from "./sources/argo"
 import { readBuilds } from "./sources/builds"
 import { cloudwatchApi, cloudwatchRanges, readAlarms } from "./sources/cloudwatch"
 import { readCluster } from "./sources/cluster"
+import { alertsBeside } from "./sources/datadog"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./sources/ecs"
 import { matchOf } from "./sources/elastic"
 import { intervalsOf } from "./sources/every"
@@ -56,7 +57,7 @@ const alertsFinding = (
   section: Sources,
   catalog: Catalog,
   environment: string,
-  alarms?: Effect.Effect<ReadonlyArray<SourcedAlert>, Failure>,
+  alarms?: Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote>,
 ) =>
   finding("alerts", readAlerts(section, alarms), (alerts) => {
     const services = inEnvironment(catalog, environment)
@@ -163,7 +164,7 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
     const prometheus = prometheusOf(section)
     const ecs = aws === undefined ? undefined : yield* makeAwsJson(ecsApi, aws.region, aws.endpoint)
     const cloudwatch = aws === undefined ? undefined : yield* makeAwsJson(cloudwatchApi, aws.region, aws.endpoint)
-    const alarms = cloudwatch === undefined ? undefined : readAlarms(cloudwatch)
+    const alarms = alertsBeside(cloudwatch === undefined ? undefined : readAlarms(cloudwatch), section.datadog)
     const ranges =
       metricsOf(section) === "prometheus" && prometheus !== undefined
         ? prometheusRanges(prometheus, grafana === undefined ? undefined : grafanaRules(grafana))

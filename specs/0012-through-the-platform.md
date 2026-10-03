@@ -51,19 +51,19 @@ sources:
 ```
 
 ```yaml
-# catalog: a service's load as Datadog queries, its monitors and lines found by its tag
+# catalog: a service's load as Datadog queries; its monitors and lines are found by its `service` tag
 services:
   - name: checkout
-    datadog: { service: checkout }
     load:
       requests: sum:trace.http.request.hits{service:checkout}.as_rate()
       errors: sum:trace.http.request.errors{service:checkout}.as_rate()
       p99: p99:trace.http.request{service:checkout}
 ```
 
-- **Alerts** are Datadog's monitors in Alert, Warn or No Data, each of their groups an alert, matched to a service by
-  its `service` tag.
-- **Silences** are Datadog downtimes scoped to the monitor and group, ended early by cancelling them.
+- **Alerts** are Datadog's monitors in Alert, Warn or No Data, each of their groups an alert, in the environment's
+  `tags`, matched to a service by its `service` tag as a Prometheus label would be.
+- **Silences** are Datadog downtimes scoped to the monitor and group, ended early by cancelling them. Datadog records
+  the keys' owner as a downtime's creator, so Estate writes who asked into its message.
 - **Load** is read with one query per series kind for the whole environment, grouped by `service`, wherever the
   catalog's queries share a shape. Otherwise it is read query by query.
 - **Logs** come from Datadog's log search, filtered by `service:<name>` and the environment's tags.
@@ -89,7 +89,7 @@ Spec 0011's `every:`, so a Datadog environment can be read once a minute or less
 - [x] **`grafana-proxy`** — Prometheus and Loki reached through Grafana's data source proxy when `grafana` names
       their uids.
       Done when: the e2e cloud estate's Prometheus is only reachable through a fake Grafana, and its lanes draw.
-- [ ] **`datadog-alerts`** — monitors as alerts, downtimes as silences.
+- [x] **`datadog-alerts`** — monitors as alerts, downtimes as silences.
       Done when: a firing monitor group appears with its service, and silencing it creates a downtime that the next
       read shows.
 - [ ] **`datadog-metrics`** — load, stats and alert charts from Datadog's metric queries, grouped by service.

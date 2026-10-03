@@ -22,11 +22,14 @@ export const deploysOf = (section: Sources): "argo" | "flux" | "ecs" | undefined
 }
 
 /** Where firing, pending and silenced alerts are read. */
-export const alertsOf = (section: Sources): ReadonlyArray<"alertmanager" | "grafana" | "prometheus" | "cloudwatch"> => [
+export const alertsOf = (
+  section: Sources,
+): ReadonlyArray<"alertmanager" | "grafana" | "prometheus" | "cloudwatch" | "datadog"> => [
   ...(section.alertmanager === undefined ? [] : ["alertmanager" as const]),
   ...(section.grafana === undefined ? [] : ["grafana" as const]),
   ...(prometheusOf(section) === undefined ? [] : ["prometheus" as const]),
   ...(section.aws === undefined ? [] : ["cloudwatch" as const]),
+  ...(section.datadog === undefined ? [] : ["datadog" as const]),
 ]
 
 /** Where queries over a range are answered: Prometheus, or CloudWatch where there is no Prometheus. */

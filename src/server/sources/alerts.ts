@@ -148,7 +148,7 @@ const prometheusAlerts = (
 /** Every alert the environment's sources know: its manager's, Grafana's and Prometheus's pending ones, and CloudWatch's alarms. */
 export const readAlerts = (
   sources: Sources,
-  alarms?: Effect.Effect<ReadonlyArray<SourcedAlert>, Failure>,
+  alarms?: Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote>,
 ): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
   Effect.gen(function* () {
     const manager = managerOf(sources)

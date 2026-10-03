@@ -108,6 +108,16 @@ const Sources = Schema.Struct({
   aws: optional(Schema.Struct({ region: Schema.String, endpoint: optional(Schema.String) })),
   /** Argo CD, in place of Flux: its URL and a token that may read its Applications. */
   argo: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
+  /** Datadog, for monitors, downtimes, load and lines: its site, its keys, and the tags that are this environment. */
+  datadog: optional(
+    Schema.Struct({
+      site: optional(Schema.String),
+      url: optional(Schema.String),
+      apiKey: Secret,
+      appKey: Secret,
+      tags: optional(Schema.Array(Schema.String)),
+    }),
+  ),
   /** How often each part is read, where its usual interval is too often for the tool or its bill. */
   every: optional(
     Schema.Struct({

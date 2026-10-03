@@ -104,7 +104,7 @@ describe("silencing an alert", () => {
         ])
         expect(yield* refusal({ environment: "production", alert: "a1", minutes: 60, reason: "x" })).toEqual([
           404,
-          { message: "production has no Alertmanager to silence with" },
+          { message: "production has no Alertmanager, Grafana or Datadog to silence with" },
         ])
         expect(yield* refusal({ environment: "qa", alert: "a1", minutes: 60, reason: "x" })).toEqual([
           404,

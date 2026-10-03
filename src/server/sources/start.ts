@@ -11,6 +11,7 @@ import { readArgo } from "./argo"
 import { runBuilds } from "./builds"
 import { cloudwatchApi, cloudwatchRanges, readAlarms } from "./cloudwatch"
 import { readCluster } from "./cluster"
+import { alertsBeside } from "./datadog"
 import { revertExpired } from "./debug"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./ecs"
 import { buildsEvery, everyOf } from "./every"
@@ -95,7 +96,7 @@ const readersFor = (
     const ecs = aws === undefined ? undefined : yield* makeAwsJson(ecsApi, aws.region, aws.endpoint)
     const cloudwatch = aws === undefined ? undefined : yield* makeAwsJson(cloudwatchApi, aws.region, aws.endpoint)
     if (alertsOf(section).length > 0) {
-      const alarms = cloudwatch === undefined ? undefined : readAlarms(cloudwatch)
+      const alarms = alertsBeside(cloudwatch === undefined ? undefined : readAlarms(cloudwatch), section.datadog)
       readers.push(
         runSource(environment.name, "alerts", everyOf(section, "alerts"), readAlerts(section, alarms), withResolved),
       )

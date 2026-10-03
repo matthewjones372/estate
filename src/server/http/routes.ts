@@ -4,7 +4,7 @@ import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 import type { Me } from "../../shared/events"
 import { streamClosed, streamOpened } from "../observed"
 import { Configured } from "../settings"
-import { managerOf } from "../sources/grafana"
+import { silencerOf } from "../sources/silencers"
 import { Estate } from "../state"
 import { eventStream, SharedViews } from "../stream"
 import { Web } from "../web"
@@ -83,7 +83,7 @@ const events = HttpRouter.add("GET", "/events", (request) =>
     const silences =
       person.role === "operator" &&
       settings.readOnly !== true &&
-      managerOf(settings.sources[found.sources] ?? {}) !== undefined
+      silencerOf(settings.sources[found.sources] ?? {}) !== undefined
     const lastEventId = request.headers["last-event-id"]
     yield* streamOpened
     const body = eventStream({ environment, silences }, lastEventId).pipe(
