@@ -46,7 +46,13 @@ export const Jobs = (props: { readonly jobs: ReadonlyArray<Job> }) => {
               <span class="spread">
                 <span class="mono">{job.name}</span>
                 <span class="muted" style={{ "font-size": "12px" }}>
-                  {job.kind === "CronJob" ? <span class="mono">{job.schedule}</span> : "Job"}
+                  {job.kind === "CronJob" ? (
+                    <span class="mono">{job.schedule}</span>
+                  ) : job.kind === "ScheduledTask" ? (
+                    "Scheduled task"
+                  ) : (
+                    "Job"
+                  )}
                 </span>
               </span>
               {job.suspended && <span class="muted">suspended</span>}

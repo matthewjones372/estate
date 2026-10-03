@@ -31,6 +31,7 @@ describe("the catalog file", () => {
         c: { flux: {} },
         d: { grafana: { url: "g" } },
         e: { argo: { url: "a" } },
+        f: { aws: { region: "eu-west-2" } },
       },
     }
     expect([...configuredKinds(configured, "a")]).toEqual(["metrics", "alerts"])
@@ -38,6 +39,7 @@ describe("the catalog file", () => {
     expect([...configuredKinds(configured, "c")]).toEqual([])
     expect([...configuredKinds(configured, "d")]).toEqual(["alerts"])
     expect([...configuredKinds(configured, "e")]).toEqual(["deploys"])
+    expect([...configuredKinds(configured, "f")]).toEqual(["cluster", "deploys"])
   })
 
   test("a new catalog keeps what is known of environments it keeps, and forgets the rest", () => {

@@ -140,7 +140,12 @@ describe("a service's jobs", () => {
         environments: [{ name: "a", sources: "a" }],
         services: [{ name: "s", environments: ["a"], jobs: [{ kind: "CronJob", name: "backup" }] }],
       }),
-    ).toEqual([{ at: "services[0] (s).jobs", message: "needs kubernetes.namespace, where its jobs run" }])
+    ).toEqual([
+      {
+        at: "services[0] (s).jobs",
+        message: "needs a runtime, Kubernetes' namespace or ECS's cluster, where its jobs run",
+      },
+    ])
   })
 })
 

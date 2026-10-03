@@ -3,7 +3,7 @@
  * partition key, the time as the sort key. The table is made, paid per request, if it is not there and the role may.
  */
 import { Effect, Layer, Schedule, Schema } from "effect"
-import { type Dynamo, type DynamoError, makeDynamo } from "./aws/dynamodb"
+import { type AwsCallError, type AwsJson, makeAwsJson } from "./aws/json"
 import { Notes, NotesError, type StoredNote } from "./notes"
 import { SourceFailure } from "./sources/run"
 
@@ -55,7 +55,11 @@ const noteOf = (item: typeof Item.Type): StoredNote => ({
   text: item.text.S,
 })
 
-const failure = (error: DynamoError | Schema.SchemaError) =>
+type Dynamo = AwsJson
+
+const dynamoDb = { service: "dynamodb", target: "DynamoDB_20120810", version: "1.0", name: "DynamoDB" } as const
+
+const failure = (error: AwsCallError | Schema.SchemaError) =>
   new SourceFailure({ message: `the notes table: ${error.message}` })
 
 /** Every item that `filter` keeps, page by page. */
@@ -64,7 +68,7 @@ const scan = (
   table: string,
   filter: object,
   from?: unknown,
-): Effect.Effect<ReadonlyArray<typeof Item.Type>, DynamoError | Schema.SchemaError> =>
+): Effect.Effect<ReadonlyArray<typeof Item.Type>, AwsCallError | Schema.SchemaError> =>
   dynamo("Scan", { TableName: table, ...filter, ...(from === undefined ? {} : { ExclusiveStartKey: from }) }).pipe(
     Effect.flatMap(decodePage),
     Effect.flatMap((page) =>
@@ -125,7 +129,7 @@ const ensureTable = (dynamo: Dynamo, table: string) =>
 export const dynamodbNotes = (settings: DynamoNotes) =>
   Layer.effect(Notes)(
     Effect.gen(function* () {
-      const dynamo = yield* makeDynamo(settings.region, settings.endpoint)
+      const dynamo = yield* makeAwsJson(dynamoDb, settings.region, settings.endpoint)
       const { table } = settings
       yield* ensureTable(dynamo, table)
       return {

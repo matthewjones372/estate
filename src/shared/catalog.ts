@@ -33,8 +33,13 @@ export const Service = Schema.Struct({
   build: optional(Schema.Union([Workflow, Schema.Struct({ github: Workflow }), Schema.Struct({ gitlab: Pipelines })])),
   runbook: optional(Schema.String),
   environments: Schema.Array(Schema.String),
-  /** What it runs on, by that runtime's own names: `{ kubernetes: { namespace, workloads } }`. */
-  runtime: optional(Schema.Struct({ kubernetes: optional(Kubernetes) })),
+  /** What it runs on, by that runtime's own names: `{ kubernetes: { namespace, workloads } }` or `{ ecs: { cluster, service } }`. */
+  runtime: optional(
+    Schema.Struct({
+      kubernetes: optional(Kubernetes),
+      ecs: optional(Schema.Struct({ cluster: Schema.String, service: Schema.String })),
+    }),
+  ),
   /** The same as `runtime.kubernetes`, as catalogs written before `runtime` name it. */
   kubernetes: optional(Kubernetes),
   /** What deploys it, by that tool's own names: Flux's Kustomization and ImagePolicy, or Argo CD's Application. */
@@ -55,7 +60,10 @@ export const Service = Schema.Struct({
   ),
   links: optional(Schema.Record(Schema.String, Schema.String)),
   debug: optional(Schema.Struct({ configMap: Schema.String, key: Schema.String, levels: Schema.Array(Schema.String) })),
-  jobs: optional(Schema.Array(Schema.Struct({ kind: Schema.Literals(["CronJob", "Job"]), name: Schema.String }))),
+  /** Its jobs: Kubernetes' CronJobs and Jobs by name, or ECS's scheduled tasks by their task family. */
+  jobs: optional(
+    Schema.Array(Schema.Struct({ kind: Schema.Literals(["CronJob", "Job", "ScheduledTask"]), name: Schema.String })),
+  ),
   /** Where its lines are and which are errors; the defaults suit most services. */
   logs: optional(
     Schema.Struct({
@@ -89,6 +97,9 @@ export type Service = typeof Service.Type
 /** Where a service runs on Kubernetes, however the catalog names it. */
 export const kubernetesOf = (service: Service): typeof Kubernetes.Type | undefined =>
   service.runtime?.kubernetes ?? service.kubernetes
+
+/** Where a service runs on ECS. */
+export const ecsOf = (service: Service) => service.runtime?.ecs
 
 /** The GitHub Actions workflow that builds a service, however the catalog names it. */
 export const workflowOf = (service: Service): typeof Workflow.Type | undefined => {

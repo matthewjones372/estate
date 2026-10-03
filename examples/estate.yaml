@@ -27,6 +27,8 @@ sources:
     # elasticsearch: { url: https://logs.production.invalid:9200, index: "logs-*", apiKey: ${ELASTIC_API_KEY} }
     kubernetes: { url: https://kubernetes.production.invalid:6443 }
     flux: {}
+    # Or services on ECS, through the credentials AWS's tools would find, in place of kubernetes:
+    # aws: { region: eu-west-2 }
     # Or Argo CD, in place of Flux, with a token that may read its Applications:
     # argo: { url: https://argocd.production.invalid, token: ${ARGO_TOKEN} }
 

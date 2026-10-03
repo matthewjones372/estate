@@ -66,6 +66,8 @@ const Sources = Schema.Struct({
   grafana: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
   kubernetes: optional(Kubernetes),
   flux: optional(Schema.Struct({})),
+  /** AWS, for services on ECS: the region, through the credentials AWS's tools would find. */
+  aws: optional(Schema.Struct({ region: Schema.String, endpoint: optional(Schema.String) })),
   /** Argo CD, in place of Flux: its URL and a token that may read its Applications. */
   argo: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
 })

@@ -127,7 +127,7 @@ rather than the AWS SDK, so the image stays small.
       Postgres and memory: the environment and alert as the key, the time as the sort key, made on demand if the role
       may create it.
       Done when: notes added on the page survive Estate restarting, against DynamoDB Local.
-- [ ] **`ecs`** — ECS services: running and desired tasks, each task's image and health, deployments rolling or
+- [x] **`ecs`** — ECS services: running and desired tasks, each task's image and health, deployments rolling or
       failed, scheduled tasks as jobs.
       Done when: a service whose deployment is failing shows it stalled with ECS's reason.
 - [ ] **`cloudwatch`** — CloudWatch alarms as alerts (read-only) and `GetMetricData` as a metrics source.

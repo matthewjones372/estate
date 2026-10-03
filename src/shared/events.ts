@@ -99,7 +99,7 @@ const JobRun = Schema.Struct({
 
 export const Job = Schema.Struct({
   name: Schema.String,
-  kind: Schema.Literals(["CronJob", "Job"]),
+  kind: Schema.Literals(["CronJob", "Job", "ScheduledTask"]),
   schedule: optional(Schema.String),
   suspended: Schema.Boolean,
   runs: Schema.Array(JobRun),

@@ -1,6 +1,7 @@
 /** Every environment's sources, each read on its own schedule, for as long as Estate runs. */
 import { Clock, Effect, FiberMap, type FileSystem, Stream, SubscriptionRef } from "effect"
 import type { Service } from "../../shared/catalog"
+import { makeAwsJson } from "../aws/json"
 import type { Remote } from "../remote"
 import type { Settings } from "../settings"
 import { Estate } from "../state"
@@ -10,6 +11,7 @@ import { readArgo } from "./argo"
 import { runBuilds } from "./builds"
 import { readCluster } from "./cluster"
 import { revertExpired } from "./debug"
+import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./ecs"
 import { readDeploys } from "./flux"
 import { grafanaRules } from "./grafana"
 import { clusterOf } from "./kubernetes"
@@ -54,6 +56,38 @@ const readersFor = (
   if (deploysOf(section) === "argo" && argo !== undefined) {
     const read = Effect.flatMap(servicesIn(environment.name), (services) => readArgo(argo, services))
     readers.push(runSource(environment.name, "deploys", "30 seconds", read))
+  }
+  const { aws } = section
+  if (runtimeOf(section) === "ecs" && aws !== undefined) {
+    // Task definitions never change, so the image each names is asked for once.
+    const images = new Map<string, string | undefined>()
+    readers.push(
+      Effect.flatMap(makeAwsJson(ecsApi, aws.region, aws.endpoint), (ecs) => {
+        const read = <A>(part: (services: ReadonlyArray<Service>) => Effect.Effect<A, Failure>) =>
+          Effect.flatMap(servicesIn(environment.name), part)
+        return Effect.all(
+          [
+            runSource(
+              environment.name,
+              "cluster",
+              "15 seconds",
+              read((services) => readEcsWorkloads(ecs, services)),
+            ),
+            ...(deploysOf(section) === "ecs"
+              ? [
+                  runSource(
+                    environment.name,
+                    "deploys",
+                    "30 seconds",
+                    read((services) => readEcsDeploys(ecs, services, images)),
+                  ),
+                ]
+              : []),
+          ],
+          { concurrency: "unbounded" },
+        ).pipe(Effect.andThen(Effect.never))
+      }),
+    )
   }
   const { kubernetes } = section
   if (runtimeOf(section) === "kubernetes" && kubernetes !== undefined) {

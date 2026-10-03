@@ -113,6 +113,12 @@ export const jobsOf = (
   // The namespace's Jobs are listed once per read, however many of its CronJobs the catalog names.
   const path = `/apis/batch/v1/namespaces/${encodeURIComponent(namespace)}/jobs`
   return Effect.flatMap(Effect.cached(kube(cluster, path, Jobs)), (listed) =>
-    Effect.forEach(service.jobs ?? [], (wanted) => jobFor(cluster, namespace, wanted, now, listed), { concurrency: 2 }),
+    Effect.forEach(
+      (service.jobs ?? []).flatMap((wanted) =>
+        wanted.kind === "ScheduledTask" ? [] : [{ ...wanted, kind: wanted.kind }],
+      ),
+      (wanted) => jobFor(cluster, namespace, wanted, now, listed),
+      { concurrency: 2 },
+    ),
   )
 }

@@ -4,13 +4,19 @@
  */
 import type { Settings, Sources } from "../settings"
 
-/** What the services run on: their instances, jobs and debug switch. */
-export const runtimeOf = (section: Sources): "kubernetes" | undefined =>
-  section.kubernetes === undefined ? undefined : "kubernetes"
+/** What the services run on: their instances, jobs and debug switch. An environment runs on one of them. */
+export const runtimeOf = (section: Sources): "kubernetes" | "ecs" | undefined => {
+  if (section.kubernetes !== undefined) return "kubernetes"
+  return section.aws === undefined ? undefined : "ecs"
+}
 
-/** What chose each version and applied it: Argo CD through its own API, or Flux through the cluster it runs in. */
-export const deploysOf = (section: Sources): "argo" | "flux" | undefined => {
+/**
+ * What chose each version and applied it: Argo CD through its own API, Flux through the cluster it runs in, or ECS's
+ * own deployments.
+ */
+export const deploysOf = (section: Sources): "argo" | "flux" | "ecs" | undefined => {
   if (section.argo !== undefined) return "argo"
+  if (runtimeOf(section) === "ecs") return "ecs"
   return section.flux !== undefined && runtimeOf(section) === "kubernetes" ? "flux" : undefined
 }
 

@@ -1,5 +1,5 @@
 /** A service's health in an environment, with the reasons in plain words, from what its sources said. */
-import { kubernetesOf, type Service } from "../../shared/catalog"
+import { ecsOf, kubernetesOf, type Service } from "../../shared/catalog"
 import type { Health } from "../../shared/events"
 import type { EnvironmentState, SourcedAlert } from "../state"
 
@@ -42,7 +42,11 @@ export const healthOf = (
   for (const alert of firing) (alert.severity === "critical" ? critical : attention).push(`${alert.name} is firing`)
 
   const pods = environment.cluster.value?.pods[service.name]
-  if (kubernetesOf(service) !== undefined && environment.cluster.state === "ok" && pods !== undefined) {
+  if (
+    (kubernetesOf(service) ?? ecsOf(service)) !== undefined &&
+    environment.cluster.state === "ok" &&
+    pods !== undefined
+  ) {
     const ready = pods.filter((pod) => pod.ready).length
     if (ready === 0) critical.push("no pod is ready")
     else if (ready < pods.length) attention.push(`${pods.length - ready} of ${pods.length} pods not ready`)
