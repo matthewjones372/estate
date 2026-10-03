@@ -8,13 +8,20 @@ const open = Schema.decodeUnknownOption(Opened)
 
 const base64url = (bytes: Uint8Array): string => Buffer.from(bytes).toString("base64url")
 
+/** Each secret's key, imported once rather than on every request that has a cookie. */
+const keys = new Map<string, Promise<CryptoKey>>()
+
 const key = (secret: string) =>
-  Effect.promise(() =>
-    crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
+  Effect.promise(() => {
+    const kept = keys.get(secret)
+    if (kept !== undefined) return kept
+    const imported = crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
       "sign",
       "verify",
-    ]),
-  )
+    ])
+    keys.set(secret, imported)
+    return imported
+  })
 
 /** A payload sealed until `expires` (milliseconds since the epoch). */
 export const seal = (payload: unknown, expires: number, secret: string): Effect.Effect<string> =>

@@ -27,7 +27,7 @@ spec:
           volumeMounts:
             - { name: settings, mountPath: /etc/estate, readOnly: true }
           readinessProbe:
-            httpGet: { path: /healthz, port: http }
+            httpGet: { path: /readyz, port: http }
           livenessProbe:
             httpGet: { path: /healthz, port: http }
             initialDelaySeconds: 20

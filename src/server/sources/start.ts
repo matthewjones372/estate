@@ -17,6 +17,7 @@ import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./ecs"
 import { buildsEvery, everyOf } from "./every"
 import { readDeploys } from "./flux"
 import { readHarnessDeploys } from "./harness"
+import { keepHeld } from "./held"
 import { clusterOf } from "./kubernetes"
 import { chartsOf, readMetrics } from "./metrics"
 import { alertsOf, buildsOf, deploysOf, runtimeOf } from "./ports"
@@ -99,7 +100,13 @@ const readersFor = (
     if (alertsOf(section).length > 0) {
       const alarms = alertsBeside(cloudwatch === undefined ? undefined : readAlarms(cloudwatch), section.datadog)
       readers.push(
-        runSource(environment.name, "alerts", everyOf(section, "alerts"), readAlerts(section, alarms), withResolved),
+        runSource(
+          environment.name,
+          "alerts",
+          everyOf(section, "alerts"),
+          readAlerts(section, alarms),
+          (before, after, alerts, at) => keepHeld(withResolved(before, after, alerts, at), at),
+        ),
       )
     }
     const ranges = yield* rangesIn(section)

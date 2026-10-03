@@ -54,6 +54,17 @@ export interface Chosen {
   readonly stalled?: string
 }
 
+/** A silence Estate wrote or ended, shown so until the manager's answer agrees or `until` passes. */
+export interface Held {
+  readonly alert: string
+  /** The alert's state before the silence, shown again when it ends. */
+  readonly was: SourcedAlert["state"]
+  readonly until: string
+  /** Silenced with this, or ended the silence with this id. */
+  readonly silence?: NonNullable<SourcedAlert["silence"]>
+  readonly ended?: string
+}
+
 export interface EnvironmentState {
   readonly metrics: Part<Metrics>
   readonly alerts: Part<ReadonlyArray<SourcedAlert>>
@@ -67,6 +78,8 @@ export interface EnvironmentState {
     readonly startsAt: string
     readonly endsAt: string
   }>
+  /** Silences Estate wrote or ended that the manager's answers do not show yet. */
+  readonly held?: ReadonlyArray<Held>
 }
 
 export interface EstateState {

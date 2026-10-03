@@ -3,10 +3,24 @@ import { Clock, Effect, Option, Redacted, Schema } from "effect"
 import { HttpServerRequest } from "effect/http"
 import { type Role, roleOf } from "../auth/roles"
 import { unseal } from "../auth/session"
-import { Configured } from "../settings"
+import { type AuthSettings, Configured } from "../settings"
 
 export const sessionCookie = "estate_session"
 export const attemptCookie = "estate_sign_in"
+
+/** How Estate sets its cookies: `Secure` whenever its public URL is https, so no browser sends them over http. */
+export const cookieOptions = (auth: AuthSettings, seconds: number) =>
+  ({
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: `${seconds} seconds`,
+    secure: auth.oidc?.publicUrl.startsWith("https://") === true,
+  }) as const
+
+/** `returnTo` when it is a path on this host, or `/`: never another site, nor `//host` or `/\\host`, which browsers take as one. */
+export const pathOnThisHost = (returnTo: string | undefined): string =>
+  returnTo?.startsWith("/") === true && !returnTo.startsWith("//") && !returnTo.startsWith("/\\") ? returnTo : "/"
 
 export interface Person {
   readonly name: string

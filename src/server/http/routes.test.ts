@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Redacted } from "effect"
+import { Effect, Redacted, SubscriptionRef } from "effect"
 import { seal } from "../auth/session"
-import { ask, type Server, secret, serverFor, settings } from "../fixture"
+import { ask, environment, estate, type Server, secret, serverFor, settings } from "../fixture"
+import { Estate, waiting } from "../state"
 
 const anonymous = settings({ anonymous: { name: "visitor", role: "viewer" } })
 const oidc = settings({
@@ -174,10 +175,38 @@ describe("the pages", () => {
       }),
     ))
 
-  test("health answers without sign-in", () =>
+  test("health answers without sign-in, and the shell holds nothing of the estate", () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        expect((yield* ask(yield* serverFor(oidc), new Request("http://estate/healthz"))).text).toBe("ok")
+        const server = yield* serverFor(oidc)
+        expect((yield* ask(server, new Request("http://estate/healthz"))).text).toBe("ok")
+        const shell = yield* ask(server, new Request("http://estate/services/orders"))
+        expect([shell.status, shell.text]).toEqual([200, "<!doctype html><title>Estate</title>"])
+      }),
+    ))
+
+  test("is ready once every part it reads has been read once, answered or failed", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(
+          oidc,
+          estate({ environments: { production: environment({ metrics: waiting, alerts: waiting }) }, builds: waiting }),
+        )
+        const readiness = () =>
+          ask(server, new Request("http://estate/readyz")).pipe(Effect.map((each) => [each.status, each.text]))
+        expect(yield* readiness()).toEqual([503, "waiting for production metrics, production alerts, builds"])
+        const ref = yield* Effect.provide(Estate, server.context)
+        yield* SubscriptionRef.update(ref, (state) => ({
+          ...state,
+          environments: {
+            production: environment({
+              metrics: { state: "failing", message: "refused" },
+              alerts: { state: "ok", value: [] },
+            }),
+          },
+          builds: { state: "ok" as const, value: {} },
+        }))
+        expect(yield* readiness()).toEqual([200, "ready"])
       }),
     ))
 })

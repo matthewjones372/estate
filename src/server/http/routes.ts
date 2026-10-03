@@ -5,7 +5,7 @@ import type { Me } from "../../shared/events"
 import { streamClosed, streamOpened } from "../observed"
 import { Configured, secondsIn } from "../settings"
 import { silencerOf } from "../sources/silencers"
-import { Estate } from "../state"
+import { Estate, type EstateState } from "../state"
 import { eventStream, SharedViews } from "../stream"
 import { Web } from "../web"
 import { type Person, personAsking } from "./people"
@@ -58,7 +58,33 @@ export const EnvParam = Schema.Struct({ env: Schema.optionalKey(Schema.String) }
 
 export const refused = (refusal: Refusal) => Effect.succeed(json(refusal.body, refusal.status))
 
+/** Liveness: the process answers. */
 const health = HttpRouter.add("GET", "/healthz", HttpServerResponse.text("ok"))
+
+const parts = ["metrics", "alerts", "cluster", "deploys"] as const
+
+/** What Estate has yet to read once: each part an environment is configured to read, and builds. */
+const unread = (estate: EstateState): ReadonlyArray<string> => [
+  ...Object.entries(estate.environments).flatMap(([name, environment]) =>
+    parts.filter((part) => environment[part].state === "waiting").map((part) => `${name} ${part}`),
+  ),
+  ...(estate.builds.state === "waiting" ? ["builds"] : []),
+]
+
+/**
+ * Readiness: every configured part read once, whether it answered or failed. A tool that is down is shown on the
+ * page as down; it does not keep Estate out of service.
+ */
+const ready = HttpRouter.add(
+  "GET",
+  "/readyz",
+  Effect.gen(function* () {
+    const waiting = unread(yield* SubscriptionRef.get(yield* Estate))
+    return waiting.length === 0
+      ? HttpServerResponse.text("ready")
+      : HttpServerResponse.text(`waiting for ${waiting.join(", ")}`, { status: 503 })
+  }),
+)
 
 const me = HttpRouter.add(
   "GET",
@@ -128,6 +154,10 @@ const assets = HttpRouter.add("GET", "/assets/:name", (request) =>
   }),
 )
 
+/**
+ * The pages' shell, to anyone: it holds no estate, which comes over the signed-in event stream. Nothing read from a
+ * tool or the catalog goes into it, or it is shown to people who have not signed in.
+ */
 const pages = HttpRouter.add(
   "GET",
   "/*",
@@ -140,4 +170,4 @@ const pages = HttpRouter.add(
   }),
 )
 
-export const routes = Layer.mergeAll(health, me, events, assets, pages)
+export const routes = Layer.mergeAll(health, ready, me, events, assets, pages)

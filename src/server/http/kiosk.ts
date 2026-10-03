@@ -9,7 +9,7 @@ import { seal } from "../auth/session"
 import { Configured } from "../settings"
 import { after } from "../time"
 import { Web } from "../web"
-import { sessionCookie } from "./people"
+import { cookieOptions, sessionCookie } from "./people"
 
 const screenDays = 30
 
@@ -33,12 +33,7 @@ export const kioskRoute = HttpRouter.add("GET", "/kiosk", (request) =>
       )
       const team = new URL(request.url, "http://estate").searchParams.get("team")
       return HttpServerResponse.redirect(team === null ? "/kiosk" : `/kiosk?team=${encodeURIComponent(team)}`).pipe(
-        HttpServerResponse.setCookieUnsafe(sessionCookie, sealed, {
-          httpOnly: true,
-          sameSite: "lax",
-          path: "/",
-          maxAge: `${screenDays * 24 * 3600} seconds`,
-        }),
+        HttpServerResponse.setCookieUnsafe(sessionCookie, sealed, cookieOptions(auth, screenDays * 24 * 3600)),
       )
     }
     const web = yield* Web

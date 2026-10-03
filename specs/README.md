@@ -21,3 +21,4 @@ entries, one per pull request, each with what proves it done.
 | [0014](0014-on-a-screen.md) | on a screen: `/kiosk`, signed in once with a token, read-only, environments in turn, a team's services, and a screen that says when it is stale; done |
 | [0015](0015-harness-and-teamcity.md) | Harness and TeamCity: builds from TeamCity and Harness CI, deploys from Harness CD; done |
 | [0016](0016-against-the-real-thing.md) | against the real thing: `bun run integration` runs Estate's readers and writers against real Prometheus, Alertmanager, Grafana, Loki, Elasticsearch, Postgres, DynamoDB Local and Jenkins in containers; done |
+| [0017](0017-what-a-review-found.md) | what a review found: sign-in returns only to a path on this host, `Secure` cookies behind https, the HMAC key imported once, silences held until the manager has them, an unsilenced alert back in its own state, and `/readyz` once every source has been read; done |

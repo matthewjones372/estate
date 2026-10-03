@@ -5,7 +5,7 @@ import { type Attempt, authorizationUrl, completeSignIn, discover, newAttempt } 
 import { seal, unseal } from "../auth/session"
 import { Configured } from "../settings"
 import { after } from "../time"
-import { attemptCookie, sessionCookie } from "./people"
+import { attemptCookie, cookieOptions, pathOnThisHost, sessionCookie } from "./people"
 
 const sessionHours = 12
 const attemptMinutes = 10
@@ -21,9 +21,6 @@ const decodeAttempt = Schema.decodeUnknownOption(Attempted)
 const query = (request: HttpServerRequest.HttpServerRequest, name: string): string | undefined =>
   new URL(request.url, "http://estate").searchParams.get(name) ?? undefined
 
-const cookieOptions = (seconds: number) =>
-  ({ httpOnly: true, sameSite: "lax", path: "/", maxAge: `${seconds} seconds` }) as const
-
 const escapeHtml = (text: string): string => text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`)
 
 const failurePage = (message: string) =>
@@ -35,7 +32,7 @@ const failurePage = (message: string) =>
 const login = HttpRouter.add("GET", "/auth/login", (request) =>
   Effect.gen(function* () {
     const { auth } = yield* Configured
-    const returnTo = query(request, "returnTo") ?? "/"
+    const returnTo = pathOnThisHost(query(request, "returnTo"))
     if (auth.oidc === undefined) return HttpServerResponse.redirect("/")
     const attempt = newAttempt(returnTo)
     const discovery = yield* discover(auth.oidc)
@@ -47,7 +44,7 @@ const login = HttpRouter.add("GET", "/auth/login", (request) =>
       Redacted.value(auth.sessionSecret),
     )
     return HttpServerResponse.redirect(url).pipe(
-      HttpServerResponse.setCookieUnsafe(attemptCookie, sealed, cookieOptions(attemptMinutes * 60)),
+      HttpServerResponse.setCookieUnsafe(attemptCookie, sealed, cookieOptions(auth, attemptMinutes * 60)),
     )
   }).pipe(Effect.catch((error) => Effect.succeed(failurePage(`the provider did not answer: ${error.message}`)))),
 )
@@ -68,8 +65,8 @@ const callback = HttpRouter.add("GET", "/auth/callback", (request) =>
     }
     const person = yield* completeSignIn(auth.oidc, attempt.value, code)
     const sealed = yield* seal(person, after(now, Duration.hours(sessionHours)), Redacted.value(auth.sessionSecret))
-    return HttpServerResponse.redirect(attempt.value.returnTo).pipe(
-      HttpServerResponse.setCookieUnsafe(sessionCookie, sealed, cookieOptions(sessionHours * 3600)),
+    return HttpServerResponse.redirect(pathOnThisHost(attempt.value.returnTo)).pipe(
+      HttpServerResponse.setCookieUnsafe(sessionCookie, sealed, cookieOptions(auth, sessionHours * 3600)),
       HttpServerResponse.expireCookieUnsafe(attemptCookie, { path: "/" }),
     )
   }).pipe(Effect.catch((error) => Effect.succeed(failurePage(error.message)))),

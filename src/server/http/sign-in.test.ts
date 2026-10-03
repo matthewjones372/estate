@@ -3,6 +3,7 @@ import { Effect, Redacted } from "effect"
 import { exportJWK, generateKeyPair, type JWK, SignJWT } from "jose"
 import { ask, type Server, serverFor, settings } from "../fixture"
 import { type Call, reply } from "../remote"
+import { cookieOptions, pathOnThisHost } from "./people"
 
 const issuer = "https://id.example"
 const configured = settings({
@@ -59,13 +60,14 @@ const cookiesOf = (headers: Headers): ReadonlyMap<string, string> =>
   )
 
 /** Starts a sign-in, and returns the provider's authorize URL and the attempt cookie. */
-const start = (server: Server) =>
-  ask(server, new Request("https://estate.example/auth/login?returnTo=/deploys")).pipe(
+const start = (server: Server, returnTo = "/deploys") =>
+  ask(server, new Request(`https://estate.example/auth/login?returnTo=${encodeURIComponent(returnTo)}`)).pipe(
     Effect.map((answered) => {
       expect(answered.status).toBe(302)
       return {
         url: new URL(answered.headers.get("location") ?? ""),
         attempt: cookiesOf(answered.headers).get("estate_sign_in") ?? "",
+        secure: answered.headers.getSetCookie().every((cookie) => cookie.includes("Secure")),
       }
     }),
   )
@@ -111,6 +113,34 @@ describe("signing in with OIDC", () => {
           new Request("https://estate.example/api/me", { headers: { cookie: `estate_session=${session}` } }),
         )
         expect(me.json()).toMatchObject({ name: "ada", role: "operator" })
+      }),
+    ))
+
+  test("comes back only to a path on this host, with cookies a browser sends over https alone", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        let token = ""
+        const server = yield* serverFor(
+          configured,
+          undefined,
+          provider(() => token),
+        )
+        const { url, attempt, secure } = yield* start(server, "https://evil.example/sign-in")
+        token = yield* idToken({ sub: "1", preferred_username: "ada", nonce: url.searchParams.get("nonce") })
+        const back = yield* callback(server, `code=c&state=${url.searchParams.get("state")}`, attempt)
+        expect(back.headers.get("location")).toBe("/")
+        expect(secure).toBe(true)
+        expect(back.headers.getSetCookie().find((cookie) => cookie.startsWith("estate_session"))).toContain("Secure")
+        expect(
+          ["/services/checkout?env=staging", "//evil.example", "/\\evil.example", "evil.example", undefined].map(
+            pathOnThisHost,
+          ),
+        ).toEqual(["/services/checkout?env=staging", "/", "/", "/", "/"])
+        const { oidc, ...anonymous } = configured.auth
+        expect(
+          oidc && cookieOptions({ ...anonymous, oidc: { ...oidc, publicUrl: "http://localhost/" } }, 60).secure,
+        ).toBe(false)
+        expect(cookieOptions(anonymous, 60).secure).toBe(false)
       }),
     ))
 

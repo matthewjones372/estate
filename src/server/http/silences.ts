@@ -1,12 +1,13 @@
 /**
  * Silences, written through Alertmanager, Grafana's or Datadog with who and why: `POST /api/silences` and
- * `DELETE /api/silences/:id`, for operators. The page sees the change at once; the manager's next answer confirms it.
+ * `DELETE /api/silences/:id`, for operators. The page sees the change at once, held until the manager's answer has it.
  */
 import { Clock, Duration, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Configured } from "../settings"
+import { holdSilence, holdUnsilence } from "../sources/held"
 import { silencerOf } from "../sources/silencers"
-import { Estate, type SourcedAlert, updateEnvironment } from "../state"
+import { Estate, updateEnvironment } from "../state"
 import { after, iso } from "../time"
 import { EnvParam, json, Refusal, refused, searchParams, writer } from "./routes"
 
@@ -41,19 +42,6 @@ const silencerIn = (environment: string) =>
       : silencer
   })
 
-const withAlert = (environment: string, id: string, change: (alert: SourcedAlert) => SourcedAlert) =>
-  updateEnvironment(environment, (state) =>
-    state.alerts.value === undefined
-      ? state
-      : {
-          ...state,
-          alerts: {
-            ...state.alerts,
-            value: state.alerts.value.map((alert) => (alert.id === id ? change(alert) : alert)),
-          },
-        },
-  )
-
 export const silenceRoute = HttpRouter.add(
   "POST",
   "/api/silences",
@@ -80,11 +68,9 @@ export const silenceRoute = HttpRouter.add(
     const startsAt = iso(now)
     const endsAt = iso(after(now, Duration.minutes(asked.minutes)))
     const id = yield* silencer.silence(alert, { startsAt, endsAt, by: person.name, reason })
-    yield* withAlert(asked.environment, alert.id, (each) => ({
-      ...each,
-      state: "silenced",
-      silence: { id, by: person.name, reason, startsAt, endsAt },
-    }))
+    yield* updateEnvironment(asked.environment, (state) =>
+      holdSilence(state, alert, { id, by: person.name, reason, startsAt, endsAt }, now),
+    )
     return json({ id, endsAt }, 201)
   }).pipe(
     Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 502))),
@@ -99,19 +85,8 @@ export const unsilenceRoute = HttpRouter.add("DELETE", "/api/silences/:id", () =
     const { env: environment = "" } = yield* searchParams(EnvParam, "env names an environment")
     const silencer = yield* silencerIn(environment)
     yield* silencer.unsilence(id)
-    yield* updateEnvironment(environment, (state) =>
-      state.alerts.value === undefined
-        ? state
-        : {
-            ...state,
-            alerts: {
-              ...state.alerts,
-              value: state.alerts.value.map(({ silence: was, ...alert }) =>
-                was?.id === id ? { ...alert, state: "firing" } : was === undefined ? alert : { ...alert, silence: was },
-              ),
-            },
-          },
-    )
+    const now = yield* Clock.currentTimeMillis
+    yield* updateEnvironment(environment, (state) => holdUnsilence(state, id, now))
     return json({ id }, 200)
   }).pipe(
     Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 502))),
