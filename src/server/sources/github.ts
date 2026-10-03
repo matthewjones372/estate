@@ -7,7 +7,7 @@ import type { Service } from "../../shared/catalog"
 import type { Build } from "../../shared/events"
 import { Remote } from "../remote"
 import { Estate, updateEstate } from "../state"
-import { afterRead, type Failure } from "./run"
+import { afterRead, type Failure, SourceFailure } from "./run"
 
 const Runs = Schema.Struct({
   workflow_runs: Schema.Array(
@@ -63,14 +63,16 @@ const buildsOf = (
     const remote = yield* Remote
     const answered = yield* remote
       .call({ url, headers })
-      .pipe(Effect.mapError((error) => ({ message: `GitHub ${error.message}` })))
+      .pipe(Effect.mapError((error) => new SourceFailure({ message: `GitHub ${error.message}` })))
     if (answered.status === 304 && last !== undefined) return last.builds
     if (answered.status !== 200)
-      return yield* Effect.fail({
+      return yield* new SourceFailure({
         message: `GitHub answered ${answered.status} for ${repository}: ${answered.text.slice(0, 160)}`,
       })
     const runs = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Runs))(answered.text).pipe(
-      Effect.mapError(() => ({ message: `GitHub answered ${repository}'s runs in a shape Estate does not know` })),
+      Effect.mapError(
+        () => new SourceFailure({ message: `GitHub answered ${repository}'s runs in a shape Estate does not know` }),
+      ),
     )
     const builds = runs.workflow_runs.map((run) => ({
       sha: run.head_sha,

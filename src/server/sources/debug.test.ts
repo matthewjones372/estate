@@ -5,6 +5,7 @@ import { ask, catalog, environment, estate, serverFor, settings, storefront } fr
 import { type Call, type Reply, reply, stubRemote } from "../remote"
 import { Estate, estateLayer } from "../state"
 import { revertExpired, switchOff, switchOn } from "./debug"
+import { SourceFailure } from "./run"
 
 const cluster = { url: "https://cluster", headers: { authorization: "Bearer t" } }
 const configMap = "https://cluster/api/v1/namespaces/shop/configmaps/storefront-logging"
@@ -124,7 +125,7 @@ describe("putting debug back", () => {
     })
     const program = Effect.gen(function* () {
       yield* Effect.forkChild(revertExpired("staging", Effect.succeed(cluster)))
-      yield* Effect.forkChild(revertExpired("production", Effect.fail({ message: "unreachable" })))
+      yield* Effect.forkChild(revertExpired("production", Effect.fail(new SourceFailure({ message: "unreachable" }))))
       yield* TestClock.adjust("61 seconds")
       const { staging } = (yield* SubscriptionRef.get(yield* Estate)).environments
       return staging?.cluster.value?.debug

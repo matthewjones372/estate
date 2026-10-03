@@ -11,7 +11,7 @@ import { Remote } from "../remote"
 import { Estate, updateEnvironment } from "../state"
 import { inEnvironment } from "../views/catalog"
 import type { Cluster } from "./kubernetes"
-import type { Failure } from "./run"
+import { type Failure, SourceFailure } from "./run"
 
 export const debugAnnotations = {
   until: "estate.dev/debug-until",
@@ -35,7 +35,7 @@ const patch = (
   Effect.gen(function* () {
     const { debug, kubernetes } = service
     if (debug === undefined || kubernetes === undefined)
-      return yield* Effect.fail({ message: `the catalog names no log level for ${service.name}` })
+      return yield* new SourceFailure({ message: `the catalog names no log level for ${service.name}` })
     const remote = yield* Remote
     const impersonation =
       acting === undefined
@@ -52,9 +52,11 @@ const patch = (
         body: JSON.stringify({ metadata: { annotations }, data: { [debug.key]: level } }),
         ...(cluster.ca === undefined ? {} : { ca: cluster.ca }),
       })
-      .pipe(Effect.mapError((error): Failure => ({ message: `the cluster ${error.message}` })))
+      .pipe(Effect.mapError((error): Failure => new SourceFailure({ message: `the cluster ${error.message}` })))
     if (answered.status !== 200)
-      return yield* Effect.fail({ message: `the cluster answered ${answered.status}: ${answered.text.slice(0, 200)}` })
+      return yield* new SourceFailure({
+        message: `the cluster answered ${answered.status}: ${answered.text.slice(0, 200)}`,
+      })
   })
 
 /** Debug on for `minutes`: the catalog's last level, until then, under the name of whoever asked. */

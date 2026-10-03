@@ -2,7 +2,7 @@
 import { Context, Effect, Redacted, Schema } from "effect"
 import { callJson, type Remote } from "../remote"
 import type { Kubernetes } from "../settings"
-import type { Failure } from "./run"
+import { type Failure, SourceFailure } from "./run"
 
 export interface Cluster {
   readonly url: string
@@ -17,7 +17,10 @@ export const Host = Context.Service<Host>("estate/Host")
 const serviceAccount = "/var/run/secrets/kubernetes.io/serviceaccount"
 
 const readFile = (path: string): Effect.Effect<string, Failure> =>
-  Effect.tryPromise({ try: () => Bun.file(path).text(), catch: () => ({ message: `cannot read ${path}` }) })
+  Effect.tryPromise({
+    try: () => Bun.file(path).text(),
+    catch: () => new SourceFailure({ message: `cannot read ${path}` }),
+  })
 
 /** The cluster to read: the one Estate runs in, unless the settings name another. */
 export const clusterOf = (
@@ -28,7 +31,7 @@ export const clusterOf = (
     const { KUBERNETES_SERVICE_HOST, KUBERNETES_SERVICE_PORT = "443" } = environment
     const inside = settings.inCluster === true || settings.url === undefined
     if (inside && KUBERNETES_SERVICE_HOST === undefined)
-      return yield* Effect.fail({ message: "Estate is not in a cluster, and no url is set" })
+      return yield* new SourceFailure({ message: "Estate is not in a cluster, and no url is set" })
     const url = inside ? `https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}` : (settings.url ?? "")
     const token = inside
       ? yield* readFile(`${serviceAccount}/token`)
@@ -55,10 +58,12 @@ export const kube = <S extends Schema.Decoder<unknown>>(
     headers: cluster.headers,
     ...(cluster.ca === undefined ? {} : { ca: cluster.ca }),
   }).pipe(
-    Effect.mapError((error) => ({ message: `the cluster ${error.message}` })),
+    Effect.mapError((error) => new SourceFailure({ message: `the cluster ${error.message}` })),
     Effect.flatMap((body) =>
       Schema.decodeUnknownEffect(schema)(body).pipe(
-        Effect.mapError(() => ({ message: `the cluster answered ${path} in a shape Estate does not know` })),
+        Effect.mapError(
+          () => new SourceFailure({ message: `the cluster answered ${path} in a shape Estate does not know` }),
+        ),
       ),
     ),
   )
