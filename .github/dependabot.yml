@@ -1,0 +1,17 @@
+# Dependencies kept current: Bun's packages, the workflows' actions and the image's base, weekly, minor and patch
+# updates grouped into one pull request each. The gate decides; .github/workflows/dependabot.yml merges what passes.
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      minor-and-patch: { update-types: [ minor, patch ] }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      actions: { patterns: [ "*" ] }
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly }
