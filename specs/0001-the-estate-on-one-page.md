@@ -35,7 +35,8 @@ several environments it has none at all.
 
 **One service, one container, any estate.** Estate is configured by two files and nothing else:
 
-- `estate.conf`: where it listens, its sign-in, its database for notes, and each environment's sources;
+- `estate.yaml`: where it listens, its sign-in, its database for notes, and each environment's sources, with
+  `${NAME}` read from the environment so secrets stay out of it;
 - `catalog.yaml`: the estate itself, kept in the estate owner's repository and mounted (a ConfigMap), so changing it
   is a commit there.
 
@@ -70,7 +71,16 @@ services:
       logs: https://grafana.{env}.example/explore?logs={service}
       traces: https://grafana.{env}.example/explore?traces={service}
       dashboard: https://grafana.{env}.example/d/orders
+      api: https://orders.{env}.example/swagger-ui   # its OpenAPI page, if it has one
+      app: https://bank.{env}.example                   # its front end, if it has one
     debug: { configMap: orders-logging, key: level, levels: [ INFO, DEBUG ] }
+    jobs:                               # Kubernetes Jobs and CronJobs that belong to it
+      - { kind: CronJob, name: orders-backup }
+    stats:                              # how the process is doing, beside how its traffic is
+      preset: jvm                       # jvm, process or container: the usual queries for that kind
+      selector: 'app="orders"'       # the labels the preset's queries are narrowed by
+      extra:
+        - { title: Mailbox depth, query: 'max(orders_queue_depth{app="orders"})' }
 
 vitals:                                 # the overview's tiles, per environment
   - title: Transfers
@@ -89,13 +99,13 @@ map:                                    # the estate drawn live: nodes are servi
 The catalog is checked as Estate starts: an unknown environment, a duplicate service, a map edge to a node that is not
 there, or a malformed query stops it with every mistake listed, rather than a page that is quietly wrong.
 
-**Sources**, configured per environment in `estate.conf`, each optional:
+**Sources**, configured per environment in `estate.yaml`, each optional:
 
 | Source | Gives | First kinds |
 |---|---|---|
 | Metrics | each service's load, the vitals, the map's rates | Prometheus |
 | Alerts | firing, pending, silenced; silences written | Alertmanager, or Prometheus alone (read-only, no silences) |
-| Cluster | pods, readiness, restarts, the image each runs; debug ConfigMaps written | Kubernetes |
+| Cluster | pods, readiness, restarts, the image each runs; jobs and their runs; debug ConfigMaps written | Kubernetes |
 | Deploys | what the deploy tool chose and applied, and why it stalled | Flux |
 | Builds | the last runs on the main branch | GitHub Actions |
 
@@ -106,19 +116,22 @@ its parts greyed with their age, and the rest carries on.
 which remembers the choice. The deploys page shows every environment side by side, so a version moving from staging
 to home is one row. Notes and silences, debug, and the states are as in the Design notes below.
 
-**Sign-in** with any OIDC provider (Pocket ID, Keycloak, Dex, Google). Roles come from the provider's groups, named in
-`estate.conf`:
+**Sign-in** with any OIDC provider (Pocket ID, Keycloak, Dex, Google): the authorization code flow with PKCE, the ID
+token checked against the provider's keys, and the session a sealed cookie, so Estate keeps no sessions. Roles come
+from the provider's groups, named in `estate.yaml`:
 
-```hocon
-estate.roles {
-  viewer   = [ ops, support, risk, auditor, admins ]   # see everything, add notes
-  operator = [ ops, admins ]                           # silence alerts, switch debug
-}
+```yaml
+auth:
+  roles:
+    viewer:   [ ops, support, risk, auditor, admins ]   # see everything, add notes
+    operator: [ ops, admins ]                           # silence alerts, switch debug
 ```
 
-Someone signed in with neither sees the no-access page. Where the cluster takes the provider's tokens (as Headlamp
-needs), Estate writes debug ConfigMaps with the person's own token, so RBAC decides and the audit names them;
-otherwise with its service account, recording who asked.
+For trying Estate out, `auth.anonymous` names one person and role for everyone instead of a provider.
+
+Someone signed in with neither sees the no-access page. Estate writes debug ConfigMaps with its service account,
+recording who asked; with `kubernetes.impersonate` it writes them as the person (Kubernetes impersonation, user and
+groups), so the cluster's RBAC decides and its audit names them.
 
 **How it is built.** TypeScript on Bun, server and pages alike, so the catalog's schema, the events the server sends
 and the pages' props are one set of types. The server is written in [Effect](https://effect.website): every failure a
@@ -126,8 +139,8 @@ caller can meet is a tagged error in the type, every dependency a service provid
 for its stub in a test by providing a different layer.
 
 - *The server* (`src/server`) keeps a snapshot per environment in a `SubscriptionRef`, filled by its sources, each a
-  service with a live layer and a stub, each on its own `Schedule`: Kubernetes and Flux by watching, Prometheus and
-  Alertmanager polled every 15 to 30 s, GitHub every 60 s with ETags. A source that fails is retried with backoff and
+  service with a live layer and a stub, each on its own `Schedule`: Kubernetes, Flux, Prometheus and Alertmanager read
+  every 15 to 30 s, GitHub every 60 s with ETags. A source that fails is retried with backoff and
   its parts marked unknown; it never takes the snapshot down. HTTP is `effect/http` served by `@effect/platform-bun`; configuration is
   Effect's `Config`.
 - *Server-sent events* carry it to the pages: one stream per environment, `GET /events?env=home`, a `Stream` of the
@@ -189,17 +202,32 @@ Nothing. Its first estate, orders, adopts it in its own spec 0026.
       *Notes:* each refusal is tested by running the real tool, with this repository's configuration, on a small
       clean project with one bad file added (`tools/gate/refuses.test.ts`); the clean project passing every check is a
       test too, so a check that silently cruises nothing fails. TypeScript is 6, the last with the compiler API that
-      dependency-cruiser reads. Bun prints nothing when coverage is under its threshold, only exits 1.
-- [ ] **`skeleton`** — the server on Bun with `effect/http`, OIDC sign-in with roles from groups, the catalog read and checked at start
+      dependency-cruiser reads. Bun prints nothing when coverage is under its threshold, only exits 1, and applies it
+      to each file's functions as well as its lines.
+- [x] **`skeleton`** — the server on Bun with `effect/http`, OIDC sign-in with roles from groups, the catalog read and checked at start
       and reloaded when it changes, the event stream, the overview listing services per environment with their links,
       the image and `deploy/`.
       Done when: started with a catalog of two environments and four services, a viewer sees them all, switching
       environment changes what is listed, someone in no role sees the no-access page, and a broken catalog stops it
       with every mistake named.
+      *Notes:* the routes are tested as a web handler with every source a stub layer, sign-in end to end against a stub
+      provider with real keys (PKCE, state, nonce and audience each refused when wrong). The pages are drawn whole now,
+      for every entry: each fills in as its part of the stream arrives. Playwright runs them in Chromium with axe
+      (`bunx playwright test`, `CHROMIUM` naming the browser where Playwright's own is not installed); it is not yet a
+      step of the gate. Bun's coverage threshold holds for functions as well as lines, per file, and counts a class
+      as a function it never sees called, so service keys are `Context.Service<Shape>(key)` values and errors are
+      `Data.TaggedError` values, not classes. Effect's Bun server listens on `::` unless told otherwise; Estate
+      listens on `0.0.0.0` (`host` in `estate.yaml`).
 - [ ] **`health`** — alerts from Alertmanager or Prometheus, pods from Kubernetes, the deploy tool's state; a health per
       service per environment.
 - [ ] **`deploys`** — builds from GitHub Actions, Flux's choice, the running image; the deploys page across environments.
 - [ ] **`load`** — the vitals, sparklines, the service page's charts, the map's rates.
+- [ ] **`stats`** — a service's stats from its preset (`jvm`, `process`, `container`) and its own queries, as charts on
+      its page. Done when: a JVM service shows heap, GC pauses, threads and CPU from Micrometer's metrics, and a query
+      of its own beside them.
+- [ ] **`jobs`** — Jobs and CronJobs from Kubernetes: schedule, last run, its outcome and duration, whether one runs
+      now; a failed or missed run in the service's health and the feed. Done when: a CronJob whose last Job failed
+      makes its service need attention, naming the job.
 - [ ] **`notes`** — notes on alerts, kept in Postgres.
 - [ ] **`silences`** — silences through Alertmanager, with a reason.
 - [ ] **`debug`** — the debug switch and its revert.
@@ -247,10 +275,16 @@ so trouble in staging is visible from home. Every page is for the chosen one, ex
 
 **Overview**: a headline written from the state ("All quiet." / "Two things need you."); the vitals; the map, live;
 the alerts that need someone as cards that draw the metric that fired against its threshold, with notes and Silence;
-a lane per service (health, its pipeline as a rail, sparklines, links, debug badge); what changed today.
+a lane per service (health, its pipeline as a rail, sparklines, links (its front end and its API page when it has them,
+logs, traces, dashboard, repository, runbook), debug badge); what changed today.
 
-**Service**: its load over a chosen range with the alert's threshold drawn in, its pods as cards, its alerts over the
-day, the debug switch, and its builds.
+**Service**: its load over a chosen range with the alert's threshold drawn in, its stats (for a JVM: heap, GC pauses,
+threads, CPU), its pods as cards, its jobs with their schedule and last runs, its alerts over the day, the debug
+switch, and its builds.
+
+**Jobs**: a job's last run that failed makes its service need attention, with the job's name and the words the
+cluster used; a CronJob that has not run when its schedule says it should have counts the same. A running job shows
+as running, with how long it has been.
 
 **Deploys**: a row per service, its versions across the environments, and each environment's pipeline (commit,
 build, chosen, running); a stalled step says why in the words the tool used.

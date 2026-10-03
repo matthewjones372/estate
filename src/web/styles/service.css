@@ -1,0 +1,121 @@
+/* Debug */
+.debug-on {
+  background: var(--debug-panel);
+  border: 1px solid #3b2f6b;
+  border-radius: 10px;
+  padding: 12px 14px;
+  gap: 6px;
+}
+.debug-button {
+  align-self: flex-start;
+  background: var(--debug);
+  color: #140d2b;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 700;
+  padding: 0 16px;
+  min-height: 40px;
+}
+.debug-choice {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+.debug-choice[aria-pressed="true"] {
+  background: var(--debug-panel);
+  border-color: var(--debug);
+}
+.debug-confirm {
+  background: var(--raised);
+  border: 1px solid #3b2f6b;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+/* The service page */
+.section-box {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+.chart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chart svg {
+  width: 100%;
+  height: 110px;
+  display: block;
+}
+.pods {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.pod {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.timeline-row {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+.timeline-track {
+  position: relative;
+  height: 10px;
+  background: var(--chip);
+  border-radius: 5px;
+}
+.timeline-bar {
+  position: absolute;
+  top: 0;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--waiting);
+}
+.timeline-bar.live {
+  background: var(--amber);
+}
+.builds {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.builds li {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 10px;
+}
+fieldset.bare {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+fieldset.silencing {
+  margin: 0;
+}
+.crumbs {
+  font-size: 13px;
+}
+.crumbs a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
