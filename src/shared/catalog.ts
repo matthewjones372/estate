@@ -21,6 +21,7 @@ const Kubernetes = Schema.Struct({ namespace: Schema.String, workloads: Schema.A
 const Workflow = Schema.Struct({ workflow: Schema.String, branch: optional(Schema.String) })
 const Pipelines = Schema.Struct({ project: Schema.String, ref: optional(Schema.String) })
 const JenkinsJob = Schema.Struct({ job: Schema.String, branch: optional(Schema.String) })
+const TeamCityBuildType = Schema.Struct({ buildType: Schema.String, branch: optional(Schema.String) })
 
 export const Service = Schema.Struct({
   name: Schema.String,
@@ -29,8 +30,8 @@ export const Service = Schema.Struct({
   repository: optional(Schema.String),
   /**
    * Its builds: `{ github: { workflow, branch } }` or the workflow alone, meaning GitHub Actions; or
-   * `{ gitlab: { project, ref } }`; or `{ jenkins: { job, branch } }`, the job by its folders and a multibranch job's
-   * branch.
+   * `{ gitlab: { project, ref } }`; `{ jenkins: { job, branch } }`, the job by its folders and a multibranch job's
+   * branch; or `{ teamcity: { buildType, branch } }`.
    */
   build: optional(
     Schema.Union([
@@ -38,6 +39,7 @@ export const Service = Schema.Struct({
       Schema.Struct({ github: Workflow }),
       Schema.Struct({ gitlab: Pipelines }),
       Schema.Struct({ jenkins: JenkinsJob }),
+      Schema.Struct({ teamcity: TeamCityBuildType }),
     ]),
   ),
   runbook: optional(Schema.String),
@@ -116,13 +118,17 @@ export const ecsOf = (service: Service) => service.runtime?.ecs
 /** The GitHub Actions workflow that builds a service, however the catalog names it. */
 export const workflowOf = (service: Service): typeof Workflow.Type | undefined => {
   const { build } = service
-  if (build === undefined || "gitlab" in build || "jenkins" in build) return undefined
+  if (build === undefined || "gitlab" in build || "jenkins" in build || "teamcity" in build) return undefined
   return "github" in build ? build.github : build
 }
 
 /** The Jenkins job that builds a service. */
 export const jenkinsOf = (service: Service): typeof JenkinsJob.Type | undefined =>
   service.build !== undefined && "jenkins" in service.build ? service.build.jenkins : undefined
+
+/** The TeamCity build type that builds a service. */
+export const teamcityOf = (service: Service): typeof TeamCityBuildType.Type | undefined =>
+  service.build !== undefined && "teamcity" in service.build ? service.build.teamcity : undefined
 
 /** The GitLab project whose pipelines build a service. */
 export const pipelinesOf = (service: Service): typeof Pipelines.Type | undefined =>

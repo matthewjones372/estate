@@ -37,6 +37,7 @@ services:
     # Or built by GitLab CI, or by a Jenkins job (its folders, and a multibranch job's branch):
     # build: { gitlab: { project: shop/orders, ref: main } }
     # build: { jenkins: { job: shop/orders, branch: main } }
+    # build: { teamcity: { buildType: Shop_Orders, branch: main } }
     environments: [ staging, production ]
     runtime: { kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: orders } ] } }
     jobs: [ { kind: CronJob, name: orders-nightly-export } ]

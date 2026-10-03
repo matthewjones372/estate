@@ -166,6 +166,8 @@ export const Settings = Schema.Struct({
       gitlab: optional(Schema.Struct({ token: optional(Secret), url: optional(Schema.String) })),
       /** Jenkins, for services whose catalog entry names a job: its URL, and a user and their API token. */
       jenkins: optional(Schema.Struct({ url: Schema.String, user: optional(Schema.String), token: optional(Secret) })),
+      /** TeamCity, for services whose catalog entry names a build type: its URL and an access token. */
+      teamcity: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
       every: optional(Every),
     }),
   ),

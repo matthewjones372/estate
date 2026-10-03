@@ -132,3 +132,12 @@
 .kiosk-reason {
   color: var(--ink-3);
 }
+.kiosk-tile .spark-label {
+  font-size: 0.9em;
+}
+.kiosk-tile .spark-now {
+  font-size: 1.1em;
+}
+.kiosk-tile .spark svg {
+  height: 2.6em;
+}

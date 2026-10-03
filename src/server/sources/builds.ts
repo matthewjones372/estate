@@ -1,4 +1,4 @@
-/** Every service's builds, from the tool its catalog entry names: GitHub Actions, GitLab CI or Jenkins. */
+/** Every service's builds, from the tool its catalog entry names: GitHub Actions, GitLab CI, Jenkins or TeamCity. */
 import { type Duration, Effect, SubscriptionRef } from "effect"
 import type { Service } from "../../shared/catalog"
 import type { Build } from "../../shared/events"
@@ -12,6 +12,7 @@ import { gitlabBuilds } from "./gitlab"
 import { jenkinsBuilds } from "./jenkins"
 import type { Remembered } from "./remembered"
 import { afterRead, type Failure } from "./run"
+import { teamcityBuilds } from "./teamcity"
 
 type Tools = NonNullable<Settings["builds"]>
 
@@ -26,6 +27,8 @@ const buildsOf = (
     return tools.gitlab === undefined ? Effect.succeed([]) : gitlabBuilds(tools.gitlab, service, remembered)
   if ("jenkins" in build)
     return tools.jenkins === undefined ? Effect.succeed([]) : jenkinsBuilds(tools.jenkins, service)
+  if ("teamcity" in build)
+    return tools.teamcity === undefined ? Effect.succeed([]) : teamcityBuilds(tools.teamcity, service)
   return tools.github === undefined ? Effect.succeed([]) : githubBuilds(tools.github, service, remembered)
 }
 

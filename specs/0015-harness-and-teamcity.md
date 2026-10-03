@@ -55,7 +55,7 @@ Nothing.
 
 ## Stack
 
-- [ ] **`teamcity-builds`** — builds from a TeamCity build type and branch.
+- [x] **`teamcity-builds`** — builds from a TeamCity build type and branch.
       Done when: a test against TeamCity's own JSON shows a running, a failed and a passing build.
 - [ ] **`harness-builds`** — builds from a Harness CI pipeline's executions.
       Done when: a test against Harness's execution summaries shows a running, a failed and a passing build.
