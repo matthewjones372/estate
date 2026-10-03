@@ -94,8 +94,10 @@ const grafana = async (request: Request, path: string): Promise<Response | undef
 }
 
 let searched = 0
-const elasticsearch = (request: Request): Response => {
+// Lines are shipped for storefront only, so a search for anything else finds nothing, as it would.
+const elasticsearch = async (request: Request): Promise<Response> => {
   if (request.headers.get("authorization") !== "ApiKey e2e") return json({ error: "unauthorised" }, 401)
+  if (!(await request.text()).includes('"storefront"')) return json({ hits: { hits: [] } })
   searched += 1
   const at = (back: number) => new Date(Date.now() - back).toISOString()
   const hits = [

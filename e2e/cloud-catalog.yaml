@@ -15,6 +15,11 @@ services:
       requests: sum(rate(http_requests_total{app="storefront"}[1m]))
       errors: sum(rate(http_requests_total{app="storefront",code=~"5.."}[1m]))
 
+  - name: search
+    description: Finds products as customers type; its lines are not shipped to Elasticsearch
+    environments: [ eks ]
+    runtime: { kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: search } ] } }
+
   - name: checkout
     description: Takes the money
     environments: [ aws ]

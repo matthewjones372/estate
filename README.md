@@ -76,6 +76,17 @@ docker run -v ./examples:/etc/estate -p 8080:8080 ghcr.io/matthewjones372/estate
 Then open <http://localhost:8080>. The example points at tools that don't exist, so each part of the page tells you
 what it couldn't reach. Edit `examples/estate.yaml` to point it at your own.
 
+To try it against your team's real tools, set `readOnly: true` in `estate.yaml` so Estate can't write anything (no
+silences, no debug switching, notes only in memory), then run:
+
+```bash
+docker run -v ./my-estate:/etc/estate --env-file my-estate/.env ghcr.io/matthewjones372/estate:main doctor
+```
+
+It asks each tool once and prints a line per part: what answered, how many alerts matched a service, which services
+have no running pods or no log lines, and which setting would fix it. It exits non-zero if anything failed. Tokens referenced as `${NAME}` in `estate.yaml` come
+from the env file.
+
 ## Running it
 
 Estate reads two files from `/etc/estate`:

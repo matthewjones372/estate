@@ -26,6 +26,18 @@ const buildsOf = (
   return tools.github === undefined ? Effect.succeed([]) : githubBuilds(tools.github, service, remembered)
 }
 
+/** Every service's builds, by its name, read once. */
+export const readBuilds = (
+  tools: Tools,
+  services: ReadonlyArray<Service>,
+  remembered: Map<string, Remembered> = new Map(),
+): Effect.Effect<ReadonlyArray<readonly [string, ReadonlyArray<Build>]>, Failure, Remote> =>
+  Effect.forEach(
+    services,
+    (service) => buildsOf(tools, service, remembered).pipe(Effect.map((builds) => [service.name, builds] as const)),
+    { concurrency: 4 },
+  )
+
 /** Every service's builds, read now and every minute into the estate. */
 export const runBuilds = (
   tools: Tools,
@@ -34,13 +46,7 @@ export const runBuilds = (
   const remembered = new Map<string, Remembered>()
   const once = Effect.gen(function* () {
     const { catalog } = yield* SubscriptionRef.get(yield* Estate)
-    const read = yield* Effect.result(
-      Effect.forEach(
-        catalog.services,
-        (service) => buildsOf(tools, service, remembered).pipe(Effect.map((builds) => [service.name, builds] as const)),
-        { concurrency: 4 },
-      ),
-    )
+    const read = yield* Effect.result(readBuilds(tools, catalog.services, remembered))
     const at = yield* isoNow
     yield* updateEstate((estate) => ({
       ...estate,

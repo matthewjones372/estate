@@ -10,6 +10,7 @@ import { Otlp, OtlpSerialization, PrometheusMetrics } from "effect/observability
 import type { Mistake } from "../shared/shape"
 import { application, background, prepare, services } from "./app"
 import { parseCatalog, readCatalogText } from "./catalog-file"
+import { doctor, printed } from "./doctor"
 import { memoryNotes, postgresNotes, type Query } from "./notes"
 import { dynamodbNotes } from "./notes-dynamodb"
 import { platform } from "./platform"
@@ -95,5 +96,26 @@ const logs = Layer.unwrap(
   ),
 )
 
+/** `estate doctor`: each source asked once, and what it said, a part a line; exits 1 if any part failed. */
+const diagnose = Effect.gen(function* () {
+  const settingsPath = yield* Config.String("ESTATE_SETTINGS").pipe(
+    Config.withDefault("/etc/estate/estate.yaml"),
+    Effect.orElseSucceed(() => "/etc/estate/estate.yaml"),
+  )
+  const started = yield* prepare(settingsPath)
+  const { text, ok } = printed(yield* doctor(started.settings, started.initial.catalog))
+  yield* Console.log(text)
+  if (!ok) process.exitCode = 1
+}).pipe(
+  Effect.catchTag("StartError", (error) => listMistakes(error.file, error.mistakes)),
+  Effect.provide(Layer.merge(liveRemote, platform)),
+)
+
 const [command, file] = process.argv.slice(2)
-BunRuntime.runMain(command === "check" && file !== undefined ? check(file) : serve.pipe(Effect.provide(logs)))
+BunRuntime.runMain(
+  command === "check" && file !== undefined
+    ? check(file)
+    : command === "doctor"
+      ? diagnose
+      : serve.pipe(Effect.provide(logs)),
+)

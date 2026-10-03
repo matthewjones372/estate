@@ -61,7 +61,7 @@ Nothing.
       in the background; notes in memory; "read-only" in the header.
       Done when: with `readOnly: true`, the silence and debug endpoints answer 403 and no call that writes leaves
       Estate.
-- [ ] **`doctor`** — `estate doctor`: each environment's sources asked once, a line per part with counts and what
+- [x] **`doctor`** — `estate doctor`: each environment's sources asked once, a line per part with counts and what
       does not fit, non-zero exit on a failure.
       Done when: run against the e2e tools, it reports every part ok, and names a service whose logs match nothing
       and an alert about no service.
