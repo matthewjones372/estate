@@ -1,0 +1,13 @@
+# Estate's Kubernetes base. An estate's overlay adds the `estate` ConfigMap (estate.yaml and catalog.yaml), the
+# `estate` Secret its settings read with ${NAME}, an ingress, and the image's tag.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - serviceaccount.yaml
+  - rbac.yaml
+  - deployment.yaml
+  - service.yaml
+images:
+  - name: estate
+    newName: ghcr.io/matthewjones372/estate
+    newTag: main

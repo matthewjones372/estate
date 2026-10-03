@@ -17,4 +17,12 @@ bun install
 bun run gate     # typecheck, lint, unused, layers, slop, test: nothing is done until it passes
 ```
 
+Try it with the example estate, whose sources are not there, so every part says why:
+
+```bash
+docker build -t estate .
+docker run -v ./examples:/etc/estate -p 8080:8080 estate
+bunx playwright test   # the pages in Chromium, with axe
+```
+
 [AGENTS.md](AGENTS.md) says how the code is written; the gate holds it to that.

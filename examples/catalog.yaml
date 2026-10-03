@@ -1,0 +1,84 @@
+# An example estate: a small shop in two environments.
+environments:
+  - name: staging
+    title: Staging, one machine
+    sources: staging
+  - name: production
+    title: Production, three machines
+    sources: production
+
+services:
+  - name: storefront
+    description: The pages customers browse and buy from
+    owner: web
+    repository: github:example/storefront
+    build: { workflow: build.yml }
+    runbook: https://example.com/runbooks/storefront
+    environments: [ staging, production ]
+    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: storefront } ] }
+    deploy: { flux: { kustomization: shop, imagePolicy: storefront } }
+    load:
+      requests: sum(rate(http_requests_total{app="storefront"}[1m]))
+      errors: sum(rate(http_requests_total{app="storefront",code=~"5.."}[1m]))
+      p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="storefront"}[5m])))
+    links:
+      logs: https://grafana.example.com/explore?env={env}&logs={namespace}/{service}
+      dashboard: https://grafana.example.com/d/{service}?var-env={env}
+      api: https://{service}.{env}.example.com/swagger-ui
+      app: https://shop.{env}.example.com
+    debug: { configMap: storefront-logging, key: level, levels: [ INFO, DEBUG ] }
+
+  - name: orders
+    description: Baskets become orders, and orders are tracked to the door
+    owner: orders
+    repository: github:example/orders
+    build: { workflow: build.yml }
+    environments: [ staging, production ]
+    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: orders } ] }
+    deploy: { flux: { kustomization: shop, imagePolicy: orders } }
+    load:
+      requests: sum(rate(http_requests_total{app="orders"}[1m]))
+      errors: sum(rate(http_requests_total{app="orders",code=~"5.."}[1m]))
+      p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="orders"}[5m])))
+    links:
+      logs: https://grafana.example.com/explore?env={env}&logs={namespace}/{service}
+      traces: https://grafana.example.com/explore?env={env}&traces={service}
+
+  - name: payments
+    description: Takes the money, through the card provider
+    owner: payments
+    repository: github:example/payments
+    environments: [ production ]
+    kubernetes: { namespace: payments, workloads: [ { kind: StatefulSet, name: payments } ] }
+    load:
+      requests: sum(rate(payments_total[1m]))
+      errors: sum(rate(payments_total{outcome="error"}[1m]))
+
+  - name: search
+    description: Finds products as customers type
+    owner: web
+    environments: [ staging, production ]
+    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: search } ] }
+
+vitals:
+  - title: Orders
+    query: sum(rate(orders_placed_total[5m]))
+    unit: /s
+  - title: Basket to order
+    query: sum(rate(orders_placed_total[1h])) / sum(rate(baskets_created_total[1h])) * 100
+    unit: "%"
+
+map:
+  nodes:
+    - { id: storefront, service: storefront }
+    - { id: search, service: search }
+    - { id: orders, service: orders }
+    - { id: payments, service: payments }
+    - { id: db, title: Postgres, kind: store }
+    - { id: cards, title: Card provider, kind: external }
+  edges:
+    - { from: storefront, to: search, label: search, rate: 'sum(rate(search_requests_total[1m]))' }
+    - { from: storefront, to: orders, label: orders, rate: 'sum(rate(http_requests_total{app="orders"}[1m]))' }
+    - { from: orders, to: payments, label: pay, rate: 'sum(rate(payments_total[1m]))', alert: PaymentsSlow }
+    - { from: orders, to: db, label: writes }
+    - { from: payments, to: cards, label: charges }
