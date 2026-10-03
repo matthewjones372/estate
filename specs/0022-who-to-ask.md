@@ -55,7 +55,7 @@ Nothing.
 
 - [x] **`teams`** — the catalog's teams, checked; their links on service pages, alert cards and job lanes; the
       screen's title.
-      Done when: the example estate's payments alert carries "Payments on Slack", and its service page the team's
+      Done when: the example estate's OrdersSlow alert carries "Orders on Slack", and its service page the team's
       links.
 
 ## Acceptance
