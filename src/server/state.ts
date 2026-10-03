@@ -16,13 +16,13 @@ export interface Part<A> {
 export const off: Part<never> = { state: "off" }
 export const waiting: Part<never> = { state: "waiting" }
 
-interface ServiceLoad {
+export interface ServiceLoad {
   readonly requests?: Series
   readonly errors?: Series
   readonly p99?: Series
 }
 
-interface Metrics {
+export interface Metrics {
   readonly services: Readonly<Record<string, ServiceLoad>>
   readonly vitals: ReadonlyArray<Series>
   readonly edges: ReadonlyArray<number | null>

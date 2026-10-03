@@ -2,6 +2,7 @@
 import { Data, Effect, Layer, Result } from "effect"
 import type { Mistake } from "../shared/shape"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
+import { loadRoute } from "./http/load"
 import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
 import type { Remote } from "./remote"
@@ -58,7 +59,7 @@ export const prepare = (
   )
 
 /** The routes with what they need, for serving or for a test's web handler. */
-export const application = Layer.mergeAll(routes, signInRoutes)
+export const application = Layer.mergeAll(routes, signInRoutes, loadRoute)
 
 /** What runs beside the routes for as long as Estate does. */
 export const background = (
