@@ -1,11 +1,12 @@
 /**
- * Silences, written through Alertmanager with who and why: `POST /api/silences` and `DELETE /api/silences/:id`, for
- * operators. The page sees the change at once; Alertmanager's next answer confirms it.
+ * Silences, written through Alertmanager or Grafana's with who and why: `POST /api/silences` and
+ * `DELETE /api/silences/:id`, for operators. The page sees the change at once; the manager's next answer confirms it.
  */
 import { Clock, Duration, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Remote } from "../remote"
 import { Configured } from "../settings"
+import { managerOf } from "../sources/grafana"
 import { Estate, type SourcedAlert, updateEnvironment } from "../state"
 import { after, iso } from "../time"
 import { EnvParam, json, Refusal, refused, searchParams, withRole } from "./routes"
@@ -28,17 +29,15 @@ const operator = Effect.gen(function* () {
   return person.role === "operator" ? person : yield* refuse(403, "silencing is for operators")
 })
 
-/** The environment's Alertmanager, or the refusal saying it has none. */
-const managerOf = (environment: string) =>
+/** The environment's Alertmanager or Grafana, or the refusal saying it has neither. */
+const managerIn = (environment: string) =>
   Effect.gen(function* () {
     const { catalog } = yield* SubscriptionRef.get(yield* Estate)
     const settings = yield* Configured
     const found = catalog.environments.find((each) => each.name === environment)
     if (found === undefined) return yield* refuse(404, `${environment} is not an environment`)
-    const manager = settings.sources[found.sources]?.alertmanager
-    return manager === undefined
-      ? yield* refuse(404, `${environment} has no Alertmanager to silence with`)
-      : manager.url.replace(/\/$/, "")
+    const manager = managerOf(settings.sources[found.sources] ?? {})
+    return manager === undefined ? yield* refuse(404, `${environment} has no Alertmanager to silence with`) : manager
   })
 
 const withAlert = (environment: string, id: string, change: (alert: SourcedAlert) => SourcedAlert) =>
@@ -72,7 +71,7 @@ export const silenceRoute = HttpRouter.add(
     if (reason === "") return yield* refuse(400, "a silence needs a reason, shown to everyone")
     if (!(asked.minutes >= 1 && asked.minutes <= longest))
       return yield* refuse(400, "a silence lasts a minute to a week")
-    const url = yield* managerOf(asked.environment)
+    const manager = yield* managerIn(asked.environment)
     const { environments } = yield* SubscriptionRef.get(yield* Estate)
     const alert = environments[asked.environment]?.alerts.value?.find((each) => each.id === asked.alert)
     if (alert === undefined) return yield* refuse(404, "that alert is not firing here")
@@ -81,9 +80,9 @@ export const silenceRoute = HttpRouter.add(
     const endsAt = iso(after(now, Duration.minutes(asked.minutes)))
     const remote = yield* Remote
     const answered = yield* remote.call({
-      url: `${url}/api/v2/silences`,
+      url: `${manager.url}/api/v2/silences`,
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { ...manager.headers, "content-type": "application/json" },
       body: JSON.stringify({
         matchers: Object.entries(alert.labels).map(([name, value]) => ({ name, value, isRegex: false, isEqual: true })),
         startsAt,
@@ -94,7 +93,7 @@ export const silenceRoute = HttpRouter.add(
     })
     const created = Schema.decodeUnknownOption(Schema.fromJsonString(Created))(answered.text)
     if (answered.status !== 200 || created._tag === "None")
-      return json({ message: `Alertmanager answered ${answered.status}: ${answered.text.slice(0, 200)}` }, 502)
+      return json({ message: `${manager.name} answered ${answered.status}: ${answered.text.slice(0, 200)}` }, 502)
     const id = created.value.silenceID
     yield* withAlert(asked.environment, alert.id, (each) => ({
       ...each,
@@ -113,11 +112,15 @@ export const unsilenceRoute = HttpRouter.add("DELETE", "/api/silences/:id", () =
     yield* operator
     const { id = "" } = yield* HttpRouter.params
     const { env: environment = "" } = yield* searchParams(EnvParam, "env names an environment")
-    const url = yield* managerOf(environment)
+    const manager = yield* managerIn(environment)
     const remote = yield* Remote
-    const answered = yield* remote.call({ url: `${url}/api/v2/silence/${encodeURIComponent(id)}`, method: "DELETE" })
+    const answered = yield* remote.call({
+      url: `${manager.url}/api/v2/silence/${encodeURIComponent(id)}`,
+      method: "DELETE",
+      headers: manager.headers,
+    })
     if (answered.status !== 200)
-      return json({ message: `Alertmanager answered ${answered.status}: ${answered.text.slice(0, 200)}` }, 502)
+      return json({ message: `${manager.name} answered ${answered.status}: ${answered.text.slice(0, 200)}` }, 502)
     yield* updateEnvironment(environment, (state) =>
       state.alerts.value === undefined
         ? state

@@ -52,6 +52,8 @@ const Sources = Schema.Struct({
   /** Loki, for services' lines; without it, the cluster's own pod logs. */
   loki: optional(Schema.Struct({ url: Schema.String, tenant: optional(Schema.String) })),
   alertmanager: optional(Url),
+  /** Grafana's alerting, in place of Alertmanager: its URL and a service account's token. */
+  grafana: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
   kubernetes: optional(Kubernetes),
   flux: optional(Schema.Struct({})),
 })

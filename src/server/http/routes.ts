@@ -4,6 +4,7 @@ import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 import type { Me } from "../../shared/events"
 import { streamClosed, streamOpened } from "../observed"
 import { Configured } from "../settings"
+import { managerOf } from "../sources/grafana"
 import { Estate } from "../state"
 import { eventStream } from "../stream"
 import { Web } from "../web"
@@ -77,7 +78,7 @@ const events = HttpRouter.add("GET", "/events", (request) =>
     const found = catalog.environments.find((each) => each.name === environment)
     if (found === undefined) return json({ message: `${environment} is not an environment` }, 404)
     const settings = yield* Configured
-    const silences = person.role === "operator" && settings.sources[found.sources]?.alertmanager !== undefined
+    const silences = person.role === "operator" && managerOf(settings.sources[found.sources] ?? {}) !== undefined
     const lastEventId = request.headers["last-event-id"]
     yield* streamOpened
     const body = eventStream({ environment, silences }, lastEventId).pipe(

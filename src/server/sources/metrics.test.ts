@@ -78,7 +78,7 @@ const read = (
 ) =>
   Effect.runPromise(
     Effect.result(
-      readMetrics("http://prometheus", withMetrics, services, stores, alerts, now).pipe(
+      readMetrics("http://prometheus", Effect.succeed(new Map()), withMetrics, services, stores, alerts, now).pipe(
         Effect.provide(stubRemote(answer)),
       ),
     ),

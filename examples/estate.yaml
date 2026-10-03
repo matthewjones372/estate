@@ -17,6 +17,8 @@ sources:
   production:
     prometheus: { url: http://prometheus.production.invalid:9090 }
     alertmanager: { url: http://alertmanager.production.invalid:9093 }
+    # Or Grafana's alerting, in place of alertmanager, with a service account's token:
+    # grafana: { url: https://grafana.production.invalid, token: ${GRAFANA_TOKEN} }
     kubernetes: { url: https://kubernetes.production.invalid:6443 }
     flux: {}
 

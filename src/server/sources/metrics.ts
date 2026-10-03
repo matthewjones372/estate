@@ -63,10 +63,21 @@ export const storeLoadOf = (
     { concurrency: 3 },
   )
 
-const ignored = new Set(["alertname", "severity", "alertstate"])
+// Labels that say where an alert came from, not what it measures: Prometheus's own, and Grafana's.
+const ignored = new Set([
+  "alertname",
+  "severity",
+  "alertstate",
+  "grafana_folder",
+  "__alert_rule_uid__",
+  "__alert_rule_namespace_uid__",
+  "datasource_uid",
+  "ref_id",
+])
 
 export const readMetrics = (
   url: string,
+  more: Effect.Effect<ReadonlyMap<string, string>, never, Remote>,
   catalog: Catalog,
   services: ReadonlyArray<Service>,
   stores: ReadonlyArray<Store>,
@@ -74,7 +85,7 @@ export const readMetrics = (
   now: number,
 ): Effect.Effect<Metrics, Failure, Remote> =>
   Effect.gen(function* () {
-    const rules = yield* alertingRules(url)
+    const rules = new Map([...(yield* alertingRules(url)), ...(yield* more)])
     const loads = yield* Effect.forEach(
       services,
       (service) => loadOf(url, service, lastHour, now).pipe(Effect.map((load) => [service.name, load] as const)),

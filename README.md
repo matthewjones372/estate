@@ -14,7 +14,7 @@ runs, in every environment, without anyone building a dashboard.
 
 ![The overview: what needs you, the estate drawn live, each service's lane, and what changed today](docs/overview.png)
 
-Your team already has the answers. The alerts are in Alertmanager, what runs where is in Kubernetes and Flux, the
+Your team already has the answers. The alerts are in Alertmanager or Grafana, what runs where is in Kubernetes and Flux, the
 builds are in GitHub, the load is in Prometheus. Each morning, and at every alert, someone joins them up in their
 head across five tabs. Estate does the joining:
 

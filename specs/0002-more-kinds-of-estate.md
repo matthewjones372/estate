@@ -103,7 +103,7 @@ the image stays small.
 
 ## Stack
 
-- [ ] **`grafana-alerts`** — `grafana:` as an environment's alerts: firing and pending from
+- [x] **`grafana-alerts`** — `grafana:` as an environment's alerts: firing and pending from
       `/api/alertmanager/grafana/api/v2/alerts`, silences listed and written there, each alert's threshold from
       `/api/prometheus/grafana/api/v1/rules`, with a service account's token.
       Done when: a firing Grafana alert shows on the page with its chart, and a silence written on the page is in

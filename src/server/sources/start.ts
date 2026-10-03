@@ -10,6 +10,7 @@ import { readCluster } from "./cluster"
 import { revertExpired } from "./debug"
 import { readDeploys } from "./flux"
 import { runBuilds } from "./github"
+import { grafanaRules } from "./grafana"
 import { clusterOf } from "./kubernetes"
 import { readMetrics } from "./metrics"
 import { type Failure, runSource } from "./run"
@@ -30,7 +31,7 @@ const readersFor = (
 ): Effect.Effect<never, never, Estate | Remote | FileSystem.FileSystem> => {
   const readers: Array<Effect.Effect<never, never, Estate | Remote | FileSystem.FileSystem>> = []
   const section = settings.sources[environment.sources] ?? {}
-  if (section.alertmanager !== undefined || section.prometheus !== undefined) {
+  if (section.alertmanager !== undefined || section.grafana !== undefined || section.prometheus !== undefined) {
     readers.push(runSource(environment.name, "alerts", "20 seconds", readAlerts(section), withResolved))
   }
   const { prometheus } = section
@@ -42,7 +43,8 @@ const readersFor = (
       const now = yield* Clock.currentTimeMillis
       const here = environment.name
       const stores = (estate.catalog.stores ?? []).filter((store) => store.environments.includes(here))
-      return yield* readMetrics(url, estate.catalog, inEnvironment(estate.catalog, here), stores, firing, now)
+      const grafana = section.grafana === undefined ? Effect.succeed(new Map()) : grafanaRules(section.grafana)
+      return yield* readMetrics(url, grafana, estate.catalog, inEnvironment(estate.catalog, here), stores, firing, now)
     })
     readers.push(runSource(environment.name, "metrics", "30 seconds", read))
   }

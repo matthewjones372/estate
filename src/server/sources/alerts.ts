@@ -1,6 +1,7 @@
 /**
- * Alerts from Alertmanager (firing, and silenced with who and why) and Prometheus (pending, or everything when there is
- * no Alertmanager). An alert is known by its labels, the same from either, so its notes follow it.
+ * Alerts from Alertmanager or Grafana's (firing, and silenced with who and why), and pending from Grafana or Prometheus
+ * (or everything from Prometheus when there is neither). An alert is known by its labels, the same from either, so its
+ * notes follow it.
  */
 import { Duration, Effect, Schema } from "effect"
 import { compact } from "../../shared/compact"
@@ -8,6 +9,7 @@ import { callJson, type Remote } from "../remote"
 import type { Sources } from "../settings"
 import type { EnvironmentState, SourcedAlert } from "../state"
 import { before as earlier, epoch, iso } from "../time"
+import { grafanaHeaders, type Manager, managerOf } from "./grafana"
 import { type Failure, SourceFailure } from "./run"
 
 const Labels = Schema.Record(Schema.String, Schema.String)
@@ -81,15 +83,19 @@ const fromLabels = (
   })
 }
 
-const managerAlerts = (url: string): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
+const managerAlerts = (manager: Manager): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
   Effect.gen(function* () {
-    const alerts = yield* callJson({ url: `${url}/api/v2/alerts?active=true&silenced=true&inhibited=false` }).pipe(
-      Effect.mapError((error) => new SourceFailure({ message: `Alertmanager ${error.message}` })),
-      Effect.flatMap(decoded(Schema.Array(ManagerAlert), "Alertmanager")),
+    const { url, headers, name } = manager
+    const alerts = yield* callJson({
+      url: `${url}/api/v2/alerts?active=true&silenced=true&inhibited=false`,
+      headers,
+    }).pipe(
+      Effect.mapError((error) => new SourceFailure({ message: `${name} ${error.message}` })),
+      Effect.flatMap(decoded(Schema.Array(ManagerAlert), name)),
     )
-    const silences = yield* callJson({ url: `${url}/api/v2/silences` }).pipe(
-      Effect.mapError((error) => new SourceFailure({ message: `Alertmanager ${error.message}` })),
-      Effect.flatMap(decoded(Schema.Array(Silence), "Alertmanager")),
+    const silences = yield* callJson({ url: `${url}/api/v2/silences`, headers }).pipe(
+      Effect.mapError((error) => new SourceFailure({ message: `${name} ${error.message}` })),
+      Effect.flatMap(decoded(Schema.Array(Silence), name)),
     )
     const byId = new Map(silences.map((silence) => [silence.id, silence]))
     return alerts.map((alert) => {
@@ -115,36 +121,49 @@ const managerAlerts = (url: string): Effect.Effect<ReadonlyArray<SourcedAlert>, 
     })
   })
 
+/** Prometheus's alerts, or Grafana's in Prometheus's shape, whose states are capitalised and say Alerting. */
 const prometheusAlerts = (
   url: string,
   states: ReadonlySet<string>,
+  name = "Prometheus",
+  headers: Readonly<Record<string, string>> = {},
 ): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
-  callJson({ url: `${url}/api/v1/alerts` }).pipe(
-    Effect.mapError((error) => new SourceFailure({ message: `Prometheus ${error.message}` })),
-    Effect.flatMap(decoded(PrometheusAlerts, "Prometheus")),
+  callJson({ url: `${url}/api/v1/alerts`, headers }).pipe(
+    Effect.mapError((error) => new SourceFailure({ message: `${name} ${error.message}` })),
+    Effect.flatMap(decoded(PrometheusAlerts, name)),
     Effect.map((body) =>
       body.data.alerts
-        .filter((alert) => states.has(alert.state))
+        .filter((alert) => states.has(alert.state.toLowerCase()))
         .map((alert) =>
           fromLabels(
             alert.labels,
             alert.annotations,
-            alert.state === "pending" ? "pending" : "firing",
+            alert.state.toLowerCase() === "pending" ? "pending" : "firing",
             alert.activeAt ?? epoch,
           ),
         ),
     ),
   )
 
-/** Every alert the environment's sources know: Alertmanager's, and Prometheus's pending ones. */
+/** Every alert the environment's sources know: its manager's, and Grafana's and Prometheus's pending ones. */
 export const readAlerts = (sources: Sources): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
   Effect.gen(function* () {
-    const manager =
-      sources.alertmanager === undefined ? [] : yield* managerAlerts(sources.alertmanager.url.replace(/\/$/, ""))
-    const states = new Set(sources.alertmanager === undefined ? ["pending", "firing"] : ["pending"])
+    const manager = managerOf(sources)
+    const managed = manager === undefined ? [] : yield* managerAlerts(manager)
+    const { grafana } = sources
+    const grafanaPending =
+      grafana === undefined
+        ? []
+        : yield* prometheusAlerts(
+            `${grafana.url.replace(/\/$/, "")}/api/prometheus/grafana`,
+            new Set(["pending"]),
+            "Grafana",
+            grafanaHeaders(grafana),
+          )
+    const states = new Set(manager === undefined ? ["pending", "firing"] : ["pending"])
     const prometheus =
       sources.prometheus === undefined ? [] : yield* prometheusAlerts(sources.prometheus.url.replace(/\/$/, ""), states)
-    return [...manager, ...prometheus]
+    return [...managed, ...grafanaPending, ...prometheus]
   })
 
 /** Alerts that fired before this read and do not now have resolved; a day of them is kept. */
