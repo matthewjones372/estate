@@ -13,3 +13,4 @@ entries, one per pull request, each with what proves it done.
 | [0006](0006-pages-in-solid.md) | the pages in Solid: the same pages and tests, updating only what changed, compiled by a Bun plugin; done |
 | [0007](0007-logs-on-the-page.md) | logs on the page: a service's live lines and its errors grouped by message, from Loki or the cluster, masked; done |
 | [0008](0008-the-whole-of-effect.md) | the whole of Effect: HttpClient, Config, Redacted, FiberMap, Cache, DateTime, FileSystem, metrics and spans where code is hand-rolled; fixes environments added by a reload never being read; done |
+| [0009](0009-trying-it-on-a-real-estate.md) | trying it on a real estate: `estate doctor` reports what each source answered and what does not fit the catalog; `readOnly: true` so trying it can change nothing; draft |
