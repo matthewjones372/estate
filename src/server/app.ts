@@ -4,7 +4,7 @@ import type { Mistake } from "../shared/shape"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
 import { loadRoute } from "./http/load"
-import { loadNotes, notesRoute } from "./http/notes"
+import { loadNotes, notesRoute, removeNoteRoute, sweepNotes } from "./http/notes"
 import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
 import { silenceRoute, unsilenceRoute } from "./http/silences"
@@ -69,6 +69,7 @@ export const application = Layer.mergeAll(
   signInRoutes,
   loadRoute,
   notesRoute,
+  removeNoteRoute,
   silenceRoute,
   unsilenceRoute,
   debugOnRoute,
@@ -88,6 +89,7 @@ export const background = (
         Effect.orDie,
         Effect.andThen(Effect.never),
       ),
+      sweepNotes(started.settings.notes?.keepDays ?? 30),
       reloadCatalog(started.settings.catalog, started.settings, started.catalogText),
       startSources(started.settings, started.initial.catalog.environments, host),
     ],
