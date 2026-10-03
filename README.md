@@ -9,3 +9,12 @@ shows is described by a catalog in the estate owner's repository.
 
 The design is [spec 0001](specs/0001-the-estate-on-one-page.md). Its first estate is
 [lark-bank](https://github.com/matthewjones372/lark-bank).
+
+## Working on it
+
+```bash
+bun install
+bun run gate     # typecheck, lint, unused, layers, slop, test: nothing is done until it passes
+```
+
+[AGENTS.md](AGENTS.md) says how the code is written; the gate holds it to that.

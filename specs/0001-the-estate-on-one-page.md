@@ -120,6 +120,44 @@ Someone signed in with neither sees the no-access page. Where the cluster takes 
 needs), Estate writes debug ConfigMaps with the person's own token, so RBAC decides and the audit names them;
 otherwise with its service account, recording who asked.
 
+**How it is built.** TypeScript on Bun, server and pages alike, so the catalog's schema, the events the server sends
+and the pages' props are one set of types. The server is written in [Effect](https://effect.website): every failure a
+caller can meet is a tagged error in the type, every dependency a service provided by a layer, so a source is swapped
+for its stub in a test by providing a different layer.
+
+- *The server* (`src/server`) keeps a snapshot per environment in a `SubscriptionRef`, filled by its sources, each a
+  service with a live layer and a stub, each on its own `Schedule`: Kubernetes and Flux by watching, Prometheus and
+  Alertmanager polled every 15 to 30 s, GitHub every 60 s with ETags. A source that fails is retried with backoff and
+  its parts marked unknown; it never takes the snapshot down. HTTP is `effect/http` served by `@effect/platform-bun`; configuration is
+  Effect's `Config`.
+- *Server-sent events* carry it to the pages: one stream per environment, `GET /events?env=home`, a `Stream` of the
+  snapshot's changes sent as named events (`catalog`, `services`, `alerts`, `deploys`, `feed`) with ids, so a
+  reconnect resumes from `Last-Event-ID` or is sent the whole snapshot; a heartbeat every 15 s keeps proxies from
+  closing it. Changes (notes, silences, debug) are plain `POST`s, and their effect arrives on the stream like anything
+  else.
+- *The pages* (`src/web`) are React, bundled by Bun: the stream feeds one small store read with
+  `useSyncExternalStore`, each event decoded with the same schema the server encoded it with; charts are SVG drawn by
+  hand to the design, with no chart library; the design's tokens are CSS variables.
+- *The catalog's and the events' schemas* (`src/shared`) are Effect `Schema`; `estate check catalog.yaml` runs the
+  catalog's check from the command line, for an estate's own CI.
+
+**The harness.** The code is written by agents, and the repository keeps them honest; nothing is done until
+`bun run gate` passes, and an agent's turn cannot end while it fails (a Claude Code `Stop` hook in
+`.claude/settings.json`). The gate is, in order:
+
+| Check | Refuses |
+|---|---|
+| `tsc` | anything short of `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` |
+| Biome | format drift; `any`, `console`, non-null assertions, unused imports and variables, a rule switched off inline |
+| knip | a file, export or dependency nothing uses |
+| dependency-cruiser | a layer reaching where it may not: `shared` imports nothing of ours; `server` never imports `web`, nor `web` `server` |
+| the slop check | TODO and FIXME, commented-out code, placeholder text, `.skip` and `.only`, files over 300 lines; in `server` and `shared`, `throw`, `try`, `async` and `new Promise`, which Effect replaces, and `Effect.run*` outside the entry |
+| `bun test` | a failing test, or coverage under 90% of lines |
+
+The gate's own configuration is guarded: a `PreToolUse` hook refuses an agent's edit to it, so loosening a rule is
+a person's commit. Pages are checked in Playwright against the design (screenshots, and axe for accessibility) from
+the entry that first draws one.
+
 **Notes** are kept in Estate's own Postgres, by environment, alert name and labels, with who and when. **Silences**
 are Alertmanager's, written through its API with the person's name and reason.
 
@@ -133,8 +171,11 @@ Read, don't store: every source keeps its own history, so Estate holds almost no
 the estate owner's Git rather than labels discovered at run time: what a service's load query is, or which ConfigMap
 holds its log level, is a decision someone made, and Git records who and why; discovery from labels is a later
 convenience, not the source of truth. Sources compiled in rather than loaded as plugins: five kinds cover most small
-estates, and a sixth is one class and a test. Built on Lark and Pelican, as its first estate is, but nothing in it
-knows about any one estate.
+estates, and a sixth is one module and a test. TypeScript end to end rather than a JVM or Go server: one language and
+one set of types between the sources, the stream and the pages, and a small process, at the cost of the Kubernetes
+client being less mature than Go's. Effect rather than plain promises: a dashboard is mostly sources failing,
+retrying and timing out, and Effect makes those failures part of each function's type and their handling
+`Schedule`s, `timeout`s and fibers rather than code an agent writes again each time.
 
 ## Depends on
 
@@ -142,8 +183,16 @@ Nothing. Its first estate, lark-bank, adopts it in its own spec 0026.
 
 ## Stack
 
-- [ ] **`skeleton`** — the service on Lark and Pelican, OIDC sign-in with roles from groups, the catalog read and
-      checked at start, the overview listing services per environment with their links, the image and `deploy/`.
+- [x] **`harness`** — Bun, TypeScript, Effect 4, the gate and its checks, the hooks that hold an agent to it, CI running it.
+      Done when: `bun run gate` passes on the repository, fails on each thing the table above refuses (one test each),
+      and an agent's edit to the gate's configuration is refused.
+      *Notes:* each refusal is tested by running the real tool, with this repository's configuration, on a small
+      clean project with one bad file added (`tools/gate/refuses.test.ts`); the clean project passing every check is a
+      test too, so a check that silently cruises nothing fails. TypeScript is 6, the last with the compiler API that
+      dependency-cruiser reads. Bun prints nothing when coverage is under its threshold, only exits 1.
+- [ ] **`skeleton`** — the server on Bun with `effect/http`, OIDC sign-in with roles from groups, the catalog read and checked at start
+      and reloaded when it changes, the event stream, the overview listing services per environment with their links,
+      the image and `deploy/`.
       Done when: started with a catalog of two environments and four services, a viewer sees them all, switching
       environment changes what is listed, someone in no role sees the no-access page, and a broken catalog stops it
       with every mistake named.
@@ -159,7 +208,7 @@ Nothing. Its first estate, lark-bank, adopts it in its own spec 0026.
 ## Acceptance
 
 ```bash
-./gradlew build
+bun run gate
 docker run -v ./examples:/etc/estate -p 8080:8080 estate   # the example catalog, against nothing: every part says why
 ```
 
