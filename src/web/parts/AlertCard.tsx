@@ -5,6 +5,7 @@ import type { Alert, CatalogEvent } from "../../shared/events"
 import { reading } from "../chart"
 import { useEstate } from "../context"
 import { amount, clock, initials, since } from "../format"
+import { chatOf, teamOf } from "../teams"
 import { A, Out } from "./A"
 import { Icon } from "./icons"
 import { ErrorList } from "./Logs"
@@ -199,6 +200,7 @@ export const AlertCard = (props: {
   const [lines, setLines] = createSignal(false)
   const service = () => props.catalog?.services.find((each) => each.name === props.alert.service)
   const link = (name: string) => service()?.links.find((each) => each.name === name)
+  const chat = () => chatOf(teamOf(props.catalog, service()?.owner))
   return (
     <article class={`alert-card ${props.alert.severity === "critical" ? "critical" : ""}`}>
       <div class="alert-head">
@@ -228,6 +230,13 @@ export const AlertCard = (props: {
           {(runbook) => (
             <Out href={runbook()} class="primary-button">
               Open the runbook
+            </Out>
+          )}
+        </Show>
+        <Show when={chat()}>
+          {(team) => (
+            <Out href={team().url} class="amber-button ghost">
+              {team().text}
             </Out>
           )}
         </Show>

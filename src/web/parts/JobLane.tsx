@@ -2,10 +2,12 @@
 /** A lane for a job no service owns: its health and why, what runs it, its last runs, when it runs next, its links. */
 import { For, Show } from "solid-js"
 import type { CatalogEvent, ServicesEvent } from "../../shared/events"
-import { useEstate } from "../context"
+import { useEstate, useSnapshot } from "../context"
 import { clock } from "../format"
+import { teamOf } from "../teams"
 import { Run } from "./Jobs"
 import { HealthLine, Links } from "./Lane"
+import { Owner } from "./Team"
 
 export type DescribedJob = NonNullable<CatalogEvent["jobs"]>[number]
 export type JobState = NonNullable<ServicesEvent["jobs"]>[number]
@@ -14,6 +16,7 @@ const kindWords = { CronJob: "CronJob", Job: "Job", ScheduledTask: "Scheduled ta
 
 export const JobLane = (props: { readonly job: DescribedJob; readonly state: JobState | undefined }) => {
   const { now } = useEstate()
+  const snapshot = useSnapshot()
   const read = () => props.state?.job
   return (
     <article class={`lane job-lane ${props.state?.health ?? "unknown"}`} aria-label={`${props.job.name}, a job`}>
@@ -32,6 +35,7 @@ export const JobLane = (props: { readonly job: DescribedJob; readonly state: Job
         <For each={(read()?.runs ?? []).slice(0, 3)}>{(run) => <Run run={run} now={now()} />}</For>
       </ol>
       <Links service={props.job} />
+      <Owner owner={props.job.owner} team={teamOf(snapshot.events.catalog, props.job.owner)} />
     </article>
   )
 }

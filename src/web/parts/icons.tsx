@@ -1,6 +1,9 @@
 /** @jsxImportSource solid-js */
 /** Small line icons, as SVG paths in a 14 by 14 box, for the links a service has. */
 const paths: Readonly<Record<string, string>> = {
+  chat: "M2 2.5h10v6.5H6.5L3.5 11.5V9H2Z",
+  doc: "M3.5 1.5h5l2.5 2.5v8.5h-7.5ZM8.5 1.5V4H11M5.5 7h3M5.5 9.5h3",
+  oncall: "M7 2a3.5 3.5 0 0 1 3.5 3.5V9l1 1.5h-9l1-1.5V5.5A3.5 3.5 0 0 1 7 2ZM5.75 12.5h2.5",
   logs: "M2 3h10M2 6h10M2 9h7M2 12h5",
   traces: "M2 3h5v3h5M7 6v5h5",
   dashboard: "M2 12V7M5.5 12V2M9 12V5M12.5 12V9",
@@ -29,6 +32,13 @@ const synonyms: Readonly<Record<string, string>> = {
   web: "app",
   openapi: "api",
   docs: "api",
+  slack: "chat",
+  teams: "chat",
+  confluence: "doc",
+  notion: "doc",
+  wiki: "doc",
+  pagerduty: "oncall",
+  opsgenie: "oncall",
 }
 
 const iconFor = (name: string): string => {

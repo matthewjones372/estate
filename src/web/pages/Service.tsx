@@ -9,6 +9,8 @@ import { DebugPanel } from "../parts/Debug"
 import { Jobs } from "../parts/Jobs"
 import { HealthLine, Links } from "../parts/Lane"
 import { LogsPanel } from "../parts/Logs"
+import { Owner } from "../parts/Team"
+import { teamOf } from "../teams"
 
 export const ServicePage = (props: { readonly name: string }) => {
   const { actions, now } = useEstate()
@@ -42,15 +44,12 @@ export const ServicePage = (props: { readonly name: string }) => {
           </h1>
           <HealthLine state={state()} />
           <p class="lede" style={{ "max-width": "760px" }}>
-            {[
-              service()?.description,
-              service()?.owner === undefined ? undefined : `Owner ${service()?.owner}`,
-              state()?.version === undefined ? undefined : `running ${state()?.version}`,
-            ]
+            {[service()?.description, state()?.version === undefined ? undefined : `running ${state()?.version}`]
               .filter(Boolean)
               .join(" · ")}
           </p>
           <Show when={service()}>{(described) => <Links service={described()} />}</Show>
+          <Owner owner={service()?.owner} team={teamOf(events().catalog, service()?.owner)} />
         </section>
         <div class="row">
           <div class="stack" style={{ flex: "999 1 640px", "min-width": 0, gap: "24px" }}>

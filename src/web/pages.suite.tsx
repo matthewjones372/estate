@@ -198,7 +198,7 @@ describe("the other pages", () => {
     const page = text(render(() => <ServicePage name="storefront" />))
     for (const words of [
       "The shop's pages",
-      "Owner web",
+      "Owned by web",
       "running v2",
       "storefront-1",
       "up 2 h",

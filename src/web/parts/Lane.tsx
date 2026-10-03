@@ -35,11 +35,12 @@ const labels: Readonly<Record<string, string>> = {
   api: "API",
   swagger: "API",
   openapi: "API",
+  oncall: "On call",
 }
 const order = ["app", "frontend", "site", "logs", "traces", "dashboard", "api", "swagger", "openapi"]
 const rank = (name: string) => (order.includes(name) ? order.indexOf(name) : order.length)
 
-const label = (name: string) => labels[name] ?? name.charAt(0).toUpperCase() + name.slice(1)
+export const label = (name: string) => labels[name] ?? name.charAt(0).toUpperCase() + name.slice(1)
 
 export const Links = (props: { readonly service: Pick<Described, "name" | "links" | "repository" | "runbook"> }) => (
   <nav aria-label={`${props.service.name} links`} class="links">

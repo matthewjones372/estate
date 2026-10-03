@@ -54,6 +54,9 @@ export const CatalogEvent = Schema.Struct({
       }),
     ),
   ),
+  teams: optional(
+    Schema.Array(Schema.Struct({ name: Schema.String, title: Schema.String, links: Schema.Array(Link) })),
+  ),
   jobs: optional(
     Schema.Array(
       Schema.Struct({

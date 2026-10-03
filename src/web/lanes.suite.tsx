@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { events } from "./fixture"
 import { mount } from "./harness"
 import { Overview } from "./pages/Overview"
+import { chatOf, teamOf } from "./teams"
 
 describe("an overview of a catalog with categories", () => {
   test("puts each category's lanes under its heading, in the catalog's order, and the rest last", () => {
@@ -116,5 +117,51 @@ describe("the map of a large estate", () => {
     page.click(page.button("Close Data"))
     await page.settle()
     expect(nodes()).toHaveLength(2)
+  })
+})
+
+describe("a team", () => {
+  test("is named by its title where it owns something, with its links, and its chat on its alerts' cards", () => {
+    const catalog = events.catalog
+    if (catalog === undefined) throw new Error("no catalog")
+    const teams = [
+      {
+        name: "web",
+        title: "Web",
+        links: [
+          { name: "slack", url: "https://slack.example/web" },
+          { name: "confluence", url: "https://wiki.example/web" },
+          { name: "oncall", url: "https://pager.example/web" },
+        ],
+      },
+    ]
+    const sent = {
+      ...events,
+      catalog: {
+        ...catalog,
+        teams,
+        services: catalog.services.map((service) => ({ ...service, owner: "web" })),
+        jobs: [{ name: "settle", kind: "CronJob" as const, links: [], owner: "web" }],
+      },
+    }
+    const page = mount(() => <Overview />, { sent })
+    const cards = [...page.container.querySelectorAll(".alert-card a")].map((link) => link.textContent?.trim())
+    expect(cards).toContain("Web on Slack")
+    const owner = page.container.querySelector('[aria-label="settle, a job"] .owner')
+    expect(owner?.textContent).toContain("Owned by Web")
+    expect([...(owner?.querySelectorAll("a") ?? [])].map((link) => link.textContent?.trim())).toEqual([
+      "Slack",
+      "Confluence",
+      "On call",
+    ])
+    expect(chatOf(teamOf(sent.catalog, "web"))).toEqual({ url: "https://slack.example/web", text: "Web on Slack" })
+    expect(chatOf({ name: "x", title: "X", links: [{ name: "teams", url: "https://teams.example" }] })?.text).toBe(
+      "X on Teams",
+    )
+    expect([chatOf(undefined), teamOf(sent.catalog, undefined), teamOf(undefined, "web")]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ])
   })
 })

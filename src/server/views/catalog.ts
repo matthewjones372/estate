@@ -19,7 +19,7 @@ interface Named {
 const fillLink = (template: string, environment: Environment, named: Named): string =>
   template.replace(/\{(\w+)\}/g, (whole, name: string) => {
     if (name === "env") return environment.name
-    if (name === "service" || name === "store" || name === "job") return named.name
+    if (name === "service" || name === "store" || name === "job" || name === "team") return named.name
     if (name === "namespace") return named.namespace ?? named.name
     return environment.values?.[name] ?? whole
   })
@@ -81,6 +81,15 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
           ...(store.category === undefined ? {} : { category: store.category }),
           engine: store.engine,
           links: linksOf(catalog, environment, store, store.links),
+        })),
+      }),
+  ...(catalog.teams === undefined
+    ? {}
+    : {
+        teams: catalog.teams.map((team) => ({
+          name: team.name,
+          title: team.title ?? team.name,
+          links: linksOf(catalog, environment, team, team.links),
         })),
       }),
   ...(catalog.jobs === undefined

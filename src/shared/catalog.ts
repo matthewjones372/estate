@@ -179,6 +179,13 @@ export const Store = Schema.Struct({
 })
 export type Store = typeof Store.Type
 
+/** A team, by the name an owner gives: where to reach it, its chat, its pages and its on-call. */
+const Team = Schema.Struct({
+  name: Schema.String,
+  title: optional(Schema.String),
+  links: optional(Schema.Record(Schema.String, Schema.String)),
+})
+
 /**
  * A job no service owns: a Kubernetes CronJob or Job by name in its namespace, or an ECS scheduled task by its task
  * family in its cluster.
@@ -233,6 +240,7 @@ export const Catalog = Schema.Struct({
   services: Schema.Array(Service),
   stores: optional(Schema.Array(Store)),
   jobs: optional(Schema.Array(StandaloneJob)),
+  teams: optional(Schema.Array(Team)),
   vitals: optional(Schema.Array(Vital)),
   map: optional(
     Schema.Struct({

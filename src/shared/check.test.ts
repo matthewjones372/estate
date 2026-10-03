@@ -188,6 +188,32 @@ describe("jobs no service owns", () => {
   })
 })
 
+describe("teams", () => {
+  test("are named once, own what names them, and take {team} and {env} in their links", () => {
+    const environments = [{ name: "a", sources: "a" }]
+    expect(
+      mistakes({
+        environments,
+        teams: [{ name: "web", links: { slack: "https://slack/{team}-{env}" } }],
+        services: [{ name: "s", environments: ["a"], owner: "web" }],
+      }),
+    ).toEqual([])
+    expect(
+      mistakes({
+        environments,
+        teams: [{ name: "web" }, { name: "web", links: { wiki: "https://wiki/{service}" } }],
+        services: [{ name: "s", environments: ["a"], owner: "data" }],
+        jobs: [{ name: "j", environments: ["a"], owner: "ops", run: { kubernetes: { namespace: "n" } } }],
+      }).map((mistake) => `${mistake.at}: ${mistake.message}`),
+    ).toEqual([
+      'teams: "web" is named twice',
+      'services[0] (s).owner: "data" is not one of the teams',
+      'jobs[0] (j).owner: "ops" is not one of the teams',
+      "teams[1] (web).links.wiki: {service} is not one of {env}, {team}, nor a value a names",
+    ])
+  })
+})
+
 describe("a link's values", () => {
   test("may be named when every environment the service runs in has them", () => {
     const valued = {

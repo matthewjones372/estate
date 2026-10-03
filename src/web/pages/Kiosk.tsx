@@ -10,6 +10,7 @@ import { amount, clock, since } from "../format"
 import { firingOf, type Narrowed, nextOf, staleSince, tilesOf, turnOf } from "../kiosk"
 import { Plot } from "../parts/Plot"
 import { Spark } from "../parts/Sparkline"
+import { teamOf } from "../teams"
 import { headlineOf } from "./Overview"
 
 const hour = 3_600_000
@@ -126,7 +127,9 @@ export const Kiosk = (props: Narrowed) => {
       <header class="kiosk-top">
         <span class="kiosk-environment">{title()}</span>
         <Show when={props.category}>{(name) => <span class="kiosk-team">{name()}</span>}</Show>
-        <Show when={props.team}>{(name) => <span class="kiosk-team">{name()}</span>}</Show>
+        <Show when={props.team}>
+          {(name) => <span class="kiosk-team">{teamOf(events().catalog, name())?.title ?? name()}</span>}
+        </Show>
         <span class="kiosk-clock mono">{clock(new Date(tick()).toISOString())}</span>
       </header>
       <Show when={stale()}>

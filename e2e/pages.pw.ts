@@ -16,6 +16,11 @@ test("the overview says what needs someone, with each service's lane and what ch
   await page.goto("/?env=production")
   await expect(page.getByRole("heading", { name: /Two things\s*need you\./ })).toBeVisible({ timeout: 20_000 })
   await expect(page.getByRole("heading", { name: "Orders are slow to place" })).toBeVisible()
+  // The owners' chat, on the card of an alert about their service.
+  await expect(page.getByRole("link", { name: "Orders on Slack" })).toHaveAttribute(
+    "href",
+    "https://example.slack.com/archives/C0ORDERS",
+  )
   await expect(services(page).getByRole("link", { name: "storefront", exact: true })).toBeVisible()
   await expect(page.getByRole("link", { name: "API" })).toHaveAttribute(
     "href",

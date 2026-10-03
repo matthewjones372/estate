@@ -7,6 +7,25 @@ environments:
     title: Production, three machines
     sources: production
 
+# Who owns what: a service's, job's or agent's owner names one of these, and its links go wherever that owner is shown.
+teams:
+  - name: web
+    title: Web
+    links:
+      slack: https://example.slack.com/archives/C0WEB
+      confluence: https://example.atlassian.net/wiki/spaces/WEB
+      oncall: https://example.pagerduty.com/schedules/PWEB
+  - name: orders
+    title: Orders
+    links:
+      slack: https://example.slack.com/archives/C0ORDERS
+      notion: https://www.notion.so/example/Orders
+  - name: payments
+    title: Payments
+    links:
+      teams: https://teams.microsoft.com/l/channel/payments
+      confluence: https://example.atlassian.net/wiki/spaces/PAY
+
 services:
   - name: storefront
     category: Shop
