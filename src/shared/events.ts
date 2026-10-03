@@ -68,6 +68,7 @@ export const CatalogEvent = Schema.Struct({
     ),
   ),
   map: Schema.Struct({
+    collapse: optional(Schema.Union([Schema.Number, Schema.Literal("never")])),
     nodes: Schema.Array(
       Schema.Struct({
         id: Schema.String,

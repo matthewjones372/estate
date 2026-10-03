@@ -56,9 +56,9 @@ Spec 0018's categories.
 
 ## Stack
 
-- [ ] **`map-spacing`** — each column as tall as its nodes need, within a maximum, scrolling past it.
+- [x] **`map-spacing`** — each column as tall as its nodes need, within a maximum, scrolling past it.
       Done when: a layout test of 40 nodes has no two nodes overlapping.
-- [ ] **`map-categories`** — past 12 nodes, a node per category with its count and worst health, edges summed,
+- [x] **`map-categories`** — past 12 nodes, a node per category with its count and worst health, edges summed,
       a category opened in place, and one that needs someone open by itself.
       Done when: the bench's 50-service estate draws as its categories, and opening one shows its nodes.
 

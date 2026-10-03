@@ -17,28 +17,12 @@ import "./styles/logs.css"
 import "./styles/kiosk.css"
 import { App } from "./App"
 import { openEvents, serverActions } from "./connect"
+import { kept } from "./kept"
 import { createLive } from "./live"
 import { NoAccess, SignIn } from "./pages/States"
 import { chooseEnvironment, pageOf } from "./route"
 
-const remembered = "estate.environment"
-
-const storage = {
-  read: (): string | null => {
-    try {
-      return window.localStorage.getItem(remembered)
-    } catch {
-      return null
-    }
-  },
-  write: (value: string) => {
-    try {
-      window.localStorage.setItem(remembered, value)
-    } catch {
-      return
-    }
-  },
-}
+const storage = kept("estate.environment")
 
 const element = document.getElementById("estate")
 const show = (page: () => JSX.Element) => {
@@ -71,9 +55,9 @@ const boot = async () => {
   const live = createLive(openEvents, environment)
   /** The path with the environment chosen; the page's own other parameters, a screen's `team`, kept where it stays. */
   const withEnvironment = (path: string) => {
-    const kept = new URLSearchParams(path === window.location.pathname ? window.location.search : "")
-    kept.set("env", live.snapshot().environment)
-    return `${path}?${kept}`
+    const params = new URLSearchParams(path === window.location.pathname ? window.location.search : "")
+    params.set("env", live.snapshot().environment)
+    return `${path}?${params}`
   }
 
   const [page, setPage] = createSignal(pageOf(window.location.pathname, window.location.search))

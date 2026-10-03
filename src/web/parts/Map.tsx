@@ -1,41 +1,58 @@
 /** @jsxImportSource solid-js */
-/** The estate drawn live: its services and stores, and the traffic between them; amber is what needs someone. */
-import { createMemo, For, Show } from "solid-js"
+/**
+ * The estate drawn live: its services and stores, and the traffic between them; amber is what needs someone. Past a
+ * dozen nodes, a node a category, which opens in place.
+ */
+import { createMemo, createSignal, For, Show } from "solid-js"
 import type { CatalogEvent, ServicesEvent } from "../../shared/events"
+import { type DrawnCategory, type DrawnEdge, type DrawnNode, drawnOf } from "../drawn"
 import { amount } from "../format"
-import { byName, indexed } from "../indexed"
+import { byName } from "../indexed"
+import { kept } from "../kept"
 import { layout } from "../layout"
 import { A } from "./A"
 
 type MapNode = CatalogEvent["map"]["nodes"][number]
-type MapEdge = CatalogEvent["map"]["edges"][number]
+
+/** Room a node needs: a row's height and a column's width, in pixels. */
+const rowHeight = 60
+const columnWidth = 170
+
+const opening = kept("estate.map.opened")
+const openedAtFirst = (): ReadonlySet<string> => new Set((opening.read() ?? "").split("\n").filter(Boolean))
+
+const isCategory = (node: DrawnNode): node is DrawnCategory => "kind" in node && node.kind === "category"
 
 export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly services: ServicesEvent | undefined }) => {
+  const [opened, setOpened] = createSignal(openedAtFirst())
+  const toggle = (category: string) => {
+    const next = new Set(opened())
+    if (next.has(category)) next.delete(category)
+    else next.add(category)
+    setOpened(next)
+    opening.write([...next].join("\n"))
+  }
+  const drawn = createMemo(() => drawnOf(props.catalog, props.services, opened(), props.catalog.map.collapse))
   const placed = createMemo(() =>
     layout(
-      props.catalog.map.nodes.map((node) => node.id),
-      props.catalog.map.edges,
+      drawn().nodes.map((node) => node.id),
+      drawn().edges,
     ),
-  )
-  const flows = indexed(
-    () => props.services?.edges,
-    (edge) => `${edge.from}\u0000${edge.to}`,
   )
   const states = byName(() => props.services?.services)
   const storeStates = byName(() => props.services?.stores)
-  const flow = (edge: MapEdge) => flows().get(`${edge.from}\u0000${edge.to}`)
   const stateOf = (service: string | undefined) => (service === undefined ? undefined : states().get(service))
   const storeStateOf = (store: string | undefined) => (store === undefined ? undefined : storeStates().get(store))
-  const ends = (edge: MapEdge) => {
-    const from = placed().get(edge.from)
-    const to = placed().get(edge.to)
+  const ends = (edge: DrawnEdge) => {
+    const from = placed().at.get(edge.from)
+    const to = placed().at.get(edge.to)
     return from === undefined || to === undefined ? undefined : { from, to }
   }
 
-  const Line = (line: { readonly edge: MapEdge }) => (
+  const Line = (line: { readonly edge: DrawnEdge }) => (
     <Show when={ends(line.edge)}>
       {(at) => {
-        const hot = () => flow(line.edge)?.alerting === true
+        const hot = () => line.edge.alerting
         return (
           <g>
             <line
@@ -64,18 +81,16 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
     </Show>
   )
 
-  const Label = (label: { readonly edge: MapEdge }) => {
-    const text = () => {
-      const rate = flow(label.edge)?.rate
-      return [label.edge.label, rate === null || rate === undefined ? undefined : `${amount(rate)}/s`]
+  const Label = (label: { readonly edge: DrawnEdge }) => {
+    const text = () =>
+      [label.edge.label, label.edge.rate === null ? undefined : `${amount(label.edge.rate)}/s`]
         .filter(Boolean)
         .join(" ")
-    }
     return (
       <Show when={text() !== "" ? ends(label.edge) : undefined}>
         {(at) => (
           <span
-            class={`map-label mono ${flow(label.edge)?.alerting ? "hot" : ""}`}
+            class={`map-label mono ${label.edge.alerting ? "hot" : ""}`}
             style={{ left: `${(at().from.x + at().to.x) / 2}%`, top: `${(at().from.y + at().to.y) / 2}%` }}
           >
             {text()}
@@ -84,6 +99,34 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
       </Show>
     )
   }
+
+  const hotOf = (health: string) => (health === "attention" || health === "critical" ? "hot" : "")
+
+  const Category = (shown: { readonly node: DrawnCategory }) => (
+    <Show when={placed().at.get(shown.node.id)}>
+      {(at) => (
+        <button
+          type="button"
+          class={`map-node map-category ${shown.node.health}`}
+          style={{ left: `${at().x}%`, top: `${at().y}%` }}
+          aria-expanded="false"
+          onClick={() => toggle(shown.node.title)}
+        >
+          <span class="map-node-name">
+            <span
+              class={`dot ${shown.node.health} ${hotOf(shown.node.health)}`}
+              style={{ width: "7px", height: "7px" }}
+            />
+            {shown.node.title}
+          </span>
+          <span class="mono map-node-sub">
+            {`${shown.node.members} node${shown.node.members === 1 ? "" : "s"}`}
+            {shown.node.needing === 0 ? "" : ` · ${shown.node.needing} need${shown.node.needing === 1 ? "s" : ""} you`}
+          </span>
+        </button>
+      )}
+    </Show>
+  )
 
   const Node = (shown: { readonly node: MapNode }) => {
     const state = () => stateOf(shown.node.service)
@@ -109,17 +152,14 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
     const body = () => (
       <>
         <span class="map-node-name">
-          <span
-            class={`dot ${health()} ${health() === "attention" || health() === "critical" ? "hot" : ""}`}
-            style={{ width: "7px", height: "7px" }}
-          />
+          <span class={`dot ${health()} ${hotOf(health())}`} style={{ width: "7px", height: "7px" }} />
           {shown.node.title}
         </span>
         <span class="mono map-node-sub">{sub()}</span>
       </>
     )
     return (
-      <Show when={placed().get(shown.node.id)}>
+      <Show when={placed().at.get(shown.node.id)}>
         {(at) => (
           <Show
             when={to()}
@@ -147,17 +187,34 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
           <span id="map-title" style={{ "font-weight": 600 }}>
             The estate, live
           </span>
-          <span class="muted" style={{ "font-size": "12px" }}>
-            Traffic over the last minute · amber is what needs you
+          <span class="map-opened">
+            <For each={drawn().opened}>
+              {(category) => (
+                <button type="button" class="plain-button" aria-expanded="true" onClick={() => toggle(category)}>
+                  Close {category}
+                </button>
+              )}
+            </For>
+            <span class="muted" style={{ "font-size": "12px" }}>
+              Traffic over the last minute · amber is what needs you
+            </span>
           </span>
         </figcaption>
         <div class="map-scroll">
-          <div class="map-canvas">
+          <div
+            class="map-canvas"
+            style={{
+              height: `${Math.max(380, placed().rows * rowHeight + 20)}px`,
+              "min-width": `${Math.max(720, placed().columns * columnWidth)}px`,
+            }}
+          >
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" class="map-lines">
-              <For each={props.catalog.map.edges}>{(edge) => <Line edge={edge} />}</For>
+              <For each={drawn().edges}>{(edge) => <Line edge={edge} />}</For>
             </svg>
-            <For each={props.catalog.map.edges}>{(edge) => <Label edge={edge} />}</For>
-            <For each={props.catalog.map.nodes}>{(node) => <Node node={node} />}</For>
+            <For each={drawn().edges}>{(edge) => <Label edge={edge} />}</For>
+            <For each={drawn().nodes}>
+              {(node) => (isCategory(node) ? <Category node={node} /> : <Node node={node} />)}
+            </For>
           </div>
         </div>
       </figure>

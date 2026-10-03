@@ -89,3 +89,32 @@ describe("a job no service owns", () => {
     expect([...page.container.querySelectorAll("h2")].map((heading) => heading.textContent)).toContain("Jobs")
   })
 })
+
+describe("the map of a large estate", () => {
+  test("is a node a category, which opens in place and closes again", async () => {
+    const catalog = events.catalog
+    if (catalog === undefined) throw new Error("no catalog")
+    const names = Array.from({ length: 14 }, (_, index) => [`svc-${index}`, index < 7 ? "Shop" : "Data"] as const)
+    const page = mount(() => <Overview />, {
+      sent: {
+        ...events,
+        catalog: {
+          ...catalog,
+          services: names.map(([name, category]) => ({ name, links: [], category })),
+          map: {
+            nodes: names.map(([name]) => ({ id: name, title: name, kind: "service", service: name })),
+            edges: [{ from: "svc-0", to: "svc-7" }],
+          },
+        },
+      },
+    })
+    const nodes = () => [...page.container.querySelectorAll(".map-node")].map((node) => node.textContent?.trim())
+    expect(nodes()).toEqual(["Shop7 nodes", "Data7 nodes"])
+    page.click(page.button(/^Data/))
+    await page.settle()
+    expect(nodes()).toHaveLength(8)
+    page.click(page.button("Close Data"))
+    await page.settle()
+    expect(nodes()).toHaveLength(2)
+  })
+})

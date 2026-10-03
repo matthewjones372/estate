@@ -10,10 +10,13 @@ const freePort = () => {
   return port
 }
 
+const areas = ["Shop", "Payments", "Search", "Data", "Platform"]
+
 const catalogOf = (services: number) => {
   const each = Array.from(
     { length: services },
     (_, index) => `  - name: svc-${index}
+    category: ${areas[index % areas.length]}
     environments: [ staging, production ]
     kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: svc-${index} } ] }
     deploy: { flux: { kustomization: shop, imagePolicy: svc-${index} } }
@@ -23,11 +26,23 @@ const catalogOf = (services: number) => {
       p99: histogram_quantile(0.99, sum by (le) (rate(duration_bucket{app="svc-${index}"}[5m])))
     links: { logs: "https://logs.example/{env}/{service}" }`,
   )
+  // A map of every service, each calling the next in its area and the first of the next area: past twelve nodes it
+  // draws as its areas.
+  const nodes = Array.from({ length: services }, (_, index) => `    - { id: svc-${index}, service: svc-${index} }`)
+  const edges = Array.from(
+    { length: Math.max(0, services - 1) },
+    (_, index) => `    - { from: svc-${index}, to: svc-${index + 1} }`,
+  )
   return `environments:
   - { name: staging, sources: staging }
   - { name: production, sources: production }
 services:
 ${each.join("\n")}
+map:
+  nodes:
+${nodes.join("\n")}
+  edges:
+${edges.length === 0 ? "    []" : edges.join("\n")}
 `
 }
 

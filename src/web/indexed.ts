@@ -4,7 +4,7 @@
  */
 import { type Accessor, createMemo } from "solid-js"
 
-export const indexed = <T>(
+const indexed = <T>(
   items: () => ReadonlyArray<T> | undefined,
   key: (item: T) => string,
 ): Accessor<ReadonlyMap<string, T>> => createMemo(() => new Map((items() ?? []).map((item) => [key(item), item])))

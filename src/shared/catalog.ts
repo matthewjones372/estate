@@ -234,6 +234,13 @@ export const Catalog = Schema.Struct({
   stores: optional(Schema.Array(Store)),
   jobs: optional(Schema.Array(StandaloneJob)),
   vitals: optional(Schema.Array(Vital)),
-  map: optional(Schema.Struct({ nodes: Schema.Array(MapNode), edges: Schema.Array(MapEdge) })),
+  map: optional(
+    Schema.Struct({
+      nodes: Schema.Array(MapNode),
+      edges: Schema.Array(MapEdge),
+      /** Past how many nodes the map draws a node a category: 12 unless set, or never. */
+      collapse: optional(Schema.Union([Schema.Number, Schema.Literal("never")])),
+    }),
+  ),
 })
 export type Catalog = typeof Catalog.Type

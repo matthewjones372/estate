@@ -10,7 +10,8 @@
   border-radius: 16px;
 }
 .map-scroll {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 560px;
 }
 .map-canvas {
   position: relative;
@@ -62,6 +63,21 @@ a.map-node:hover {
   background: var(--critical-panel);
   border-color: var(--critical-line);
   box-shadow: 0 0 0 4px rgba(255, 93, 93, 0.1);
+}
+button.map-category {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-style: dashed;
+}
+button.map-category:hover {
+  border-color: var(--ink-3);
+}
+.map-opened {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .map-node-name {
   display: flex;

@@ -107,6 +107,7 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
         ),
       }),
   map: {
+    ...(catalog.map?.collapse === undefined ? {} : { collapse: catalog.map.collapse }),
     nodes: mapIn(catalog, environment).nodes.map((node) => ({
       id: node.id,
       title: node.title ?? node.service ?? node.store ?? node.id,

@@ -1,15 +1,22 @@
 /** Where the map's nodes go: in layers, left to right, each after everything that calls it, spread down the height. */
 
-export interface Placed {
+interface Placed {
   readonly id: string
   readonly x: number
   readonly y: number
 }
 
+export interface Layout {
+  readonly at: ReadonlyMap<string, Placed>
+  /** How many nodes the fullest column has, and how many columns: what the map's size is made from. */
+  readonly rows: number
+  readonly columns: number
+}
+
 export const layout = (
   ids: ReadonlyArray<string>,
   edges: ReadonlyArray<{ readonly from: string; readonly to: string }>,
-): ReadonlyMap<string, Placed> => {
+): Layout => {
   const layer = new Map(ids.map((id) => [id, 0]))
   for (let pass = 0; pass < ids.length; pass++) {
     let moved = false
@@ -39,5 +46,5 @@ export const layout = (
       })
     })
   }
-  return placed
+  return { at: placed, rows: Math.max(0, ...[...columns.values()].map((members) => members.length)), columns: layers }
 }
