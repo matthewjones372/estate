@@ -150,7 +150,10 @@ describe("load over a longer range", () => {
           server,
           new Request("http://estate/api/load?env=staging&service=storefront&range=1y"),
         )
-        expect(missing.status).toBe(404)
+        expect([missing.status, missing.json()]).toEqual([
+          400,
+          { message: "load is asked for by env, service and a range of 1h, 6h, 24h or 7d" },
+        ])
         const none = yield* ask(
           server,
           new Request("http://estate/api/load?env=production&service=storefront&range=6h"),

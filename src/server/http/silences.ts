@@ -7,7 +7,7 @@ import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Remote } from "../remote"
 import { Configured } from "../settings"
 import { Estate, type SourcedAlert, updateEnvironment } from "../state"
-import { json, Refusal, refused, withRole } from "./routes"
+import { EnvParam, json, Refusal, refused, searchParams, withRole } from "./routes"
 
 const Asked = Schema.Struct({
   environment: Schema.String,
@@ -107,11 +107,11 @@ export const silenceRoute = HttpRouter.add(
   ),
 )
 
-export const unsilenceRoute = HttpRouter.add("DELETE", "/api/silences/:id", (request) =>
+export const unsilenceRoute = HttpRouter.add("DELETE", "/api/silences/:id", () =>
   Effect.gen(function* () {
     yield* operator
     const { id = "" } = yield* HttpRouter.params
-    const environment = new URL(request.url, "http://estate").searchParams.get("env") ?? ""
+    const { env: environment = "" } = yield* searchParams(EnvParam, "env names an environment")
     const url = yield* managerOf(environment)
     const remote = yield* Remote
     const answered = yield* remote.call({ url: `${url}/api/v2/silence/${encodeURIComponent(id)}`, method: "DELETE" })

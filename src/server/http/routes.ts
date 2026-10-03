@@ -1,6 +1,6 @@
 /** Estate's routes: who you are, the event stream for an environment, and the pages. */
-import { Data, Effect, Layer, Option, Stream, SubscriptionRef } from "effect"
-import { HttpRouter, type HttpServerRequest, HttpServerResponse } from "effect/http"
+import { Data, Effect, Layer, Option, Schema, Stream, SubscriptionRef } from "effect"
+import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 import type { Me } from "../../shared/events"
 import { Configured } from "../settings"
 import { Estate } from "../state"
@@ -35,6 +35,18 @@ export const withRole: Effect.Effect<
   return { name, groups, role }
 })
 
+/** The query's parameters, decoded by `schema`; a query that does not fit is refused, saying what it should be. */
+export const searchParams = <A, I extends Readonly<Record<string, string | ReadonlyArray<string> | undefined>>>(
+  schema: Schema.Codec<A, I>,
+  expected: string,
+) =>
+  HttpServerRequest.schemaSearchParams(schema).pipe(
+    Effect.mapError(() => new Refusal({ status: 400, body: { message: expected } })),
+  )
+
+/** `?env=`, which most routes take. */
+export const EnvParam = Schema.Struct({ env: Schema.optionalKey(Schema.String) })
+
 export const refused = (refusal: Refusal) => Effect.succeed(json(refusal.body, refusal.status))
 
 const health = HttpRouter.add("GET", "/healthz", HttpServerResponse.text("ok"))
@@ -59,7 +71,7 @@ const events = HttpRouter.add("GET", "/events", (request) =>
     const person = yield* withRole
     const ref = yield* Estate
     const { catalog } = yield* SubscriptionRef.get(ref)
-    const asked = new URL(request.url, "http://estate").searchParams.get("env")
+    const { env: asked } = yield* searchParams(EnvParam, "env names an environment")
     const environment = asked ?? catalog.environments[0]?.name ?? ""
     const found = catalog.environments.find((each) => each.name === environment)
     if (found === undefined) return json({ message: `${environment} is not an environment` }, 404)
