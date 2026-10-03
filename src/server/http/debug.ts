@@ -5,7 +5,7 @@ import { Configured } from "../settings"
 import { showDebug, switchOff, switchOn } from "../sources/debug"
 import { clusterOf, Host } from "../sources/kubernetes"
 import { Estate } from "../state"
-import { json, Refusal, refused, withRole } from "./routes"
+import { EnvParam, json, Refusal, refused, searchParams, withRole } from "./routes"
 
 const Asked = Schema.Struct({ environment: Schema.String, service: Schema.String, minutes: Schema.Number })
 
@@ -59,10 +59,10 @@ export const debugOnRoute = HttpRouter.add(
   }).pipe(Effect.catchTag("Refusal", refused)),
 )
 
-export const debugOffRoute = HttpRouter.add("DELETE", "/api/debug/:service", (request) =>
+export const debugOffRoute = HttpRouter.add("DELETE", "/api/debug/:service", () =>
   Effect.gen(function* () {
     const { service: name = "" } = yield* HttpRouter.params
-    const environment = new URL(request.url, "http://estate").searchParams.get("env") ?? ""
+    const { env: environment = "" } = yield* searchParams(EnvParam, "env names an environment")
     const { service, cluster, acting } = yield* asked(environment, name)
     const switched = yield* Effect.result(switchOff(cluster, service, acting))
     if (switched._tag === "Failure") return failed(switched.failure)
