@@ -6,6 +6,8 @@ import { serviceOf } from "./health"
 import { storeOf, storesIn } from "./stores"
 
 const order = { firing: 0, pending: 1, silenced: 2 } as const
+/** How many earlier firings an alert carries to the page. */
+const kept = 20
 const severities: Readonly<Record<string, number>> = { critical: 0, warning: 1 }
 
 export const alertsView = (estate: EstateState, environment: string, silences: boolean): AlertsEvent => {
@@ -16,10 +18,27 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
   const alerts = (state.alerts.value ?? []).map((alert) => {
     const service = serviceOf(alert.labels, services)
     const runbook = alert.runbook ?? services.find((each) => each.name === service)?.runbook
-    const notes = estate.notes
+    const about = estate.notes
       .filter((note) => note.environment === environment && note.alert === alert.id)
       .map(({ id, at, by, text }) => ({ id, at, by, text }))
       .sort((a, b) => b.at.localeCompare(a.at))
+    // This firing's notes on the card; earlier ones with the firing they were written in.
+    const notes = about.filter((note) => note.at >= alert.startsAt)
+    const earlier = (estate.firings ?? [])
+      .filter(
+        (firing) => firing.environment === environment && firing.alert === alert.id && firing.startsAt < alert.startsAt,
+      )
+      .toSorted((a, b) => b.startsAt.localeCompare(a.startsAt))
+      .slice(0, kept)
+    const history = earlier.map((firing, index) => {
+      const until = earlier[index - 1]?.startsAt ?? alert.startsAt
+      return compact({
+        startsAt: firing.startsAt,
+        endsAt: firing.endsAt,
+        silence: firing.silence,
+        notes: about.filter((note) => note.at >= firing.startsAt && note.at < until),
+      })
+    })
     const { expression: _, impact: said, ...shown } = alert
     const onPage = estate.impacts?.find((each) => each.alert === alert.name)
     const written = estate.catalog.alerts?.[alert.name]?.impact
@@ -37,6 +56,7 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
       store: storeOf(alert.labels, stores),
       runbook,
       notes,
+      history: history.length === 0 ? undefined : history,
       chart: state.metrics.value?.charts[alert.id],
     })
   })

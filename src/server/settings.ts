@@ -145,6 +145,8 @@ export const Settings = Schema.Struct({
   readOnly: optional(Schema.Boolean),
   catalog: Schema.String,
   auth: Auth,
+  /** How many days each alert's firings are kept, with who silenced them and why: 90 unless set. */
+  alerts: optional(Schema.Struct({ historyDays: optional(Schema.Number) })),
   /** Where notes are kept: Postgres, a DynamoDB table, or else memory; and for how many days. */
   notes: optional(
     Schema.Struct({

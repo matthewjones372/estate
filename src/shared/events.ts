@@ -180,6 +180,17 @@ export const Alert = Schema.Struct({
     Schema.Struct({ id: Schema.String, by: Schema.String, reason: Schema.String, startsAt: Instant, endsAt: Instant }),
   ),
   notes: Schema.Array(Note),
+  /** Its earlier firings, newest first, as far back as they are kept: who silenced each and why, and its notes. */
+  history: optional(
+    Schema.Array(
+      Schema.Struct({
+        startsAt: Instant,
+        endsAt: optional(Instant),
+        silence: optional(Schema.Struct({ by: Schema.String, reason: Schema.String })),
+        notes: Schema.Array(Note),
+      }),
+    ),
+  ),
   /** What it means for the people using the product: written on the page, in the catalog, or on its rule. */
   impact: optional(
     Schema.Struct({

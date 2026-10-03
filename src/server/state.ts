@@ -67,6 +67,19 @@ export interface Held {
   readonly ended?: string
 }
 
+/** One firing of an alert: when it started and ended, and who silenced it and why, if anyone did. */
+export interface StoredFiring {
+  readonly environment: string
+  /** The alert's id, its labels', which its notes are kept by. */
+  readonly alert: string
+  readonly name: string
+  /** The service it was about, as the catalog said when it fired. */
+  readonly service?: string
+  readonly startsAt: string
+  readonly endsAt?: string
+  readonly silence?: { readonly by: string; readonly reason: string }
+}
+
 export interface EnvironmentState {
   readonly metrics: Part<Metrics>
   readonly alerts: Part<ReadonlyArray<SourcedAlert>>
@@ -89,6 +102,8 @@ export interface EstateState {
   readonly environments: Readonly<Record<string, EnvironmentState>>
   readonly builds: Part<Readonly<Record<string, ReadonlyArray<Build>>>>
   readonly notes: ReadonlyArray<Note & { readonly environment: string; readonly alert: string }>
+  /** Each alert's firings, as far back as they are kept, newest first. */
+  readonly firings?: ReadonlyArray<StoredFiring>
   /** What alerts mean for users, by alert name, as operators wrote it on the page. */
   readonly impacts?: ReadonlyArray<{
     readonly alert: string

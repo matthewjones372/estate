@@ -3,6 +3,7 @@ import { Data, Effect, type FileSystem, Layer, Result } from "effect"
 import type { Mistake } from "../shared/shape"
 import { providerLayer } from "./auth/oidc"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
+import { loadHistory, recordFirings, sweepHistory } from "./history"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
 import { impactRoute } from "./http/impacts"
 import { kioskRoute } from "./http/kiosk"
@@ -18,6 +19,7 @@ import { platform, readText } from "./platform"
 import type { Remote } from "./remote"
 import { backOff } from "./schedule"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
+import { backfillHistory } from "./sources/backfill"
 import { toolsOf } from "./sources/ports"
 import { startSources } from "./sources/start"
 import { type Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
@@ -93,19 +95,26 @@ export const application = Layer.mergeAll(
   errorsRoute,
 )
 
+const historyDays = (settings: Started["settings"]) => settings.alerts?.historyDays ?? 90
+
 /** What runs beside the routes for as long as Estate does. */
 export const background = (
   started: Started,
 ): Effect.Effect<never, never, Estate | Remote | Notes | FileSystem.FileSystem> =>
   Effect.all(
     [
+      // The firings kept are read before any are recorded, so one still open when Estate stopped is ended, not begun.
       loadNotes.pipe(
+        Effect.andThen(loadHistory(historyDays(started.settings))),
         Effect.tapError((failure) => Effect.logWarning(`notes cannot be read yet: ${failure.message}`)),
         Effect.retry(backOff),
         Effect.orDie,
+        Effect.andThen(backfillHistory(started.settings)),
+        Effect.andThen(recordFirings),
         Effect.andThen(Effect.never),
       ),
       sweepNotes(started.settings.notes?.keepDays ?? 30),
+      sweepHistory(historyDays(started.settings)),
       reloadCatalog(started.settings.catalog, started.settings, started.catalogText),
       startSources(started.settings),
     ],

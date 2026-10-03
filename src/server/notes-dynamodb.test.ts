@@ -40,7 +40,11 @@ const fakeDynamo = (calls: Call[], refuse?: string) => {
             ? (item["time"]?.S ?? "") < values[":at"].S
             : body.FilterExpression === "begins_with(pk, :impact)"
               ? (item["pk"]?.S ?? "").startsWith(values[":impact"].S)
-              : true,
+              : body.FilterExpression === "begins_with(pk, :firing) AND #time >= :since"
+                ? (item["pk"]?.S ?? "").startsWith(values[":firing"].S) && (item["time"]?.S ?? "") >= values[":since"].S
+                : body.FilterExpression === "begins_with(pk, :firing) AND #time < :at"
+                  ? (item["pk"]?.S ?? "").startsWith(values[":firing"].S) && (item["time"]?.S ?? "") < values[":at"].S
+                  : true,
       )
       const from = Number(body.ExclusiveStartKey?.index ?? 0)
       const next = from + 2 < kept.length ? { LastEvaluatedKey: { index: from + 2 } } : {}
@@ -114,6 +118,43 @@ describe("impacts in DynamoDB", () => {
       ])
       expect(read?.notes).toEqual([])
       expect(read?.after.map((each) => each.alert)).toEqual(["SearchSlow"])
+    })
+  })
+})
+
+describe("firings in DynamoDB", () => {
+  test("are kept beside the notes, a firing's end and silence written over its start, and swept by their time", () => {
+    const calls: Call[] = []
+    const firing = {
+      environment: "production",
+      alert: "a1",
+      name: "OrdersSlow",
+      service: "orders",
+      startsAt: "2026-10-02T10:00:00Z",
+    }
+    return withNotes(
+      (notes) =>
+        Effect.gen(function* () {
+          yield* notes.add(note("n1", "2026-10-02T10:01:00Z"))
+          yield* notes.keepFiring(firing)
+          yield* notes.keepFiring({
+            ...firing,
+            endsAt: "2026-10-02T10:20:00Z",
+            silence: { by: "gil", reason: "deploy" },
+          })
+          yield* notes.keepFiring({ ...firing, startsAt: "2026-09-01T10:00:00Z" })
+          const read = yield* notes.firings("2026-09-15T00:00:00Z")
+          yield* notes.removeFiringsBefore("2026-09-15T00:00:00Z")
+          return { read, left: yield* notes.firings("2026-01-01T00:00:00Z"), notes: yield* notes.all }
+        }),
+      stubRemote(fakeDynamo(calls)),
+    ).then((result) => {
+      const done = Result.isSuccess(result) ? result.success : undefined
+      expect(done?.read).toEqual([
+        { ...firing, endsAt: "2026-10-02T10:20:00Z", silence: { by: "gil", reason: "deploy" } },
+      ])
+      expect(done?.left.map((each) => each.startsAt)).toEqual(["2026-10-02T10:00:00Z"])
+      expect(done?.notes.map((each) => each.id)).toEqual(["n1"])
     })
   })
 })

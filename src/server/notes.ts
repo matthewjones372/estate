@@ -5,7 +5,10 @@
 import { Context, Data, Effect, Layer, Ref } from "effect"
 import type { Note } from "../shared/events"
 import { type Failure, SourceFailure } from "./sources/run"
+import type { StoredFiring } from "./state"
 import { iso } from "./time"
+
+export type { StoredFiring } from "./state"
 
 export type StoredNote = Note & { readonly environment: string; readonly alert: string }
 
@@ -26,6 +29,11 @@ export interface Notes {
   readonly impacts: Effect.Effect<ReadonlyArray<StoredImpact>, Failure>
   /** Keeps an alert's impact in place of the one before, or forgets it when its text is empty. */
   readonly setImpact: (impact: StoredImpact) => Effect.Effect<void, Failure>
+  /** The firings that started at `since` or later, newest first. */
+  readonly firings: (since: string) => Effect.Effect<ReadonlyArray<StoredFiring>, Failure>
+  /** Keeps a firing in place of the one with its environment, alert and start, if there is one. */
+  readonly keepFiring: (firing: StoredFiring) => Effect.Effect<void, Failure>
+  readonly removeFiringsBefore: (at: string) => Effect.Effect<void, Failure>
 }
 export const Notes = Context.Service<Notes>("estate/Notes")
 
@@ -55,6 +63,32 @@ const createImpacts = `create table if not exists estate_impacts (
   at timestamptz not null
 )`
 
+const createFirings = `create table if not exists estate_firings (
+  environment text not null,
+  alert text not null,
+  name text not null,
+  service text,
+  starts_at timestamptz not null,
+  ends_at timestamptz,
+  silenced_by text,
+  silence_reason text,
+  primary key (environment, alert, starts_at)
+)`
+
+const instant = (value: unknown) => iso(value instanceof Date ? value : String(value))
+
+const firingOf = (row: Record<string, unknown>): StoredFiring => ({
+  environment: String(row["environment"]),
+  alert: String(row["alert"]),
+  name: String(row["name"]),
+  ...(row["service"] === null || row["service"] === undefined ? {} : { service: String(row["service"]) }),
+  startsAt: instant(row["starts_at"]),
+  ...(row["ends_at"] === null || row["ends_at"] === undefined ? {} : { endsAt: instant(row["ends_at"]) }),
+  ...(row["silenced_by"] === null || row["silenced_by"] === undefined
+    ? {}
+    : { silence: { by: String(row["silenced_by"]), reason: String(row["silence_reason"] ?? "") } }),
+})
+
 const run = (query: Query, statement: string, parameters: ReadonlyArray<unknown> = []) =>
   Effect.tryPromise({
     try: () => query(statement, parameters),
@@ -75,6 +109,7 @@ export const postgresNotes = (query: Query) =>
   Layer.effect(Notes)(
     run(query, create).pipe(
       Effect.andThen(run(query, createImpacts)),
+      Effect.andThen(run(query, createFirings)),
       Effect.mapError((failure) => new NotesError(failure)),
       Effect.as({
         all: run(
@@ -108,15 +143,45 @@ export const postgresNotes = (query: Query) =>
                 [impact.alert, impact.text, impact.by, impact.at],
               )
           ).pipe(Effect.asVoid),
+        firings: (since: string) =>
+          run(
+            query,
+            "select environment, alert, name, service, starts_at, ends_at, silenced_by, silence_reason from estate_firings where starts_at >= $1 order by starts_at desc",
+            [since],
+          ).pipe(Effect.map((rows) => rows.map(firingOf))),
+        keepFiring: (firing: StoredFiring) =>
+          run(
+            query,
+            "insert into estate_firings (environment, alert, name, starts_at, ends_at, silenced_by, silence_reason, service) values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict (environment, alert, starts_at) do update set ends_at = $5, silenced_by = $6, silence_reason = $7",
+            [
+              firing.environment,
+              firing.alert,
+              firing.name,
+              firing.startsAt,
+              firing.endsAt ?? null,
+              firing.silence?.by ?? null,
+              firing.silence?.reason ?? null,
+              firing.service ?? null,
+            ],
+          ).pipe(Effect.asVoid),
+        removeFiringsBefore: (at: string) =>
+          run(query, "delete from estate_firings where starts_at < $1", [at]).pipe(Effect.asVoid),
       }),
     ),
   )
 
-/** Notes for as long as Estate runs. */
+export const sameFiring = (a: StoredFiring, b: StoredFiring) =>
+  a.environment === b.environment && a.alert === b.alert && a.startsAt === b.startsAt
+
+/** Notes, impacts and firings for as long as Estate runs. */
 export const memoryNotes = Layer.effect(Notes)(
   Effect.map(
-    Effect.all([Ref.make<ReadonlyArray<StoredNote>>([]), Ref.make<ReadonlyArray<StoredImpact>>([])]),
-    ([notes, impacts]) => ({
+    Effect.all([
+      Ref.make<ReadonlyArray<StoredNote>>([]),
+      Ref.make<ReadonlyArray<StoredImpact>>([]),
+      Ref.make<ReadonlyArray<StoredFiring>>([]),
+    ]),
+    ([notes, impacts, firings]) => ({
       all: Effect.map(Ref.get(notes), (kept) => [...kept].reverse()),
       add: (note: StoredNote) => Ref.update(notes, (kept) => [...kept, note]),
       remove: (id: string) => Ref.update(notes, (kept) => kept.filter((note) => note.id !== id)),
@@ -127,6 +192,14 @@ export const memoryNotes = Layer.effect(Notes)(
           ...kept.filter((each) => each.alert !== impact.alert),
           ...(impact.text === "" ? [] : [impact]),
         ]),
+      firings: (since: string) =>
+        Effect.map(Ref.get(firings), (kept) =>
+          kept.filter((firing) => firing.startsAt >= since).toSorted((a, b) => b.startsAt.localeCompare(a.startsAt)),
+        ),
+      keepFiring: (firing: StoredFiring) =>
+        Ref.update(firings, (kept) => [...kept.filter((each) => !sameFiring(each, firing)), firing]),
+      removeFiringsBefore: (at: string) =>
+        Ref.update(firings, (kept) => kept.filter((firing) => firing.startsAt >= at)),
     }),
   ),
 )

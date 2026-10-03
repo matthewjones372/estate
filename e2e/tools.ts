@@ -59,11 +59,27 @@ const podLog = (pod: string) => {
     .join("")
 }
 
+/** SearchIndexStale fired for twenty minutes six days ago, as Prometheus's ALERTS series keeps it. */
+const earlierFirings = (end: number, step: number) => {
+  const from = Math.floor((end - 6 * 86_400) / step) * step
+  const values: Array<[number, string]> = []
+  for (let at = from; at < from + 20 * 60; at += step) values.push([at, "1"])
+  const metric = {
+    __name__: "ALERTS",
+    alertstate: "firing",
+    alertname: "SearchIndexStale",
+    severity: "warning",
+    app: "search",
+  }
+  return { status: "success", data: { resultType: "matrix", result: [{ metric, values }] } }
+}
+
 const queryRange = (url: URL) => {
   const query = url.searchParams.get("query") ?? ""
   const start = Number(url.searchParams.get("start"))
   const end = Number(url.searchParams.get("end"))
   const step = Number(url.searchParams.get("step"))
+  if (query.startsWith("ALERTS{")) return earlierFirings(end, step)
   const value = series.find(([pattern]) => pattern.test(query))?.[1]
   if (value === undefined) return { status: "success", data: { resultType: "matrix", result: [] } }
   const values: Array<[number, string]> = []

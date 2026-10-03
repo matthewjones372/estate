@@ -47,6 +47,12 @@ test("an alert says what it means for users, from its rule or the catalog, and a
   await page.goto("/?env=production")
   const search = page.getByRole("article").filter({ hasText: "Search has not indexed" })
   await expect(search).toContainText("New products can't be found in search", { timeout: 20_000 })
+  // It fired before, as Prometheus remembers, for twenty minutes.
+  await expect(search).toContainText("Beforeonce, last 6 d ago for 20 min")
+  await search.getByRole("button", { name: "History" }).click()
+  await expect(
+    search.getByRole("list", { name: "Earlier firings of SearchIndexStale" }).getByRole("listitem"),
+  ).toHaveCount(1)
   const orders = page.getByRole("article").filter({ hasText: "Orders are slow to place" })
   await expect(orders).toContainText("Customers wait to place orders")
   await orders.getByRole("button", { name: "Edit" }).click()

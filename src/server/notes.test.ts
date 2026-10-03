@@ -44,7 +44,7 @@ describe("notes in Postgres", () => {
     return Effect.runPromise(program.pipe(Effect.provide(postgresNotes(database(statements))))).then((all) => {
       expect(all).toEqual([note])
       expect(statements[0]?.[0]).toStartWith("create table if not exists estate_notes")
-      expect(statements[2]).toEqual([
+      expect(statements[3]).toEqual([
         "insert into estate_notes (id, environment, alert, at, by, text) values ($1, $2, $3, $4, $5, $6)",
         ["n1", "staging", "a1", "2026-10-03T11:50:00.000Z", "gil", "On it."],
       ])
@@ -65,52 +65,6 @@ describe("notes in Postgres", () => {
         message: "the notes database: Error: refused",
       })
     }))
-})
-
-describe("impacts", () => {
-  const impact = {
-    alert: "OrdersSlow",
-    text: "Orders take minutes to place.",
-    by: "ada",
-    at: "2026-10-03T12:00:00.000Z",
-  }
-
-  test("are kept in Postgres, one an alert, and forgotten when emptied", () => {
-    const statements: Array<readonly [string, ReadonlyArray<unknown>]> = []
-    const rows = [{ alert: "OrdersSlow", text: "Orders fail.", by: "ada", at: new Date("2026-10-03T12:00:00Z") }]
-    const query: Query = (statement, parameters) => {
-      statements.push([statement.replace(/\s+/g, " ").trim(), parameters])
-      return Promise.resolve(statement.includes("from estate_impacts") ? rows : [])
-    }
-    const program = Effect.gen(function* () {
-      const notes = yield* Notes
-      yield* notes.setImpact(impact)
-      yield* notes.setImpact({ ...impact, text: "" })
-      return yield* notes.impacts
-    })
-    return Effect.runPromise(program.pipe(Effect.provide(postgresNotes(query)))).then((impacts) => {
-      expect(impacts).toEqual([
-        { alert: "OrdersSlow", text: "Orders fail.", by: "ada", at: "2026-10-03T12:00:00.000Z" },
-      ])
-      expect(statements[1]?.[0]).toStartWith("create table if not exists estate_impacts")
-      expect(statements[2]?.[0]).toContain("on conflict (alert) do update")
-      expect(statements[3]).toEqual(["delete from estate_impacts where alert = $1", ["OrdersSlow"]])
-    })
-  })
-
-  test("are kept in memory, the newest for each alert", () =>
-    Effect.runPromise(
-      Effect.gen(function* () {
-        const notes = yield* Notes
-        yield* notes.setImpact(impact)
-        yield* notes.setImpact({ ...impact, text: "Orders fail." })
-        yield* notes.setImpact({ ...impact, alert: "SearchSlow" })
-        yield* notes.setImpact({ ...impact, alert: "SearchSlow", text: "" })
-        return yield* notes.impacts
-      }).pipe(Effect.provide(memoryNotes)),
-    ).then((impacts) =>
-      expect(impacts.map((each) => [each.alert, each.text])).toEqual([["OrdersSlow", "Orders fail."]]),
-    ))
 })
 
 describe("adding a note", () => {
@@ -163,6 +117,9 @@ describe("adding a note", () => {
             removeBefore: () => Effect.void,
             impacts: Effect.succeed([]),
             setImpact: () => Effect.void,
+            firings: () => Effect.succeed([]),
+            keepFiring: () => Effect.void,
+            removeFiringsBefore: () => Effect.void,
           }),
         )
         const answered = yield* ask(server, post({ environment: "staging", alert: "a1", text: "hi" }))
@@ -244,6 +201,9 @@ describe("taking a note back", () => {
             removeBefore: () => Effect.void,
             impacts: Effect.succeed([]),
             setImpact: () => Effect.void,
+            firings: () => Effect.succeed([]),
+            keepFiring: () => Effect.void,
+            removeFiringsBefore: () => Effect.void,
           }),
         )
         const answered = yield* ask(server, remove("n1"))
@@ -285,7 +245,7 @@ describe("old notes", () => {
         yield* notes.removeBefore("2026-09-03T00:00:00.000Z")
       }).pipe(Effect.provide(postgresNotes(database(statements)))),
     ).then(() => {
-      expect(statements.slice(2)).toEqual([
+      expect(statements.slice(3)).toEqual([
         ["delete from estate_notes where id = $1", ["n1"]],
         ["delete from estate_notes where at < $1", ["2026-09-03T00:00:00.000Z"]],
       ])

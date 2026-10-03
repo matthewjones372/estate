@@ -4,7 +4,7 @@
  */
 import { Effect, Layer, Option, Schedule, Schema, Stream } from "effect"
 import { type AwsCallError, type AwsJson, makeAwsJson } from "./aws/json"
-import { Notes, NotesError, type StoredImpact, type StoredNote } from "./notes"
+import { Notes, NotesError, type StoredFiring, type StoredImpact, type StoredNote } from "./notes"
 import { SourceFailure } from "./sources/run"
 
 export interface DynamoNotes {
@@ -50,6 +50,36 @@ const itemOf = (note: StoredNote) => ({
 const other = "!"
 const impactKey = (alert: string) => ({ pk: { S: `${other}impact#${alert}` }, sk: { S: "-" } })
 const isNote = (item: typeof Item.Type) => !item.pk.S.startsWith(other)
+const firingKey = (firing: StoredFiring) => ({
+  pk: { S: `${other}firing#${firing.environment}#${firing.alert}` },
+  sk: { S: firing.startsAt },
+})
+
+/** A firing's end and silence reason, which the item has no field for, are kept as JSON in its text. */
+const Rest = Schema.fromJsonString(
+  Schema.Struct({
+    endsAt: Schema.optionalKey(Schema.String),
+    reason: Schema.optionalKey(Schema.String),
+    service: Schema.optionalKey(Schema.String),
+  }),
+)
+const decodeRest = Schema.decodeUnknownOption(Rest)
+
+const firingOf = (item: typeof Item.Type): StoredFiring => {
+  const rest = Option.getOrElse(
+    decodeRest(item.text.S),
+    () => ({}) as { endsAt?: string; reason?: string; service?: string },
+  )
+  return {
+    environment: item.environment.S,
+    alert: item.alert.S,
+    name: item.id.S,
+    ...(rest.service === undefined ? {} : { service: rest.service }),
+    startsAt: item.time.S,
+    ...(rest.endsAt === undefined ? {} : { endsAt: rest.endsAt }),
+    ...(item.by.S === "" ? {} : { silence: { by: item.by.S, reason: rest.reason ?? "" } }),
+  }
+}
 
 const noteOf = (item: typeof Item.Type): StoredNote => ({
   id: item.id.S,
@@ -186,6 +216,39 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
                 },
               })
           ).pipe(Effect.asVoid, Effect.mapError(failure)),
+        firings: (since: string) =>
+          scan(dynamo, table, {
+            FilterExpression: "begins_with(pk, :firing) AND #time >= :since",
+            ExpressionAttributeNames: { "#time": "time" },
+            ExpressionAttributeValues: { ":firing": { S: `${other}firing#` }, ":since": { S: since } },
+          }).pipe(
+            Effect.map((items) => items.map(firingOf).toSorted((a, b) => b.startsAt.localeCompare(a.startsAt))),
+            Effect.mapError(failure),
+          ),
+        keepFiring: (firing: StoredFiring) =>
+          dynamo("PutItem", {
+            TableName: table,
+            Item: {
+              ...firingKey(firing),
+              id: { S: firing.name },
+              environment: { S: firing.environment },
+              alert: { S: firing.alert },
+              time: { S: firing.startsAt },
+              by: { S: firing.silence?.by ?? "" },
+              text: {
+                S: JSON.stringify({ endsAt: firing.endsAt, reason: firing.silence?.reason, service: firing.service }),
+              },
+            },
+          }).pipe(Effect.asVoid, Effect.mapError(failure)),
+        removeFiringsBefore: (at: string) =>
+          scan(dynamo, table, {
+            FilterExpression: "begins_with(pk, :firing) AND #time < :at",
+            ExpressionAttributeNames: { "#time": "time" },
+            ExpressionAttributeValues: { ":firing": { S: `${other}firing#` }, ":at": { S: at } },
+          }).pipe(
+            Effect.flatMap((items) => remove(dynamo, table, items)),
+            Effect.mapError(failure),
+          ),
       }
     }),
   )

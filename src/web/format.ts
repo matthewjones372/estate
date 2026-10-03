@@ -8,6 +8,14 @@ export const clock = (iso: string): string => {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
+const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+/** "27 Sep 09:10", in the viewer's time zone. */
+export const day = (iso: string): string => {
+  const date = new Date(iso)
+  return `${date.getDate()} ${months[date.getMonth()] ?? ""} ${clock(iso)}`
+}
+
 /** "8 min", "1 h 52 min", "3 d": how long from `iso` to `now`. */
 export const since = (iso: string, now: number): string => duration(now - new Date(iso).getTime())
 

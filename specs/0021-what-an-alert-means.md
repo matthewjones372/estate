@@ -67,7 +67,8 @@ History of SearchIndexStale in production
 - **Each firing is kept**: when it started and ended, who silenced it and why, and the notes written while it fired.
   They are kept by the alert's name and environment, in the same store as notes, for `alerts.historyDays` (90 by
   default).
-- **On the card**, an alert that has fired before says how often in the last 30 days, when last, and for how long.
+- **On the card**, an alert that has fired before says how often, as far back as its firings are kept, when last,
+  and for how long.
   It also quotes the last note written about it. "History" opens the alert's past firings, newest first, each with
   its silences and notes.
 - **The resolved list** on the alerts page reads from the same record, so it survives a restart.
@@ -93,13 +94,13 @@ Nothing. Stores keep a second kind of record beside notes.
       Done when: a Prometheus rule with an `impact` annotation shows it on its card and on the kiosk.
 - [x] **`impact-written`** — written and edited on the page by operators, kept in memory, Postgres and DynamoDB.
       Done when: an impact written on a firing alert is on its next firing, with who wrote it, after a restart.
-- [ ] **`alert-history`** — each firing kept with its silences and notes, in memory, Postgres and DynamoDB.
+- [x] **`alert-history`** — each firing kept with its silences and notes, in memory, Postgres and DynamoDB.
       Done when: an alert that fired, resolved and fired again shows its first firing's note, after a restart.
-- [ ] **`history-shown`** — "before" on the card, the alert's history, and the resolved list from the record.
-      Done when: a card says how often its alert fired in 30 days, and History lists each firing with its notes.
-- [ ] **`history-backfill`** — the last 30 days' firings read once from Prometheus's `ALERTS`.
+- [x] **`history-shown`** — "before" on the card, the alert's history, and the resolved list from the record.
+      Done when: a card says how often its alert fired before, and History lists each firing with its notes.
+- [x] **`history-backfill`** — the last 30 days' firings read once from Prometheus's `ALERTS`.
       Done when: a test against Prometheus's range answer gives an alert's earlier firings.
-- [ ] **`impact-e2e`** — the example estate's SearchIndexStale with an impact and a past firing with a note;
+- [x] **`impact-e2e`** — the example estate's SearchIndexStale with an impact and a past firing from Prometheus;
       Playwright writes an impact and opens a history.
       Done when: `bunx playwright test` passes with it.
 

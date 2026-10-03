@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer, SubscriptionRef } from "effect"
 import { ask, catalog, environment, estate, serverFor, settings } from "../fixture"
-import { memoryNotes, Notes } from "../notes"
+import { memoryNotes, Notes, postgresNotes, type Query } from "../notes"
 import { SourceFailure } from "../sources/run"
 import { Estate, type SourcedAlert } from "../state"
 import { alertsView } from "../views/alerts"
@@ -82,4 +82,51 @@ describe("an alert's impact", () => {
     expect(impactOf(firing({ catalog: inCatalog }))).toEqual({ text: "Said in the catalog.", from: "catalog" })
     expect(impactOf(firing())).toEqual({ text: "Said by the rule.", from: "rule" })
   })
+})
+
+describe("impacts kept", () => {
+  const impact = {
+    alert: "OrdersSlow",
+    text: "Orders take minutes to place.",
+    by: "ada",
+    at: "2026-10-03T12:00:00.000Z",
+  }
+
+  test("are kept in Postgres, one an alert, and forgotten when emptied", () => {
+    const statements: Array<readonly [string, ReadonlyArray<unknown>]> = []
+    const rows = [{ alert: "OrdersSlow", text: "Orders fail.", by: "ada", at: new Date("2026-10-03T12:00:00Z") }]
+    const query: Query = (statement, parameters) => {
+      statements.push([statement.replace(/\s+/g, " ").trim(), parameters])
+      return Promise.resolve(statement.includes("from estate_impacts") ? rows : [])
+    }
+    const program = Effect.gen(function* () {
+      const notes = yield* Notes
+      yield* notes.setImpact(impact)
+      yield* notes.setImpact({ ...impact, text: "" })
+      return yield* notes.impacts
+    })
+    return Effect.runPromise(program.pipe(Effect.provide(postgresNotes(query)))).then((impacts) => {
+      expect(impacts).toEqual([
+        { alert: "OrdersSlow", text: "Orders fail.", by: "ada", at: "2026-10-03T12:00:00.000Z" },
+      ])
+      expect(statements[1]?.[0]).toStartWith("create table if not exists estate_impacts")
+      expect(statements[2]?.[0]).toStartWith("create table if not exists estate_firings")
+      expect(statements[3]?.[0]).toContain("on conflict (alert) do update")
+      expect(statements[4]).toEqual(["delete from estate_impacts where alert = $1", ["OrdersSlow"]])
+    })
+  })
+
+  test("are kept in memory, the newest for each alert", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const notes = yield* Notes
+        yield* notes.setImpact(impact)
+        yield* notes.setImpact({ ...impact, text: "Orders fail." })
+        yield* notes.setImpact({ ...impact, alert: "SearchSlow" })
+        yield* notes.setImpact({ ...impact, alert: "SearchSlow", text: "" })
+        return yield* notes.impacts
+      }).pipe(Effect.provide(memoryNotes)),
+    ).then((impacts) =>
+      expect(impacts.map((each) => [each.alert, each.text])).toEqual([["OrdersSlow", "Orders fail."]]),
+    ))
 })
