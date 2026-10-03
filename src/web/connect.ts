@@ -34,6 +34,7 @@ export const serverActions = (
 ): Actions => ({
   ...navigation,
   addNote: (alert, text) => send("POST", "/api/notes", { environment: environment(), alert, text }),
+  removeNote: (note) => send("DELETE", `/api/notes/${encodeURIComponent(note)}`),
   silence: (alert, minutes, reason) =>
     send("POST", "/api/silences", { environment: environment(), alert, minutes, reason }),
   unsilence: (silence) =>

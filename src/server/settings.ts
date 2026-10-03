@@ -57,7 +57,7 @@ export const Settings = Schema.Struct({
   host: optional(Schema.String),
   catalog: Schema.String,
   auth: Auth,
-  notes: optional(Schema.Struct({ postgres: Schema.String })),
+  notes: optional(Schema.Struct({ postgres: optional(Schema.String), keepDays: optional(Schema.Number) })),
   sources: Schema.Record(Schema.String, Sources),
   builds: optional(
     Schema.Struct({ github: Schema.Struct({ token: optional(Schema.String), url: optional(Schema.String) }) }),

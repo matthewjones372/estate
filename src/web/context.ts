@@ -8,6 +8,7 @@ export interface Actions {
   readonly navigate: (path: string) => void
   readonly choose: (environment: string) => void
   readonly addNote: (alert: string, text: string) => Promise<boolean>
+  readonly removeNote: (note: string) => Promise<boolean>
   readonly silence: (alert: string, minutes: number, reason: string) => Promise<boolean>
   readonly unsilence: (silence: string) => Promise<boolean>
   readonly debug: (service: string, minutes: number) => Promise<boolean>

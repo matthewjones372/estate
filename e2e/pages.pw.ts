@@ -45,7 +45,7 @@ test("an alert silenced with a reason leaves the cards, and comes back when unsi
   await page.goto("/?env=production")
   const card = page.getByRole("article").filter({ hasText: "Search has not indexed" })
   await card.getByRole("button", { name: "Silence…" }).click()
-  await card.getByRole("button", { name: "4 hours" }).click()
+  await card.getByRole("button", { name: "6 hours" }).click()
   await card.getByRole("textbox", { name: /Why/ }).fill("reindexing tonight")
   await card.getByRole("button", { name: /Silence until/ }).click()
   await expect(page.getByText(/silenced until .* by visitor: “reindexing tonight”/)).toBeVisible()

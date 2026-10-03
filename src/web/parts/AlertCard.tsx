@@ -17,7 +17,8 @@ const minutesUntilNine = (now: number): number => {
 const spansFrom = (now: number) =>
   [
     { label: "1 hour", minutes: 60 },
-    { label: "4 hours", minutes: 240 },
+    { label: "6 hours", minutes: 360 },
+    { label: "1 day", minutes: 1440 },
     { label: "until 09:00 tomorrow", minutes: minutesUntilNine(now) },
   ] as const
 
@@ -67,7 +68,7 @@ const Chart = (props: { readonly alert: Alert }) => {
 }
 
 const Notes = (props: { readonly alert: Alert }) => {
-  const { actions } = useEstate()
+  const { actions, me } = useEstate()
   const [draft, setDraft] = useState("")
   const notes = props.alert.notes
   const post = async () => {
@@ -90,6 +91,14 @@ const Notes = (props: { readonly alert: Alert }) => {
           <div style={{ minWidth: 0 }}>
             <div className="alert-quiet">
               <strong className="note-who">{note.by}</strong> · {clock(note.at)}
+              {(note.by === me.name || me.role === "operator") && (
+                <>
+                  {" · "}
+                  <button type="button" className="note-remove" onClick={() => void actions.removeNote(note.id)}>
+                    Remove<span className="visually-hidden"> the note by {note.by}</span>
+                  </button>
+                </>
+              )}
             </div>
             <div className="note-text">{note.text}</div>
           </div>
