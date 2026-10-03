@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { ConfigProvider, Effect, Layer, Redacted, Result, SubscriptionRef } from "effect"
+import { ConfigProvider, Effect, type FileSystem, Layer, Redacted, Result, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
 import { catalog, environment, estate, settings, storefront } from "../fixture"
+import { platform } from "../platform"
 import { type Call, type Remote, stubRemote } from "../remote"
 import { Estate, estateLayer, type SourcedAlert } from "../state"
 import { alertId, readAlerts, withResolved } from "./alerts"
@@ -15,6 +16,8 @@ import { startSources } from "./start"
 /** The environment a test reads, in place of the real one. */
 const within = (environment: Record<string, string>) =>
   Effect.provideService(ConfigProvider.ConfigProvider, ConfigProvider.fromUnknown(environment))
+
+const onDisk = <A, E>(effect: Effect.Effect<A, E, FileSystem.FileSystem>) => effect.pipe(Effect.provide(platform))
 
 const run = <A, E>(effect: Effect.Effect<A, E, Remote>, calls: Call[] = []) =>
   Effect.runPromise(Effect.result(effect.pipe(Effect.provide(stubRemote(answering(undefined, calls))))))
@@ -135,12 +138,12 @@ describe("the cluster", () => {
 
   test("is found from inside it, or from the settings", () =>
     Promise.all([
-      Effect.runPromise(Effect.result(clusterOf({}).pipe(within({})))),
-      Effect.runPromise(Effect.result(clusterOf({ url: "https://cluster/", token: Redacted.make("t") }))),
+      Effect.runPromise(onDisk(Effect.result(clusterOf({}).pipe(within({}))))),
+      Effect.runPromise(onDisk(Effect.result(clusterOf({ url: "https://cluster/", token: Redacted.make("t") })))),
       Effect.runPromise(
-        Effect.result(clusterOf({ inCluster: true }).pipe(within({ KUBERNETES_SERVICE_HOST: "10.0.0.1" }))),
+        onDisk(Effect.result(clusterOf({ inCluster: true }).pipe(within({ KUBERNETES_SERVICE_HOST: "10.0.0.1" })))),
       ),
-      Effect.runPromise(Effect.result(clusterOf({ url: "https://cluster", caFile: "/nowhere/ca.crt" }))),
+      Effect.runPromise(onDisk(Effect.result(clusterOf({ url: "https://cluster", caFile: "/nowhere/ca.crt" })))),
     ]).then(([nowhere, named, inside, noCa]) => {
       expect(Result.isFailure(nowhere) && nowhere.failure.message).toBe("Estate is not in a cluster, and no url is set")
       expect(Result.isSuccess(named) && named.success).toEqual({
@@ -261,7 +264,9 @@ describe("every source", () => {
       return (yield* SubscriptionRef.get(ref)).environments
     })
     return Effect.runPromise(
-      program.pipe(Effect.provide(Layer.mergeAll(estateLayer(shopEstate), TestClock.layer(), stubRemote(answering())))),
+      program.pipe(
+        Effect.provide(Layer.mergeAll(estateLayer(shopEstate), TestClock.layer(), stubRemote(answering()), platform)),
+      ),
     ).then(({ staging, production }) => {
       expect(staging?.alerts.state).toBe("ok")
       expect(staging?.cluster.value?.pods).toMatchObject({ storefront: [{ ready: true }, { ready: false }] })

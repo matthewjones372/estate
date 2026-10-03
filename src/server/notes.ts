@@ -2,7 +2,7 @@
  * Notes on alerts: Estate's own record, kept in Postgres by environment and alert, with who and when; in memory when
  * no database is set, for trying Estate out.
  */
-import { Context, Data, Effect, Layer } from "effect"
+import { Context, Data, Effect, Layer, Ref } from "effect"
 import type { Note } from "../shared/events"
 import { type Failure, SourceFailure } from "./sources/run"
 import { iso } from "./time"
@@ -75,21 +75,11 @@ export const postgresNotes = (query: Query) =>
   )
 
 /** Notes for as long as Estate runs. */
-export const memoryNotes = Layer.sync(Notes)(() => {
-  let notes: ReadonlyArray<StoredNote> = []
-  return {
-    all: Effect.sync(() => [...notes].reverse()),
-    add: (note: StoredNote) =>
-      Effect.sync(() => {
-        notes = [...notes, note]
-      }),
-    remove: (id: string) =>
-      Effect.sync(() => {
-        notes = notes.filter((note) => note.id !== id)
-      }),
-    removeBefore: (at: string) =>
-      Effect.sync(() => {
-        notes = notes.filter((note) => note.at >= at)
-      }),
-  }
-})
+export const memoryNotes = Layer.effect(Notes)(
+  Effect.map(Ref.make<ReadonlyArray<StoredNote>>([]), (notes) => ({
+    all: Effect.map(Ref.get(notes), (kept) => [...kept].reverse()),
+    add: (note: StoredNote) => Ref.update(notes, (kept) => [...kept, note]),
+    remove: (id: string) => Ref.update(notes, (kept) => kept.filter((note) => note.id !== id)),
+    removeBefore: (at: string) => Ref.update(notes, (kept) => kept.filter((note) => note.at >= at)),
+  })),
+)

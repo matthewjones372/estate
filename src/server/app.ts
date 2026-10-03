@@ -1,5 +1,5 @@
 /** Estate assembled: settings and catalog read and checked, the routes, the catalog's reload and the sources. */
-import { Data, Effect, Layer, Result, Schedule } from "effect"
+import { Data, Effect, type FileSystem, Layer, Result, Schedule } from "effect"
 import type { Mistake } from "../shared/shape"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
@@ -9,6 +9,7 @@ import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
 import { silenceRoute, unsilenceRoute } from "./http/silences"
 import { memoryNotes, type Notes } from "./notes"
+import { platform, readText } from "./platform"
 import type { Remote } from "./remote"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
 import { startSources } from "./sources/start"
@@ -28,12 +29,13 @@ export interface Started {
 }
 
 /** Reads both files and checks them, naming every mistake before anything starts. */
-export const prepare = (settingsPath: string): Effect.Effect<Started, StartError> =>
+export const prepare = (settingsPath: string): Effect.Effect<Started, StartError, FileSystem.FileSystem> =>
   Effect.gen(function* () {
-    const settingsText = yield* Effect.tryPromise({
-      try: () => Bun.file(settingsPath).text(),
-      catch: () => new StartError({ file: settingsPath, mistakes: [{ at: settingsPath, message: "cannot be read" }] }),
-    })
+    const settingsText = yield* readText(settingsPath).pipe(
+      Effect.mapError(
+        () => new StartError({ file: settingsPath, mistakes: [{ at: settingsPath, message: "cannot be read" }] }),
+      ),
+    )
     const settings = yield* readSettings(settingsText)
     const catalogText = yield* readCatalogText(settings.catalog)
     const parsed = parseCatalog(settings.catalog, catalogText)
@@ -73,7 +75,9 @@ export const application = Layer.mergeAll(
 )
 
 /** What runs beside the routes for as long as Estate does. */
-export const background = (started: Started): Effect.Effect<never, never, Estate | Remote | Notes> =>
+export const background = (
+  started: Started,
+): Effect.Effect<never, never, Estate | Remote | Notes | FileSystem.FileSystem> =>
   Effect.all(
     [
       loadNotes.pipe(
@@ -89,9 +93,12 @@ export const background = (started: Started): Effect.Effect<never, never, Estate
     { concurrency: "unbounded" },
   ).pipe(Effect.andThen(Effect.never))
 
-export const services = <E, F>(
+export const services = <E, F, R>(
   started: Started,
-  web: Layer.Layer<Web, E>,
+  web: Layer.Layer<Web, E, R>,
   remote: Layer.Layer<Remote>,
   notes: Layer.Layer<Notes, F> = memoryNotes,
-) => Layer.mergeAll(estateLayer(started.initial), web, remote, notes, Layer.succeed(Configured)(started.settings))
+) =>
+  Layer.mergeAll(estateLayer(started.initial), web, remote, notes, Layer.succeed(Configured)(started.settings)).pipe(
+    Layer.provideMerge(platform),
+  )

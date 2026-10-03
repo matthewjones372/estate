@@ -2,9 +2,8 @@
  * The pages: `src/web` bundled when the image is built, or as Estate starts when it runs from source, by a process of
  * its own (`bundle.ts`); served from memory.
  */
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { Context, Data, Effect, Layer, Option, Schema } from "effect"
+import { Context, Data, Effect, FileSystem, Layer, Option, Path, Schema } from "effect"
+import { constant, constFalse } from "effect/Function"
 import { bundler } from "./bundle"
 
 export interface Asset {
@@ -27,32 +26,33 @@ const Printed = Schema.Union([
 ])
 const decodeBundle = Schema.decodeUnknownEffect(Schema.fromJsonString(Printed))
 
-const webDirectory = join(import.meta.dir, "..", "web")
-
-/** Where the image keeps the pages it bundled as it was built. */
-const prebuiltPages = join(import.meta.dir, "..", "..", "dist", "pages.json")
-
-// Bun itself runs the bundler, so starting it cannot fail short of Bun being gone; what it writes is checked.
+// Bun itself runs the bundler, so starting it cannot fail short of Bun being gone; what it writes is checked. A
+// bundler that died before writing leaves no file, which reads as nothing printed.
 const bundleNow = (directory: string) =>
-  Effect.promise(() => {
-    const to = Bun.file(join(tmpdir(), `estate-pages-${process.pid}-${Date.now()}.json`))
-    // A bundler that died before writing leaves no file, which reads as nothing printed.
-    return Bun.spawn([process.execPath, bundler, directory, to.name ?? ""], { stdout: "inherit", stderr: "inherit" })
-      .exited.then(() => to.exists())
-      .then((written) => (written ? to.text() : ""))
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const to = path.join(yield* fs.makeTempDirectoryScoped(), "pages.json")
+    yield* Effect.promise(
+      () => Bun.spawn([process.execPath, bundler, directory, to], { stdout: "inherit", stderr: "inherit" }).exited,
+    )
+    return yield* fs.readFileString(to).pipe(Effect.orElseSucceed(constant("")))
   })
 
 /**
- * The pages from `directory`: as the image bundled them into `prebuilt`, or, run from source, bundled now; its
- * `index.html` naming the bundle.
+ * The pages from `directory` (`src/web` unless a test names another): as the image bundled them into `prebuilt`
+ * (`dist/pages.json`), or, run from source, bundled now; its `index.html` naming the bundle.
  */
-export const buildWeb = (directory: string, prebuilt = prebuiltPages) =>
+export const buildWeb = (directory?: string, prebuilt?: string) =>
   Layer.effect(Web)(
     Effect.gen(function* () {
-      const kept = Bun.file(prebuilt)
-      const printed = (yield* Effect.promise(() => kept.exists()))
-        ? yield* Effect.promise(() => kept.text())
-        : yield* bundleNow(directory)
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const pages = directory ?? path.join(import.meta.dir, "..", "web")
+      const kept = prebuilt ?? path.join(import.meta.dir, "..", "..", "dist", "pages.json")
+      const printed = (yield* fs.exists(kept).pipe(Effect.orElseSucceed(constFalse)))
+        ? yield* fs.readFileString(kept).pipe(Effect.orElseSucceed(constant("")))
+        : yield* bundleNow(pages)
       const built = yield* decodeBundle(printed).pipe(
         Effect.mapError(
           () => new WebBuildError({ message: `the bundler printed no bundle: ${printed.slice(0, 200)}` }),
@@ -63,10 +63,9 @@ export const buildWeb = (directory: string, prebuilt = prebuiltPages) =>
       const assets = new Map<string, Asset>(
         built.outputs.map((output) => [output.name, { body: encoder.encode(output.text), type: output.type }]),
       )
-      const template = yield* Effect.tryPromise({
-        try: () => Bun.file(join(directory, "index.html")).text(),
-        catch: () => new WebBuildError({ message: `${directory} has no index.html` }),
-      })
+      const template = yield* fs
+        .readFileString(path.join(pages, "index.html"))
+        .pipe(Effect.mapError(() => new WebBuildError({ message: `${pages} has no index.html` })))
       const tags = [...assets.keys()]
         .map((name) =>
           name.endsWith(".css")
@@ -83,7 +82,7 @@ export const buildWeb = (directory: string, prebuilt = prebuiltPages) =>
     }),
   )
 
-export const builtWeb = buildWeb(webDirectory)
+export const builtWeb = buildWeb()
 
 export const stubWeb = (index: string, assets: Readonly<Record<string, Asset>> = {}) =>
   Layer.succeed(Web)({ index, asset: (name) => Option.fromNullishOr(assets[name]) })

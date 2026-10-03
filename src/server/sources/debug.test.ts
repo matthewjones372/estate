@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { Effect, Layer, Redacted, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
 import { ask, catalog, environment, estate, serverFor, settings, storefront } from "../fixture"
+import { platform } from "../platform"
 import { type Call, type Reply, reply, stubRemote } from "../remote"
 import { Estate, estateLayer } from "../state"
 import { revertExpired, switchOff, switchOn } from "./debug"
@@ -100,7 +101,9 @@ describe("debug through a ConfigMap", () => {
       return { early, debug: staging?.cluster.value?.debug }
     })
     return Effect.runPromise(
-      program.pipe(Effect.provide(Layer.mergeAll(estateLayer(state), TestClock.layer(), stubRemote(kube(calls))))),
+      program.pipe(
+        Effect.provide(Layer.mergeAll(estateLayer(state), TestClock.layer(), stubRemote(kube(calls)), platform)),
+      ),
     ).then(({ early, debug }) => {
       expect(early).toBe(0)
       expect(debug).toEqual({ storefront: { level: "INFO", on: false } })
@@ -131,7 +134,9 @@ describe("putting debug back", () => {
       return staging?.cluster.value?.debug
     })
     return Effect.runPromise(
-      program.pipe(Effect.provide(Layer.mergeAll(estateLayer(state), TestClock.layer(), stubRemote(kube(calls, 403))))),
+      program.pipe(
+        Effect.provide(Layer.mergeAll(estateLayer(state), TestClock.layer(), stubRemote(kube(calls, 403)), platform)),
+      ),
     ).then((debug) => {
       expect(debug).toMatchObject({ storefront: { on: true } })
       expect(calls.length).toBeGreaterThan(0)

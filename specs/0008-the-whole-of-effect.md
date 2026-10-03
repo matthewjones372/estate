@@ -80,7 +80,7 @@ Nothing.
       reads retried on transport errors with back-off, writes tried once, every call given up on after 10 s.
       Done when: every source's tests pass through it, the pages work against the fake tools, and an upstream timing
       out is named.
-- [ ] **`config-files-state`** — `Config` for the environment, `FileSystem` and `Path` for files, `Ref` for state,
+- [x] **`config-files-state`** — `Config` for the environment, `FileSystem` and `Path` for files, `Ref` for state,
       `DateTime` and `Duration` for time.
       Done when: no `process.env`, `Bun.file`, `node:path` or `let` is left in `src/server` outside the bundler.
 - [ ] **`supervised`** — sources in a `FiberMap` per environment, following the catalog; the schedule helper;

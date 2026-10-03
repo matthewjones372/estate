@@ -10,6 +10,7 @@ import type { Mistake } from "../shared/shape"
 import { application, background, prepare, services } from "./app"
 import { parseCatalog, readCatalogText } from "./catalog-file"
 import { memoryNotes, postgresNotes, type Query } from "./notes"
+import { platform } from "./platform"
 import { liveRemote } from "./remote"
 import { builtWeb } from "./web"
 
@@ -37,6 +38,7 @@ const check = (path: string) =>
       Result.isSuccess(parsed) ? Console.log(`${path} is a good catalog`) : listMistakes(path, parsed.failure.mistakes),
     ),
     Effect.catchTag("CatalogError", (error) => listMistakes(error.path, error.mistakes)),
+    Effect.provide(platform),
   )
 
 const serve = Effect.gen(function* () {
@@ -61,6 +63,7 @@ const serve = Effect.gen(function* () {
     StartError: (error) => listMistakes(error.file, error.mistakes),
     NotesError: (error) => listMistakes("estate.yaml", [{ at: "notes.postgres", message: error.message }]),
   }),
+  Effect.provide(platform),
 )
 
 const [command, file] = process.argv.slice(2)

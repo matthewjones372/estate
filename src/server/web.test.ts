@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect, Layer, Option, Result } from "effect"
 import { bundle, print } from "./bundle"
+import { platform } from "./platform"
 import { buildWeb, builtWeb, Web } from "./web"
 
 const read = Effect.gen(function* () {
@@ -28,7 +29,7 @@ describe("the pages' bundle", () => {
               expect(Option.isNone(web.asset("missing.js"))).toBe(true)
             }),
           ),
-          Effect.provide(Layer.fresh(builtWeb)),
+          Effect.provide(Layer.fresh(builtWeb).pipe(Layer.provide(platform))),
         ),
       ),
     30_000,
@@ -40,7 +41,7 @@ describe("the pages' bundle", () => {
     const empty = mkdtempSync(join(tmpdir(), "estate-web-"))
     writeFileSync(join(empty, "main.tsx"), "export const page = 1\n")
     const attempt = (directory: string) =>
-      Effect.runPromise(Effect.result(read.pipe(Effect.provide(buildWeb(directory)))))
+      Effect.runPromise(Effect.result(read.pipe(Effect.provide(buildWeb(directory).pipe(Layer.provide(platform))))))
     return Promise.all([attempt(broken), attempt(empty), attempt(join(broken, "gone"))]).then((results) => {
       expect(results.map((result) => Result.isFailure(result) && result.failure._tag)).toEqual([
         "WebBuildError",
@@ -79,7 +80,7 @@ describe("the pages' bundle", () => {
               expect(Option.isSome(web.asset(script))).toBe(true)
             }),
           ),
-          Effect.provide(buildWeb(join(import.meta.dir, "..", "web"), kept)),
+          Effect.provide(buildWeb(join(import.meta.dir, "..", "web"), kept).pipe(Layer.provide(platform))),
         ),
       ),
     )

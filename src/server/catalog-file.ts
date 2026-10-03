@@ -1,9 +1,10 @@
 /** The catalog file: read and checked as Estate starts, then read again every few seconds and taken when it changes. */
-import { Data, Duration, Effect, Result, Schedule } from "effect"
+import { Data, Duration, Effect, type FileSystem, Ref, Result, Schedule } from "effect"
 import type { Catalog } from "../shared/catalog"
 import { checkCatalog } from "../shared/check"
 import type { SourceKind } from "../shared/events"
 import type { Mistake } from "../shared/shape"
+import { readText } from "./platform"
 import type { Settings } from "./settings"
 import { type Estate, type EstateState, emptyEnvironment, updateEstate } from "./state"
 
@@ -21,11 +22,10 @@ export const parseCatalog = (path: string, text: string): Result.Result<Catalog,
   return Result.isFailure(checked) ? fail(checked.failure) : Result.succeed(checked.success)
 }
 
-export const readCatalogText = (path: string): Effect.Effect<string, CatalogError> =>
-  Effect.tryPromise({
-    try: () => Bun.file(path).text(),
-    catch: () => new CatalogError({ path, mistakes: [{ at: path, message: "cannot be read" }] }),
-  })
+export const readCatalogText = (path: string): Effect.Effect<string, CatalogError, FileSystem.FileSystem> =>
+  readText(path).pipe(
+    Effect.mapError(() => new CatalogError({ path, mistakes: [{ at: path, message: "cannot be read" }] })),
+  )
 
 /** The kinds of source an environment's section of the settings configures. */
 export const configuredKinds = (settings: Settings, sources: string): ReadonlySet<SourceKind> => {
@@ -70,13 +70,13 @@ export const reloadCatalog = (
   path: string,
   settings: Settings,
   firstText: string,
-): Effect.Effect<never, never, Estate> =>
+): Effect.Effect<never, never, Estate | FileSystem.FileSystem> =>
   Effect.gen(function* () {
-    let last = firstText
+    const last = yield* Ref.make(firstText)
     const reload = Effect.gen(function* () {
       const text = yield* readCatalogText(path)
-      if (text === last) return
-      last = text
+      if (text === (yield* Ref.get(last))) return
+      yield* Ref.set(last, text)
       const parsed = parseCatalog(path, text)
       const mistakes = Result.isFailure(parsed) ? parsed.failure.mistakes : crossCheck(settings, parsed.success)
       if (Result.isSuccess(parsed) && mistakes.length === 0) {

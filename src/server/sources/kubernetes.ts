@@ -1,5 +1,6 @@
 /** A cluster's API: where it is and how Estate signs in to it, from inside the cluster or from settings. */
-import { Config, Effect, Option, Redacted, Schema } from "effect"
+import { Config, Effect, type FileSystem, Option, Redacted, Schema } from "effect"
+import { readText } from "../platform"
 import { callJson, type Remote } from "../remote"
 import type { Kubernetes } from "../settings"
 import { type Failure, SourceFailure } from "./run"
@@ -12,18 +13,15 @@ export interface Cluster {
 
 const serviceAccount = "/var/run/secrets/kubernetes.io/serviceaccount"
 
-const readFile = (path: string): Effect.Effect<string, Failure> =>
-  Effect.tryPromise({
-    try: () => Bun.file(path).text(),
-    catch: () => new SourceFailure({ message: `cannot read ${path}` }),
-  })
+const readFile = (path: string): Effect.Effect<string, Failure, FileSystem.FileSystem> =>
+  readText(path).pipe(Effect.mapError(() => new SourceFailure({ message: `cannot read ${path}` })))
 
 /** The cluster to read: the one Estate runs in, unless the settings name another. */
 /** Where the cluster Estate runs in is, as Kubernetes tells every pod. */
 const inClusterHost = Config.option(Config.String("KUBERNETES_SERVICE_HOST"))
 const inClusterPort = Config.String("KUBERNETES_SERVICE_PORT").pipe(Config.withDefault("443"))
 
-export const clusterOf = (settings: Kubernetes): Effect.Effect<Cluster, Failure> =>
+export const clusterOf = (settings: Kubernetes): Effect.Effect<Cluster, Failure, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const KUBERNETES_SERVICE_HOST = Option.getOrUndefined(yield* inClusterHost.pipe(Effect.orElseSucceed(Option.none)))
     const KUBERNETES_SERVICE_PORT = yield* inClusterPort.pipe(Effect.orElseSucceed(() => "443"))

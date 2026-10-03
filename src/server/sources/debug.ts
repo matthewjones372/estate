@@ -3,7 +3,7 @@
  * beside it, and the usual level put back when that time passes. Everything is on the ConfigMap, so Estate restarting
  * loses nothing.
  */
-import { Duration, Effect, Schedule, SubscriptionRef } from "effect"
+import { Duration, Effect, type FileSystem, Schedule, SubscriptionRef } from "effect"
 import type { Service } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Debug } from "../../shared/events"
@@ -115,8 +115,8 @@ export const showDebug = (environment: string, service: string, debug: Debug) =>
 /** Every minute, puts back the usual level wherever debug's time has passed. */
 export const revertExpired = (
   environment: string,
-  cluster: Effect.Effect<Cluster, Failure>,
-): Effect.Effect<never, never, Estate | Remote> => {
+  cluster: Effect.Effect<Cluster, Failure, FileSystem.FileSystem>,
+): Effect.Effect<never, never, Estate | Remote | FileSystem.FileSystem> => {
   const once = Effect.gen(function* () {
     const estate = yield* SubscriptionRef.get(yield* Estate)
     const now = yield* isoNow

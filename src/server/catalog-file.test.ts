@@ -6,6 +6,7 @@ import { Effect, Fiber, Layer, Result, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
 import { configuredKinds, crossCheck, parseCatalog, reloadCatalog, withCatalog } from "./catalog-file"
 import { catalog, estate, settings } from "./fixture"
+import { platform } from "./platform"
 import { Estate, estateLayer } from "./state"
 
 describe("the catalog file", () => {
@@ -62,7 +63,7 @@ describe("the catalog file", () => {
         const configured = { ...settings(), catalog: path }
         const program = Effect.gen(function* () {
           const ref = yield* Estate
-          const fiber = yield* Effect.forkChild(reloadCatalog(path, configured, text))
+          const fiber = yield* Effect.forkChild(reloadCatalog(path, configured, text).pipe(Effect.provide(platform)))
           writeFileSync(
             path,
             "environments: [ { name: staging, sources: staging } ]\nservices: [ { name: shop, environments: [ staging ] } ]\n",

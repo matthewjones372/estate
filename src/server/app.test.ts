@@ -5,6 +5,7 @@ import { join } from "node:path"
 import { Effect, Fiber, Layer, Result } from "effect"
 import { background, prepare, services } from "./app"
 import { Notes } from "./notes"
+import { platform } from "./platform"
 import { stubRemote } from "./remote"
 import { SourceFailure } from "./sources/run"
 import { stubWeb } from "./web"
@@ -26,7 +27,7 @@ const files = (settings: (catalog: string) => string, catalog: string) => {
   return join(directory, "estate.yaml")
 }
 
-const start = (path: string) => Effect.runPromise(Effect.result(prepare(path)))
+const start = (path: string) => Effect.runPromise(Effect.result(prepare(path)).pipe(Effect.provide(platform)))
 
 describe("starting", () => {
   test("reads both files, and starts every configured source waiting", () =>

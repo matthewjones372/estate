@@ -1,5 +1,5 @@
 /** Every environment's sources, each read on its own schedule, for as long as Estate runs. */
-import { Clock, Effect, SubscriptionRef } from "effect"
+import { Clock, Effect, type FileSystem, SubscriptionRef } from "effect"
 import type { Service } from "../../shared/catalog"
 import type { Remote } from "../remote"
 import type { Settings } from "../settings"
@@ -24,9 +24,9 @@ const servicesIn = (environment: string): Effect.Effect<ReadonlyArray<Service>, 
 export const startSources = (
   settings: Settings,
   environments: ReadonlyArray<{ readonly name: string; readonly sources: string }>,
-): Effect.Effect<never, never, Estate | Remote> =>
+): Effect.Effect<never, never, Estate | Remote | FileSystem.FileSystem> =>
   Effect.gen(function* () {
-    const readers: Array<Effect.Effect<never, never, Estate | Remote>> = []
+    const readers: Array<Effect.Effect<never, never, Estate | Remote | FileSystem.FileSystem>> = []
     for (const environment of environments) {
       const section = settings.sources[environment.sources] ?? {}
       if (section.alertmanager !== undefined || section.prometheus !== undefined) {
