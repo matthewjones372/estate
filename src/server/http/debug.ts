@@ -30,7 +30,11 @@ const asked = (environment: string, name: string) =>
     const cluster = yield* clusterOf(kubernetes, yield* Host).pipe(
       Effect.mapError((failure): Refusal => ({ status: 502, body: failure })),
     )
-    const acting = kubernetes.impersonate === true ? { name: person.name, groups: person.groups } : undefined
+    const prefix = kubernetes.impersonationPrefix ?? ""
+    const acting =
+      kubernetes.impersonate === true
+        ? { name: `${prefix}${person.name}`, groups: person.groups.map((group) => `${prefix}${group}`) }
+        : undefined
     return { person, service, cluster, acting }
   })
 
