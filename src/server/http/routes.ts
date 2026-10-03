@@ -59,10 +59,12 @@ const me = HttpRouter.add(
   Effect.gen(function* () {
     const person = yield* withRole
     const { catalog } = yield* SubscriptionRef.get(yield* Estate)
+    const settings = yield* Configured
     const body: Me = {
       name: person.name,
       role: person.role,
       environments: catalog.environments.map((each) => each.name),
+      ...(settings.readOnly === true ? { readOnly: true } : {}),
     }
     return json(body)
   }).pipe(Effect.catchTag("Refusal", refused)),
@@ -78,7 +80,10 @@ const events = HttpRouter.add("GET", "/events", (request) =>
     const found = catalog.environments.find((each) => each.name === environment)
     if (found === undefined) return json({ message: `${environment} is not an environment` }, 404)
     const settings = yield* Configured
-    const silences = person.role === "operator" && managerOf(settings.sources[found.sources] ?? {}) !== undefined
+    const silences =
+      person.role === "operator" &&
+      settings.readOnly !== true &&
+      managerOf(settings.sources[found.sources] ?? {}) !== undefined
     const lastEventId = request.headers["last-event-id"]
     yield* streamOpened
     const body = eventStream({ environment, silences }, lastEventId).pipe(

@@ -134,6 +134,7 @@ export const Header = () => {
               {initials(me.name)}
             </span>
             {me.name} · {me.role}
+            {me.readOnly === true ? " · read-only" : ""}
             <form method="post" action="/auth/logout">
               <button type="submit" class="plain-button">
                 Sign out

@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 /** What a person does on the page, in happy-dom: run by \`interact.test.ts\` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
-import { events, listening } from "./fixture"
+import { events, listening, operator } from "./fixture"
 import { mount } from "./harness"
 import { Alerts } from "./pages/Alerts"
 import { Overview } from "./pages/Overview"
@@ -110,6 +110,15 @@ describe("debug", () => {
       services: events.services.services.map((each) => ({ ...each, debug: { level: "INFO", on: false } })),
     },
   }
+
+  test("cannot be switched where Estate is read-only, which the header says", () => {
+    const page = mount(() => <ServicePage name="storefront" />, { sent: off, me: { ...operator, readOnly: true } })
+    expect(page.container.textContent).not.toContain("Turn on debug")
+    page.dispose()
+    const header = mount(() => <Header />, { me: { ...operator, readOnly: true } })
+    expect(header.container.textContent).toContain("operator · read-only")
+    header.dispose()
+  })
 
   test("is turned on for a chosen time, after saying what it costs", async () => {
     const page = mount(() => <ServicePage name="storefront" />, { sent: off })

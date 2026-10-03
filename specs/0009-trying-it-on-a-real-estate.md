@@ -37,8 +37,8 @@ production
   builds     ok    gitlab: storefront 8, orders 8
 ```
 
-`readOnly: true` in `estate.yaml` makes Estate write nothing anywhere: no silence or debug buttons on the page, the
-write endpoints refuse with 403 and say why, and notes are kept in memory whatever `notes:` says. The page says
+`readOnly: true` in `estate.yaml` makes Estate write to no other tool: no silence or debug buttons on the page, those
+endpoints refuse with 403 and say why, and notes are kept in Estate's memory whatever `notes:` says. The page says
 "read-only" in its header so nobody wonders where the buttons went.
 
 ## Why this shape
@@ -57,9 +57,10 @@ Nothing.
 
 ## Stack
 
-- [ ] **`read-only`** — `readOnly: true`: writes refused with 403, silences and debug off on the page, notes in
-      memory, "read-only" in the header.
-      Done when: with `readOnly: true`, every write endpoint answers 403 and no call that writes leaves Estate.
+- [x] **`read-only`** — `readOnly: true`: silences and debug refused with 403, off on the page, and never reverted
+      in the background; notes in memory; "read-only" in the header.
+      Done when: with `readOnly: true`, the silence and debug endpoints answer 403 and no call that writes leaves
+      Estate.
 - [ ] **`doctor`** — `estate doctor`: each environment's sources asked once, a line per part with counts and what
       does not fit, non-zero exit on a failure.
       Done when: run against the e2e tools, it reports every part ok, and names a service whose logs match nothing

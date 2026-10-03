@@ -18,9 +18,10 @@ const refuse = (status: Refusal["status"], message: string): Effect.Effect<never
 const asked = (environment: string, name: string) =>
   Effect.gen(function* () {
     const person = yield* withRole
+    const settings = yield* Configured
+    if (settings.readOnly === true) return yield* refuse(403, "Estate is read-only here: it switches no debug")
     if (person.role !== "operator") return yield* refuse(403, "switching debug is for operators")
     const { catalog } = yield* SubscriptionRef.get(yield* Estate)
-    const settings = yield* Configured
     const found = catalog.environments.find((each) => each.name === environment)
     const service = catalog.services.find((each) => each.name === name && each.environments.includes(environment))
     if (found === undefined || service === undefined) return yield* refuse(404, `${name} is not in ${environment}`)

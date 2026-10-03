@@ -51,11 +51,13 @@ const serve = Effect.gen(function* () {
   const started = yield* prepare(settingsPath)
   const { postgres, dynamodb } = started.settings.notes ?? {}
   const notes =
-    postgres !== undefined
-      ? postgresNotes(sqlOf(Redacted.value(postgres)))
-      : dynamodb !== undefined
-        ? dynamodbNotes(dynamodb).pipe(Layer.provide([liveRemote, platform]))
-        : memoryNotes
+    started.settings.readOnly === true
+      ? memoryNotes
+      : postgres !== undefined
+        ? postgresNotes(sqlOf(Redacted.value(postgres)))
+        : dynamodb !== undefined
+          ? dynamodbNotes(dynamodb).pipe(Layer.provide([liveRemote, platform]))
+          : memoryNotes
   const provided = services(started, builtWeb, liveRemote, notes)
   const hostname = started.settings.host ?? "0.0.0.0"
   const server = HttpRouter.serve(application).pipe(

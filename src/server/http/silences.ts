@@ -26,6 +26,7 @@ const refuse = (status: Refusal["status"], message: string): Effect.Effect<never
 
 const operator = Effect.gen(function* () {
   const person = yield* withRole
+  if ((yield* Configured).readOnly === true) return yield* refuse(403, "Estate is read-only here: it silences nothing")
   return person.role === "operator" ? person : yield* refuse(403, "silencing is for operators")
 })
 

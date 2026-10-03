@@ -176,7 +176,7 @@ const readersFor = (
             ...(deploysOf(section) === "flux"
               ? [runSource(environment.name, "deploys", "30 seconds", withCluster(readDeploys))]
               : []),
-            revertExpired(environment.name, cluster),
+            ...(settings.readOnly === true ? [] : [revertExpired(environment.name, cluster)]),
           ]
           return Effect.all(reading, { concurrency: "unbounded" }).pipe(Effect.andThen(Effect.never))
         }),

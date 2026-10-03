@@ -78,6 +78,8 @@ export type Sources = typeof Sources.Type
 export const Settings = Schema.Struct({
   port: optional(Schema.Number),
   host: optional(Schema.String),
+  /** Write to no tool: no silences, no debug switched, notes kept in memory. For trying Estate on a team's tools. */
+  readOnly: optional(Schema.Boolean),
   catalog: Schema.String,
   auth: Auth,
   /** Where notes are kept: Postgres, a DynamoDB table, or else memory; and for how many days. */

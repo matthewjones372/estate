@@ -19,7 +19,7 @@ export const DebugPanel = (props: {
   const [minutes, setMinutes] = createSignal<number>(15)
   const [confirming, setConfirming] = createSignal(false)
   const debug = () => props.state?.debug
-  const operator = me.role === "operator"
+  const operator = me.role === "operator" && me.readOnly !== true
   return (
     <Show
       when={props.service.debug?.levels}

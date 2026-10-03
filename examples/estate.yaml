@@ -1,6 +1,7 @@
 # Estate's settings for trying it out: no sign-in, and sources that are not there, so every part says why.
 # An estate people use signs in with OIDC; see deploy/ for the settings it mounts.
 port: 8080
+# readOnly: true   # write to no tool (no silences, no debug, notes in memory), for trying Estate on real tools
 catalog: /etc/estate/catalog.yaml
 
 auth:

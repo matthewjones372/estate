@@ -260,6 +260,8 @@ export const Me = Schema.Struct({
   name: Schema.String,
   role: Schema.Literals(["viewer", "operator"]),
   environments: Schema.Array(Schema.String),
+  /** Estate writes to no tool here: no silences, no debug. */
+  readOnly: optional(Schema.Boolean),
 })
 export type Me = typeof Me.Type
 
