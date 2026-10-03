@@ -8,18 +8,37 @@
 ![Solid](https://img.shields.io/badge/Solid-1.9-2c4f7c?logo=solid&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-3dd68c)](LICENSE)
 
+**A control room for your engineering estate.**
+
 Estate answers one question in five seconds: **how is our stack doing right now?**
 
-It doesn't replace your DevOps tools. Alerts stay in Alertmanager or Datadog, deploys in Flux or Argo CD, builds in
-GitHub Actions or Jenkins, logs in Loki. Estate reads them all live and puts the answer on one page: what's firing,
-what's deployed where, whether a pipeline is stuck, and how busy each service is. Everything on it links back to the
-tool it came from, so when you need to dig in, the right place is one click away.
+It brings together the signals you already have (alerts, deploys, builds, Kubernetes, load, jobs) into one live
+page per environment. It doesn't replace Prometheus, Grafana, Alertmanager, Datadog, Flux or GitHub Actions. **It
+sits above them**, and everything on the page links back to the tool that owns it, so the place to dig in is one
+click away.
 
-It keeps none of that data. It reads it again whenever it shows it.
+![The overview: what needs you now, each service's lane, and what changed today](docs/overview.png)
 
-![The overview page](docs/overview.png)
+## Why Estate?
 
-## What it reads
+Teams rarely lack operational data. What they lack is knowing **what matters right now**. A deploy has just rolled
+out, an alert has fired, a build has failed, a pod is restarting, and each of those is in a different tool. Someone
+opens six tabs to put the picture together, and the next person does it again.
+
+Estate puts the picture together once, keeps it live, and shows it to everyone. It answers:
+
+- **Is anything wrong?** What's firing, drawn against its threshold, with its runbook, what it means for the people
+  using the product, and whether it has happened before.
+- **What changed?** Deploys, builds, alerts, silences and notes from today, in one feed.
+- **What's deployed where?** Each service's path from commit to build to the version running, in every environment,
+  and a deploy that stalled says why in the deploy tool's own words.
+- **How busy is it?** The last hour of requests, errors and p99 for every service, and stats for its databases,
+  queues and caches.
+- **Who do I ask?** Each service's team, with its Slack or Teams channel, its Confluence or Notion pages and its
+  on-call.
+- **Where do I look next?** Its logs, traces, dashboards and API docs, one click away.
+
+## What it brings together
 
 | | |
 |---|---|
@@ -29,69 +48,44 @@ It keeps none of that data. It reads it again whenever it shows it.
 | Deploys | Flux, Argo CD, Harness CD, ECS deployments |
 | Builds | GitHub Actions, GitLab CI, Jenkins, TeamCity, Harness CI |
 | Logs | Loki, Datadog, Elasticsearch/OpenSearch, or pod logs straight from the cluster |
-| Notes | Postgres, DynamoDB, or memory |
+| Notes, impact and alert history | Postgres, DynamoDB, or memory |
 
-Where Grafana sits in front of Prometheus and Loki, Estate can reach them through Grafana's data source proxy with
-one service account token, rather than with addresses and credentials of their own.
-
-The same page on other tools: EKS with Grafana's alerting, Argo CD and Elasticsearch; and an environment read wholly
-from Datadog, its service built by Jenkins.
+Where Grafana sits in front of Prometheus and Loki, Estate reaches them through Grafana with one service account
+token, rather than with addresses and credentials of their own. The same page works on other stacks: EKS with
+Grafana's alerting, Argo CD and Elasticsearch, or an environment read wholly from Datadog and built by Jenkins.
 
 ![An environment on Grafana, Argo CD and Elasticsearch](docs/eks.png)
 ![An environment on Datadog](docs/datadog.png)
-![A service whose lines come from Datadog and builds from Jenkins](docs/datadog-service.png)
 
-## What's on the page
+> **Read, don't store.** Your tools own their data. Estate reads it live each time it shows it. It keeps only what
+> it adds: notes, what an alert means, and each alert's past firings.
 
-The overview starts with whatever is firing, each alert drawn against its threshold with a link to its runbook.
-Below that, each service gets a row: health, the path from commit to build to deployed version, the last hour of
-requests, errors and p99, and links to its logs, traces and dashboards. Databases, queues and caches get rows too,
-using stats from the exporters you probably already have (Postgres, CloudNativePG, MySQL, Redis, Kafka).
-
-From the page you can:
+## What you can do from the page
 
 - add a note to an alert so the next person knows someone's on it
 - say what an alert means for the people using the product, kept for every time it fires
-- see whether an alert has fired before, and what was written about it then
+- see whether an alert has fired before, for how long, and what was written about it then
 - silence an alert for a while, with a reason everyone can see
 - turn on debug logging for a service for 15 minutes; it switches itself back off
 - watch a service's logs live, or see its errors grouped by message
 - compare what's deployed in each environment
 
-![A service page](docs/service.png)
+Viewers see everything and add notes. Operators can also silence, switch debug, and write what an alert means.
 
-For a screen on the wall there is `/kiosk`: the headline, what's firing and every service worst first, in type you
-can read across a room, with nothing to press. Set `kiosk.token` and open `/kiosk?token=…` once on the screen; it
-signs in for 30 days and can read but never change anything. Environments take turns, `?team=payments` shows only
-the services that team owns, `?category=Payments` only that category's, and if the screen stops hearing from Estate it says so in red.
+![A service page: load, logs, pods, jobs, alerts today, debug and builds](docs/service.png)
+
+Services, stores and jobs can be grouped by **category**, such as Payments or Data, so a page of forty services
+reads as five areas. The map at the top draws a node per category once there are more than a dozen, and opens one
+in place when you click it. Anything that needs someone is always drawn on its own.
+
+### On a screen
+
+`/kiosk` is for the screen on the wall: the headline, what's firing and every service worst first, in type you can
+read across a room, with nothing to press. Open `/kiosk?token=…` once on the screen; it signs in for 30 days and can
+read but never change anything. Environments take turns; `?team=payments` or `?category=Payments` narrows it; and
+if the screen stops hearing from Estate, it says so in red.
 
 ![The kiosk on a 1080p screen](docs/kiosk.png)
-
-## Why it's built this way
-
-It runs as one container using about 120 MB. Since it reads everything live, there's nothing to back up. The only
-thing it keeps is notes, and only if you give it a database.
-
-What it shows comes from a `catalog.yaml` in your repo, so adding a service is a pull request. `estate check
-catalog.yaml` validates the file, so you can run it in CI.
-
-The page updates over server-sent events and redraws only what changed. If a source stops answering, the page says
-which one and when it last heard from it, rather than showing stale data as if it were current.
-
-Sign-in is OIDC. Viewers can see everything and add notes; operators can also silence alerts and switch debug
-logging. With impersonation turned on, debug changes go to the cluster as the person who made them.
-
-Estate exposes its own metrics on `:9464/metrics`, logs JSON, and sends traces over OTLP if you configure a collector.
-
-### How it compares
-
-Estate sits beside these tools rather than instead of them, and links into each.
-
-- **Backstage, Port, Cortex** catalog what you own. Estate shows how it's doing right now.
-- **Grafana** can chart anything, but someone has to build and maintain the boards. Estate needs none.
-- **k9s, Lens, Headlamp** go deep on one cluster. Estate covers several environments and links into them.
-- **Argo CD's UI, Weave GitOps** show the deploy tool. Estate puts that next to the build and what's running.
-- **Karma, Keep** handle alerts on their own. Estate shows each one next to the service it's about.
 
 ## Try it
 
@@ -102,70 +96,151 @@ docker run -v ./examples:/etc/estate -p 8080:8080 ghcr.io/matthewjones372/estate
 Then open <http://localhost:8080>. The example points at tools that don't exist, so each part of the page tells you
 what it couldn't reach. Edit `examples/estate.yaml` to point it at your own.
 
-To try it against your team's real tools, set `readOnly: true` in `estate.yaml` so Estate can't write anything (no
-silences, no debug switching, notes only in memory), then run:
+To try it against your team's real tools, set `readOnly: true` in `estate.yaml` so Estate writes nothing (no
+silences, no debug switching, notes only in memory), then ask the doctor:
 
 ```bash
 docker run -v ./my-estate:/etc/estate --env-file my-estate/.env ghcr.io/matthewjones372/estate:main doctor
 ```
 
 It asks each tool once and prints a line per part: what answered, how many alerts matched a service, which services
-have no running pods or no log lines, and which setting would fix it. It exits non-zero if anything failed. Tokens
-referenced as `${NAME}` in `estate.yaml` come from the env file. [docs/real-tools.md](docs/real-tools.md) has the
-settings for each kind of tool, and what each line should say when it is right.
+have no running pods or no log lines, and which setting would fix it. [docs/real-tools.md](docs/real-tools.md) has the
+settings for each tool, and what each line should say when it's right.
 
-## Running it
+## Describe your estate
 
-Estate reads two files from `/etc/estate`:
+Estate reads two files from `/etc/estate`. `catalog.yaml` says what your estate is, and lives in Git, so adding a
+service is a pull request:
 
-- `catalog.yaml` describes your environments and services. [`examples/catalog.yaml`](examples/catalog.yaml) uses
-  every option. Give services and stores a `category`, such as payments or data, and the overview groups them under
-  a heading each. Jobs no service owns, a CronJob or an ECS scheduled task, go under `jobs:` and get a lane of their
-  own. List `teams:` with their Slack or Teams channel, Confluence or Notion pages and on-call, and each
-  owner's links appear on its services' pages and on the cards of alerts about them.
-- `estate.yaml` holds settings: sign-in, roles, where each environment's tools are, and where to keep notes. Secrets
-  can be written as `${NAME}` and are read from the environment.
+```yaml
+environments:
+  - { name: production, sources: production }   # sources: which section of estate.yaml has its tools
+
+teams:
+  - name: payments
+    title: Payments
+    links: { slack: "https://example.slack.com/archives/C0PAY", oncall: "https://example.pagerduty.com/schedules/PPAY" }
+
+services:
+  - name: payments
+    owner: payments
+    category: Payments
+    environments: [ production ]
+    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: payments } ] }
+    deploy: { flux: { kustomization: shop, imagePolicy: payments } }
+    build: { github: { workflow: payments.yml, branch: main } }
+    load:
+      requests: sum(rate(http_requests_total{app="payments"}[1m]))
+      p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="payments"}[5m])))
+    links:
+      logs: "https://grafana.example.com/explore?var-env={env}&var-service={service}"
+      traces: "https://grafana.example.com/explore?var-service={service}"
+
+alerts:
+  PaymentsFailing: { impact: "Customers cannot pay; orders wait in their baskets." }
+```
+
+`estate.yaml` holds the settings: sign-in, roles, where each environment's tools are, and where to keep notes.
+Secrets are written as `${NAME}` and read from the environment.
+
+`estate check catalog.yaml` reports every mistake in one go, with where it is, so it fits in CI. Estate reloads the
+catalog when it changes. There is deliberately no automatic discovery: the catalog is explicit and reviewed.
+[`examples/catalog.yaml`](examples/catalog.yaml) uses every option, including stores, jobs no service owns, the map
+and vitals.
+
+## Run it
 
 Images for amd64 and arm64 are published to `ghcr.io/matthewjones372/estate` from `main`. [`deploy/`](deploy) has a
-Kubernetes base you can overlay with those two files, an ingress and your secrets.
+Kubernetes base to overlay with your two files, an ingress and your secrets. It runs as one container in about
+120 MB.
 
-## How many services
+- **Sign-in** is OIDC with PKCE, groups mapped to viewer and operator. Anonymous sign-in is there for trying it out.
+- **Health**: `/healthz` says the process is up, and `/readyz` says every source has been read at least once.
+- **Its own telemetry**: metrics on `:9464/metrics`, JSON logs, and traces over OTLP if you set a collector.
+
+### How it compares
+
+Estate sits beside these tools, not instead of them, and links into each.
+
+- **Backstage, Port, Cortex** catalog what you own. Estate shows how it's doing right now.
+- **Grafana** can chart anything, but someone has to build and maintain the boards. Estate needs none.
+- **k9s, Lens, Headlamp** go deep on one cluster. Estate covers several environments and links into them.
+- **Argo CD's UI, Weave GitOps** show the deploy tool. Estate puts that next to the build and what's running.
+- **Karma, Keep** handle alerts on their own. Estate shows each one next to the service it's about.
+
+### How many services
 
 Fifty is about the most a team puts on one page, and the build fails if Estate gets slower there. A thousand is a
-stress test. Both are measured by [`bench/`](bench) against fake tools that answer in 20 ms, two environments, each
-service with three load queries, a Deployment and a Flux image policy:
+stress test. Both are measured by [`bench/`](bench) against fake tools that answer in 20 ms:
 
 | | 50 services, 5 pages | 1,000 services, 20 pages |
 |---|---|---|
 | Calls to the tools a second | 11 | 101 |
 | First data to a page | 0.1 MB | 2 MB |
-| Data to a page a minute, once loaded | 0.02 MB | 0.01 MB |
 | Estate's CPU | 3% of a core | 52% |
 | Estate's memory | 136 MB | 174 MB |
-| Page drawn | 0.4 s | 2.2 s |
-| Page's heap | 8 MB | 88 MB |
+| Page drawn | 0.5 s | 2.2 s |
 
-Every page watching an environment shares one stream of its views, so more pages cost little. Each source is read
-on its own interval, which `every:` in `estate.yaml` lengthens for tools that limit or bill each call.
+Every page watching an environment shares one stream, so more pages cost little. Each source is read on its own
+interval, which `every:` lengthens for tools that limit or bill each call.
 
-```bash
-bun bench/run.ts 1000 20   # services, pages
+## Design principles
+
+- **One operational view.** The state of the estate should be obvious without opening six dashboards.
+- **Not another system of record.** Prometheus owns metrics, Alertmanager owns alerts, Kubernetes owns workloads,
+  Git owns configuration. Estate combines them.
+- **Configuration over discovery.** The catalog is explicit and reviewable in Git.
+- **Fail explicitly.** Tools go down, tokens expire, APIs change. When a source stops answering, the page says which
+  and since when, rather than showing stale data as if it were current.
+- **Keep the browser simple.** The integration work happens on the server, once, for every page.
+- **Make changes obvious.** Reading and changing are separate, and every change says who made it and why.
+
+## How it's built
+
+```mermaid
+flowchart LR
+  tools["Your tools<br/>Prometheus · Alertmanager · Kubernetes<br/>Flux · GitHub Actions · Datadog · …"]
+  sources["Sources<br/>one reader per tool, each on its own interval"]
+  state["Estate's state<br/>the current estate, in one place"]
+  web["Pages<br/>Solid"]
+  tools --> sources --> state -- "server-sent events" --> web
 ```
 
-## Development
+Each tool is a **source** behind a typed port, with a fake for tests. Sources do the talking, retries and timeouts.
+Estate holds the current state, and each environment's views are built once and shared by every page watching it.
+A new page receives a snapshot, then only what changes; a page that reconnects resumes from its `Last-Event-ID`.
 
-The server is TypeScript on Bun using [Effect](https://effect.website); the pages use
-[Solid](https://www.solidjs.com).
+The server is [Effect](https://effect.website), because the work is remote calls that fail, retries, timeouts,
+schedules, concurrency and long-lived streams. With Effect, a tool being down is part of the typed error model, not
+an exception somewhere in a request. The pages are [Solid](https://www.solidjs.com), redrawing only what changed.
+
+```mermaid
+flowchart LR
+  web["src/web"] --> shared["src/shared<br/>schemas both sides decode with"]
+  server["src/server"] --> shared
+```
+
+The server and the pages never import each other, and `shared` imports nothing of ours. Those boundaries are
+checked on every build.
+
+## Quality
 
 ```bash
 bun install
-bun run gate          # typecheck, lint, unused code, layering, tests
-bunx playwright test  # browser tests against fake tools in e2e/
-bun run perf          # fifty services against the budgets in bench/run.ts
-bun run integration   # Estate's readers against the real tools, in containers: needs Docker
+bun run gate          # typecheck, lint, unused code, layering, slop, tests with coverage
+bunx playwright test  # the pages in a browser against fake tools, with axe accessibility checks
+bun run perf          # fifty services against the budgets
+bun run integration   # Estate's readers against the real tools in containers: needs Docker
 ```
 
-[AGENTS.md](AGENTS.md) covers code conventions. Design decisions are written up in [specs/](specs).
+**If it isn't passing the gate, it isn't finished.** The gate runs strict TypeScript, Biome, Knip,
+dependency-cruiser, and the tests, which must cover 90% of the lines in every file. It also refuses `any`, non-null assertions,
+`console`, TODOs, commented-out code, skipped tests, files over 300 lines, rules switched off inline, and running an
+Effect inside application code. The same gate is the agent's stop hook. `bun run integration` runs the readers
+against real Prometheus, Alertmanager, Grafana, Loki, Elasticsearch, Postgres, DynamoDB, Jenkins, LocalStack and
+Kubernetes.
+
+[AGENTS.md](AGENTS.md) covers code conventions. Every change starts as a spec in [specs/](specs).
 
 ## License
 
