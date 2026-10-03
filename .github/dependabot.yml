@@ -1,7 +1,7 @@
 # Dependencies kept current: Bun's packages, the workflows' actions and the image's base, weekly, minor and patch
 # updates grouped into one pull request each. The gate decides; .github/workflows/dependabot.yml merges what passes,
-# and a pull request the gate fails stays open. Majors the tools cannot take yet are skipped: TypeScript 7 has no
-# JavaScript API for dependency-cruiser, and Solid's compiler is built on Babel 7.
+# and a pull request the gate fails stays open. Babel's majors are skipped: Solid's compiler is
+# built on Babel 7.
 version: 2
 updates:
   - package-ecosystem: bun
@@ -10,7 +10,6 @@ updates:
     groups:
       minor-and-patch: { update-types: [ minor, patch ] }
     ignore:
-      - { dependency-name: typescript, update-types: [ "version-update:semver-major" ] }
       - { dependency-name: "@babel/*", update-types: [ "version-update:semver-major" ] }
   - package-ecosystem: github-actions
     directory: /

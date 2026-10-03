@@ -7,13 +7,14 @@
     "@biomejs/biome": "^2.5.15",
     "@happy-dom/global-registrator": "^20.14.5",
     "@playwright/test": "^1.63.0",
+    "@swc/core": "^1.16.13",
     "@types/babel__core": "^7",
     "@types/bun": "^1.4.2",
     "babel-preset-solid": "^1.9.15",
     "dependency-cruiser": "^18.5.0",
     "knip": "^6.39.0",
     "solid-js": "^1.9.15",
-    "typescript": "^6"
+    "typescript": "^7"
   },
   "private": true,
   "scripts": {

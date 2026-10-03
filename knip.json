@@ -1,5 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["tools/guard.ts", "src/server/main.ts", "src/web/main.tsx"],
-  "project": ["src/**/*.{ts,tsx}", "tools/**/*.ts"]
+  "project": ["src/**/*.{ts,tsx}", "tools/**/*.ts"],
+  "ignoreDependencies": ["@swc/core"]
 }

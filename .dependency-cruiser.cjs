@@ -16,6 +16,7 @@ module.exports = {
   options: {
     includeOnly: "^(src|tools)/",
     doNotFollow: { path: "node_modules" },
+    parser: "swc",
     tsPreCompilationDeps: true,
     tsConfig: { fileName: "tsconfig.json" },
     enhancedResolveOptions: { exportsFields: ["exports"], conditionNames: ["import", "require", "node", "default"] },
