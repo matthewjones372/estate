@@ -4,7 +4,7 @@
  */
 import { Context, Data, Effect, Layer } from "effect"
 import type { Note } from "../shared/events"
-import type { Failure } from "./sources/run"
+import { type Failure, SourceFailure } from "./sources/run"
 
 export type StoredNote = Note & { readonly environment: string; readonly alert: string }
 
@@ -39,7 +39,7 @@ const create = `create table if not exists estate_notes (
 const run = (query: Query, statement: string, parameters: ReadonlyArray<unknown> = []) =>
   Effect.tryPromise({
     try: () => query(statement, parameters),
-    catch: (error) => ({ message: `the notes database: ${String(error)}` }),
+    catch: (error) => new SourceFailure({ message: `the notes database: ${String(error)}` }),
   })
 
 const asNote = ({ id, environment, alert, at, by, text }: Record<string, unknown>): StoredNote => ({

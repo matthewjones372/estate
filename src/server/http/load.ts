@@ -32,5 +32,5 @@ export const loadRoute = HttpRouter.add("GET", "/api/load", (request) =>
     if (prometheus === undefined) return json({ message: `${environment.name} has no Prometheus` }, 404)
     const now = yield* Clock.currentTimeMillis
     return json(yield* loadOf(prometheus.url.replace(/\/$/, ""), service, span, now))
-  }).pipe(Effect.catch(refused)),
+  }).pipe(Effect.catchTag("Refusal", refused)),
 )

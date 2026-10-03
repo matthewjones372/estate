@@ -6,6 +6,7 @@ import { Effect, Fiber, Layer, Result } from "effect"
 import { background, prepare, services } from "./app"
 import { Notes } from "./notes"
 import { stubRemote } from "./remote"
+import { SourceFailure } from "./sources/run"
 import { stubWeb } from "./web"
 
 const goodSettings = (catalog: string) => `catalog: ${catalog}
@@ -100,10 +101,10 @@ describe("running", () => {
                 stubWeb(""),
                 stubRemote(() => undefined),
                 Layer.succeed(Notes)({
-                  all: Effect.fail({ message: "the notes database: down" }),
+                  all: Effect.fail(new SourceFailure({ message: "the notes database: down" })),
                   add: () => Effect.void,
                   remove: () => Effect.void,
-                  removeBefore: () => Effect.fail({ message: "the notes database: down" }),
+                  removeBefore: () => Effect.fail(new SourceFailure({ message: "the notes database: down" })),
                 }),
               ),
             ),

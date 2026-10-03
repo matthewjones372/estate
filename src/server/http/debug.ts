@@ -5,14 +5,14 @@ import { Configured } from "../settings"
 import { showDebug, switchOff, switchOn } from "../sources/debug"
 import { clusterOf, Host } from "../sources/kubernetes"
 import { Estate } from "../state"
-import { json, type Refusal, refused, withRole } from "./routes"
+import { json, Refusal, refused, withRole } from "./routes"
 
 const Asked = Schema.Struct({ environment: Schema.String, service: Schema.String, minutes: Schema.Number })
 
 const longest = 24 * 60
 
 const refuse = (status: Refusal["status"], message: string): Effect.Effect<never, Refusal> =>
-  Effect.fail({ status, body: { message } })
+  Effect.fail(new Refusal({ status, body: { message } }))
 
 /** The operator asking, the service, and how to reach its environment's cluster, or why not. */
 const asked = (environment: string, name: string) =>
@@ -28,7 +28,7 @@ const asked = (environment: string, name: string) =>
     const kubernetes = settings.sources[found.sources]?.kubernetes
     if (kubernetes === undefined) return yield* refuse(404, `${environment} has no cluster to switch it in`)
     const cluster = yield* clusterOf(kubernetes, yield* Host).pipe(
-      Effect.mapError((failure): Refusal => ({ status: 502, body: failure })),
+      Effect.mapError((failure) => new Refusal({ status: 502, body: { message: failure.message } })),
     )
     const prefix = kubernetes.impersonationPrefix ?? ""
     const acting =
@@ -46,7 +46,7 @@ export const debugOnRoute = HttpRouter.add(
   Effect.gen(function* () {
     const body = yield* HttpServerRequest.schemaBodyJson(Asked).pipe(
       Effect.mapError(
-        (): Refusal => ({ status: 400, body: { message: "debug is an environment, a service and minutes" } }),
+        () => new Refusal({ status: 400, body: { message: "debug is an environment, a service and minutes" } }),
       ),
     )
     if (!(body.minutes >= 1 && body.minutes <= longest)) return yield* refuse(400, "debug lasts a minute to a day")
@@ -56,7 +56,7 @@ export const debugOnRoute = HttpRouter.add(
     if (switched._tag === "Failure") return failed(switched.failure)
     yield* showDebug(body.environment, service.name, switched.success)
     return json(switched.success, 201)
-  }).pipe(Effect.catch(refused)),
+  }).pipe(Effect.catchTag("Refusal", refused)),
 )
 
 export const debugOffRoute = HttpRouter.add("DELETE", "/api/debug/:service", (request) =>
@@ -68,5 +68,5 @@ export const debugOffRoute = HttpRouter.add("DELETE", "/api/debug/:service", (re
     if (switched._tag === "Failure") return failed(switched.failure)
     yield* showDebug(environment, service.name, switched.success)
     return json(switched.success, 200)
-  }).pipe(Effect.catch(refused)),
+  }).pipe(Effect.catchTag("Refusal", refused)),
 )

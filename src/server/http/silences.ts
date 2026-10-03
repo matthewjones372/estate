@@ -7,7 +7,7 @@ import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Remote } from "../remote"
 import { Configured } from "../settings"
 import { Estate, type SourcedAlert, updateEnvironment } from "../state"
-import { json, type Refusal, refused, withRole } from "./routes"
+import { json, Refusal, refused, withRole } from "./routes"
 
 const Asked = Schema.Struct({
   environment: Schema.String,
@@ -20,7 +20,7 @@ const Created = Schema.Struct({ silenceID: Schema.String })
 const longest = 7 * 24 * 60
 
 const refuse = (status: Refusal["status"], message: string): Effect.Effect<never, Refusal> =>
-  Effect.fail({ status, body: { message } })
+  Effect.fail(new Refusal({ status, body: { message } }))
 
 const operator = Effect.gen(function* () {
   const person = yield* withRole
@@ -60,10 +60,11 @@ export const silenceRoute = HttpRouter.add(
     const person = yield* operator
     const asked = yield* HttpServerRequest.schemaBodyJson(Asked).pipe(
       Effect.mapError(
-        (): Refusal => ({
-          status: 400,
-          body: { message: "a silence is an environment, an alert, minutes and a reason" },
-        }),
+        () =>
+          new Refusal({
+            status: 400,
+            body: { message: "a silence is an environment, an alert, minutes and a reason" },
+          }),
       ),
     )
     const reason = asked.reason.trim()
@@ -102,7 +103,7 @@ export const silenceRoute = HttpRouter.add(
     return json({ id, endsAt }, 201)
   }).pipe(
     Effect.catchTag("RemoteError", (error) => Effect.succeed(json({ message: `Alertmanager ${error.message}` }, 502))),
-    Effect.catch(refused),
+    Effect.catchTag("Refusal", refused),
   ),
 )
 
@@ -132,6 +133,6 @@ export const unsilenceRoute = HttpRouter.add("DELETE", "/api/silences/:id", (req
     return json({ id }, 200)
   }).pipe(
     Effect.catchTag("RemoteError", (error) => Effect.succeed(json({ message: `Alertmanager ${error.message}` }, 502))),
-    Effect.catch(refused),
+    Effect.catchTag("Refusal", refused),
   ),
 )

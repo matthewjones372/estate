@@ -2,7 +2,7 @@
 import { Effect, Schema } from "effect"
 import type { Series } from "../../shared/events"
 import { callJson, type Remote } from "../remote"
-import type { Failure } from "./run"
+import { type Failure, SourceFailure } from "./run"
 
 const Matrix = Schema.Struct({
   data: Schema.Struct({
@@ -36,10 +36,11 @@ const decoded =
   <S extends Schema.Decoder<unknown>>(schema: S) =>
   (body: unknown): Effect.Effect<S["Type"], Failure> =>
     Schema.decodeUnknownEffect(schema)(body).pipe(
-      Effect.mapError(() => ({ message: "Prometheus answered in a shape Estate does not know" })),
+      Effect.mapError(() => new SourceFailure({ message: "Prometheus answered in a shape Estate does not know" })),
     )
 
-const failure = (error: { readonly message: string }): Failure => ({ message: `Prometheus ${error.message}` })
+const failure = (error: { readonly message: string }): Failure =>
+  new SourceFailure({ message: `Prometheus ${error.message}` })
 
 /** One result's values laid on the grid from `start`, a point a step, null where Prometheus had none. */
 export const onGrid = (values: ReadonlyArray<readonly [number, string]>, start: number, span: Span): Series => {
