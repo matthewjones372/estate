@@ -1,0 +1,35 @@
+name: image
+
+# On main, the image built on a runner at home and pushed to its registry, tagged main-<run>-<sha> so an estate's
+# Flux image automation takes the newest. RUNNER names another runner; pushing needs the home network.
+on:
+  push: { branches: [ main ] }
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ${{ vars.RUNNER || 'self-hosted' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+      - run: bun install --frozen-lockfile
+      - run: bun run gate
+      - name: Push the image
+        if: runner.environment == 'self-hosted'
+        run: |
+          tag="main-${{ github.run_number }}-${GITHUB_SHA::7}"
+          docker build -t "estate:$tag" .
+          nix run nixpkgs#skopeo -- --insecure-policy copy --dest-tls-verify=false \
+            "docker-daemon:estate:$tag" "docker://${REGISTRY:-registry.example}/estate:$tag"
+          echo "pushed $tag" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          REGISTRY: ${{ vars.REGISTRY }}

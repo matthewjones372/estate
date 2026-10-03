@@ -131,7 +131,8 @@ For trying Estate out, `auth.anonymous` names one person and role for everyone i
 
 Someone signed in with neither sees the no-access page. Estate writes debug ConfigMaps with its service account,
 recording who asked; with `kubernetes.impersonate` it writes them as the person (Kubernetes impersonation, user and
-groups), so the cluster's RBAC decides and its audit names them.
+groups, each with `kubernetes.impersonationPrefix` before it, as the cluster's own sign-in names them), so the
+cluster's RBAC decides and its audit names them.
 
 **How it is built.** TypeScript on Bun, server and pages alike, so the catalog's schema, the events the server sends
 and the pages' props are one set of types. The server is written in [Effect](https://effect.website): every failure a

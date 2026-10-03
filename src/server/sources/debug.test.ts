@@ -175,6 +175,26 @@ describe("switching debug from the page", () => {
     )
   })
 
+  test("is switched as the person, named as the cluster names them, when Estate impersonates", () => {
+    const calls: Call[] = []
+    const impersonating = {
+      ...configured("operator"),
+      sources: {
+        staging: {
+          kubernetes: { url: "https://cluster", token: "t", impersonate: true, impersonationPrefix: "pocket-id:" },
+        },
+        production: {},
+      },
+    }
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(impersonating, withCluster, kube(calls))
+        yield* ask(server, on({ environment: "staging", service: "storefront", minutes: 15 }))
+        expect(calls[0]?.headers).toMatchObject({ "impersonate-user": "pocket-id:ada" })
+      }),
+    )
+  })
+
   test("is for operators, a minute to a day, for a service with a level, where there is a cluster", () =>
     Effect.runPromise(
       Effect.gen(function* () {

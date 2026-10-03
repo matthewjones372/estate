@@ -75,7 +75,8 @@ Two files, mounted at `/etc/estate`:
 - **`estate.yaml`**, the settings: sign-in and roles, each environment's sources, the notes database, GitHub's token.
   Secrets are `${NAMES}` read from the environment.
 
-[`deploy/`](deploy) is a Kubernetes base to overlay with those two files, your ingress and your secrets. The design,
+The image is built by `.github/workflows/image.yml` on a runner at home and pushed to its registry as
+`estate:main-<run>-<sha>`. [`deploy/`](deploy) is a Kubernetes base to overlay with those two files, your ingress and your secrets. The design,
 and why it is shaped this way, is [spec 0001](specs/0001-the-estate-on-one-page.md). Its first estate is
 [orders](https://github.com/example/orders).
 
