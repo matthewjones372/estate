@@ -7,6 +7,7 @@ import { Estate } from "../state"
 import { inEnvironment } from "../views/catalog"
 import { readAlerts, withResolved } from "./alerts"
 import { readCluster } from "./cluster"
+import { revertExpired } from "./debug"
 import { readDeploys } from "./flux"
 import { runBuilds } from "./github"
 import { clusterOf } from "./kubernetes"
@@ -58,6 +59,7 @@ export const startSources = (
         readers.push(runSource(environment.name, "cluster", "15 seconds", withCluster(readCluster)))
         if (section.flux !== undefined)
           readers.push(runSource(environment.name, "deploys", "30 seconds", withCluster(readDeploys)))
+        readers.push(revertExpired(environment.name, clusterOf(kubernetes, host)))
       }
     }
     if (settings.builds !== undefined) readers.push(runBuilds(settings.builds.github))

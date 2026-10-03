@@ -11,7 +11,7 @@ import { type Person, personAsking } from "./people"
 export const json = (body: unknown, status = 200) =>
   HttpServerResponse.text(JSON.stringify(body), { status, contentType: "application/json" })
 
-export type Refusal = { readonly status: 400 | 401 | 403 | 404; readonly body: unknown }
+export type Refusal = { readonly status: 400 | 401 | 403 | 404 | 502; readonly body: unknown }
 
 /** The person asking if they hold a role, or the response that says why not. */
 export const withRole: Effect.Effect<
@@ -21,13 +21,13 @@ export const withRole: Effect.Effect<
 > = Effect.gen(function* () {
   const person = yield* personAsking
   if (Option.isNone(person)) return yield* Effect.fail({ status: 401, body: { signIn: "/auth/login" } } as const)
-  const { name, role } = person.value
+  const { name, groups, role } = person.value
   if (role === undefined) {
     const { auth } = yield* Configured
     const groups = [...new Set([...auth.roles.viewer, ...auth.roles.operator])]
     return yield* Effect.fail({ status: 403, body: { name, groups } } as const)
   }
-  return { name, role }
+  return { name, groups, role }
 })
 
 export const refused = (refusal: Refusal) => Effect.succeed(json(refusal.body, refusal.status))

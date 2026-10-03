@@ -2,6 +2,7 @@
 import { Data, Effect, Layer, Result, Schedule } from "effect"
 import type { Mistake } from "../shared/shape"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
+import { debugOffRoute, debugOnRoute } from "./http/debug"
 import { loadRoute } from "./http/load"
 import { loadNotes, notesRoute } from "./http/notes"
 import { routes } from "./http/routes"
@@ -10,6 +11,7 @@ import { silenceRoute, unsilenceRoute } from "./http/silences"
 import { memoryNotes, type Notes } from "./notes"
 import type { Remote } from "./remote"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
+import { Host } from "./sources/kubernetes"
 import { startSources } from "./sources/start"
 import { type Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
 import type { Web } from "./web"
@@ -62,7 +64,16 @@ export const prepare = (
   )
 
 /** The routes with what they need, for serving or for a test's web handler. */
-export const application = Layer.mergeAll(routes, signInRoutes, loadRoute, notesRoute, silenceRoute, unsilenceRoute)
+export const application = Layer.mergeAll(
+  routes,
+  signInRoutes,
+  loadRoute,
+  notesRoute,
+  silenceRoute,
+  unsilenceRoute,
+  debugOnRoute,
+  debugOffRoute,
+)
 
 /** What runs beside the routes for as long as Estate does. */
 export const background = (
@@ -88,4 +99,13 @@ export const services = <E, F>(
   web: Layer.Layer<Web, E>,
   remote: Layer.Layer<Remote>,
   notes: Layer.Layer<Notes, F> = memoryNotes,
-) => Layer.mergeAll(estateLayer(started.initial), web, remote, notes, Layer.succeed(Configured)(started.settings))
+  host: Host = {},
+) =>
+  Layer.mergeAll(
+    estateLayer(started.initial),
+    web,
+    remote,
+    notes,
+    Layer.succeed(Configured)(started.settings),
+    Layer.succeed(Host)(host),
+  )
