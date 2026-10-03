@@ -30,6 +30,20 @@ const servicesIn = (environment: string): Effect.Effect<ReadonlyArray<Service>, 
 
 type Environment = { readonly name: string; readonly sources: string }
 
+/** Done once the environment's alerts have been read, whether they answered or failed. */
+const alertsHeard = (environment: string): Effect.Effect<void, never, Estate> =>
+  Effect.gen(function* () {
+    const ref = yield* Estate
+    yield* SubscriptionRef.changes(ref).pipe(
+      Stream.filter((estate) => {
+        const state = estate.environments[environment]?.alerts.state
+        return state === "ok" || state === "failing"
+      }),
+      Stream.take(1),
+      Stream.runDrain,
+    )
+  })
+
 /** One environment's sources, each read on its own schedule, together. */
 const readersFor = (
   settings: Settings,
@@ -61,7 +75,13 @@ const readersFor = (
         const stores = (estate.catalog.stores ?? []).filter((store) => store.environments.includes(here))
         return yield* readMetrics(ranges, estate.catalog, inEnvironment(estate.catalog, here), stores, firing, now)
       })
-      readers.push(runSource(environment.name, "metrics", "30 seconds", read))
+      // The first read waits a little for the alerts, so those firing as Estate starts are charted on it.
+      readers.push(
+        Effect.andThen(
+          alertsHeard(environment.name).pipe(Effect.timeout("10 seconds"), Effect.ignore),
+          runSource(environment.name, "metrics", "30 seconds", read),
+        ),
+      )
     }
     const { argo } = section
     if (deploysOf(section) === "argo" && argo !== undefined) {

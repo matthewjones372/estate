@@ -1,0 +1,25 @@
+# An estate on other kinds of tool, for the pages' tests: EKS with Grafana's alerting, Elasticsearch, Argo CD and
+# GitLab; and ECS with CloudWatch.
+environments:
+  - { name: eks, title: EKS, sources: eks }
+  - { name: aws, title: ECS, sources: aws }
+
+services:
+  - name: storefront
+    description: The pages customers browse and buy from
+    environments: [ eks ]
+    runtime: { kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: storefront } ] } }
+    deploy: { argo: { application: storefront } }
+    build: { gitlab: { project: shop/storefront } }
+    load:
+      requests: sum(rate(http_requests_total{app="storefront"}[1m]))
+      errors: sum(rate(http_requests_total{app="storefront",code=~"5.."}[1m]))
+
+  - name: checkout
+    description: Takes the money
+    environments: [ aws ]
+    runtime: { ecs: { cluster: shop, service: checkout } }
+    build: { gitlab: { project: shop/checkout } }
+    jobs: [ { kind: ScheduledTask, name: checkout-nightly-export } ]
+    load:
+      requests: SELECT SUM(RequestCount) FROM SCHEMA("AWS/ApplicationELB", LoadBalancer)

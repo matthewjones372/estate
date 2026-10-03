@@ -1,0 +1,22 @@
+# Estate against the fake tools in e2e/cloud-tools.ts (and e2e/tools.ts for EKS's Prometheus and cluster).
+port: 8183
+metrics: { port: 9465 }
+catalog: e2e/cloud-catalog.yaml
+
+auth:
+  sessionSecret: an-example-secret-for-trying-estate-out-only
+  roles: { viewer: [ developers ], operator: [ ops ] }
+  anonymous: { name: visitor, role: operator }
+
+sources:
+  eks:
+    prometheus: { url: http://127.0.0.1:8282 }
+    kubernetes: { url: http://127.0.0.1:8282, token: fake }
+    grafana: { url: http://127.0.0.1:8283, token: glsa-e2e }
+    elasticsearch: { url: http://127.0.0.1:8283, apiKey: e2e }
+    argo: { url: http://127.0.0.1:8283, token: argo-e2e }
+  aws:
+    aws: { region: eu-west-2, endpoint: http://127.0.0.1:8283/aws }
+
+builds:
+  gitlab: { url: http://127.0.0.1:8283, token: glpat-e2e }
