@@ -14,4 +14,7 @@ entries, one per pull request, each with what proves it done.
 | [0007](0007-logs-on-the-page.md) | logs on the page: a service's live lines and its errors grouped by message, from Loki or the cluster, masked; done |
 | [0008](0008-the-whole-of-effect.md) | the whole of Effect: HttpClient, Config, Redacted, FiberMap, Cache, DateTime, FileSystem, metrics and spans where code is hand-rolled; fixes environments added by a reload never being read; done |
 | [0009](0009-trying-it-on-a-real-estate.md) | trying it on a real estate: `estate doctor` reports what each source answered and what does not fit the catalog; `readOnly: true` so trying it can change nothing; done |
-| [0010](0010-a-thousand-services.md) | a thousand services: each environment's views built once and shared by every page watching it, only changed services sent, the cluster read a namespace at a time, every flow of data a `Stream`, and a bench that measures it; draft |
+| [0010](0010-a-thousand-services.md) | a thousand services: each environment's views built once and shared by every page watching it, only changed services sent, the cluster read a namespace at a time, every flow of data a `Stream`, and lanes that look services up by name; done |
+| [0011](0011-staying-fast.md) | staying fast: the bench in the repository, budgets at fifty services that fail the build, and how often each source is read set per environment; draft |
+| [0012](0012-through-the-platform.md) | through the platform: Prometheus and Loki through Grafana's data source proxy, and Datadog for alerts, silences, load and logs; draft |
+| [0013](0013-jenkins.md) | Jenkins: builds from Jenkins jobs on the pipeline rail; draft |

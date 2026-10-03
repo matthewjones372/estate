@@ -2,7 +2,7 @@
 
 ## Problem
 
-Measured with `bench/` against tools that answer for any service, two environments, each service with three load
+Measured against tools that answer for any service, two environments, each service with three load
 queries, a Deployment and a Flux image policy, the tools answering in 20 ms:
 
 | Services | Full metrics read | Calls to the tools | Estate's memory | First data to a page | Page drawn |
@@ -45,7 +45,6 @@ do.
   service, and holds each series whole rather than tracking it point by point.
 - Paged reads (CloudWatch's alarms, DynamoDB's scans) are `Stream.paginate`, and the log hub's polling is a stream
   into its `PubSub`, so every flow of data in Estate is a `Stream`.
-- `bench/` holds the measurement, run with `bun bench/run.ts`, and the README states its results.
 
 ## Why this shape
 
@@ -73,12 +72,11 @@ Nothing.
       Done when: at 1,000 services, a page's heap after a collection is under 150 MB.
 - [x] **`streams`** — `Stream.paginate` for paged reads, the log hub's polling a stream.
       Done when: nothing in `src/server` pages or polls by hand.
-- [ ] **`bench`** — `bench/` and the README's table, re-measured after the above.
-      Done when: the README states the numbers `bun bench/run.ts` prints.
+
+The bench these numbers come from, and budgets that keep them, are spec 0011.
 
 ## Acceptance
 
 ```bash
 bun run gate
-bun bench/run.ts 1000 20
 ```
