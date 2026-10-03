@@ -83,7 +83,7 @@ Nothing.
 - [x] **`config-files-state`** — `Config` for the environment, `FileSystem` and `Path` for files, `Ref` for state,
       `DateTime` and `Duration` for time.
       Done when: no `process.env`, `Bun.file`, `node:path` or `let` is left in `src/server` outside the bundler.
-- [ ] **`supervised`** — sources in a `FiberMap` per environment, following the catalog; the schedule helper;
+- [x] **`supervised`** — sources in a `FiberMap` per environment, following the catalog; the schedule helper;
       back-off where a dependency is down.
       Done when: an environment added by a catalog reload is read, and one removed stops being read.
 - [ ] **`caches`** — OIDC discovery and keys, the cluster's credentials, Jobs per namespace.

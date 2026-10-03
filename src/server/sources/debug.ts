@@ -3,11 +3,12 @@
  * beside it, and the usual level put back when that time passes. Everything is on the ConfigMap, so Estate restarting
  * loses nothing.
  */
-import { Duration, Effect, type FileSystem, Schedule, SubscriptionRef } from "effect"
+import { Duration, Effect, type FileSystem, SubscriptionRef } from "effect"
 import type { Service } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Debug } from "../../shared/events"
 import { Remote } from "../remote"
+import { forEver } from "../schedule"
 import { Estate, updateEnvironment } from "../state"
 import { after, iso, isoNow } from "../time"
 import { inEnvironment } from "../views/catalog"
@@ -135,5 +136,5 @@ export const revertExpired = (
   }).pipe(
     Effect.catch((failure) => Effect.logWarning(`debug could not be put back in ${environment}: ${failure.message}`)),
   )
-  return once.pipe(Effect.repeat(Schedule.spaced("60 seconds")), Effect.andThen(Effect.never))
+  return forEver(once, "60 seconds")
 }

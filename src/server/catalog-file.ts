@@ -1,10 +1,11 @@
 /** The catalog file: read and checked as Estate starts, then read again every few seconds and taken when it changes. */
-import { Data, Duration, Effect, type FileSystem, Ref, Result, Schedule } from "effect"
+import { Data, Duration, Effect, type FileSystem, Ref, Result } from "effect"
 import type { Catalog } from "../shared/catalog"
 import { checkCatalog } from "../shared/check"
 import type { SourceKind } from "../shared/events"
 import type { Mistake } from "../shared/shape"
 import { readText } from "./platform"
+import { forEver } from "./schedule"
 import type { Settings } from "./settings"
 import { type Estate, type EstateState, emptyEnvironment, updateEstate } from "./state"
 
@@ -88,5 +89,5 @@ export const reloadCatalog = (
         )
       }
     }).pipe(Effect.catch((error) => Effect.logWarning(`catalog at ${error.path} cannot be read`)))
-    return yield* reload.pipe(Effect.repeat(Schedule.spaced(every)), Effect.andThen(Effect.never))
+    return yield* forEver(reload, every)
   })

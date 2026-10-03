@@ -2,7 +2,8 @@
  * A source read on its own schedule for one environment. What it reads becomes its part of the state; when it does
  * not answer, its part keeps what it last read, marked failing with the words it failed with, and the rest carries on.
  */
-import { Data, type Duration, Effect, Schedule } from "effect"
+import { Data, type Duration, Effect } from "effect"
+import { forEver } from "../schedule"
 import { type EnvironmentState, type Estate, type Part, updateEnvironment } from "../state"
 import { isoNow } from "../time"
 
@@ -55,5 +56,5 @@ export const runSource = <K extends Parts, R>(
       return result._tag === "Success" ? also(state, next, result.success, at) : next
     })
   })
-  return once.pipe(Effect.repeat(Schedule.spaced(every)), Effect.andThen(Effect.never))
+  return forEver(once, every)
 }

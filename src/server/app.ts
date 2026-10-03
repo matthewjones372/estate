@@ -1,5 +1,5 @@
 /** Estate assembled: settings and catalog read and checked, the routes, the catalog's reload and the sources. */
-import { Data, Effect, type FileSystem, Layer, Result, Schedule } from "effect"
+import { Data, Effect, type FileSystem, Layer, Result } from "effect"
 import type { Mistake } from "../shared/shape"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
@@ -11,6 +11,7 @@ import { silenceRoute, unsilenceRoute } from "./http/silences"
 import { memoryNotes, type Notes } from "./notes"
 import { platform, readText } from "./platform"
 import type { Remote } from "./remote"
+import { backOff } from "./schedule"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
 import { startSources } from "./sources/start"
 import { type Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
@@ -82,13 +83,13 @@ export const background = (
     [
       loadNotes.pipe(
         Effect.tapError((failure) => Effect.logWarning(`notes cannot be read yet: ${failure.message}`)),
-        Effect.retry(Schedule.spaced("10 seconds")),
+        Effect.retry(backOff),
         Effect.orDie,
         Effect.andThen(Effect.never),
       ),
       sweepNotes(started.settings.notes?.keepDays ?? 30),
       reloadCatalog(started.settings.catalog, started.settings, started.catalogText),
-      startSources(started.settings, started.initial.catalog.environments),
+      startSources(started.settings),
     ],
     { concurrency: "unbounded" },
   ).pipe(Effect.andThen(Effect.never))

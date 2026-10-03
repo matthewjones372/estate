@@ -1,7 +1,8 @@
 /** `POST /api/notes`: anyone who may see the estate adds a note to an alert, under their own name. */
-import { Clock, Duration, Effect, Schedule, Schema, SubscriptionRef } from "effect"
+import { Clock, Duration, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Notes } from "../notes"
+import { forEver } from "../schedule"
 import { Estate, updateEstate } from "../state"
 import { before, iso, isoNow } from "../time"
 import { json, Refusal, refused, withRole } from "./routes"
@@ -71,8 +72,7 @@ export const sweepNotes = (keepDays: number) =>
     yield* updateEstate((estate) => ({ ...estate, notes: estate.notes.filter((note) => note.at >= cutoff) }))
   }).pipe(
     Effect.catch((failure) => Effect.logWarning(`old notes could not be removed: ${failure.message}`)),
-    Effect.repeat(Schedule.spaced("1 hour")),
-    Effect.andThen(Effect.never),
+    (sweep) => forEver(sweep, "1 hour"),
   )
 
 /** The notes already kept, into the state as Estate starts; tried again until the database answers. */
