@@ -6,6 +6,7 @@ import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
 import type { Remote } from "./remote"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
+import { startSources } from "./sources/start"
 import { type Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
 import type { Web } from "./web"
 
@@ -60,8 +61,17 @@ export const prepare = (
 export const application = Layer.mergeAll(routes, signInRoutes)
 
 /** What runs beside the routes for as long as Estate does. */
-export const background = (started: Started): Effect.Effect<never, never, Estate | Remote> =>
-  reloadCatalog(started.settings.catalog, started.settings, started.catalogText)
+export const background = (
+  started: Started,
+  host: Readonly<Record<string, string | undefined>>,
+): Effect.Effect<never, never, Estate | Remote> =>
+  Effect.all(
+    [
+      reloadCatalog(started.settings.catalog, started.settings, started.catalogText),
+      startSources(started.settings, started.initial.catalog.environments, host),
+    ],
+    { concurrency: "unbounded" },
+  ).pipe(Effect.andThen(Effect.never))
 
 export const services = <E>(started: Started, web: Layer.Layer<Web, E>, remote: Layer.Layer<Remote>) =>
   Layer.mergeAll(estateLayer(started.initial), web, remote, Layer.succeed(Configured)(started.settings))

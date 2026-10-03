@@ -218,8 +218,14 @@ Nothing. Its first estate, orders, adopts it in its own spec 0026.
       as a function it never sees called, so service keys are `Context.Service<Shape>(key)` values and errors are
       `Data.TaggedError` values, not classes. Effect's Bun server listens on `::` unless told otherwise; Estate
       listens on `0.0.0.0` (`host` in `estate.yaml`).
-- [ ] **`health`** — alerts from Alertmanager or Prometheus, pods from Kubernetes, the deploy tool's state; a health per
+- [x] **`health`** — alerts from Alertmanager or Prometheus, pods from Kubernetes, the deploy tool's state; a health per
       service per environment.
+      *Notes:* an alert is known by a hash of its labels, the same from Alertmanager or Prometheus, so its notes follow
+      it; Alertmanager gives firing and silenced, Prometheus pending (or all, without Alertmanager); an alert that stops
+      firing is kept a day as resolved. An alert belongs to the service its `service`, `app`, `job` or `container`
+      label names, or to the only service in its namespace. Pods are found by each workload's own selector. Flux's
+      ImagePolicy is read at `v1` then `v1beta2`. Sources start for the environments in the catalog Estate started
+      with; one a reloaded catalog adds is read from the next start.
 - [ ] **`deploys`** — builds from GitHub Actions, Flux's choice, the running image; the deploys page across environments.
 - [ ] **`load`** — the vitals, sparklines, the service page's charts, the map's rates.
 - [ ] **`stats`** — a service's stats from its preset (`jvm`, `process`, `container`) and its own queries, as charts on

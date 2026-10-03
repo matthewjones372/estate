@@ -86,7 +86,7 @@ describe("running", () => {
       (started) => {
         if (Result.isFailure(started)) return Promise.reject(started.failure)
         const running = Effect.gen(function* () {
-          const fiber = yield* Effect.forkChild(background(started.success))
+          const fiber = yield* Effect.forkChild(background(started.success, {}))
           yield* Effect.promise(() => Bun.sleep(20))
           yield* Fiber.interrupt(fiber)
           return yield* Fiber.await(fiber)

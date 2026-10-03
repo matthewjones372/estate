@@ -40,7 +40,7 @@ const serve = Effect.gen(function* () {
       BunHttpServer.layer({ port: started.settings.port ?? 8080, hostname: started.settings.host ?? "0.0.0.0" }),
     ),
   )
-  return yield* Effect.all([Layer.launch(server), background(started)], { concurrency: "unbounded" }).pipe(
+  return yield* Effect.all([Layer.launch(server), background(started, process.env)], { concurrency: "unbounded" }).pipe(
     Effect.provide(provided),
   )
 }).pipe(Effect.catchTag("StartError", (error) => listMistakes(error.file, error.mistakes)))

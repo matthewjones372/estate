@@ -32,7 +32,7 @@ const Auth = Schema.Struct({
 
 const Url = Schema.Struct({ url: Schema.String })
 
-const Kubernetes = Schema.Struct({
+export const Kubernetes = Schema.Struct({
   url: optional(Schema.String),
   token: optional(Schema.String),
   caFile: optional(Schema.String),
@@ -46,6 +46,9 @@ const Sources = Schema.Struct({
   kubernetes: optional(Kubernetes),
   flux: optional(Schema.Struct({})),
 })
+
+export type Kubernetes = typeof Kubernetes.Type
+export type Sources = typeof Sources.Type
 
 export const Settings = Schema.Struct({
   port: optional(Schema.Number),

@@ -36,12 +36,12 @@ export type SourcedAlert = Omit<Alert, "notes" | "service" | "runbook" | "chart"
   readonly expression?: string
 }
 
-interface Workloads {
+export interface Workloads {
   readonly pods: Readonly<Record<string, ReadonlyArray<Pod>>>
   readonly debug: Readonly<Record<string, Debug>>
 }
 
-interface Chosen {
+export interface Chosen {
   readonly version: string
   readonly ready: boolean
   readonly at?: string
@@ -80,6 +80,18 @@ export type Estate = SubscriptionRef.SubscriptionRef<EstateState>
 export const Estate = Context.Service<Estate>("estate/Estate")
 
 export const estateLayer = (initial: EstateState) => Layer.effect(Estate)(SubscriptionRef.make(initial))
+
+/** Updates one environment's state, if it is still in the catalog. */
+export const updateEnvironment = (
+  environment: string,
+  update: (state: EnvironmentState) => EnvironmentState,
+): Effect.Effect<void, never, Estate> =>
+  updateEstate((estate) => {
+    const current = estate.environments[environment]
+    return current === undefined
+      ? estate
+      : { ...estate, environments: { ...estate.environments, [environment]: update(current) } }
+  })
 
 export const updateEstate = (update: (state: EstateState) => EstateState): Effect.Effect<void, never, Estate> =>
   Effect.gen(function* () {
