@@ -37,6 +37,26 @@ describe("the page's store", () => {
     expect(told).toBe(2)
   })
 
+  test("merges a partial services event into the services it has, by name", () => {
+    const { live, streams } = opened()
+    streams[0]?.handlers.onEvent("services", JSON.stringify(events.services))
+    const expected = events.services.services.map((each, index) =>
+      index === 1 ? { ...each, reasons: ["changed"] } : each,
+    )
+    streams[0]?.handlers.onEvent(
+      "services",
+      JSON.stringify({ ...events.services, partial: true, services: expected.slice(1, 2) }),
+    )
+    expect(live.snapshot().events.services?.services).toEqual(expected)
+    expect(live.snapshot().events.services?.partial).toBeUndefined()
+  })
+
+  test("takes a partial services event whole when it has none yet", () => {
+    const { live, streams } = opened()
+    streams[0]?.handlers.onEvent("services", JSON.stringify({ ...events.services, partial: true }))
+    expect(live.snapshot().events.services?.services).toHaveLength(events.services.services.length)
+  })
+
   test("ignores what does not decode", () => {
     const { live, streams } = opened()
     streams[0]?.handlers.onEvent("feed", "{not json")

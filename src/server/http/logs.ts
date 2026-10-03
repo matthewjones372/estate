@@ -4,7 +4,7 @@
  */
 import { Clock, Duration, Effect, Schema, Stream } from "effect"
 import { HttpRouter, HttpServerResponse } from "effect/http"
-import type { ErrorGroups } from "../../shared/events"
+import type { ErrorGroups } from "../../shared/log-events"
 import { LogHub, serviceLogs } from "../log-hub"
 import { Configured } from "../settings"
 import { groupErrors } from "../sources/lines"

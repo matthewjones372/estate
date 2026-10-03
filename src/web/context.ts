@@ -1,7 +1,8 @@
 /** What every part of the page can reach: the store, the person, where we are, and the actions they may take. */
 import { createContext, useContext } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
-import type { ErrorGroups, LogBatch, Me, ServiceState } from "../shared/events"
+import type { Me, ServiceState } from "../shared/events"
+import type { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { Live, Snapshot } from "./live"
 import type { Page } from "./route"
 

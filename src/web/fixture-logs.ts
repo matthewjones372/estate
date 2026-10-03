@@ -1,5 +1,5 @@
 /** A service's lines and errors as the server sends them, for the logs' tests. */
-import type { ErrorGroups, LogBatch } from "../shared/events"
+import type { ErrorGroups, LogBatch } from "../shared/log-events"
 
 const line = (minute: number, level: string, text: string, pod = "storefront-1") => ({
   at: `2026-10-03T11:${String(minute).padStart(2, "0")}:00.000Z`,

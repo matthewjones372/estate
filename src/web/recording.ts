@@ -1,5 +1,5 @@
 /** Actions that record what they were asked, answering as the server would, for the pages' tests. */
-import type { LogBatch } from "../shared/events"
+import type { LogBatch } from "../shared/log-events"
 import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
 import { groups, lines } from "./fixture-logs"

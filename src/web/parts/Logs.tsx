@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 /** A service's logs: its lines as they arrive, and its errors grouped by message. */
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
-import type { ErrorGroups, LogLine } from "../../shared/events"
+import type { ErrorGroups, LogLine } from "../../shared/log-events"
 import { type ErrorWindow, useEstate } from "../context"
 import { clock, since } from "../format"
 

@@ -4,7 +4,8 @@
  * The page is rendered once per change for everyone watching an environment, not once per page.
  */
 import { Clock, Context, Duration, Effect, Layer, PubSub, RcMap, type Scope, Stream, SubscriptionRef } from "effect"
-import type { EventName, Events } from "../shared/events"
+import type { EventName, Events, ServiceState } from "../shared/events"
+import { shiftsBetween } from "../shared/shifts"
 import { Estate, type EstateState } from "./state"
 import { alertsView } from "./views/alerts"
 import { catalogView } from "./views/catalog"
@@ -29,27 +30,64 @@ const names: ReadonlyArray<EventName> = ["catalog", "services", "alerts", "deplo
 
 type Sent = Readonly<Record<EventName, string>>
 
-/** Every part of the page as the text sent for it, and an id naming the whole. */
+/** Every part of the page as the text sent for it, each service's own text, and an id naming the whole. */
 export interface Rendered {
   readonly sent: Sent
+  readonly services: ReadonlyMap<string, string>
+  readonly states: ReadonlyMap<string, ServiceState>
+  /** The services event's text but for its services, without its opening brace. */
+  readonly servicesRest: string
   readonly id: string
 }
 
 export const rendered = (views: Events): Rendered => {
-  const sent = Object.fromEntries(names.map((name) => [name, JSON.stringify(views[name])])) as Sent
-  return { sent, id: Bun.hash(names.map((name) => sent[name]).join("\n")).toString(36) }
+  const { services: list, ...rest } = views.services
+  const services = new Map(list.map((service) => [service.name, JSON.stringify(service)]))
+  const servicesRest = JSON.stringify(rest).slice(1)
+  const servicesText = `{"services":[${[...services.values()].join(",")}]${servicesRest === "}" ? "}" : `,${servicesRest}`}`
+  const sent = Object.fromEntries(
+    names.map((name) => [name, name === "services" ? servicesText : JSON.stringify(views[name])]),
+  ) as Sent
+  const states = new Map(list.map((service) => [service.name, service]))
+  return { sent, services, states, servicesRest, id: Bun.hash(names.map((name) => sent[name]).join("\n")).toString(36) }
 }
 
-/** The messages that bring a page showing `before` up to `now`, and what it then shows. */
+/**
+ * The services event that brings a page from `before` to `now`: only the services that changed, when it has the same
+ * services; all of them otherwise.
+ */
+const servicesData = (before: Rendered | undefined, now: Rendered): string => {
+  const same =
+    before !== undefined &&
+    before.services.size === now.services.size &&
+    [...now.services.keys()].every((name) => before.services.has(name))
+  if (!same) return now.sent.services
+  const changed = [...now.services].filter(([name, text]) => before.services.get(name) !== text)
+  const moved = changed.map(([name, text]) => {
+    const was = before.states.get(name)
+    const is = now.states.get(name)
+    return { text, shifts: was === undefined || is === undefined ? undefined : shiftsBetween(was, is) }
+  })
+  const whole = moved.filter((each) => each.shifts === undefined).map((each) => each.text)
+  const shifts = moved.flatMap((each) => each.shifts ?? [])
+  return `{"partial":true,"services":[${whole.join(",")}],"shifts":${JSON.stringify(shifts)}${now.servicesRest === "}" ? "}" : `,${now.servicesRest}`}`
+}
+
+/** The messages that bring a page showing `before` up to `now`; it then shows `now`. */
 export const framesFor = (
-  before: Sent | undefined,
+  before: Rendered | undefined,
   now: Rendered,
   lastEventId: string | undefined,
-): readonly [Sent, ReadonlyArray<string>] => {
+): readonly [Rendered, ReadonlyArray<string>] => {
   const { sent, id } = now
-  if (before === undefined && id === lastEventId) return [sent, []]
-  const changed = names.filter((name) => before === undefined || before[name] !== sent[name])
-  return [sent, changed.map((name) => `id: ${id}\nevent: ${name}\ndata: ${sent[name]}\n\n`)]
+  if (before === undefined && id === lastEventId) return [now, []]
+  const changed = names.filter((name) => before === undefined || before.sent[name] !== sent[name])
+  return [
+    now,
+    changed.map(
+      (name) => `id: ${id}\nevent: ${name}\ndata: ${name === "services" ? servicesData(before, now) : sent[name]}\n\n`,
+    ),
+  ]
 }
 
 /**
@@ -102,7 +140,7 @@ export const eventStream = (
       const shared = yield* SharedViews
       const changes = Stream.unwrap(shared.watch(viewer)).pipe(
         Stream.mapAccum(
-          (): Sent | undefined => undefined,
+          (): Rendered | undefined => undefined,
           (before, now) => framesFor(before, now, lastEventId),
         ),
       )

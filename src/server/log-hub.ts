@@ -15,7 +15,7 @@ import {
   Stream,
   SubscriptionRef,
 } from "effect"
-import type { LogBatch } from "../shared/events"
+import type { LogBatch } from "../shared/log-events"
 import { forEver } from "./schedule"
 import { Configured } from "./settings"
 import { logsFor, type ServiceLogs } from "./sources/logs"

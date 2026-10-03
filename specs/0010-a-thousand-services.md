@@ -34,8 +34,9 @@ do.
 
 - Each environment's views are built once per change, in one stream shared by everyone watching it, and only when
   something that environment shows has changed. Its frames are kept for whoever connects next.
-- The `services` event carries only the services that changed since the last, and the page merges them; numbers are
-  sent to four significant figures.
+- The `services` event carries only the services that changed since the last, and the page merges them; a service
+  whose series only moved along (the hour's window moves once a minute) is sent as the points each series gained, and
+  any of its last points revised by late samples. Numbers are sent to four significant figures.
 - The cluster is read a namespace at a time: its Deployments, StatefulSets, DaemonSets, pods and Flux image policies
   listed once per read, whatever number of services live there.
 - Paged reads (CloudWatch's alarms, DynamoDB's scans) are `Stream.paginate`, and the log hub's polling is a stream
@@ -59,7 +60,7 @@ Nothing.
 - [x] **`shared-views`** — one stream of frames per environment, shared and replayed, rebuilt only when that
       environment's part of the state changes.
       Done when: at 1,000 services, twenty pages cost under 1.5 times the CPU of one.
-- [ ] **`changed-services`** — the `services` event as the services that changed, merged by the page; numbers to four
+- [x] **`changed-services`** — the `services` event as the services that changed, merged by the page; numbers to four
       significant figures.
       Done when: at 1,000 services, a page receives under 1 MB a minute once loaded.
 - [ ] **`namespace-lists`** — the cluster and Flux read a namespace at a time.

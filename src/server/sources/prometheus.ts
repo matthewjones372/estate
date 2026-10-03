@@ -48,7 +48,8 @@ export const onGrid = (values: ReadonlyArray<readonly [number, string]>, start: 
   const points: Array<number | null> = Array.from({ length: count }, () => null)
   for (const [at, value] of values) {
     const index = Math.round((at - start) / span.step)
-    const number = Number(value)
+    // Four significant figures: as much as a chart or a tile shows, and a third of the text of a float's every digit.
+    const number = Number(Number(value).toPrecision(4))
     if (index >= 0 && index < count && Number.isFinite(number)) points[index] = number
   }
   return { now: points.at(-1) ?? null, points }

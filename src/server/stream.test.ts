@@ -39,6 +39,53 @@ describe("the stream's messages", () => {
   })
 })
 
+describe("the services event", () => {
+  const base = viewsOf(estate(), viewer, Date.parse("2026-10-03T12:00:00Z"))
+  const services = base.services.services
+  const servicesData = (frames: ReadonlyArray<string>) =>
+    JSON.parse(/event: services\ndata: (.*)/.exec(frames.join(""))?.[1] ?? "{}")
+
+  test("after the first, carries only the services that changed", () => {
+    const [sent] = framesFor(undefined, views, undefined)
+    const one = rendered({
+      ...base,
+      services: {
+        ...base.services,
+        services: services.map((each, index) => (index === 0 ? { ...each, reasons: ["changed"] } : each)),
+      },
+    })
+    const data = servicesData(framesFor(sent, one, undefined)[1])
+    expect(data.partial).toBe(true)
+    expect(data.services.map((each: { name: string }) => each.name)).toEqual([services[0]?.name])
+    expect(data.sources).toEqual(base.services.sources)
+  })
+
+  test("carries a service whose series only moved along as the points it gained", () => {
+    const withLoad = (points: ReadonlyArray<number>) =>
+      rendered({
+        ...base,
+        services: {
+          ...base.services,
+          services: services.map((each, index) =>
+            index === 0 ? { ...each, load: { requests: { now: points.at(-1) ?? null, points } } } : each,
+          ),
+        },
+      })
+    const [sent] = framesFor(undefined, withLoad([1, 2, 3]), undefined)
+    const data = servicesData(framesFor(sent, withLoad([2, 3, 4]), undefined)[1])
+    expect(data.services).toEqual([])
+    expect(data.shifts).toEqual([{ service: services[0]?.name, series: "requests", shift: 1, tail: [4] }])
+  })
+
+  test("carries every service when the services themselves change", () => {
+    const [sent] = framesFor(undefined, views, undefined)
+    const fewer = rendered({ ...base, services: { ...base.services, services: services.slice(1) } })
+    const data = servicesData(framesFor(sent, fewer, undefined)[1])
+    expect(data.partial).toBeUndefined()
+    expect(data.services).toHaveLength(services.length - 1)
+  })
+})
+
 describe("the renderings", () => {
   test("are made once per change for everyone watching an environment, and replayed to whoever joins", () =>
     Effect.runPromise(

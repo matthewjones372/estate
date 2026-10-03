@@ -1,6 +1,7 @@
 /** The browser's side of the wire: the event stream, and the POSTs a person's actions make. */
 import { Option, Schema } from "effect"
-import { ErrorGroups, type EventName, Load, LogBatch } from "../shared/events"
+import { type EventName, Load } from "../shared/events"
+import { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { Actions, ErrorWindow, LogHandlers, Range } from "./context"
 import type { Open } from "./live"
 
