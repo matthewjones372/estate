@@ -63,10 +63,18 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
     statsOf(service).forEach((stat) => {
       query(`${at}.stats (${stat.title})`, stat.query)
     })
+    const valued = catalog.environments.filter((environment) => service.environments.includes(environment.name))
     for (const [name, template] of Object.entries(service.links ?? {})) {
       for (const [, placeholder] of template.matchAll(/\{(\w+)\}/g)) {
-        if (placeholder !== undefined && !placeholders.has(placeholder)) {
-          mistake(`${at}.links.${name}`, `{${placeholder}} is not one of {env}, {namespace}, {service}`)
+        if (placeholder === undefined || placeholders.has(placeholder)) continue
+        const lacking = valued
+          .filter((environment) => environment.values?.[placeholder] === undefined)
+          .map((each) => each.name)
+        if (lacking.length > 0) {
+          mistake(
+            `${at}.links.${name}`,
+            `{${placeholder}} is not one of {env}, {namespace}, {service}, nor a value ${[...new Set(lacking)].join(" and ")} names`,
+          )
         }
       }
     }

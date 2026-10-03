@@ -7,7 +7,10 @@ const Environment = Schema.Struct({
   name: Schema.String,
   title: optional(Schema.String),
   sources: Schema.String,
+  /** Values a link may name as `{name}`, as this environment has them: its Grafana's address, say. */
+  values: optional(Schema.Record(Schema.String, Schema.String)),
 })
+export type Environment = typeof Environment.Type
 
 const Workload = Schema.Struct({
   kind: Schema.Literals(["Deployment", "StatefulSet", "DaemonSet"]),

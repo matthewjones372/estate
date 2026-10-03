@@ -52,6 +52,7 @@ environments:
     sources: home                      # a section of estate.conf: which Prometheus, cluster, CI
   - name: staging
     sources: staging
+    values: { grafana: https://grafana.staging.example }   # what {grafana} is in this environment's links
 
 services:
   - name: orders
@@ -67,7 +68,7 @@ services:
       requests: sum(rate(http_server_requests_total{app="orders"}[1m]))
       errors: sum(rate(http_server_requests_total{app="orders",status=~"5.."}[1m]))
       p99: histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{app="orders"}[5m])))
-    links:                              # templates; {env}, {namespace}, {service} filled in
+    links:                              # templates; {env}, {namespace}, {service} and the environment's values filled in
       logs: https://grafana.{env}.example/explore?logs={service}
       traces: https://grafana.{env}.example/explore?traces={service}
       dashboard: https://grafana.{env}.example/d/orders
