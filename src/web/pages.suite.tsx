@@ -87,6 +87,18 @@ describe("the overview", () => {
       "Alerts firing",
       "Deploys stalled",
     ])
+    const off = runtime(undefined, "off")
+    const withoutVitals = { ...off, catalog: { ...off.catalog, vitals: [] }, services: { ...off.services, vitals: [] } }
+    const failed = { sha: "a", title: "x", status: "failure" as const, at: "2026-10-03T11:00:00Z", url: "u" }
+    const builds = (name: string) => ({
+      ...withoutVitals,
+      deploys: {
+        ...events.deploys,
+        services: [{ name, builds: [failed], environments: [] }],
+      },
+    })
+    expect(tilesOf(builds("orders")).at(-1)).toMatchObject({ label: "Builds failing", value: "1", note: "orders" })
+    expect(tilesOf(builds("elsewhere")).at(-1)).toMatchObject({ label: "Builds failing", value: "0" })
   })
 
   test("draws the headline, the map, the card for what fires, silences, lanes and the feed", () => {

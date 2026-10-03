@@ -77,6 +77,11 @@ export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
   const services = events.services?.services ?? []
   const pods = services.flatMap((service) => service.pods)
   const runtime = events.services?.sources.find((source) => source.kind === "cluster")
+  // Builds are the whole estate's: only those of the services in this environment count here.
+  const here = new Set(services.map((service) => service.name))
+  const failing = (events.deploys?.services ?? [])
+    .filter((service) => here.has(service.name) && service.builds[0]?.status === "failure")
+    .map((service) => service.name)
   const firing = (events.alerts?.alerts ?? []).filter((alert) => alert.state === "firing")
   const stalled = (events.deploys?.services ?? []).flatMap((service) =>
     service.environments.filter(
@@ -124,6 +129,12 @@ export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
       value: String(stalled.length),
       note: stalled.length === 0 ? "every deploy in step" : "see Deploys",
       alarm: stalled.length > 0,
+    },
+    {
+      label: "Builds failing",
+      value: String(failing.length),
+      note: failing.length === 0 ? "every last build passed" : failing.slice(0, 2).join(", "),
+      alarm: failing.length > 0,
     },
   ]
   return [...own, ...always].slice(0, Math.max(4, own.length))
