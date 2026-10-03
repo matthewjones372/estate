@@ -123,7 +123,7 @@ rather than the AWS SDK, so the image stays small.
 - [x] **`aws-signing`** — SigV4 for AWS's JSON APIs, from the environment, the container's role (ECS task roles,
       EKS Pod Identity) or the instance's (IMDSv2).
       Done when: signed against AWS's published test suite.
-- [ ] **`dynamodb-notes`** — notes kept in a DynamoDB table (`notes: { dynamodb: { table, region } }`), beside
+- [x] **`dynamodb-notes`** — notes kept in a DynamoDB table (`notes: { dynamodb: { table, region } }`), beside
       Postgres and memory: the environment and alert as the key, the time as the sort key, made on demand if the role
       may create it.
       Done when: notes added on the page survive Estate restarting, against DynamoDB Local.

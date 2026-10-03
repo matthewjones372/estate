@@ -1,6 +1,6 @@
 /**
- * Notes on alerts: Estate's own record, kept in Postgres by environment and alert, with who and when; in memory when
- * no database is set, for trying Estate out.
+ * Notes on alerts: Estate's own record, kept in Postgres by environment and alert, with who and when (or in DynamoDB,
+ * by `notes-dynamodb.ts`); in memory when no database is set, for trying Estate out.
  */
 import { Context, Data, Effect, Layer, Ref } from "effect"
 import type { Note } from "../shared/events"
@@ -18,7 +18,7 @@ export interface Notes {
 }
 export const Notes = Context.Service<Notes>("estate/Notes")
 
-const NotesError = Data.TaggedError("NotesError")<{ readonly message: string }>
+export const NotesError = Data.TaggedError("NotesError")<{ readonly message: string }>
 
 /** The little of a SQL client the notes need: a statement with its parameters, and the rows it returns. */
 export type Query = (

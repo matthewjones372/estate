@@ -78,7 +78,16 @@ export const Settings = Schema.Struct({
   host: optional(Schema.String),
   catalog: Schema.String,
   auth: Auth,
-  notes: optional(Schema.Struct({ postgres: optional(Secret), keepDays: optional(Schema.Number) })),
+  /** Where notes are kept: Postgres, a DynamoDB table, or else memory; and for how many days. */
+  notes: optional(
+    Schema.Struct({
+      postgres: optional(Secret),
+      dynamodb: optional(
+        Schema.Struct({ table: Schema.String, region: Schema.String, endpoint: optional(Schema.String) }),
+      ),
+      keepDays: optional(Schema.Number),
+    }),
+  ),
   sources: Schema.Record(Schema.String, Sources),
   /** Estate's own metrics, for Prometheus to scrape, on a port of their own without sign-in (9464 unless set). */
   metrics: optional(Schema.Struct({ port: optional(Schema.Number) })),

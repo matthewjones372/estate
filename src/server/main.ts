@@ -11,6 +11,7 @@ import type { Mistake } from "../shared/shape"
 import { application, background, prepare, services } from "./app"
 import { parseCatalog, readCatalogText } from "./catalog-file"
 import { memoryNotes, postgresNotes, type Query } from "./notes"
+import { dynamodbNotes } from "./notes-dynamodb"
 import { platform } from "./platform"
 import { liveRemote } from "./remote"
 import { builtWeb } from "./web"
@@ -48,8 +49,13 @@ const serve = Effect.gen(function* () {
     Effect.orElseSucceed(() => "/etc/estate/estate.yaml"),
   )
   const started = yield* prepare(settingsPath)
-  const database = started.settings.notes?.postgres
-  const notes = database === undefined ? memoryNotes : postgresNotes(sqlOf(Redacted.value(database)))
+  const { postgres, dynamodb } = started.settings.notes ?? {}
+  const notes =
+    postgres !== undefined
+      ? postgresNotes(sqlOf(Redacted.value(postgres)))
+      : dynamodb !== undefined
+        ? dynamodbNotes(dynamodb).pipe(Layer.provide([liveRemote, platform]))
+        : memoryNotes
   const provided = services(started, builtWeb, liveRemote, notes)
   const hostname = started.settings.host ?? "0.0.0.0"
   const server = HttpRouter.serve(application).pipe(
@@ -71,7 +77,7 @@ const serve = Effect.gen(function* () {
 }).pipe(
   Effect.catchTags({
     StartError: (error) => listMistakes(error.file, error.mistakes),
-    NotesError: (error) => listMistakes("estate.yaml", [{ at: "notes.postgres", message: error.message }]),
+    NotesError: (error) => listMistakes("estate.yaml", [{ at: "notes", message: error.message }]),
   }),
   Effect.provide(platform),
 )
