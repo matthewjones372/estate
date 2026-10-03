@@ -1,8 +1,11 @@
 name: dependabot
 
-# Dependabot's pull requests are set to merge themselves once the gate passes. Nothing from the pull request is
-# checked out or run here; GitHub merges only when the branch's required checks are green.
-on: pull_request_target
+# A Dependabot pull request is merged once the gate has passed on it, and only the commit that passed. This runs
+# after the gate, from the default branch's copy of this file; nothing from the pull request is checked out or run.
+on:
+  workflow_run:
+    workflows: [ gate ]
+    types: [ completed ]
 
 permissions:
   contents: write
@@ -10,11 +13,15 @@ permissions:
 
 jobs:
   merge:
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: dependabot/fetch-metadata@v3
-      - run: gh pr merge --auto --squash "$PR"
+      - run: gh pr merge "$BRANCH" --repo "$REPOSITORY" --squash --match-head-commit "$SHA"
         env:
-          PR: ${{ github.event.pull_request.html_url }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
