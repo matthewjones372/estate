@@ -187,6 +187,7 @@ export const DeploysEvent = Schema.Struct({
       environments: Schema.Array(
         Schema.Struct({
           environment: Schema.String,
+          seen: Schema.Boolean,
           running: optional(Schema.String),
           chosen: optional(Schema.Struct({ version: Schema.String, ready: Schema.Boolean, at: optional(Instant) })),
           stalled: optional(Schema.String),

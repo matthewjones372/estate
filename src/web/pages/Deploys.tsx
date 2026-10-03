@@ -33,6 +33,7 @@ export const summaryOf = (deploys: DeploysEvent | undefined): { readonly title: 
 const Cell = (props: { readonly row: Row; readonly environment: string }) => {
   const deployed = props.row.environments.find((each) => each.environment === props.environment)
   if (deployed === undefined) return <td className="muted">not here</td>
+  if (!deployed.seen) return <td className="muted">not read here</td>
   const tone = deployed.stalled !== undefined ? "attention" : deployed.running === undefined ? "unknown" : "healthy"
   const note =
     deployed.stalled ??

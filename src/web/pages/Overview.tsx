@@ -24,7 +24,9 @@ export const headlineOf = (events: Partial<Events>): Headline => {
   const critical =
     firing.some((alert) => alert.severity === "critical") || services.some((service) => service.health === "critical")
   const count = Math.max(firing.length, troubled.length)
-  const reasons = troubled.flatMap((service) => service.reasons.map((reason) => `${service.name}: ${reason}`))
+  const reasons = troubled.flatMap((service) =>
+    service.reasons.slice(0, 1).map((reason) => `${service.name}: ${reason}`),
+  )
   if (count === 0 && services.length > 0 && services.every((service) => service.health === "unknown")) {
     return {
       tone: "healthy",

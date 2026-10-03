@@ -1,0 +1,263 @@
+/**
+ * A small estate's tools on one port, answering in their own shapes, for the pages' tests and screenshots:
+ * Prometheus, Alertmanager (silences kept), a Kubernetes API with Flux (ConfigMaps patched), and GitHub Actions.
+ */
+const now = () => Math.floor(Date.now() / 1000)
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
+
+const wave = (base: number, swing: number, phase: number) => (at: number) => base + swing * Math.sin(at / 600 + phase)
+
+const series: Array<[RegExp, (at: number) => number]> = [
+  [/^histogram_quantile.*app="orders"/, (at) => 0.06 + 0.16 * Math.max(0, (at - (now() - 1500)) / 1500)],
+  [/^histogram_quantile/, wave(0.045, 0.01, 1)],
+  [/code=~"5\.\."|outcome="error"/, wave(0.02, 0.02, 2)],
+  [/payments_total/, wave(9, 2, 4)],
+  [/search_requests_total/, wave(64, 9, 5)],
+  [/orders_placed_total\[5m\]/, wave(3.4, 0.6, 6)],
+  [/baskets_created_total/, wave(31, 3, 7)],
+  [/jvm_memory_used_bytes/, wave(420 * 1024 ** 2, 60 * 1024 ** 2, 8)],
+  [/jvm_gc_pause/, wave(0.012, 0.004, 9)],
+  [/jvm_threads/, wave(64, 4, 10)],
+  [/process_cpu_usage/, wave(23, 8, 11)],
+  [/container_cpu/, wave(0.4, 0.1, 12)],
+  [/container_memory/, wave(310 * 1024 ** 2, 20 * 1024 ** 2, 13)],
+  [/orders_waiting/, wave(12, 5, 14)],
+  [/app="storefront"/, wave(118, 14, 0)],
+  [/app="orders"/, wave(42, 6, 3)],
+]
+
+const queryRange = (url: URL) => {
+  const query = url.searchParams.get("query") ?? ""
+  const start = Number(url.searchParams.get("start"))
+  const end = Number(url.searchParams.get("end"))
+  const step = Number(url.searchParams.get("step"))
+  const value = series.find(([pattern]) => pattern.test(query))?.[1]
+  if (value === undefined) return { status: "success", data: { resultType: "matrix", result: [] } }
+  const values: Array<[number, string]> = []
+  for (let at = start; at <= end; at += step) values.push([at, String(value(at))])
+  return { status: "success", data: { resultType: "matrix", result: [{ metric: { app: "orders" }, values }] } }
+}
+
+const silences = new Map<
+  string,
+  {
+    id: string
+    createdBy: string
+    comment: string
+    startsAt: string
+    endsAt: string
+    matchers: Array<{ name: string; value: string }>
+  }
+>()
+
+const firing = [
+  {
+    labels: { alertname: "OrdersSlow", severity: "warning", app: "orders" },
+    annotations: { summary: "Orders are slow to place", runbook_url: "https://example.com/runbooks/orders-slow" },
+    startsAt: minutesAgo(14),
+  },
+  {
+    labels: { alertname: "SearchIndexStale", severity: "warning", app: "search" },
+    annotations: { summary: "Search has not indexed for 40 minutes" },
+    startsAt: minutesAgo(41),
+  },
+]
+
+const silencedBy = (labels: Record<string, string>) =>
+  [...silences.values()]
+    .filter((silence) => silence.matchers.every((matcher) => labels[matcher.name] === matcher.value))
+    .map((silence) => silence.id)
+
+const condition = (status: string, message?: string) => ({
+  type: "Ready",
+  status,
+  reason: status === "True" ? "Succeeded" : "Failed",
+  lastTransitionTime: minutesAgo(34),
+  ...(message === undefined ? {} : { message }),
+})
+
+const pod = (name: string, image: string) => ({
+  metadata: { name },
+  spec: { nodeName: ["one", "two", "three"][name.length % 3], containers: [{ image }] },
+  status: {
+    phase: "Running",
+    startTime: minutesAgo(180),
+    conditions: [condition("True")],
+    containerStatuses: [{ restartCount: 0 }],
+  },
+})
+
+const configMaps = new Map<
+  string,
+  { metadata: { name: string; annotations: Record<string, string> }; data: Record<string, string> }
+>([["storefront-logging", { metadata: { name: "storefront-logging", annotations: {} }, data: { level: "INFO" } }]])
+
+const run = (
+  sha: string,
+  title: string,
+  minutes: number,
+  status = "completed",
+  conclusion: string | null = "success",
+) => ({
+  head_sha: sha,
+  display_title: title,
+  status,
+  conclusion,
+  updated_at: minutesAgo(minutes),
+  html_url: `https://github.com/example/runs/${sha}`,
+})
+
+const kube: Record<string, () => unknown> = {
+  "/apis/apps/v1/namespaces/shop/deployments/storefront": () => ({
+    spec: { selector: { matchLabels: { app: "storefront" } } },
+  }),
+  "/apis/apps/v1/namespaces/shop/deployments/orders": () => ({
+    spec: { selector: { matchLabels: { app: "orders" } } },
+  }),
+  "/apis/apps/v1/namespaces/shop/deployments/search": () => ({
+    spec: { selector: { matchLabels: { app: "search" } } },
+  }),
+  "/apis/apps/v1/namespaces/payments/statefulsets/payments": () => ({
+    spec: { selector: { matchLabels: { app: "payments" } } },
+  }),
+  "/api/v1/namespaces/shop/pods?labelSelector=app%3Dstorefront": () => ({
+    items: ["storefront-7d9f-a", "storefront-7d9f-b", "storefront-7d9f-c"].map((name) =>
+      pod(name, "registry.example/storefront:main-212-c556728"),
+    ),
+  }),
+  "/api/v1/namespaces/shop/pods?labelSelector=app%3Dorders": () => ({
+    items: ["orders-5c4-a", "orders-5c4-b"].map((name) => pod(name, "registry.example/orders:main-87-3889c5c")),
+  }),
+  "/api/v1/namespaces/shop/pods?labelSelector=app%3Dsearch": () => ({
+    items: [pod("search-0", "registry.example/search:1.4.2")],
+  }),
+  "/api/v1/namespaces/payments/pods?labelSelector=app%3Dpayments": () => ({
+    items: [pod("payments-0", "registry.example/payments:main-31-17edba9")],
+  }),
+  "/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/shop": () => ({
+    status: { lastAppliedRevision: "main@sha1:c556728aa", conditions: [condition("True")] },
+  }),
+  "/apis/image.toolkit.fluxcd.io/v1/namespaces/flux-system/imagepolicies/storefront": () => ({
+    status: { latestRef: { tag: "main-212-c556728" }, conditions: [condition("True")] },
+  }),
+  "/apis/image.toolkit.fluxcd.io/v1/namespaces/flux-system/imagepolicies/orders": () => ({
+    status: {
+      latestRef: { tag: "main-88-04bc441" },
+      conditions: [condition("False", "cannot list tags: GET registry.example/v2/orders/tags/list: 401 Unauthorized")],
+    },
+  }),
+  "/apis/batch/v1/namespaces/shop/cronjobs/orders-nightly-export": () => ({
+    spec: { schedule: "30 2 * * *" },
+    status: { lastScheduleTime: new Date(new Date().setUTCHours(2, 30, 0, 0)).toISOString() },
+  }),
+  "/apis/batch/v1/namespaces/shop/jobs": () => ({
+    items: [
+      {
+        metadata: {
+          name: "orders-nightly-export-1",
+          ownerReferences: [{ kind: "CronJob", name: "orders-nightly-export" }],
+        },
+        status: { startTime: minutesAgo(600), completionTime: minutesAgo(596), succeeded: 1 },
+      },
+    ],
+  }),
+}
+
+const json = (body: unknown, status = 200) => Response.json(body, { status })
+
+const server = Bun.serve({
+  port: Number(process.env["TOOLS_PORT"] ?? 8282),
+  hostname: "127.0.0.1",
+  fetch: async (request) => {
+    const url = new URL(request.url)
+    const path = url.pathname
+    if (path === "/api/v1/query_range") return json(queryRange(url))
+    if (path === "/api/v1/rules")
+      return json({
+        status: "success",
+        data: {
+          groups: [
+            {
+              rules: [
+                {
+                  type: "alerting",
+                  name: "OrdersSlow",
+                  query:
+                    'histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="orders"}[5m]))) > 0.15',
+                },
+              ],
+            },
+          ],
+        },
+      })
+    if (path === "/api/v1/alerts")
+      return json({
+        status: "success",
+        data: {
+          alerts: [
+            {
+              labels: { alertname: "PaymentsRetrying", severity: "warning", app: "payments" },
+              annotations: { summary: "Payments are being retried" },
+              state: "pending",
+              activeAt: minutesAgo(2),
+            },
+          ],
+        },
+      })
+    if (path === "/api/v2/alerts") {
+      return json(
+        firing.map((alert) => ({
+          ...alert,
+          status: {
+            state: silencedBy(alert.labels).length > 0 ? "suppressed" : "active",
+            silencedBy: silencedBy(alert.labels),
+            inhibitedBy: [],
+          },
+        })),
+      )
+    }
+    if (path === "/api/v2/silences" && request.method === "GET")
+      return json([...silences.values()].map((silence) => ({ ...silence, status: { state: "active" } })))
+    if (path === "/api/v2/silences" && request.method === "POST") {
+      const body = await request.json()
+      const id = crypto.randomUUID()
+      silences.set(id, { id, ...body })
+      return json({ silenceID: id })
+    }
+    if (path.startsWith("/api/v2/silence/") && request.method === "DELETE") {
+      silences.delete(path.slice("/api/v2/silence/".length))
+      return json({})
+    }
+    const map = /^\/api\/v1\/namespaces\/shop\/configmaps\/([\w-]+)$/.exec(path)?.[1]
+    if (map !== undefined) {
+      const found = configMaps.get(map)
+      if (found === undefined) return json({ message: "not found" }, 404)
+      if (request.method === "PATCH") {
+        const patch = await request.json()
+        for (const [name, value] of Object.entries(patch.metadata?.annotations ?? {})) {
+          if (value === null) delete found.metadata.annotations[name]
+          else found.metadata.annotations[name] = String(value)
+        }
+        Object.assign(found.data, patch.data ?? {})
+      }
+      return json(found)
+    }
+    const answer = kube[`${path}${url.search}`]
+    if (answer !== undefined) return json(answer())
+    const repository = /^\/repos\/example\/([\w-]+)\/actions\/workflows\/build\.yml\/runs$/.exec(path)?.[1]
+    if (repository === "storefront")
+      return json({
+        workflow_runs: [run("c556728aa", "Faster product pages", 52), run("9a1b2c3dd", "Basket badge", 300)],
+      })
+    if (repository === "orders")
+      return json({
+        workflow_runs: [
+          run("04bc441ee", "Split shipments", 9, "in_progress", null),
+          run("3889c5cff", "Retry payment once", 75),
+        ],
+      })
+    return json({ message: "Not Found" }, 404)
+  },
+})
+
+process.stdout.write(`tools on ${server.port}\n`)
