@@ -10,7 +10,7 @@
 
 **A control room for your engineering estate.**
 
-Estate answers one question in five seconds: **how is our stack doing right now?**
+Estate is designed to answer one question in five seconds: **how is our stack doing right now?**
 
 It brings together the signals you already have (alerts, deploys, builds, Kubernetes, load, jobs) into one live
 page per environment. It doesn't replace Prometheus, Grafana, Alertmanager, Datadog, Flux or GitHub Actions. **It
@@ -107,7 +107,7 @@ It asks each tool once and prints a line per part: what answered, how many alert
 have no running pods or no log lines, and which setting would fix it. [docs/real-tools.md](docs/real-tools.md) has the
 settings for each tool, and what each line should say when it's right.
 
-## Describe your estate
+## Configure it
 
 Estate reads two files from `/etc/estate`. `catalog.yaml` says what your estate is, and lives in Git, so adding a
 service is a pull request:
@@ -148,17 +148,7 @@ catalog when it changes. There is deliberately no automatic discovery: the catal
 [`examples/catalog.yaml`](examples/catalog.yaml) uses every option, including stores, jobs no service owns, the map
 and vitals.
 
-## Run it
-
-Images for amd64 and arm64 are published to `ghcr.io/matthewjones372/estate` from `main`. [`deploy/`](deploy) has a
-Kubernetes base to overlay with your two files, an ingress and your secrets. It runs as one container in about
-120 MB.
-
-- **Sign-in** is OIDC with PKCE, groups mapped to viewer and operator. Anonymous sign-in is there for trying it out.
-- **Health**: `/healthz` says the process is up, and `/readyz` says every source has been read at least once.
-- **Its own telemetry**: metrics on `:9464/metrics`, JSON logs, and traces over OTLP if you set a collector.
-
-### How it compares
+## How it compares
 
 Estate sits beside these tools, not instead of them, and links into each.
 
@@ -168,34 +158,19 @@ Estate sits beside these tools, not instead of them, and links into each.
 - **Argo CD's UI, Weave GitOps** show the deploy tool. Estate puts that next to the build and what's running.
 - **Karma, Keep** handle alerts on their own. Estate shows each one next to the service it's about.
 
-### How many services
+## Technical details
 
-Fifty is about the most a team puts on one page, and the build fails if Estate gets slower there. A thousand is a
-stress test. Both are measured by [`bench/`](bench) against fake tools that answer in 20 ms:
+### Deployment
 
-| | 50 services, 5 pages | 1,000 services, 20 pages |
-|---|---|---|
-| Calls to the tools a second | 11 | 101 |
-| First data to a page | 0.1 MB | 2 MB |
-| Estate's CPU | 3% of a core | 52% |
-| Estate's memory | 136 MB | 174 MB |
-| Page drawn | 0.5 s | 2.2 s |
+Images for amd64 and arm64 are published to `ghcr.io/matthewjones372/estate` from `main`. [`deploy/`](deploy) has a
+Kubernetes base to overlay with your two files, an ingress and your secrets. It runs as one container in about
+120 MB.
 
-Every page watching an environment shares one stream, so more pages cost little. Each source is read on its own
-interval, which `every:` lengthens for tools that limit or bill each call.
+- **Sign-in** is OIDC with PKCE, groups mapped to viewer and operator. Anonymous sign-in is there for trying it out.
+- **Health**: `/healthz` says the process is up, and `/readyz` says every source has been read at least once.
+- **Its own telemetry**: metrics on `:9464/metrics`, JSON logs, and traces over OTLP if you set a collector.
 
-## Design principles
-
-- **One operational view.** The state of the estate should be obvious without opening six dashboards.
-- **Not another system of record.** Prometheus owns metrics, Alertmanager owns alerts, Kubernetes owns workloads,
-  Git owns configuration. Estate combines them.
-- **Configuration over discovery.** The catalog is explicit and reviewable in Git.
-- **Fail explicitly.** Tools go down, tokens expire, APIs change. When a source stops answering, the page says which
-  and since when, rather than showing stale data as if it were current.
-- **Keep the browser simple.** The integration work happens on the server, once, for every page.
-- **Make changes obvious.** Reading and changing are separate, and every change says who made it and why.
-
-## How it's built
+### Architecture
 
 ```mermaid
 flowchart LR
@@ -223,7 +198,23 @@ flowchart LR
 The server and the pages never import each other, and `shared` imports nothing of ours. Those boundaries are
 checked on every build.
 
-## Quality
+### Performance
+
+Fifty is about the most a team puts on one page, and the build fails if Estate gets slower there. A thousand is a
+stress test. Both are measured by [`bench/`](bench) against fake tools that answer in 20 ms:
+
+| | 50 services, 5 pages | 1,000 services, 20 pages |
+|---|---|---|
+| Calls to the tools a second | 11 | 101 |
+| First data to a page | 0.1 MB | 2 MB |
+| Estate's CPU | 3% of a core | 52% |
+| Estate's memory | 136 MB | 174 MB |
+| Page drawn | 0.5 s | 2.2 s |
+
+Every page watching an environment shares one stream, so more pages cost little. Each source is read on its own
+interval, which `every:` lengthens for tools that limit or bill each call.
+
+### Testing
 
 ```bash
 bun install
@@ -241,6 +232,17 @@ against real Prometheus, Alertmanager, Grafana, Loki, Elasticsearch, Postgres, D
 Kubernetes.
 
 [AGENTS.md](AGENTS.md) covers code conventions. Every change starts as a spec in [specs/](specs).
+
+### Design principles
+
+- **One operational view.** The state of the estate should be obvious without opening six dashboards.
+- **Not another system of record.** Prometheus owns metrics, Alertmanager owns alerts, Kubernetes owns workloads,
+  Git owns configuration. Estate combines them.
+- **Configuration over discovery.** The catalog is explicit and reviewable in Git.
+- **Fail explicitly.** Tools go down, tokens expire, APIs change. When a source stops answering, the page says which
+  and since when, rather than showing stale data as if it were current.
+- **Keep the browser simple.** The integration work happens on the server, once, for every page.
+- **Make changes obvious.** Reading and changing are separate, and every change says who made it and why.
 
 ## License
 
