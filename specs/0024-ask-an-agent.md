@@ -46,18 +46,20 @@ Tools, each answering from Estate's current state, in the words the page uses:
 Each tool returns structured content and a short text summary, and takes `environment`, defaulting to the
 catalog's first.
 
-### Ask Claude, on an alert's card
+### Ask AI, on an alert's card
 
 ```yaml
-# estate.yaml
-ai: { apiKey: "${ANTHROPIC_API_KEY}", model: claude-opus-5-5 }   # the model, unless set
+# estate.yaml: one of
+ai: { provider: anthropic, apiKey: "${ANTHROPIC_API_KEY}", model: claude-opus-5-5 }
+ai: { provider: openai, apiKey: "${OPENAI_API_KEY}", model: <the model> }
+ai: { provider: openai-compatible, url: http://vllm.ai:8000/v1, model: <the model> }  # self-hosted: vLLM, Ollama, LiteLLM
 ```
 
 ```text
 ┌ WARNING  OrdersSlow                                          firing 14 min ┐
 │ Orders are slow to place                                                     │
-│ [Ask Claude]                                                                 │
-│ ─ Claude, reading Estate ──────────────────────────────────────────────────  │
+│ [Ask AI]                                                                     │
+│ ─ claude-opus-5-5, reading Estate ─────────────────────────────────────────  │
 │ orders' p99 rose from 60 ms to 220 ms at 11:46, two minutes after            │
 │ main-88-04bc441 was chosen; its image policy is stalled, so staging and      │
 │ production run different versions. The last firing, 27 Sep, cleared when     │
@@ -67,11 +69,14 @@ ai: { apiKey: "${ANTHROPIC_API_KEY}", model: claude-opus-5-5 }   # the model, un
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **"Ask Claude"** is on the card of any alert, for anyone who may write notes, when `ai` is set. Estate gives
-  Claude the alert and the same tools the MCP server offers, and Claude decides what to look at: the service, what
+- **"Ask AI"** is on the card of any alert, for anyone who may write notes, when `ai` is set. Estate gives the model
+  the alert and the same tools the MCP server offers, and the model decides what to look at: the service, what
   changed, the alert's history, the errors from the logs.
+- **Any model that calls tools**: Anthropic's Messages API, OpenAI's Chat Completions, or any server that speaks the
+  OpenAI-compatible API, so a team can keep everything on its own hardware. One port, three kinds, as for every
+  other tool Estate reads.
 - **The answer streams onto the card**, with the tools it used listed under it, so whoever reads it can check the
-  working. "Keep as note" saves it to the alert under "Claude, asked by ada", where everyone sees it.
+  working. "Keep as note" saves it to the alert under the model's name, "asked by ada", where everyone sees it.
 - **What is sent** is what the tools return: the page's own views and masked log lines. Nothing goes to the model
   that a viewer could not see on the page.
 - **One answer an alert a minute**, and a token budget a day in `ai.budget`, so a busy morning cannot run up a bill.
@@ -79,7 +84,7 @@ ai: { apiKey: "${ANTHROPIC_API_KEY}", model: claude-opus-5-5 }   # the model, un
 ## Why this shape
 
 An agent outside Estate and a button inside it share one thing: the tools. The MCP server gives them to whatever
-agent a team already uses; the card gives them to Claude for the person who has just seen the alert and has no agent
+agent a team already uses; the card gives them to a model for the person who has just seen the alert and has no agent
 open. MCP is how agents are given tools, and Claude Code, Claude Desktop and most agent frameworks speak it, so one server
 serves all of them. Estate serves it over streamable HTTP at `/mcp`, beside the page, because Estate already runs as
 a server with the state in memory; an agent asks the running Estate rather than starting one. The tools answer from
@@ -100,9 +105,10 @@ Nothing.
       Done when: Claude Code, given the token, lists the tools and answers "what needs someone in production?".
 - [ ] **`mcp-alerts`** — `alerts`, `alert_history`, `changes`, `errors`, `agents`.
       Done when: a test asks for an alert's history and gets its earlier firings with their notes.
-- [ ] **`ask-on-card`** — "Ask Claude" on an alert's card: the tools, the answer streamed, kept as a note.
-      Done when: against a fake Claude that calls `service` and `changes`, the card shows its answer and the tools it
-      used, and Keep as note saves it under Claude's name and the asker's.
+- [ ] **`ask-on-card`** — "Ask AI" on an alert's card, through Anthropic, OpenAI or an OpenAI-compatible server: the
+      tools, the answer streamed, kept as a note.
+      Done when: against fakes of both APIs that call `service` and `changes`, the card shows the answer and the tools
+      used, and Keep as note saves it under the model's name and the asker's.
 - [ ] **`mcp-docs`** — the README's section, `examples/estate.yaml`, and a Playwright-free end-to-end test that
       drives `/mcp` with the MCP SDK's client against the e2e estate.
       Done when: the e2e test lists the tools and calls each one.
@@ -116,8 +122,9 @@ bunx playwright test
 
 ## Open questions
 
-- **Which model for the card?** Recommended: Claude Opus 5.5 by default (`claude-opus-5-5`), set by `ai.model`; a
-  team watching cost can choose Claude Sonnet 5.5 (`claude-sonnet-5-5`).
+- **Which model by default?** Recommended: none. `ai.model` is required, since a team's choice of provider decides
+  it. The docs suggest Claude Opus 5.5 (`claude-opus-5-5`) for Anthropic, or Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+  where cost matters.
 - **May an agent add a note?** Recommended: yes, for a token with the operator role, under the token's name, so
   "what I found" lands on the alert for the next person. Silencing and debug stay with people.
 - **The MCP SDK, or a small server of Estate's own?** Recommended: the official TypeScript SDK, for the protocol's
