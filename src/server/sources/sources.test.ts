@@ -62,7 +62,7 @@ describe("alerts", () => {
         ),
       ),
     ]).then(([missing, odd]) => {
-      expect(Result.isFailure(missing) && missing.failure.message).toBe("answered 404: not found")
+      expect(Result.isFailure(missing) && missing.failure.message).toBe("Alertmanager answered 404: not found")
       expect(Result.isFailure(odd) && odd.failure.message).toBe("Prometheus answered in a shape Estate does not know")
     }))
 
