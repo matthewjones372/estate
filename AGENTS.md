@@ -15,6 +15,9 @@ Estate is TypeScript on Bun, server and pages, for any estate, not one. The serv
   handled with `catchTag`; no `throw`, `try` or `async` in `server` or `shared`. Dependencies are services
   (`Context.Service`) provided by layers, and a test provides the stub layer. Data from outside is decoded with `Schema`.
   A `switch` over a union is exhaustive, with no `default`; `Match.exhaustive` where it reads better.
+- **Effect's source is the reference.** The `effect` package ships its own source, its `AGENTS.md` and its
+  `ai-docs` in `node_modules/effect/` (and `@effect/platform-bun` its source beside it). Read how Effect does a thing
+  there, and prefer its patterns to a guess or a web search. Never edit or import from those paths directly.
 - **Run an Effect once, at the edge.** `runMain` in the server's entry, `Effect.runPromise` in a test; nowhere else.
 - **Comments say why, in a line or two.** No restating the code, and no history.
 - **Docs say what is, not how it got here.** No history, measurements are the latest only; diagrams are mermaid.
