@@ -49,7 +49,7 @@ Docker where the suite runs.
 
 - [x] **`real-prometheus`** — the suite's harness and `bun run integration`; Prometheus and Alertmanager.
       Done when: a rule firing in a real Prometheus is silenced and unsilenced by Estate in a real Alertmanager.
-- [ ] **`real-grafana`** — Grafana's data source proxy, its alerting and its silences.
+- [x] **`real-grafana`** — Grafana's data source proxy, its alerting and its silences.
       Done when: a Grafana-managed rule fires and Estate charts it against its threshold, through a service account.
 - [ ] **`real-logs`** — Loki and Elasticsearch.
       Done when: a line pushed to each is read back, masked, and an error grouped.

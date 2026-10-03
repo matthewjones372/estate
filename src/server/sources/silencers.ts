@@ -32,7 +32,8 @@ const answer = (manager: Manager, call: Call) =>
     const answered = yield* remote
       .call({ ...call, headers: { ...manager.headers, ...call.headers } })
       .pipe(Effect.mapError((error) => new SourceFailure({ message: `${manager.name} ${error.message}` })))
-    if (answered.status !== 200)
+    // Alertmanager answers 200; Grafana's, 202.
+    if (answered.status < 200 || answered.status >= 300)
       return yield* new SourceFailure({
         message: `${manager.name} answered ${answered.status}: ${answered.text.slice(0, 200)}`,
       })

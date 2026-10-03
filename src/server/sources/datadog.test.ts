@@ -195,11 +195,18 @@ describe("Datadog's monitors", () => {
       why(silencer?.silence(alert, asked).pipe(Effect.provide(unreachable))),
       why(silencer?.unsilence("s1").pipe(Effect.provide(unreachable))),
       why(silencer?.silence(alert, asked).pipe(Effect.provide(stubRemote(() => reply("ok"))))),
+      // Grafana's Alertmanager takes a silence with 202 Accepted.
+      run(
+        silencerOf({ grafana: { url: "http://grafana" } })
+          ?.silence(alert, asked)
+          .pipe(Effect.provide(stubRemote(() => reply({ silenceID: "s9" }, 202)))) ?? Effect.die("none"),
+      ).then((result) => (Result.isSuccess(result) ? result.success : "refused")),
     ]).then((messages) =>
       expect(messages).toEqual([
         "Alertmanager refused the connection",
         "Alertmanager refused the connection",
         "Alertmanager answered 200: ok",
+        "s9",
       ]),
     )
   })

@@ -75,7 +75,8 @@ load.
 ```
 
 A data source's uid is the last part of its URL under Connections → Data sources. The service account needs the
-Viewer role, and query permission on both data sources.
+Viewer role, and query permission on both data sources, to read; to silence from Estate it needs Editor, since
+Grafana refuses a viewer's silence with 403. `bun run integration` checks both against a real Grafana.
 
 | Line | Right when |
 |---|---|
