@@ -37,6 +37,7 @@ Each source kind becomes one implementation of a port per part, chosen by the ke
 | Alerts | firing, pending, silenced; silences written | Alertmanager, Prometheus | CloudWatch alarms (read-only: `ALARM` is firing, `INSUFFICIENT_DATA` is pending) |
 | Metrics | a query over a range | Prometheus's API | CloudWatch metrics (`GetMetricData`), then Datadog |
 | Builds | the last runs on a branch | GitHub Actions | GitLab CI pipelines, then Buildkite |
+| Notes | Estate's own notes, kept | Postgres, memory | DynamoDB, for an estate on AWS with no database of its own |
 
 The catalog names a service the same way whatever the kind, by what that kind calls it:
 
@@ -91,6 +92,10 @@ the image stays small.
       Done when: a running pipeline shows the build step in progress, and a failed one names its job.
 - [ ] **`aws-signing`** — SigV4 for AWS's JSON APIs, from the task role, instance role or environment.
       Done when: signed against AWS's published test suite.
+- [ ] **`dynamodb-notes`** — notes kept in a DynamoDB table (`notes: { dynamodb: { table, region } }`), beside
+      Postgres and memory: the environment and alert as the key, the time as the sort key, made on demand if the role
+      may create it.
+      Done when: notes added on the page survive Estate restarting, against DynamoDB Local.
 - [ ] **`ecs`** — ECS services: running and desired tasks, each task's image and health, deployments rolling or
       failed, scheduled tasks as jobs.
       Done when: a service whose deployment is failing shows it stalled with ECS's reason.
