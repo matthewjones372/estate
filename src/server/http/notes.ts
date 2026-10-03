@@ -3,7 +3,7 @@ import { Clock, Effect, Schedule, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Notes } from "../notes"
 import { Estate, updateEstate } from "../state"
-import { json, refused, withRole } from "./routes"
+import { json, Refusal, refused, withRole } from "./routes"
 
 const Asked = Schema.Struct({ environment: Schema.String, alert: Schema.String, text: Schema.String })
 
@@ -17,7 +17,7 @@ export const notesRoute = HttpRouter.add(
     const person = yield* withRole
     const asked = yield* HttpServerRequest.schemaBodyJson(Asked).pipe(
       Effect.mapError(
-        () => ({ status: 400, body: { message: "a note is an environment, an alert and its text" } }) as const,
+        () => new Refusal({ status: 400, body: { message: "a note is an environment, an alert and its text" } }),
       ),
     )
     const text = asked.text.trim()
@@ -38,7 +38,7 @@ export const notesRoute = HttpRouter.add(
     if (added._tag === "Failure") return json({ message: added.failure.message }, 503)
     yield* updateEstate((estate) => ({ ...estate, notes: [note, ...estate.notes].slice(0, kept) }))
     return json(note, 201)
-  }).pipe(Effect.catch((refusal) => refused(refusal))),
+  }).pipe(Effect.catchTag("Refusal", refused)),
 )
 
 /** `DELETE /api/notes/:id`: a note taken back by whoever wrote it, or by an operator. */
@@ -58,7 +58,7 @@ export const removeNoteRoute = HttpRouter.add(
     if (removed._tag === "Failure") return json({ message: removed.failure.message }, 503)
     yield* updateEstate((estate) => ({ ...estate, notes: estate.notes.filter((each) => each.id !== id) }))
     return json({ id })
-  }).pipe(Effect.catch(refused)),
+  }).pipe(Effect.catchTag("Refusal", refused)),
 )
 
 const day = 24 * 3_600_000

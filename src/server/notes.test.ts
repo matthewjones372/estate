@@ -4,6 +4,7 @@ import { TestClock } from "effect/testing"
 import { ask, estate, serverFor, settings } from "./fixture"
 import { loadNotes, sweepNotes } from "./http/notes"
 import { memoryNotes, Notes, postgresNotes, type Query, type StoredNote } from "./notes"
+import { SourceFailure } from "./sources/run"
 import { Estate, estateLayer, updateEstate } from "./state"
 
 const note: StoredNote = {
@@ -111,8 +112,8 @@ describe("adding a note", () => {
           undefined,
           Layer.succeed(Notes)({
             all: Effect.succeed([]),
-            add: () => Effect.fail({ message: "the notes database: down" }),
-            remove: () => Effect.fail({ message: "the notes database: down" }),
+            add: () => Effect.fail(new SourceFailure({ message: "the notes database: down" })),
+            remove: () => Effect.fail(new SourceFailure({ message: "the notes database: down" })),
             removeBefore: () => Effect.void,
           }),
         )
@@ -191,7 +192,7 @@ describe("taking a note back", () => {
           Layer.succeed(Notes)({
             all: Effect.succeed([]),
             add: () => Effect.void,
-            remove: () => Effect.fail({ message: "the notes database: down" }),
+            remove: () => Effect.fail(new SourceFailure({ message: "the notes database: down" })),
             removeBefore: () => Effect.void,
           }),
         )

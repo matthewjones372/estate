@@ -2,18 +2,23 @@
  * A source read on its own schedule for one environment. What it reads becomes its part of the state; when it does
  * not answer, its part keeps what it last read, marked failing with the words it failed with, and the rest carries on.
  */
-import { Clock, type Duration, Effect, Schedule } from "effect"
+import { Clock, Data, type Duration, Effect, Schedule } from "effect"
 import { type EnvironmentState, type Estate, type Part, updateEnvironment } from "../state"
 
-export interface Failure {
-  readonly message: string
-}
+/** Why a source did not answer, in the words it failed with. */
+export const SourceFailure = Data.TaggedError("SourceFailure")<{ readonly message: string }>
+export type SourceFailure = InstanceType<typeof SourceFailure>
+export type Failure = SourceFailure
 
 type Parts = "metrics" | "alerts" | "cluster" | "deploys"
 type ValueOf<K extends Parts> = NonNullable<EnvironmentState[K]["value"]>
 
 /** The part after a read: what it read, or what it last read with why it failed. */
-export const afterRead = <A>(part: Part<A>, read: { readonly value: A } | Failure, at: string): Part<A> =>
+export const afterRead = <A>(
+  part: Part<A>,
+  read: { readonly value: A } | { readonly message: string },
+  at: string,
+): Part<A> =>
   "value" in read
     ? { state: "ok", value: read.value, answeredAt: at }
     : {

@@ -7,7 +7,7 @@ import { compact } from "../../shared/compact"
 import { callJson, type Remote } from "../remote"
 import type { Sources } from "../settings"
 import type { EnvironmentState, SourcedAlert } from "../state"
-import type { Failure } from "./run"
+import { type Failure, SourceFailure } from "./run"
 
 const Labels = Schema.Record(Schema.String, Schema.String)
 
@@ -57,7 +57,7 @@ const decoded =
   <S extends Schema.Decoder<unknown>>(schema: S, what: string) =>
   (body: unknown): Effect.Effect<S["Type"], Failure> =>
     Schema.decodeUnknownEffect(schema)(body).pipe(
-      Effect.mapError(() => ({ message: `${what} answered in a shape Estate does not know` })),
+      Effect.mapError(() => new SourceFailure({ message: `${what} answered in a shape Estate does not know` })),
     )
 
 const fromLabels = (
@@ -83,11 +83,11 @@ const fromLabels = (
 const managerAlerts = (url: string): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
   Effect.gen(function* () {
     const alerts = yield* callJson({ url: `${url}/api/v2/alerts?active=true&silenced=true&inhibited=false` }).pipe(
-      Effect.mapError((error) => ({ message: `Alertmanager ${error.message}` })),
+      Effect.mapError((error) => new SourceFailure({ message: `Alertmanager ${error.message}` })),
       Effect.flatMap(decoded(Schema.Array(ManagerAlert), "Alertmanager")),
     )
     const silences = yield* callJson({ url: `${url}/api/v2/silences` }).pipe(
-      Effect.mapError((error) => ({ message: `Alertmanager ${error.message}` })),
+      Effect.mapError((error) => new SourceFailure({ message: `Alertmanager ${error.message}` })),
       Effect.flatMap(decoded(Schema.Array(Silence), "Alertmanager")),
     )
     const byId = new Map(silences.map((silence) => [silence.id, silence]))
@@ -119,7 +119,7 @@ const prometheusAlerts = (
   states: ReadonlySet<string>,
 ): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
   callJson({ url: `${url}/api/v1/alerts` }).pipe(
-    Effect.mapError((error) => ({ message: `Prometheus ${error.message}` })),
+    Effect.mapError((error) => new SourceFailure({ message: `Prometheus ${error.message}` })),
     Effect.flatMap(decoded(PrometheusAlerts, "Prometheus")),
     Effect.map((body) =>
       body.data.alerts

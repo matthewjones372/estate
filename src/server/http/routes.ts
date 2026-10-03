@@ -1,5 +1,5 @@
 /** Estate's routes: who you are, the event stream for an environment, and the pages. */
-import { Effect, Layer, Option, Stream, SubscriptionRef } from "effect"
+import { Data, Effect, Layer, Option, Stream, SubscriptionRef } from "effect"
 import { HttpRouter, type HttpServerRequest, HttpServerResponse } from "effect/http"
 import type { Me } from "../../shared/events"
 import { Configured } from "../settings"
@@ -11,7 +11,12 @@ import { type Person, personAsking } from "./people"
 export const json = (body: unknown, status = 200) =>
   HttpServerResponse.text(JSON.stringify(body), { status, contentType: "application/json" })
 
-export type Refusal = { readonly status: 400 | 401 | 403 | 404 | 502; readonly body: unknown }
+/** A request refused: the status, and the body that says why. */
+export const Refusal = Data.TaggedError("Refusal")<{
+  readonly status: 400 | 401 | 403 | 404 | 502
+  readonly body: unknown
+}>
+export type Refusal = InstanceType<typeof Refusal>
 
 /** The person asking if they hold a role, or the response that says why not. */
 export const withRole: Effect.Effect<
@@ -20,12 +25,12 @@ export const withRole: Effect.Effect<
   HttpServerRequest.HttpServerRequest | Configured
 > = Effect.gen(function* () {
   const person = yield* personAsking
-  if (Option.isNone(person)) return yield* Effect.fail({ status: 401, body: { signIn: "/auth/login" } } as const)
+  if (Option.isNone(person)) return yield* new Refusal({ status: 401, body: { signIn: "/auth/login" } })
   const { name, groups, role } = person.value
   if (role === undefined) {
     const { auth } = yield* Configured
     const groups = [...new Set([...auth.roles.viewer, ...auth.roles.operator])]
-    return yield* Effect.fail({ status: 403, body: { name, groups } } as const)
+    return yield* new Refusal({ status: 403, body: { name, groups } })
   }
   return { name, groups, role }
 })
@@ -46,7 +51,7 @@ const me = HttpRouter.add(
       environments: catalog.environments.map((each) => each.name),
     }
     return json(body)
-  }).pipe(Effect.catch(refused)),
+  }).pipe(Effect.catchTag("Refusal", refused)),
 )
 
 const events = HttpRouter.add("GET", "/events", (request) =>
@@ -68,7 +73,7 @@ const events = HttpRouter.add("GET", "/events", (request) =>
     return HttpServerResponse.stream(body, {
       headers: { "content-type": "text/event-stream", "cache-control": "no-cache", "x-accel-buffering": "no" },
     })
-  }).pipe(Effect.catch(refused)),
+  }).pipe(Effect.catchTag("Refusal", refused)),
 )
 
 const assets = HttpRouter.add("GET", "/assets/:name", (request) =>
