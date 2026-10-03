@@ -75,6 +75,27 @@ const ignored = new Set([
   "ref_id",
 ])
 
+/** Each firing alert's measure over the last hour against its threshold, by the alert's id. */
+export const chartsOf = (
+  ranges: Ranges,
+  rules: ReadonlyMap<string, string>,
+  alerts: ReadonlyArray<SourcedAlert>,
+  now: number,
+): Effect.Effect<Metrics["charts"], never, Remote> =>
+  Effect.forEach(
+    alerts.filter((alert) => alert.state === "firing"),
+    (alert) => {
+      // An alert that carries its own comparison (a CloudWatch alarm's) is charted by it, else by its rule's.
+      const watched = thresholdOf(alert.expression ?? rules.get(alert.name) ?? "")
+      if (watched === undefined) return Effect.succeed([])
+      const labels = Object.fromEntries(Object.entries(alert.labels).filter(([name]) => !ignored.has(name)))
+      return quietly(ranges.range(watched.measure, lastHour, now, labels)).pipe(
+        Effect.map((series) => [[alert.id, { points: series.points, threshold: watched.threshold }] as const]),
+      )
+    },
+    { concurrency: 4 },
+  ).pipe(Effect.map((charts) => Object.fromEntries(charts.flat())))
+
 export const readMetrics = (
   ranges: Ranges,
   catalog: Catalog,
@@ -111,24 +132,12 @@ export const readMetrics = (
           : quietly(ranges.range(edge.rate, lastHour, now)).pipe(Effect.map((series) => series.now)),
       { concurrency: 4 },
     )
-    const charts = yield* Effect.forEach(
-      firing.filter((alert) => alert.state === "firing"),
-      (alert) => {
-        // An alert that carries its own comparison (a CloudWatch alarm's) is charted by it, else by its rule's.
-        const watched = thresholdOf(alert.expression ?? rules.get(alert.name) ?? "")
-        if (watched === undefined) return Effect.succeed([])
-        const labels = Object.fromEntries(Object.entries(alert.labels).filter(([name]) => !ignored.has(name)))
-        return quietly(ranges.range(watched.measure, lastHour, now, labels)).pipe(
-          Effect.map((series) => [[alert.id, { points: series.points, threshold: watched.threshold }] as const]),
-        )
-      },
-      { concurrency: 4 },
-    )
+    const charts = yield* chartsOf(ranges, rules, firing, now)
     return {
       services: Object.fromEntries(loads),
       ...(stores.length === 0 ? {} : { stores: Object.fromEntries(storeLoads) }),
       vitals,
       edges,
-      charts: Object.fromEntries(charts.flat()),
+      charts,
     }
   })

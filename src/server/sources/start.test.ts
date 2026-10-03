@@ -96,4 +96,41 @@ describe("the sources", () => {
       expect(Object.values(charts ?? {}).map((chart) => chart.threshold)).toEqual([0.15])
     })
   })
+
+  test("charts an alert as it starts firing, not at the next read of the metrics", () => {
+    const configured = {
+      ...settings(),
+      sources: {
+        staging: { alertmanager: { url: "http://alertmanager" }, prometheus: { url: "http://prometheus" } },
+        production: {},
+      },
+    }
+    let firing = false
+    const answer = (call: Call) => {
+      if (call.url.includes("/api/v1/rules"))
+        return reply({
+          data: { groups: [{ rules: [{ type: "alerting", name: "OrdersSlow", query: "latency > 0.15" }] }] },
+        })
+      if (call.url.includes("/api/v1/query_range")) {
+        const end = Number(new URL(call.url).searchParams.get("end"))
+        return reply({ data: { result: [{ metric: {}, values: [[end, "0.2"]] }] } })
+      }
+      if (call.url.includes("/api/v2/alerts") && !firing) return reply([])
+      return answering()(call)
+    }
+    const program = Effect.gen(function* () {
+      yield* Effect.forkChild(startSources(configured))
+      yield* TestClock.adjust("10 seconds")
+      firing = true
+      yield* TestClock.adjust("15 seconds")
+      return (yield* SubscriptionRef.get(yield* Estate)).environments["staging"]?.metrics.value?.charts
+    })
+    return Effect.runPromise(
+      program.pipe(
+        Effect.provide(Layer.mergeAll(estateLayer(estate()), TestClock.layer(), stubRemote(answer), platform)),
+      ),
+    ).then((charts) => {
+      expect(Object.values(charts ?? {}).map((chart) => chart.threshold)).toEqual([0.15])
+    })
+  })
 })

@@ -4,7 +4,7 @@ import type { Service } from "../../shared/catalog"
 import { makeAwsJson } from "../aws/json"
 import type { Remote } from "../remote"
 import type { Settings } from "../settings"
-import { Estate } from "../state"
+import { Estate, updateEnvironment } from "../state"
 import { inEnvironment } from "../views/catalog"
 import { readAlerts, withResolved } from "./alerts"
 import { readArgo } from "./argo"
@@ -16,9 +16,9 @@ import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./ecs"
 import { readDeploys } from "./flux"
 import { grafanaRules } from "./grafana"
 import { clusterOf } from "./kubernetes"
-import { readMetrics } from "./metrics"
+import { chartsOf, readMetrics } from "./metrics"
 import { alertsOf, buildsOf, deploysOf, metricsOf, runtimeOf } from "./ports"
-import { prometheusRanges } from "./prometheus"
+import { prometheusRanges, type Ranges } from "./prometheus"
 import { type Failure, runSource } from "./run"
 
 /** The services in an environment as the catalog says now, so a reloaded catalog is read from the next time. */
@@ -29,6 +29,44 @@ const servicesIn = (environment: string): Effect.Effect<ReadonlyArray<Service>, 
   })
 
 type Environment = { readonly name: string; readonly sources: string }
+
+/**
+ * Charts for alerts as they start firing, rather than at the next read of the metrics: whenever the environment's
+ * firing alerts include ones without a chart, those are read and added to the metrics it has.
+ */
+const chartNewlyFiring = (environment: string, ranges: Ranges): Effect.Effect<never, never, Estate | Remote> =>
+  Effect.gen(function* () {
+    const ref = yield* Estate
+    yield* SubscriptionRef.changes(ref).pipe(
+      Stream.map((estate) => {
+        const state = estate.environments[environment]
+        const charted = state?.metrics.value?.charts ?? {}
+        return (state?.alerts.value ?? []).filter(
+          (alert) => alert.state === "firing" && charted[alert.id] === undefined,
+        )
+      }),
+      Stream.filter((uncharted) => uncharted.length > 0),
+      Stream.changesWith((a, b) => a.map((alert) => alert.id).join() === b.map((alert) => alert.id).join()),
+      Stream.runForEach((uncharted) =>
+        Effect.gen(function* () {
+          const rules = yield* ranges.rules.pipe(Effect.orElseSucceed(() => new Map<string, string>()))
+          const charts = yield* chartsOf(ranges, rules, uncharted, yield* Clock.currentTimeMillis)
+          yield* updateEnvironment(environment, (state) =>
+            state.metrics.value === undefined
+              ? state
+              : {
+                  ...state,
+                  metrics: {
+                    ...state.metrics,
+                    value: { ...state.metrics.value, charts: { ...state.metrics.value.charts, ...charts } },
+                  },
+                },
+          )
+        }),
+      ),
+    )
+    return yield* Effect.never
+  })
 
 /** Done once the environment's alerts have been read, whether they answered or failed. */
 const alertsHeard = (environment: string): Effect.Effect<void, never, Estate> =>
@@ -75,6 +113,7 @@ const readersFor = (
         const stores = (estate.catalog.stores ?? []).filter((store) => store.environments.includes(here))
         return yield* readMetrics(ranges, estate.catalog, inEnvironment(estate.catalog, here), stores, firing, now)
       })
+      readers.push(chartNewlyFiring(environment.name, ranges))
       // The first read waits a little for the alerts, so those firing as Estate starts are charted on it.
       readers.push(
         Effect.andThen(
