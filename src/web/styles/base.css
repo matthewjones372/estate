@@ -151,3 +151,61 @@ button:disabled {
 .dot.unknown {
   background: var(--waiting);
 }
+
+/* Every control answers the pointer: it lights up under it and dims as it is pressed, so what will be clicked is plain. */
+button,
+.link-chip,
+.primary-button,
+.amber-button {
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    filter 120ms ease;
+}
+.plain-button:not(:disabled):hover,
+.filter:not(:disabled):hover,
+.switcher-button:not(:disabled):hover {
+  background: var(--raised);
+  border-color: var(--quiet);
+  color: var(--ink);
+}
+.switcher-option:not(:disabled):hover {
+  background: var(--raised);
+}
+.choice:not(:disabled):hover,
+.amber-button:not(:disabled):hover {
+  background: var(--amber-deep);
+  border-color: var(--amber);
+  color: var(--amber-ink);
+}
+.debug-choice:not(:disabled):hover {
+  background: var(--debug-panel);
+  border-color: var(--debug);
+}
+.link-chip:hover {
+  background: var(--line-strong);
+  color: var(--ink);
+}
+.primary-button:not(:disabled):hover,
+.debug-button:not(:disabled):hover {
+  filter: brightness(1.15);
+}
+.note-remove:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+button:not(:disabled):active,
+.link-chip:active,
+.primary-button:active,
+.amber-button:active {
+  filter: brightness(0.85);
+}
+@media (prefers-reduced-motion: reduce) {
+  button,
+  .link-chip,
+  .primary-button,
+  .amber-button {
+    transition: none;
+  }
+}

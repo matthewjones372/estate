@@ -64,7 +64,7 @@ log panel, which would need Grafana's sign-in inside Estate's page and still sho
 
 ## Depends on
 
-Nothing in Estate. For lark-bank, its spec 0023 (JSON lines) makes the level field exact; until then the default
+Nothing. Services that log JSON lines with a level field are read exactly; for the rest, the default
 error pattern finds them.
 
 ## Stack

@@ -1,73 +1,17 @@
-import { afterAll, describe, expect, test } from "bun:test"
-import { GlobalRegistrator } from "@happy-dom/global-registrator"
-import type { ReactNode } from "react"
-import type { Root } from "react-dom/client"
-
-// React's DOM decides which browser events it can use as it loads, so the browser is in place before it does.
-GlobalRegistrator.register()
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
-afterAll(() => GlobalRegistrator.unregister())
-
-const { act } = await import("react")
-const { createRoot } = await import("react-dom/client")
-const { EstateContext } = await import("./context")
-const { events, heard, now, operator, recording } = await import("./fixture")
-const { Alerts } = await import("./pages/Alerts")
-const { Overview } = await import("./pages/Overview")
-const { ServicePage } = await import("./pages/Service")
-const { A } = await import("./parts/A")
-const { Header } = await import("./parts/Header")
-
-const mounted: Root[] = []
-
-const mount = (node: ReactNode, sent = events) => {
-  const recorded = recording()
-  const container = document.createElement("div")
-  document.body.append(container)
-  const root = createRoot(container)
-  mounted.push(root)
-  act(() => {
-    root.render(
-      <EstateContext.Provider
-        value={{
-          live: heard(sent),
-          me: operator,
-          page: { page: "overview" },
-          actions: recorded.actions,
-          now: () => now,
-        }}
-      >
-        {node}
-      </EstateContext.Provider>,
-    )
-  })
-  const button = (name: string | RegExp) => {
-    const found = [...container.querySelectorAll("button")].find((each) =>
-      typeof name === "string" ? each.textContent?.trim() === name : name.test(each.textContent ?? ""),
-    )
-    if (found === undefined) throw new Error(`no button ${name} in ${container.textContent}`)
-    return found
-  }
-  const click = (element: HTMLElement, init: MouseEventInit = {}) =>
-    act(() => {
-      element.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, ...init }))
-    })
-  const type = (element: HTMLInputElement | HTMLSelectElement, value: string) =>
-    act(() => {
-      let prototype: object | null = Object.getPrototypeOf(element)
-      while (prototype !== null && Object.getOwnPropertyDescriptor(prototype, "value") === undefined) {
-        prototype = Object.getPrototypeOf(prototype)
-      }
-      if (prototype !== null) Object.getOwnPropertyDescriptor(prototype, "value")?.set?.call(element, value)
-      element.dispatchEvent(new Event(element instanceof HTMLSelectElement ? "change" : "input", { bubbles: true }))
-    })
-  const settle = () => act(() => Promise.resolve())
-  return { container, calls: recorded.calls, button, click, type, settle }
-}
+/** @jsxImportSource solid-js */
+/** What a person does on the page, in happy-dom: run by \`interact.test.ts\` once Solid's compiler is in place. */
+import { describe, expect, test } from "bun:test"
+import { events, listening } from "./fixture"
+import { mount } from "./harness"
+import { Alerts } from "./pages/Alerts"
+import { Overview } from "./pages/Overview"
+import { ServicePage } from "./pages/Service"
+import { A } from "./parts/A"
+import { Header } from "./parts/Header"
 
 describe("acting on an alert", () => {
   test("adds a note", async () => {
-    const page = mount(<Overview />)
+    const page = mount(() => <Overview />)
     const input = page.container.querySelector<HTMLInputElement>(".note-form input")
     if (input === null) throw new Error("no note input")
     page.type(input, "  vacuuming the table  ")
@@ -78,7 +22,7 @@ describe("acting on an alert", () => {
   })
 
   test("silences it for a chosen time, only with a reason", async () => {
-    const page = mount(<Overview />)
+    const page = mount(() => <Overview />)
     page.click(page.button("Silence…"))
     page.click(page.button("6 hours"))
     const silence = page.button(/^Silence until/)
@@ -94,7 +38,7 @@ describe("acting on an alert", () => {
   })
 
   test("cancelling the silence closes it, and a silenced one can be unsilenced", () => {
-    const page = mount(<Overview />)
+    const page = mount(() => <Overview />)
     page.click(page.button("Silence…"))
     page.click(page.button("Cancel"))
     expect(page.container.textContent).not.toContain("Silence until")
@@ -103,9 +47,31 @@ describe("acting on an alert", () => {
   })
 })
 
+describe("the page as events arrive", () => {
+  test("changes only what changed: a note being written survives the next alerts event", async () => {
+    const { live, send } = listening()
+    send("catalog", events.catalog)
+    send("alerts", events.alerts)
+    const page = mount(() => <Overview />, { live })
+    const input = page.container.querySelector<HTMLInputElement>(".note-form input")
+    if (input === null) throw new Error("no note input")
+    page.type(input, "half written")
+    const [first, ...rest] = events.alerts.alerts
+    if (first === undefined) throw new Error("no alert")
+    send("alerts", { ...events.alerts, alerts: [{ ...first, summary: "Orders are very slow" }, ...rest] })
+    await page.settle()
+    expect(page.container.textContent).toContain("Orders are very slow")
+    expect(page.container.querySelector<HTMLInputElement>(".note-form input")).toBe(input)
+    expect(input.value).toBe("half written")
+    live.choose("staging")
+    await page.settle()
+    expect(page.container.textContent).not.toContain("Orders are very slow")
+  })
+})
+
 describe("a note", () => {
   test("is removed by an operator, or by whoever wrote it", () => {
-    const page = mount(<Overview />)
+    const page = mount(() => <Overview />)
     page.click(page.button(/^Remove/))
     expect(page.calls).toContainEqual(["removeNote", "n1"])
   })
@@ -113,7 +79,7 @@ describe("a note", () => {
 
 describe("the alerts page", () => {
   test("filters by state and by service, and opens one to act on", () => {
-    const page = mount(<Alerts />)
+    const page = mount(() => <Alerts />)
     page.click(page.button(/^Silenced/))
     expect(page.container.querySelectorAll("tbody tr")).toHaveLength(1)
     page.click(page.button(/^All/))
@@ -146,7 +112,7 @@ describe("debug", () => {
   }
 
   test("is turned on for a chosen time, after saying what it costs", async () => {
-    const page = mount(<ServicePage name="storefront" />, off)
+    const page = mount(() => <ServicePage name="storefront" />, { sent: off })
     page.click(page.button("1 hour"))
     page.click(page.button("Turn on debug…"))
     expect(page.container.textContent).toContain("DEBUG for storefront, 1 hour?")
@@ -158,7 +124,7 @@ describe("debug", () => {
   })
 
   test("is turned off before its time", () => {
-    const page = mount(<ServicePage name="storefront" />)
+    const page = mount(() => <ServicePage name="storefront" />)
     page.click(page.button("Turn off now"))
     expect(page.calls).toContainEqual(["undebug", "storefront"])
   })
@@ -166,7 +132,7 @@ describe("debug", () => {
 
 describe("the service's load", () => {
   test("is read again for a longer range", async () => {
-    const page = mount(<ServicePage name="storefront" />)
+    const page = mount(() => <ServicePage name="storefront" />)
     page.click(page.button("6h"))
     await page.settle()
     expect(page.calls).toContainEqual(["load", "storefront", "6h"])
@@ -179,20 +145,18 @@ describe("reading a chart", () => {
   const captions = (page: ReturnType<typeof mount>) =>
     [...page.container.querySelectorAll(".chart figcaption")].map((each) => each.textContent ?? "")
   const key = (element: Element, name: string) =>
-    act(() => {
-      element.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true }))
-    })
+    element.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true }))
   const pointer = (element: Element, type: string, clientX: number) =>
-    act(() => {
-      element.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX, button: 0, pointerId: 1 }))
-    })
+    element.dispatchEvent(
+      new PointerEvent(type, { bubbles: type !== "pointerleave", clientX, button: 0, pointerId: 1 }),
+    )
   const wide = (element: Element) =>
     Object.assign(element, {
       getBoundingClientRect: () => ({ left: 0, width: 600, top: 0, height: 110, right: 600, bottom: 110 }),
     })
 
   test("stepping with the keys marks the same moment on every chart, and Escape lets go", () => {
-    const page = mount(<ServicePage name="storefront" />)
+    const page = mount(() => <ServicePage name="storefront" />)
     const [requests] = charts(page)
     if (requests === undefined) throw new Error("no chart")
     key(requests, "End")
@@ -207,13 +171,13 @@ describe("reading a chart", () => {
   })
 
   test("pointing marks a point and leaving lets go; dragging zooms every chart, and Show all goes back", () => {
-    const page = mount(<ServicePage name="storefront" />)
+    const page = mount(() => <ServicePage name="storefront" />)
     const [requests] = charts(page)
     if (requests === undefined) throw new Error("no chart")
     wide(requests)
     pointer(requests, "pointermove", 300)
     expect(captions(page)[0]).toMatch(/ at /)
-    pointer(requests, "pointerout", 300)
+    pointer(requests, "pointerleave", 300)
     expect(captions(page)[0]).not.toMatch(/ at /)
     pointer(requests, "pointerdown", 60)
     pointer(requests, "pointermove", 300)
@@ -227,7 +191,7 @@ describe("reading a chart", () => {
   })
 
   test("the alert's chart reads its points too, and a sparkline answers to a pointer", () => {
-    const page = mount(<Overview />)
+    const page = mount(() => <Overview />)
     const alert = page.container.querySelector<SVGSVGElement>(".alert-card svg[tabindex], article svg[tabindex]")
     if (alert === null) throw new Error("no alert chart")
     key(alert, "End")
@@ -238,15 +202,13 @@ describe("reading a chart", () => {
     wide(spark)
     pointer(spark, "pointermove", 590)
     expect(spark.closest(".spark")?.textContent).toMatch(/\d\d:\d\d/)
-    act(() => {
-      spark.dispatchEvent(new FocusEvent("blur"))
-    })
+    spark.dispatchEvent(new FocusEvent("blur"))
   })
 })
 
 describe("getting about", () => {
   test("the switcher lists each environment with its worst, and chooses one", () => {
-    const page = mount(<Header />)
+    const page = mount(() => <Header />)
     page.click(page.button(/Environment: production|production/))
     expect(page.container.textContent).toContain("needs attention")
     page.click(page.button(/^staging/))
@@ -254,7 +216,7 @@ describe("getting about", () => {
   })
 
   test("a link within Estate is followed without a reload, unless asked for a new tab", () => {
-    const page = mount(<A to="/deploys">Deploys</A>)
+    const page = mount(() => <A to="/deploys">Deploys</A>)
     const link = page.container.querySelector("a")
     if (link === null) throw new Error("no link")
     page.click(link)

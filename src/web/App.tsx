@@ -1,4 +1,6 @@
+/** @jsxImportSource solid-js */
 /** The signed-in page: the header, then the page the address names. */
+import { Match, Switch } from "solid-js"
 import { type Estate, EstateContext } from "./context"
 import { Alerts } from "./pages/Alerts"
 import { Deploys } from "./pages/Deploys"
@@ -8,26 +10,32 @@ import { A } from "./parts/A"
 import { Header } from "./parts/Header"
 
 const Missing = () => (
-  <main className="state-page">
+  <main class="state-page">
     <h1>There is no such page.</h1>
     <A to="/">The overview</A>
   </main>
 )
 
 const Page = (props: { readonly estate: Estate }) => {
-  const { page } = props.estate
-  switch (page.page) {
-    case "overview":
-      return <Overview />
-    case "service":
-      return <ServicePage name={page.name} />
-    case "deploys":
-      return <Deploys />
-    case "alerts":
-      return <Alerts />
-    case "missing":
-      return <Missing />
+  const page = () => props.estate.page()
+  const service = () => {
+    const now = page()
+    return now.page === "service" ? now.name : undefined
   }
+  return (
+    <Switch fallback={<Missing />}>
+      <Match when={page().page === "overview"}>
+        <Overview />
+      </Match>
+      <Match when={service()}>{(name) => <ServicePage name={name()} />}</Match>
+      <Match when={page().page === "deploys"}>
+        <Deploys />
+      </Match>
+      <Match when={page().page === "alerts"}>
+        <Alerts />
+      </Match>
+    </Switch>
+  )
 }
 
 export const App = (props: { readonly estate: Estate }) => (

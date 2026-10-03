@@ -5,7 +5,7 @@ Estate is TypeScript on Bun, server and pages, for any estate, not one. The serv
 
 - **Specs come first.** Nothing is built without a committed spec in `specs/`; see `specs/README.md`.
 - **Nothing in it knows one estate.** Services, environments, queries, links and groups come from the catalog and the
-  configuration. A name from lark-bank in the code, outside tests and examples, is a bug.
+  configuration. A name from any one estate in the code, outside tests and examples, is a bug.
 - **Read, don't store.** What another tool keeps is read from it and linked to; Estate keeps only its own notes and
   who switched what.
 - **A source is an interface and a test.** Each kind (Prometheus, Alertmanager, Kubernetes, Flux, GitHub) is one
@@ -18,6 +18,10 @@ Estate is TypeScript on Bun, server and pages, for any estate, not one. The serv
 - **Effect's source is the reference.** The `effect` package ships its own source, its `AGENTS.md` and its
   `ai-docs` in `node_modules/effect/` (and `@effect/platform-bun` its source beside it). Read how Effect does a thing
   there, and prefer its patterns to a guess or a web search. Never edit or import from those paths directly.
+- **The pages are Solid.** Each `.tsx` starts with `/** @jsxImportSource solid-js */`. A part reads its props as
+  `props.x`, never destructured, and derives values as functions (`const state = () => …`), so that it updates;
+  lists are `<For>`, conditions `<Show>`, state `createSignal`. The pages' tests are `*.suite.tsx`, imported by a
+  `*.test.ts` once `inBrowser()` has set up happy-dom and Solid's compiler.
 - **Run an Effect once, at the edge.** `runMain` in the server's entry, `Effect.runPromise` in a test; nowhere else.
 - **Comments say why, in a line or two.** No restating the code, and no history.
 - **Docs say what is, not how it got here.** No history, measurements are the latest only; diagrams are mermaid.

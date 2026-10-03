@@ -1,4 +1,6 @@
+/** @jsxImportSource solid-js */
 /** A service's lane on the overview: health, pipeline, the last hour, and its links. */
+import { For, Show } from "solid-js"
 import type { CatalogEvent, DeploysEvent, Health, ServiceState } from "../../shared/events"
 import { useEstate } from "../context"
 import { clock } from "../format"
@@ -38,32 +40,36 @@ const rank = (name: string) => (order.includes(name) ? order.indexOf(name) : ord
 const label = (name: string) => labels[name] ?? name.charAt(0).toUpperCase() + name.slice(1)
 
 export const Links = (props: { readonly service: Described }) => (
-  <nav aria-label={`${props.service.name} links`} className="links">
-    {linksOf(props.service).map((link) => (
-      <Out key={link.name} href={link.url} className="link-chip">
-        <Icon name={link.name} />
-        {label(link.name)}
-      </Out>
-    ))}
+  <nav aria-label={`${props.service.name} links`} class="links">
+    <For each={linksOf(props.service)}>
+      {(link) => (
+        <Out href={link.url} class="link-chip">
+          <Icon name={link.name} />
+          {label(link.name)}
+        </Out>
+      )}
+    </For>
   </nav>
 )
 
 export const HealthLine = (props: { readonly state: ServiceState | undefined }) => {
-  const health = props.state?.health ?? "unknown"
-  const pods = props.state?.pods ?? []
-  const ready = pods.filter((pod) => pod.ready).length
-  const reasons = props.state?.reasons ?? []
-  const first = reasons[0]
-  const why = [
-    ...(first === undefined ? [] : [reasons.length > 1 ? `${first} +${reasons.length - 1}` : first]),
-    ...(pods.length > 0 ? [`${ready}/${pods.length} pods`] : []),
-  ].join(" · ")
+  const health = () => props.state?.health ?? "unknown"
+  const why = () => {
+    const pods = props.state?.pods ?? []
+    const ready = pods.filter((pod) => pod.ready).length
+    const reasons = props.state?.reasons ?? []
+    const first = reasons[0]
+    return [
+      ...(first === undefined ? [] : [reasons.length > 1 ? `${first} +${reasons.length - 1}` : first]),
+      ...(pods.length > 0 ? [`${ready}/${pods.length} pods`] : []),
+    ].join(" · ")
+  }
   return (
-    <span className="health">
-      <span className={`dot ${health}`} />
-      <span className={`health-word ${health}`}>{healthWords[health]}</span>
-      <span className="muted health-why" title={reasons.join("\n")}>
-        {why}
+    <span class="health">
+      <span class={`dot ${health()}`} />
+      <span class={`health-word ${health()}`}>{healthWords[health()]}</span>
+      <span class="muted health-why" title={(props.state?.reasons ?? []).join("\n")}>
+        {why()}
       </span>
     </span>
   )
@@ -76,41 +82,44 @@ export const Lane = (props: {
   readonly environment: string
 }) => {
   const { now } = useEstate()
-  const { service, state } = props
-  const deployed = props.deploys?.services.find((each) => each.name === service.name)
-  const pipeline = pipelineOf(
-    deployed?.builds ?? [],
-    deployed?.environments.find((each) => each.environment === props.environment),
-    now(),
-  )
-  const reasons = state?.reasons.join(" ") ?? ""
+  const pipeline = () => {
+    const deployed = props.deploys?.services.find((each) => each.name === props.service.name)
+    return pipelineOf(
+      deployed?.builds ?? [],
+      deployed?.environments.find((each) => each.environment === props.environment),
+      now(),
+    )
+  }
+  const reasons = () => props.state?.reasons.join(" ") ?? ""
   return (
-    <article className={`lane ${state?.health ?? "unknown"}`}>
-      <div className="lane-name">
-        <A to={`/services/${encodeURIComponent(service.name)}`} className="lane-title">
-          {service.name}
+    <article class={`lane ${props.state?.health ?? "unknown"}`}>
+      <div class="lane-name">
+        <A to={`/services/${encodeURIComponent(props.service.name)}`} class="lane-title">
+          {props.service.name}
         </A>
-        <HealthLine state={state} />
-        {state?.debug?.on === true && (
-          <span className="badge-debug">
-            <span className="dot live" style={{ background: "var(--debug)", width: 6, height: 6 }} />
-            Debug{state.debug.until === undefined ? "" : ` until ${clock(state.debug.until)}`}
-            {state.debug.by === undefined ? "" : ` · ${state.debug.by}`}
-          </span>
-        )}
+        <HealthLine state={props.state} />
+        <Show when={props.state?.debug?.on === true ? props.state.debug : undefined}>
+          {(debug) => (
+            <span class="badge-debug">
+              <span class="dot live" style={{ background: "var(--debug)", width: "6px", height: "6px" }} />
+              Debug{debug().until === undefined ? "" : ` until ${clock(debug().until ?? "")}`}
+              {debug().by === undefined ? "" : ` · ${debug().by}`}
+            </span>
+          )}
+        </Show>
       </div>
-      <Rail pipeline={pipeline} version={state?.version} />
-      <div className="sparks">
-        <Spark label="Requests" unit="/s" series={state?.load.requests} />
+      <Rail pipeline={pipeline()} version={props.state?.version} />
+      <div class="sparks">
+        <Spark label="Requests" unit="/s" series={props.state?.load.requests} />
         <Spark
           label="Errors"
           unit="/s"
-          series={state?.load.errors}
-          alarm={(state?.load.errors?.now ?? 0) > 0 && /error/i.test(reasons)}
+          series={props.state?.load.errors}
+          alarm={(props.state?.load.errors?.now ?? 0) > 0 && /error/i.test(reasons())}
         />
-        <Spark label="p99" unit="s" series={state?.load.p99} alarm={/latency|slow|p99/i.test(reasons)} />
+        <Spark label="p99" unit="s" series={props.state?.load.p99} alarm={/latency|slow|p99/i.test(reasons())} />
       </div>
-      <Links service={service} />
+      <Links service={props.service} />
     </article>
   )
 }

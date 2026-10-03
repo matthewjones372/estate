@@ -1,4 +1,6 @@
+/** @jsxImportSource solid-js */
 /** A service's pipeline in one environment as a rail: commit, build, chosen, running. */
+import { Index, Show } from "solid-js"
 import type { Build, DeploysEvent } from "../../shared/events"
 import { since } from "../format"
 
@@ -51,33 +53,34 @@ export const pipelineOf = (builds: ReadonlyArray<Build>, deployed: Deployed | un
 }
 
 export const Rail = (props: { readonly pipeline: Pipeline; readonly version: string | undefined }) => {
-  const { steps, note, tone, sha } = props.pipeline
-  const aria = `Pipeline: ${steps.map((step, index) => `${titles[index]} ${step}`).join(", ")}`
+  const aria = () => `Pipeline: ${props.pipeline.steps.map((step, index) => `${titles[index]} ${step}`).join(", ")}`
   return (
-    <div className="rail-box">
-      <div role="img" aria-label={aria} className="rail">
-        {steps.map((step, index) => {
-          const [fill, ring, bar] = looks[step]
-          const last = index === steps.length - 1
-          return (
-            <span key={titles[index]} className="rail-step" style={{ flex: last ? "0 0 auto" : "1 1 0" }}>
-              <span
-                title={`${titles[index]}: ${step}`}
-                className="rail-dot"
-                style={{ background: fill, borderColor: ring }}
-              />
-              {!last && <span className="rail-bar" style={{ background: bar }} />}
-            </span>
-          )
-        })}
+    <div class="rail-box">
+      <div role="img" aria-label={aria()} class="rail">
+        <Index each={props.pipeline.steps}>
+          {(step, index) => {
+            const look = () => looks[step()]
+            const last = index === titles.length - 1
+            return (
+              <span class="rail-step" style={{ flex: last ? "0 0 auto" : "1 1 0" }}>
+                <span
+                  title={`${titles[index]}: ${step()}`}
+                  class="rail-dot"
+                  style={{ background: look()[0], "border-color": look()[1] }}
+                />
+                {!last && <span class="rail-bar" style={{ background: look()[2] }} />}
+              </span>
+            )
+          }}
+        </Index>
       </div>
-      <div className="rail-notes mono">
-        <span>{sha ?? ""}</span>
-        <span className={`rail-note ${tone}`} title={note}>
-          {note}
+      <div class="rail-notes mono">
+        <span>{props.pipeline.sha ?? ""}</span>
+        <span class={`rail-note ${props.pipeline.tone}`} title={props.pipeline.note}>
+          {props.pipeline.note}
         </span>
       </div>
-      {props.version !== undefined && <span className="mono rail-version">{props.version}</span>}
+      <Show when={props.version}>{(version) => <span class="mono rail-version">{version()}</span>}</Show>
     </div>
   )
 }

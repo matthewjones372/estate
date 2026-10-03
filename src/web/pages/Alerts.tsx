@@ -1,5 +1,6 @@
+/** @jsxImportSource solid-js */
 /** Alerts: firing, pending and silenced together, filtered by state and service; what resolved today below. */
-import { useState } from "react"
+import { createSignal, For, Show } from "solid-js"
 import type { Alert } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock, counted, duration, since } from "../format"
@@ -23,64 +24,68 @@ export const alertsSummary = (alerts: ReadonlyArray<Alert>): string => {
 
 export const Alerts = () => {
   const { me, now, actions } = useEstate()
-  const { events } = useSnapshot()
-  const [filter, setFilter] = useState<Filter>("all")
-  const [service, setService] = useState("")
-  const [open, setOpen] = useState<string | undefined>(undefined)
-  const alerts = events.alerts?.alerts ?? []
-  const canSilence = me.role === "operator" && events.alerts?.silences === true
-  const services = [...new Set(alerts.flatMap((alert) => (alert.service === undefined ? [] : [alert.service])))].sort()
-  const shown = alerts.filter(
-    (alert) => (filter === "all" || alert.state === filter) && (service === "" || alert.service === service),
-  )
-  const opened = alerts.find((alert) => alert.id === open)
+  const snapshot = useSnapshot()
+  const [filter, setFilter] = createSignal<Filter>("all")
+  const [service, setService] = createSignal("")
+  const [open, setOpen] = createSignal<string | undefined>(undefined)
+  const alerts = () => snapshot.events.alerts?.alerts ?? []
+  const canSilence = () => me.role === "operator" && snapshot.events.alerts?.silences === true
+  const services = () =>
+    [...new Set(alerts().flatMap((alert) => (alert.service === undefined ? [] : [alert.service])))].sort()
+  const shown = () =>
+    alerts().filter(
+      (alert) => (filter() === "all" || alert.state === filter()) && (service() === "" || alert.service === service()),
+    )
+  const opened = () => alerts().find((alert) => alert.id === open())
+  const resolved = () => snapshot.events.alerts?.resolved ?? []
   return (
-    <main className="main">
-      <div className="spread" style={{ alignItems: "flex-end" }}>
-        <div className="stack">
-          <h1 className="headline" style={{ fontSize: 38 }}>
+    <main class="main">
+      <div class="spread" style={{ "align-items": "flex-end" }}>
+        <div class="stack">
+          <h1 class="headline" style={{ "font-size": "38px" }}>
             Alerts
           </h1>
-          <p className="lede">{alertsSummary(alerts)}</p>
+          <p class="lede">{alertsSummary(alerts())}</p>
         </div>
-        <div className="choices" style={{ alignItems: "center" }}>
-          <fieldset className="choices bare">
-            <legend className="visually-hidden">State</legend>
-            {filters.map((each) => (
-              <button
-                key={each.value}
-                type="button"
-                aria-pressed={filter === each.value}
-                className="filter"
-                onClick={() => setFilter(each.value)}
-              >
-                {each.label}{" "}
-                <span className="muted">
-                  {each.value === "all" ? alerts.length : alerts.filter((alert) => alert.state === each.value).length}
-                </span>
-              </button>
-            ))}
+        <div class="choices" style={{ "align-items": "center" }}>
+          <fieldset class="choices bare">
+            <legend class="visually-hidden">State</legend>
+            <For each={filters}>
+              {(each) => (
+                <button
+                  type="button"
+                  aria-pressed={filter() === each.value}
+                  class="filter"
+                  onClick={() => setFilter(each.value)}
+                >
+                  {each.label}{" "}
+                  <span class="muted">
+                    {each.value === "all"
+                      ? alerts().length
+                      : alerts().filter((alert) => alert.state === each.value).length}
+                  </span>
+                </button>
+              )}
+            </For>
           </fieldset>
-          <label className="select-label">
+          <label class="select-label">
             Service
-            <select value={service} onChange={(event) => setService(event.target.value)} className="select">
+            <select value={service()} onChange={(event) => setService(event.currentTarget.value)} class="select">
               <option value="">All services</option>
-              {services.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
+              <For each={services()}>{(name) => <option value={name}>{name}</option>}</For>
             </select>
           </label>
         </div>
       </div>
-      {opened !== undefined && (
-        <div className="cards">
-          <AlertCard alert={opened} catalog={events.catalog} canSilence={canSilence} />
-        </div>
-      )}
-      <section aria-label="Alerts" className="table-scroll panel">
-        <table className="grid">
+      <Show when={opened()}>
+        {(alert) => (
+          <div class="cards">
+            <AlertCard alert={alert()} catalog={snapshot.events.catalog} canSilence={canSilence()} />
+          </div>
+        )}
+      </Show>
+      <section aria-label="Alerts" class="table-scroll panel">
+        <table class="grid">
           <thead>
             <tr>
               <th scope="col">State</th>
@@ -89,111 +94,119 @@ export const Alerts = () => {
               <th scope="col">Since</th>
               <th scope="col">Latest note</th>
               <th scope="col">
-                <span className="visually-hidden">Actions</span>
+                <span class="visually-hidden">Actions</span>
               </th>
             </tr>
           </thead>
           <tbody>
-            {shown.map((alert) => {
-              const note = alert.notes[0]
-              return (
-                <tr key={alert.id} className={alert.state === "silenced" ? "greyed" : ""}>
-                  <td>
-                    <span className="cell-version">
-                      <span
-                        className={`dot ${alert.state === "firing" ? (alert.severity === "critical" ? "critical" : "attention") : "unknown"}`}
-                      />
-                      {alert.state}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{alert.summary ?? alert.name}</div>
-                    <div className="cell-note mono">
-                      {alert.name} · {alert.severity}
-                    </div>
-                    {alert.silence !== undefined && (
-                      <div className="cell-note">
-                        silenced until {clock(alert.silence.endsAt)} by {alert.silence.by}: “{alert.silence.reason}”
+            <For each={shown()}>
+              {(alert) => {
+                const note = () => alert.notes[0]
+                return (
+                  <tr class={alert.state === "silenced" ? "greyed" : ""}>
+                    <td>
+                      <span class="cell-version">
+                        <span
+                          class={`dot ${alert.state === "firing" ? (alert.severity === "critical" ? "critical" : "attention") : "unknown"}`}
+                        />
+                        {alert.state}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ "font-weight": 600 }}>{alert.summary ?? alert.name}</div>
+                      <div class="cell-note mono">
+                        {alert.name} · {alert.severity}
                       </div>
-                    )}
-                  </td>
-                  <td>
-                    {alert.service === undefined ? (
-                      <span className="muted">–</span>
-                    ) : (
-                      <A to={`/services/${encodeURIComponent(alert.service)}`}>{alert.service}</A>
-                    )}
-                  </td>
-                  <td className="mono">{since(alert.startsAt, now())}</td>
-                  <td>
-                    {note === undefined ? (
-                      <span className="muted">none</span>
-                    ) : (
-                      <>
-                        {note.text}
-                        <div className="cell-note">
-                          {note.by} · {clock(note.at)}
-                        </div>
-                      </>
-                    )}
-                  </td>
-                  <td>
-                    <div className="choices" style={{ justifyContent: "flex-end" }}>
-                      {alert.runbook !== undefined && (
-                        <Out href={alert.runbook} className="plain-button link-button">
-                          Runbook
-                        </Out>
-                      )}
-                      {alert.state === "silenced" && canSilence && alert.silence !== undefined ? (
-                        <button
-                          type="button"
-                          className="plain-button"
-                          onClick={() => void actions.unsilence(alert.silence?.id ?? "")}
-                        >
-                          Unsilence
-                        </button>
+                      <Show when={alert.silence}>
+                        {(silence) => (
+                          <div class="cell-note">
+                            silenced until {clock(silence().endsAt)} by {silence().by}: “{silence().reason}”
+                          </div>
+                        )}
+                      </Show>
+                    </td>
+                    <td>
+                      {alert.service === undefined ? (
+                        <span class="muted">–</span>
                       ) : (
-                        <button
-                          type="button"
-                          className="plain-button"
-                          onClick={() => setOpen(open === alert.id ? undefined : alert.id)}
-                        >
-                          {open === alert.id ? "Close" : "Notes and silence"}
-                        </button>
+                        <A to={`/services/${encodeURIComponent(alert.service)}`}>{alert.service}</A>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
+                    </td>
+                    <td class="mono">{since(alert.startsAt, now())}</td>
+                    <td>
+                      <Show when={note()} fallback={<span class="muted">none</span>}>
+                        {(latest) => (
+                          <>
+                            {latest().text}
+                            <div class="cell-note">
+                              {latest().by} · {clock(latest().at)}
+                            </div>
+                          </>
+                        )}
+                      </Show>
+                    </td>
+                    <td>
+                      <div class="choices" style={{ "justify-content": "flex-end" }}>
+                        <Show when={alert.runbook}>
+                          {(runbook) => (
+                            <Out href={runbook()} class="plain-button link-button">
+                              Runbook
+                            </Out>
+                          )}
+                        </Show>
+                        {alert.state === "silenced" && canSilence() && alert.silence !== undefined ? (
+                          <button
+                            type="button"
+                            class="plain-button"
+                            onClick={() => void actions.unsilence(alert.silence?.id ?? "")}
+                          >
+                            Unsilence
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            class="plain-button"
+                            onClick={() => setOpen(open() === alert.id ? undefined : alert.id)}
+                          >
+                            {open() === alert.id ? "Close" : "Notes and silence"}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              }}
+            </For>
           </tbody>
         </table>
-        {shown.length === 0 && (
-          <p className="muted" style={{ padding: "0 16px" }}>
+        <Show when={shown().length === 0}>
+          <p class="muted" style={{ padding: "0 16px" }}>
             Nothing here for this filter.
           </p>
-        )}
+        </Show>
       </section>
-      <section aria-labelledby="resolved" className="stack">
-        <h2 id="resolved" className="section-title">
+      <section aria-labelledby="resolved" class="stack">
+        <h2 id="resolved" class="section-title">
           Resolved today
         </h2>
-        {(events.alerts?.resolved ?? []).length === 0 && (
-          <p className="muted" style={{ margin: 0 }}>
+        <Show when={resolved().length === 0}>
+          <p class="muted" style={{ margin: 0 }}>
             Nothing has resolved today.
           </p>
-        )}
-        {(events.alerts?.resolved ?? []).map((each) => (
-          <div key={`${each.name}-${each.endsAt}`} className="silenced-row">
-            <span className="mono" style={{ color: "var(--ink-soft)" }}>
-              {each.name}
-            </span>
-            <span>{each.service ?? ""}</span>
-            <span>
-              resolved at {clock(each.endsAt)} after {duration(Date.parse(each.endsAt) - Date.parse(each.startsAt))}
-            </span>
-          </div>
-        ))}
+        </Show>
+        <For each={resolved()}>
+          {(each) => (
+            <div class="silenced-row">
+              <span class="mono" style={{ color: "var(--ink-soft)" }}>
+                {each.name}
+              </span>
+              <span>{each.service ?? ""}</span>
+              <span>
+                resolved at {clock(each.endsAt)} after {duration(Date.parse(each.endsAt) - Date.parse(each.startsAt))}
+              </span>
+            </div>
+          )}
+        </For>
       </section>
     </main>
   )

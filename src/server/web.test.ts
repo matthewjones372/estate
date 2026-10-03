@@ -3,6 +3,7 @@ import { mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect, Layer, Option, Result } from "effect"
+import { bundle, print } from "./bundle"
 import { buildWeb, builtWeb, Web } from "./web"
 
 const read = Effect.gen(function* () {
@@ -48,4 +49,39 @@ describe("the pages' bundle", () => {
       ])
     })
   })
+
+  test("is made by a process of its own, which says what went wrong when it cannot", () =>
+    Promise.all([bundle(join(import.meta.dir, "..", "web")), bundle(join(tmpdir(), "estate-nowhere"))]).then(
+      ([made, failed]) => {
+        expect(made.ok && made.outputs.map((output) => output.name.replace(/-.*\./, "."))).toEqual([
+          "main.js",
+          "main.css",
+        ])
+        expect(failed.ok).toBe(false)
+      },
+    ))
+
+  test("is printed as JSON for Estate to read", () => {
+    const to = Bun.file(join(mkdtempSync(join(tmpdir(), "estate-bundle-")), "printed.json"))
+    return print(join(tmpdir(), "estate-nowhere"), to)
+      .then(() => to.json())
+      .then((printed) => expect(printed).toMatchObject({ ok: false }))
+  })
+
+  test("is printed as JSON, which the image keeps and Estate serves without bundling again", () => {
+    const kept = join(mkdtempSync(join(tmpdir(), "estate-bundle-")), "pages.json")
+    return print(join(import.meta.dir, "..", "web"), Bun.file(kept)).then(() =>
+      Effect.runPromise(
+        read.pipe(
+          Effect.flatMap((web) =>
+            Effect.sync(() => {
+              const script = /src="\/assets\/([^"]+\.js)"/.exec(web.index)?.[1] ?? ""
+              expect(Option.isSome(web.asset(script))).toBe(true)
+            }),
+          ),
+          Effect.provide(buildWeb(join(import.meta.dir, "..", "web"), kept)),
+        ),
+      ),
+    )
+  }, 30_000)
 })
