@@ -39,6 +39,10 @@ export const recording = (): Recorded => {
         calls.push(["load", service, range])
         return Promise.resolve({ requests: series([1, 2]) })
       },
+      storeLoad: (store, range) => {
+        calls.push(["storeLoad", store, range])
+        return Promise.resolve({ stats: [{ title: "Connections used", unit: "%", series: series([40, 45]) }] })
+      },
       watchLogs: (service, handlers) => {
         calls.push(["watchLogs", service])
         if (service !== "storefront") {

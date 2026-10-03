@@ -47,6 +47,12 @@ const watchLogs = (environment: string, service: string, handlers: LogHandlers) 
   return () => source.close()
 }
 
+const loadFrom = (url: string) =>
+  fetch(url)
+    .then((response) => (response.ok ? response.json() : undefined))
+    .then((body) => Option.getOrUndefined(decodeLoad(body)))
+    .catch(() => undefined)
+
 const windowQuery = (window: ErrorWindow) =>
   "range" in window ? `range=${window.range}` : `since=${encodeURIComponent(window.since)}`
 
@@ -76,8 +82,11 @@ export const serverActions = (
       })
       .catch(() => undefined),
   load: (service, range: Range) =>
-    fetch(`/api/load?env=${encodeURIComponent(environment())}&service=${encodeURIComponent(service)}&range=${range}`)
-      .then((response) => (response.ok ? response.json() : undefined))
-      .then((body) => Option.getOrUndefined(decodeLoad(body)))
-      .catch(() => undefined),
+    loadFrom(
+      `/api/load?env=${encodeURIComponent(environment())}&service=${encodeURIComponent(service)}&range=${range}`,
+    ),
+  storeLoad: (store, range: Range) =>
+    loadFrom(
+      `/api/store-load?env=${encodeURIComponent(environment())}&store=${encodeURIComponent(store)}&range=${range}`,
+    ),
 })

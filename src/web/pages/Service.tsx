@@ -11,7 +11,7 @@ import { HealthLine, Links } from "../parts/Lane"
 import { LogsPanel } from "../parts/Logs"
 
 export const ServicePage = (props: { readonly name: string }) => {
-  const { now } = useEstate()
+  const { actions, now } = useEstate()
   const snapshot = useSnapshot()
   const events = () => snapshot.events
   const service = () => events().catalog?.services.find((each) => each.name === props.name)
@@ -54,7 +54,7 @@ export const ServicePage = (props: { readonly name: string }) => {
         </section>
         <div class="row">
           <div class="stack" style={{ flex: "999 1 640px", "min-width": 0, gap: "24px" }}>
-            <Load name={props.name} state={state()} alerts={alerts()} />
+            <Load name={props.name} hour={state()?.load} read={actions.load} alerts={alerts()} />
             <LogsPanel service={props.name} />
             <section aria-labelledby="pods" class="stack">
               <h2 id="pods" class="section-title">

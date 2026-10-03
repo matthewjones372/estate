@@ -78,7 +78,13 @@ describe("the catalog's check", () => {
           extra: [{ title: "Outbox", query: "max(outbox_lag" }],
           attention: { connections: 90, memory: 95 },
         },
-        { name: "orders-db", environments: [], engine: "redis", selector: 'instance="cache"' },
+        {
+          name: "orders-db",
+          environments: ["staging"],
+          engine: "redis",
+          selector: 'instance="cache"',
+          links: { dashboard: "https://grafana.example/{env}/{store}/{namespace}" },
+        },
         { name: "orders", environments: [], engine: "kafka", selector: 'job="kafka"' },
       ],
       map: {
@@ -104,6 +110,7 @@ describe("the catalog's check", () => {
       "stores[0] (orders-db).selector: is empty",
       "stores[0] (orders-db).extra[0] (Outbox): the query is missing a )",
       "stores[0] (orders-db).attention.memory: is not one of postgres's: connections, lag",
+      "stores[1] (orders-db).links.dashboard: {namespace} is not one of {env}, {store}, nor a value staging names",
       'stores[2] (orders): "orders" is also a service\'s name',
       'map.nodes: "a" is named twice',
       'map.nodes[0] (a): "carts" is not a service',

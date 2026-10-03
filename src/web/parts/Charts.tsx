@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
-/** A service's load and stats over a chosen range, and its alerts over the day. */
+/** A service's load and stats, or a store's stats, over a chosen range; and alerts over the day. */
 import { createEffect, createMemo, createSignal, For, on, onCleanup, Show } from "solid-js"
-import type { Alert, Series, ServiceState } from "../../shared/events"
+import type { Alert, Load as Read, Series } from "../../shared/events"
 import { reading, whole, type Zoom } from "../chart"
 import { type Range, useEstate } from "../context"
 import { clock, measured } from "../format"
@@ -81,14 +81,20 @@ const Chart = (props: {
   )
 }
 
+/**
+ * The last hour as the stream sends it in `hour`, or a longer range as `read` fetches it; for a store, `title` is
+ * Stats and only its stats are drawn.
+ */
 export const Load = (props: {
   readonly name: string
-  readonly state: ServiceState | undefined
+  readonly hour: Read | undefined
+  readonly read: (name: string, range: Range) => Promise<Read | undefined>
   readonly alerts: ReadonlyArray<Alert>
+  readonly title?: string
 }) => {
-  const { actions, now } = useEstate()
+  const { now } = useEstate()
   const [range, setRange] = createSignal<Range>("1h")
-  const [load, setLoad] = createSignal<ServiceState["load"] | undefined>(undefined)
+  const [load, setLoad] = createSignal<Read | undefined>(undefined)
   const [mark, setMark] = createSignal<number | undefined>(undefined)
   const [zoom, setZoom] = createSignal<Zoom>(whole)
   const [readAt, setReadAt] = createSignal(now())
@@ -99,16 +105,16 @@ export const Load = (props: {
         current = false
       })
       if (chosen !== "1h")
-        void actions.load(name, chosen).then((read) => {
+        void props.read(name, chosen).then((read) => {
           if (!current) return
           setLoad(read)
           setReadAt(now())
         })
     }),
   )
-  const shown = () => (range() === "1h" ? props.state?.load : load())
+  const shown = () => (range() === "1h" ? props.hour : load())
   // The last hour ends when its event came; a longer range when it was read.
-  const heard = createMemo(on(() => props.state?.load, now))
+  const heard = createMemo(on(() => props.hour, now))
   const end = () => (range() === "1h" ? heard() : readAt())
   const limit = () =>
     props.alerts.find((alert) => alert.chart !== undefined && /latency|slow|p99|duration/i.test(alert.name))?.chart
@@ -123,7 +129,7 @@ export const Load = (props: {
     <section aria-labelledby="load" class="panel section-box">
       <div class="spread">
         <h2 id="load" class="section-title">
-          Load
+          {props.title ?? "Load"}
         </h2>
         <fieldset class="choices bare">
           <legend class="visually-hidden">Range</legend>
@@ -141,13 +147,17 @@ export const Load = (props: {
           </For>
         </fieldset>
       </div>
-      <div class="charts">
-        <Chart label="Requests" unit="/s" series={shown()?.requests} limit={undefined} reading={shared} />
-        <Chart label="Errors" unit="/s" series={shown()?.errors} limit={undefined} reading={shared} />
-        <Chart label="p99" unit="s" series={shown()?.p99} limit={limit()} reading={shared} />
-      </div>
+      <Show when={props.title === undefined}>
+        <div class="charts">
+          <Chart label="Requests" unit="/s" series={shown()?.requests} limit={undefined} reading={shared} />
+          <Chart label="Errors" unit="/s" series={shown()?.errors} limit={undefined} reading={shared} />
+          <Chart label="p99" unit="s" series={shown()?.p99} limit={limit()} reading={shared} />
+        </div>
+      </Show>
       <Show when={(shown()?.stats ?? []).length > 0}>
-        <h3 class="section-title">Stats</h3>
+        <Show when={props.title === undefined}>
+          <h3 class="section-title">Stats</h3>
+        </Show>
         <div class="charts">
           <For each={shown()?.stats ?? []}>
             {(stat) => (

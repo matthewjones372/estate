@@ -134,3 +134,11 @@ fieldset.silencing {
   gap: 8px;
   align-items: center;
 }
+.reasons {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

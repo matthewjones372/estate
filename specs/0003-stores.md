@@ -67,7 +67,7 @@ kafka_exporter) are the estate's; Estate names the series they publish.
       Done when: a broken store query or an unknown engine is a named mistake.
 - [x] **`store-presets`** — the five presets, their stats read with the load, and health from their thresholds.
       Done when: a CloudNativePG store with an instance not ready shows as needing attention, saying which.
-- [ ] **`store-pages`** — the Stores section on the overview, the store page, map nodes coloured by health, alerts
+- [x] **`store-pages`** — the Stores section on the overview, the store page, map nodes coloured by health, alerts
       about a store.
       Done when: Playwright opens a store from the overview and sees its stats over 24 h.
 

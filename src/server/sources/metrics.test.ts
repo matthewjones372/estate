@@ -187,4 +187,35 @@ describe("load over a longer range", () => {
       }),
     )
   })
+
+  test("a store's stats are read the same way, from its preset", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(
+          configured,
+          estate({ catalog: { ...withMetrics, stores: [ordersDb] } }),
+          prometheus(),
+        )
+        const answered = yield* ask(
+          server,
+          new Request("http://estate/api/store-load?env=staging&store=orders-db&range=24h"),
+        )
+        const { stats } = answered.json() as { stats: ReadonlyArray<unknown> }
+        expect(stats).toHaveLength(4)
+        expect(stats[0]).toMatchObject({ title: "Memory used", unit: "%", series: { now: 12 } })
+        const elsewhere = yield* ask(
+          server,
+          new Request("http://estate/api/store-load?env=production&store=orders-db&range=24h"),
+        )
+        expect(elsewhere.status).toBe(404)
+        const bare = yield* serverFor(
+          { ...configured, sources: { staging: {}, production: {} } },
+          estate({ catalog: { ...withMetrics, stores: [ordersDb] } }),
+        )
+        const none = yield* ask(bare, new Request("http://estate/api/store-load?env=staging&store=orders-db&range=6h"))
+        expect(none.json()).toEqual({ message: "staging has no Prometheus" })
+        const wrong = yield* ask(bare, new Request("http://estate/api/store-load?env=staging&store=orders-db"))
+        expect(wrong.status).toBe(400)
+      }),
+    ))
 })

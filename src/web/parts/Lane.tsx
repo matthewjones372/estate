@@ -18,7 +18,9 @@ const healthWords: Readonly<Record<Health, string>> = {
 
 type Described = CatalogEvent["services"][number]
 
-const linksOf = (service: Described): ReadonlyArray<{ readonly name: string; readonly url: string }> => [
+const linksOf = (
+  service: Pick<Described, "links" | "repository" | "runbook">,
+): ReadonlyArray<{ readonly name: string; readonly url: string }> => [
   ...[...service.links].sort((a, b) => rank(a.name) - rank(b.name)),
   ...(service.repository === undefined
     ? []
@@ -39,7 +41,7 @@ const rank = (name: string) => (order.includes(name) ? order.indexOf(name) : ord
 
 const label = (name: string) => labels[name] ?? name.charAt(0).toUpperCase() + name.slice(1)
 
-export const Links = (props: { readonly service: Described }) => (
+export const Links = (props: { readonly service: Pick<Described, "name" | "links" | "repository" | "runbook"> }) => (
   <nav aria-label={`${props.service.name} links`} class="links">
     <For each={linksOf(props.service)}>
       {(link) => (
@@ -52,7 +54,10 @@ export const Links = (props: { readonly service: Described }) => (
   </nav>
 )
 
-export const HealthLine = (props: { readonly state: ServiceState | undefined }) => {
+/** A service's or a store's health, its first reason, and for a service its pods. */
+export const HealthLine = (props: {
+  readonly state: (Pick<ServiceState, "health" | "reasons"> & Partial<Pick<ServiceState, "pods">>) | undefined
+}) => {
   const health = () => props.state?.health ?? "unknown"
   const why = () => {
     const pods = props.state?.pods ?? []

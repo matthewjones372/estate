@@ -124,3 +124,18 @@ test("a service's lines arrive live, pause, filter to errors, and its errors gro
   await expect(logs.locator(".examples .log-line").first()).toBeVisible()
   await accessible(page)
 })
+
+test("a store opened from the overview shows its stats over a day", async ({ page }) => {
+  await page.goto("/?env=production")
+  const stores = services(page)
+  await expect(stores.getByRole("heading", { name: "Stores" })).toBeVisible({ timeout: 20_000 })
+  await stores.getByRole("link", { name: "orders-db", exact: true }).click()
+  await expect(page).toHaveURL(/\/stores\/orders-db/)
+  await expect(page.getByRole("heading", { name: "orders-db", level: 1 })).toBeVisible()
+  await expect(page.getByText("Healthy")).toBeVisible()
+  await page.getByRole("button", { name: "24h" }).click()
+  await expect(page.getByText("24h ago").first()).toBeVisible()
+  await expect(page.getByRole("img", { name: /Connections used over 24h, now [\d.]+%/ })).toBeVisible()
+  await shot(page, "store")
+  await accessible(page)
+})

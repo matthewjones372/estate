@@ -1,5 +1,8 @@
 /** @jsxImportSource solid-js */
-/** The overview: the headline, the vitals, the map, what needs someone, a lane per service, and what changed. */
+/**
+ * The overview: the headline, the vitals, the map, what needs someone, a lane per service and per store, and what
+ * changed.
+ */
 import { For, Show } from "solid-js"
 import type { Alert, Events } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
@@ -9,6 +12,7 @@ import { Feed } from "../parts/Feed"
 import { Icon } from "../parts/icons"
 import { Lane } from "../parts/Lane"
 import { EstateMap } from "../parts/Map"
+import { StoreLane } from "../parts/StoreLane"
 import { Reading, SourceNotices } from "./States"
 
 export interface Headline {
@@ -21,7 +25,7 @@ export interface Headline {
 
 export const headlineOf = (events: Partial<Events>): Headline => {
   const firing = (events.alerts?.alerts ?? []).filter((alert) => alert.state === "firing")
-  const services = events.services?.services ?? []
+  const services = [...(events.services?.services ?? []), ...(events.services?.stores ?? [])]
   const troubled = services.filter((service) => service.health === "attention" || service.health === "critical")
   const critical =
     firing.some((alert) => alert.severity === "critical") || services.some((service) => service.health === "critical")
@@ -241,6 +245,21 @@ export const Overview = () => {
               />
             )}
           </For>
+          <Show when={(events().catalog?.stores ?? []).length > 0}>
+            <div class="spread">
+              <h2 id="stores-title" class="section-title">
+                Stores
+              </h2>
+              <span class="muted" style={{ "font-size": "12px" }}>
+                Last hour
+              </span>
+            </div>
+            <For each={events().catalog?.stores ?? []}>
+              {(store) => (
+                <StoreLane store={store} state={events().services?.stores?.find((each) => each.name === store.name)} />
+              )}
+            </For>
+          </Show>
         </section>
         <Feed feed={events().feed} />
       </div>

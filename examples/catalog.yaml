@@ -66,6 +66,25 @@ services:
     environments: [ staging, production ]
     kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: search } ] }
 
+stores:
+  - name: orders-db
+    description: Orders, baskets and deliveries
+    environments: [ staging, production ]
+    engine: postgres
+    selector: 'datname="orders"'
+    links: { dashboard: 'https://grafana.example.com/d/postgres?var-env={env}&var-db={store}' }
+  - name: cache
+    description: Sessions and product pages
+    environments: [ staging, production ]
+    engine: redis
+    selector: 'instance="cache:9121"'
+  - name: events
+    description: Orders placed and paid, for whoever listens
+    environments: [ production ]
+    engine: kafka
+    selector: 'job="kafka"'
+    attention: { underReplicated: 0 }
+
 vitals:
   - title: Orders
     query: sum(rate(orders_placed_total[5m]))
@@ -80,7 +99,7 @@ map:
     - { id: search, service: search }
     - { id: orders, service: orders }
     - { id: payments, service: payments }
-    - { id: db, title: Postgres, kind: store }
+    - { id: db, title: Postgres, store: orders-db }
     - { id: cards, title: Card provider, kind: external }
   edges:
     - { from: storefront, to: search, label: search, rate: 'sum(rate(search_requests_total[1m]))' }

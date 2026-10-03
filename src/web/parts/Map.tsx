@@ -18,6 +18,7 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
   )
   const flow = (edge: MapEdge) => props.services?.edges.find((each) => each.from === edge.from && each.to === edge.to)
   const stateOf = (service: string | undefined) => props.services?.services.find((each) => each.name === service)
+  const storeStateOf = (store: string | undefined) => props.services?.stores?.find((each) => each.name === store)
   const ends = (edge: MapEdge) => {
     const from = placed().get(edge.from)
     const to = placed().get(edge.to)
@@ -79,9 +80,22 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
 
   const Node = (shown: { readonly node: MapNode }) => {
     const state = () => stateOf(shown.node.service)
-    const health = () => (shown.node.service === undefined ? "healthy" : (state()?.health ?? "unknown"))
+    const store = () => storeStateOf(shown.node.store)
+    const health = () =>
+      shown.node.service !== undefined
+        ? (state()?.health ?? "unknown")
+        : shown.node.store !== undefined
+          ? (store()?.health ?? "unknown")
+          : "healthy"
+    const to = () =>
+      shown.node.service !== undefined
+        ? `/services/${encodeURIComponent(shown.node.service)}`
+        : shown.node.store === undefined
+          ? undefined
+          : `/stores/${encodeURIComponent(shown.node.store)}`
     const sub = () => {
       const requests = state()?.load.requests?.now
+      if (shown.node.store !== undefined) return store()?.reasons[0] ?? shown.node.kind
       if (shown.node.service === undefined) return shown.node.kind
       return requests === undefined || requests === null ? (state()?.version ?? "") : `${amount(requests)} req/s`
     }
@@ -101,19 +115,15 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
       <Show when={placed().get(shown.node.id)}>
         {(at) => (
           <Show
-            when={shown.node.service}
+            when={to()}
             fallback={
               <span class={`map-node ${health()}`} style={{ left: `${at().x}%`, top: `${at().y}%` }}>
                 {body()}
               </span>
             }
           >
-            {(service) => (
-              <A
-                to={`/services/${encodeURIComponent(service())}`}
-                class={`map-node ${health()}`}
-                style={{ left: `${at().x}%`, top: `${at().y}%` }}
-              >
+            {(path) => (
+              <A to={path()} class={`map-node ${health()}`} style={{ left: `${at().x}%`, top: `${at().y}%` }}>
                 {body()}
               </A>
             )}

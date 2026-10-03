@@ -1,6 +1,6 @@
 /**
  * A small estate's tools on one port, answering in their own shapes, for the pages' tests and screenshots:
- * Prometheus, Alertmanager (silences kept), a Kubernetes API with Flux (ConfigMaps patched, pods logging), and GitHub
+ * Prometheus (with the stores' exporters' series), Alertmanager (silences kept), a Kubernetes API with Flux (ConfigMaps patched, pods logging), and GitHub
  * Actions.
  */
 const now = () => Math.floor(Date.now() / 1000)
@@ -9,6 +9,20 @@ const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).
 const wave = (base: number, swing: number, phase: number) => (at: number) => base + swing * Math.sin(at / 600 + phase)
 
 const series: Array<[RegExp, (at: number) => number]> = [
+  // The stores' exporters: postgres_exporter, redis_exporter and kafka_exporter, every store well.
+  [/pg_stat_activity_count/, wave(38, 6, 1)],
+  [/pg_stat_database_xact_commit/, wave(120, 25, 2)],
+  [/pg_replication_lag_seconds/, wave(0.4, 0.2, 3)],
+  [/pg_database_size_bytes/, wave(2.1 * 1024 ** 3, 0.01 * 1024 ** 3, 4)],
+  [/pg_stat_database_deadlocks/, () => 0],
+  [/redis_memory_used_bytes/, wave(62, 4, 5)],
+  [/redis_keyspace_hits_total/, wave(94, 2, 6)],
+  [/redis_evicted_keys_total/, () => 0],
+  [/redis_connected_clients/, wave(18, 3, 7)],
+  [/^deriv\(sum\(kafka_consumergroup_lag/, () => 0],
+  [/kafka_consumergroup_lag/, wave(35, 20, 8)],
+  [/kafka_topic_partition_current_offset/, wave(240, 40, 9)],
+  [/kafka_topic_partition_under_replicated_partition/, () => 0],
   [/^histogram_quantile.*app="orders"/, (at) => 0.06 + 0.16 * Math.max(0, (at - (now() - 1500)) / 1500)],
   [/^histogram_quantile/, wave(0.045, 0.01, 1)],
   [/code=~"5\.\."|outcome="error"/, wave(0.02, 0.02, 2)],

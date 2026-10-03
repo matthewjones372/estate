@@ -33,6 +33,9 @@ head across five tabs. Estate does the joining:
 - **Jobs and CronJobs**: last runs, how they ended, the next one, and the run that should have happened and didn't.
 - **Stats for the process behind each service**: heap, GC pauses, threads and CPU for a JVM, or memory and CPU for
   any container, from presets, beside queries of your own.
+- **Stores**: databases, queues and caches beside the services, read from the exporters you already run (Postgres,
+  CloudNativePG, MySQL, Redis, Kafka): connections, lag, memory, backups, under-replicated partitions, amber past
+  each engine's thresholds, with a page each and their alerts.
 - **Logs on the page**: a service's lines as they arrive, filtered by level or text, paused when you scroll up; its
   errors over the last hour or day grouped by message, so 4,000 lines read as the three faults behind them; and on
   each alert, the errors from the minutes before it started. From Loki, or from the pods themselves, masked.

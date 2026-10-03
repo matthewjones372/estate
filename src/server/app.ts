@@ -4,7 +4,7 @@ import type { Mistake } from "../shared/shape"
 import { providerLayer } from "./auth/oidc"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
-import { loadRoute } from "./http/load"
+import { loadRoute, storeLoadRoute } from "./http/load"
 import { errorsRoute, logsRoute } from "./http/logs"
 import { loadNotes, notesRoute, removeNoteRoute, sweepNotes } from "./http/notes"
 import { routes } from "./http/routes"
@@ -70,6 +70,7 @@ export const application = Layer.mergeAll(
   routes,
   signInRoutes,
   loadRoute,
+  storeLoadRoute,
   notesRoute,
   removeNoteRoute,
   silenceRoute,

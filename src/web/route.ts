@@ -2,6 +2,7 @@
 export type Page =
   | { readonly page: "overview" }
   | { readonly page: "service"; readonly name: string }
+  | { readonly page: "store"; readonly name: string }
   | { readonly page: "deploys" }
   | { readonly page: "alerts" }
   | { readonly page: "missing" }
@@ -11,7 +12,9 @@ export const pageOf = (pathname: string): Page => {
   if (pathname === "/deploys") return { page: "deploys" }
   if (pathname === "/alerts") return { page: "alerts" }
   const service = /^\/services\/([^/]+)$/.exec(pathname)?.[1]
-  return service === undefined ? { page: "missing" } : { page: "service", name: decodeURIComponent(service) }
+  if (service !== undefined) return { page: "service", name: decodeURIComponent(service) }
+  const store = /^\/stores\/([^/]+)$/.exec(pathname)?.[1]
+  return store === undefined ? { page: "missing" } : { page: "store", name: decodeURIComponent(store) }
 }
 
 export const pathOf = (page: Page): string => {
@@ -20,6 +23,8 @@ export const pathOf = (page: Page): string => {
       return "/"
     case "service":
       return `/services/${encodeURIComponent(page.name)}`
+    case "store":
+      return `/stores/${encodeURIComponent(page.name)}`
     case "deploys":
       return "/deploys"
     case "alerts":

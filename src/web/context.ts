@@ -15,6 +15,8 @@ export interface Actions {
   readonly debug: (service: string, minutes: number) => Promise<boolean>
   readonly undebug: (service: string) => Promise<boolean>
   readonly load: (service: string, range: Range) => Promise<ServiceState["load"] | undefined>
+  /** A store's stats over a range, as a load with only stats. */
+  readonly storeLoad: (store: string, range: Range) => Promise<ServiceState["load"] | undefined>
   /** A service's live lines; the returned function stops watching. */
   readonly watchLogs: (service: string, handlers: LogHandlers) => () => void
   /** A service's errors grouped, over a range or since a time: "none" where it has no logs to read. */

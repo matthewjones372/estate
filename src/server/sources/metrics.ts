@@ -48,7 +48,7 @@ export const loadOf = (
   })
 
 /** A store's stats over a span, from the preset for its engine and its own queries. */
-const storeLoadOf = (
+export const storeLoadOf = (
   url: string,
   store: Store,
   span: Span,

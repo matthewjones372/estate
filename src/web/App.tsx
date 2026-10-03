@@ -6,6 +6,7 @@ import { Alerts } from "./pages/Alerts"
 import { Deploys } from "./pages/Deploys"
 import { Overview } from "./pages/Overview"
 import { ServicePage } from "./pages/Service"
+import { StorePage } from "./pages/Store"
 import { A } from "./parts/A"
 import { Header } from "./parts/Header"
 
@@ -22,12 +23,17 @@ const Page = (props: { readonly estate: Estate }) => {
     const now = page()
     return now.page === "service" ? now.name : undefined
   }
+  const store = () => {
+    const now = page()
+    return now.page === "store" ? now.name : undefined
+  }
   return (
     <Switch fallback={<Missing />}>
       <Match when={page().page === "overview"}>
         <Overview />
       </Match>
       <Match when={service()}>{(name) => <ServicePage name={name()} />}</Match>
+      <Match when={store()}>{(name) => <StorePage name={name()} />}</Match>
       <Match when={page().page === "deploys"}>
         <Deploys />
       </Match>

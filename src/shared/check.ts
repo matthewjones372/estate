@@ -34,7 +34,8 @@ export const queryMistake = (query: string): string | undefined => {
   return last === undefined ? undefined : `is missing a ${last}`
 }
 
-const placeholders = new Set(["env", "namespace", "service"])
+const servicePlaceholders = ["env", "namespace", "service"]
+const storePlaceholders = ["env", "store"]
 
 const duplicates = (names: ReadonlyArray<string>): ReadonlyArray<string> =>
   [...new Set(names.filter((name, index) => names.indexOf(name) !== index))].sort()
@@ -47,6 +48,27 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
   const query = (at: string, text: string | undefined) => {
     const wrong = text === undefined ? undefined : queryMistake(text)
     if (wrong !== undefined) mistake(at, `the query ${wrong}`)
+  }
+  /** A link's placeholders: its own, or a value every environment it is in names. */
+  const links = (
+    at: string,
+    names: ReadonlyArray<string>,
+    templates: Readonly<Record<string, string>> | undefined,
+    own: ReadonlyArray<string>,
+  ) => {
+    const valued = catalog.environments.filter((environment) => names.includes(environment.name))
+    for (const [name, template] of Object.entries(templates ?? {})) {
+      for (const [, placeholder = ""] of template.matchAll(/\{(\w+)\}/g)) {
+        if (own.includes(placeholder)) continue
+        const lacking = valued.filter((each) => each.values?.[placeholder] === undefined).map((each) => each.name)
+        if (lacking.length > 0) {
+          mistake(
+            `${at}.links.${name}`,
+            `{${placeholder}} is not one of ${own.map((each) => `{${each}}`).join(", ")}, nor a value ${[...new Set(lacking)].join(" and ")} names`,
+          )
+        }
+      }
+    }
   }
 
   if (catalog.environments.length === 0) mistake("environments", "names no environment")
@@ -67,21 +89,7 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
     statsOf(service).forEach((stat) => {
       query(`${at}.stats (${stat.title})`, stat.query)
     })
-    const valued = catalog.environments.filter((environment) => service.environments.includes(environment.name))
-    for (const [name, template] of Object.entries(service.links ?? {})) {
-      for (const [, placeholder] of template.matchAll(/\{(\w+)\}/g)) {
-        if (placeholder === undefined || placeholders.has(placeholder)) continue
-        const lacking = valued
-          .filter((environment) => environment.values?.[placeholder] === undefined)
-          .map((each) => each.name)
-        if (lacking.length > 0) {
-          mistake(
-            `${at}.links.${name}`,
-            `{${placeholder}} is not one of {env}, {namespace}, {service}, nor a value ${[...new Set(lacking)].join(" and ")} names`,
-          )
-        }
-      }
-    }
+    links(at, service.environments, service.links, servicePlaceholders)
     if ((service.jobs ?? []).length > 0 && service.kubernetes === undefined) {
       mistake(`${at}.jobs`, "needs kubernetes.namespace, where its jobs run")
     }
@@ -113,6 +121,7 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
       if (!environments.has(environment)) mistake(`${at}.environments`, `"${environment}" is not an environment`)
     }
     if (store.selector.trim() === "") mistake(`${at}.selector`, "is empty")
+    links(at, store.environments, store.links, storePlaceholders)
     store.extra?.forEach((extra, extraIndex) => {
       query(`${at}.extra[${extraIndex}] (${extra.title})`, extra.query)
     })

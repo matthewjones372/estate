@@ -190,7 +190,13 @@ export type Alert = typeof Alert.Type
 export const AlertsEvent = Schema.Struct({
   alerts: Schema.Array(Alert),
   resolved: Schema.Array(
-    Schema.Struct({ name: Schema.String, service: optional(Schema.String), startsAt: Instant, endsAt: Instant }),
+    Schema.Struct({
+      name: Schema.String,
+      service: optional(Schema.String),
+      store: optional(Schema.String),
+      startsAt: Instant,
+      endsAt: Instant,
+    }),
   ),
   silences: Schema.Boolean,
 })
