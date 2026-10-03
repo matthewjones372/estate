@@ -2,7 +2,7 @@
   "name": "estate",
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "@babel/core": "^7",
+    "@babel/core": "^8",
     "@babel/preset-typescript": "^7",
     "@biomejs/biome": "^2.5.15",
     "@happy-dom/global-registrator": "^20.14.5",
