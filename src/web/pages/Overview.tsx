@@ -76,6 +76,7 @@ interface Tile {
 export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
   const services = events.services?.services ?? []
   const pods = services.flatMap((service) => service.pods)
+  const runtime = events.services?.sources.find((source) => source.kind === "cluster")
   const firing = (events.alerts?.alerts ?? []).filter((alert) => alert.state === "firing")
   const stalled = (events.deploys?.services ?? []).flatMap((service) =>
     service.environments.filter(
@@ -107,12 +108,17 @@ export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
               .join(", "),
       alarm: firing.length > 0,
     },
-    {
-      label: "Pods ready",
-      value: `${pods.filter((pod) => pod.ready).length}/${pods.length}`,
-      note: `${pods.reduce((total, pod) => total + pod.restarts, 0)} restarts`,
-      alarm: pods.some((pod) => !pod.ready),
-    },
+    // Instances only where something runs them: an environment read wholly from Datadog has none to count.
+    ...(runtime === undefined || runtime.state === "off"
+      ? []
+      : [
+          {
+            label: `${runtime.tool === "ECS" ? "Tasks" : "Pods"} ready`,
+            value: `${pods.filter((pod) => pod.ready).length}/${pods.length}`,
+            note: `${pods.reduce((total, pod) => total + pod.restarts, 0)} restarts`,
+            alarm: pods.some((pod) => !pod.ready),
+          },
+        ]),
     {
       label: "Deploys stalled",
       value: String(stalled.length),

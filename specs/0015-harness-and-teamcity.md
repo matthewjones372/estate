@@ -74,6 +74,6 @@ bunx playwright test
 
 ## Open questions
 
-- Harness's execution summary carries the environment and artifact of a CD stage under `moduleInfo.cd`. The fields
-  Estate reads are from Harness's API reference and must be checked against a real account before a team relies
-  on them; `estate doctor` printing what it read is how. Recommended: ship behind the doctor, as Datadog did.
+None. Decided: Harness CD's environment and artifact are read from `moduleInfo.cd` in the execution summaries, as
+Harness's API reference gives them. Before a team relies on them, `estate doctor` against their account prints
+what each service's deploys read as; a service whose deployments Estate cannot read is missing from that line.

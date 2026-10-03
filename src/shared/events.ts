@@ -15,6 +15,8 @@ export type SourceKind = typeof SourceKind.Type
 
 export const SourceStatus = Schema.Struct({
   kind: SourceKind,
+  /** The tool the part is read from, by its own name, where one is set up. */
+  tool: optional(Schema.String),
   /** off: not configured; waiting: not answered yet; ok; failing: did not answer, its parts shown with their age. */
   state: Schema.Literals(["off", "waiting", "ok", "failing"]),
   message: optional(Schema.String),

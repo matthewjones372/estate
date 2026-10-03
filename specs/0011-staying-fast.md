@@ -95,5 +95,5 @@ bun run perf
 
 ## Open questions
 
-- Should five pages be the CPU budget's case, or one? Recommended: five, since sharing views is what keeps that
-  cheap, and one page would not catch it breaking.
+None. Decided: the CPU budget is measured with five pages open, since sharing views is what keeps pages cheap,
+and one page would not catch that breaking.

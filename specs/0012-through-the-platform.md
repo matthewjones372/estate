@@ -80,7 +80,7 @@ organisation. A call a query every 30 s, as Estate makes of Prometheus, would sp
 in minutes at fifty services. Batching turns a read of fifty services into three calls, and spec 0011's `every:`
 lets a team read less often still. Rewriting each kind's queries into one grouped by `service` would cut it to one
 call a kind, but only where every service's query has the same shape; batching works for any queries. The alternative, Datadog's dashboards embedded in the page,
-would show load but not join it to anything. Recommended: read through the API, grouped.
+would show load but not join it to anything. Recommended: read through the API, batched.
 
 ## Depends on
 
@@ -112,6 +112,6 @@ bun run perf
 
 ## Open questions
 
-- Does a team name a Datadog service's queries in the catalog, or should Estate assume APM's `trace.*` metrics
-  when none are named? Recommended: name them, as for Prometheus. A default can follow once a real team's metrics
-  are seen.
+None. Decided: a team names a Datadog service's load queries in the catalog, as for Prometheus. Estate does not
+assume APM's `trace.*` metrics, whose names differ by language and integration; a guess that is wrong draws an empty
+lane, which looks like a quiet service.

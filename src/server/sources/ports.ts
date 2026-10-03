@@ -2,6 +2,7 @@
  * Which kind of tool fills each part of an environment, from its section of the settings. Every part is a port: the
  * views read Estate's own state whichever kind filled it, so a kind added later is one more case here and its reader.
  */
+import type { SourceKind } from "../../shared/events"
 import type { Settings, Sources } from "../settings"
 import { prometheusOf } from "./grafana"
 
@@ -50,3 +51,40 @@ export const buildsOf = (
   ...(settings.builds?.teamcity === undefined ? [] : ["teamcity" as const]),
   ...(settings.builds?.harness === undefined ? [] : ["harness" as const]),
 ]
+
+const named: Readonly<Record<string, string>> = {
+  alertmanager: "Alertmanager",
+  grafana: "Grafana",
+  prometheus: "Prometheus",
+  cloudwatch: "CloudWatch",
+  datadog: "Datadog",
+  kubernetes: "Kubernetes",
+  ecs: "ECS",
+  flux: "Flux",
+  argo: "Argo CD",
+  harness: "Harness",
+  github: "GitHub",
+  gitlab: "GitLab",
+  jenkins: "Jenkins",
+  teamcity: "TeamCity",
+}
+
+const said = (kinds: ReadonlyArray<string>): ReadonlyArray<string> => {
+  const names = kinds.map((kind) => named[kind] ?? kind)
+  return names.length === 0
+    ? []
+    : [names.length === 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`]
+}
+
+/** The tool each part of an environment is read from, by its own name, for the page to say. */
+export const toolsOf = (settings: Settings, section: Sources): Readonly<Partial<Record<SourceKind, string>>> => {
+  const one = (kind: string | undefined) => (kind === undefined ? [] : [kind])
+  const parts: ReadonlyArray<readonly [SourceKind, ReadonlyArray<string>]> = [
+    ["alerts", said(alertsOf(section))],
+    ["metrics", said(one(metricsOf(section)))],
+    ["cluster", said(one(runtimeOf(section)))],
+    ["deploys", said(one(deploysOf(section)))],
+    ["builds", said(buildsOf(settings))],
+  ]
+  return Object.fromEntries(parts.flatMap(([kind, names]) => names.map((name) => [kind, name] as const)))
+}

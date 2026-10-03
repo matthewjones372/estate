@@ -7,7 +7,7 @@ import type { Mistake } from "../shared/shape"
 import { readText } from "./platform"
 import { forEver } from "./schedule"
 import type { Settings } from "./settings"
-import { alertsOf, deploysOf, metricsOf, runtimeOf } from "./sources/ports"
+import { alertsOf, deploysOf, metricsOf, runtimeOf, toolsOf } from "./sources/ports"
 import { type Estate, type EstateState, emptyEnvironment, updateEstate } from "./state"
 
 export const CatalogError = Data.TaggedError("CatalogError")<{
@@ -60,7 +60,11 @@ export const withCatalog = (estate: EstateState, catalog: Catalog, settings: Set
   environments: Object.fromEntries(
     catalog.environments.map((environment) => [
       environment.name,
-      estate.environments[environment.name] ?? emptyEnvironment(configuredKinds(settings, environment.sources)),
+      estate.environments[environment.name] ??
+        emptyEnvironment(
+          configuredKinds(settings, environment.sources),
+          toolsOf(settings, settings.sources[environment.sources] ?? {}),
+        ),
     ]),
   ),
 })

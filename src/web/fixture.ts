@@ -43,10 +43,16 @@ export const events: Events = {
   },
   services: {
     sources: [
-      { kind: "alerts", state: "ok", answeredAt: "2026-10-03T12:00:00Z" },
-      { kind: "cluster", state: "ok", answeredAt: "2026-10-03T12:00:00Z" },
-      { kind: "deploys", state: "ok" },
-      { kind: "metrics", state: "failing", answeredAt: "2026-10-03T11:55:00Z", message: "connection refused" },
+      { kind: "alerts", tool: "Alertmanager", state: "ok", answeredAt: "2026-10-03T12:00:00Z" },
+      { kind: "cluster", tool: "Kubernetes", state: "ok", answeredAt: "2026-10-03T12:00:00Z" },
+      { kind: "deploys", tool: "Flux", state: "ok" },
+      {
+        kind: "metrics",
+        tool: "Prometheus",
+        state: "failing",
+        answeredAt: "2026-10-03T11:55:00Z",
+        message: "connection refused",
+      },
       { kind: "builds", state: "off" },
     ],
     environments: [

@@ -72,5 +72,5 @@ bunx playwright test
 
 ## Open questions
 
-- Should a team's screen show alerts that name no service? Recommended: no. They belong to whoever owns the
-  estate, whose screen has no `?team=`.
+None. Decided: a team's screen shows only alerts about its services. Alerts that name no service belong to whoever
+owns the estate, whose screen has no `?team=`.

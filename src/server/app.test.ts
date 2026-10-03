@@ -41,6 +41,13 @@ describe("starting", () => {
             alerts: { state: "waiting" },
             cluster: { state: "waiting" },
             deploys: { state: "waiting" },
+            tools: {
+              alerts: "Prometheus",
+              metrics: "Prometheus",
+              cluster: "Kubernetes",
+              deploys: "Flux",
+              builds: "GitHub",
+            },
             resolved: [],
           },
         })

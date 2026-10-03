@@ -59,6 +59,8 @@ export interface EnvironmentState {
   readonly alerts: Part<ReadonlyArray<SourcedAlert>>
   readonly cluster: Part<Workloads>
   readonly deploys: Part<Readonly<Record<string, Chosen>>>
+  /** The tool each part is read from, by its own name, for the page to say: Prometheus, Datadog, Harness… */
+  readonly tools: Tools
   readonly resolved: ReadonlyArray<{
     readonly name: string
     readonly labels: Readonly<Record<string, string>>
@@ -74,11 +76,14 @@ export interface EstateState {
   readonly notes: ReadonlyArray<Note & { readonly environment: string; readonly alert: string }>
 }
 
-export const emptyEnvironment = (configured: ReadonlySet<SourceKind>): EnvironmentState => ({
+export type Tools = Readonly<Partial<Record<SourceKind, string>>>
+
+export const emptyEnvironment = (configured: ReadonlySet<SourceKind>, tools: Tools = {}): EnvironmentState => ({
   metrics: configured.has("metrics") ? waiting : off,
   alerts: configured.has("alerts") ? waiting : off,
   cluster: configured.has("cluster") ? waiting : off,
   deploys: configured.has("deploys") ? waiting : off,
+  tools,
   resolved: [],
 })
 

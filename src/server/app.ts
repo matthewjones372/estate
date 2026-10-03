@@ -17,6 +17,7 @@ import { platform, readText } from "./platform"
 import type { Remote } from "./remote"
 import { backOff } from "./schedule"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
+import { toolsOf } from "./sources/ports"
 import { startSources } from "./sources/start"
 import { type Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
 import { sharedViewsLayer } from "./stream"
@@ -52,7 +53,13 @@ export const prepare = (settingsPath: string): Effect.Effect<Started, StartError
     const initial: EstateState = {
       catalog,
       environments: Object.fromEntries(
-        catalog.environments.map((each) => [each.name, emptyEnvironment(configuredKinds(settings, each.sources))]),
+        catalog.environments.map((each) => [
+          each.name,
+          emptyEnvironment(
+            configuredKinds(settings, each.sources),
+            toolsOf(settings, settings.sources[each.sources] ?? {}),
+          ),
+        ]),
       ),
       builds: settings.builds === undefined ? off : waiting,
       notes: [],

@@ -9,8 +9,8 @@ import { inEnvironment } from "./catalog"
 import { healthOf, worst } from "./health"
 import { storeHealthOf, storesIn } from "./stores"
 
-const status = (kind: SourceKind, part: Part<unknown>): SourceStatus =>
-  compact({ kind, state: part.state, message: part.message, answeredAt: part.answeredAt })
+const status = (kind: SourceKind, part: Part<unknown>, tool: string | undefined): SourceStatus =>
+  compact({ kind, tool, state: part.state, message: part.message, answeredAt: part.answeredAt })
 
 /** The version an image runs: its tag, or the start of its digest. */
 export const versionOf = (image: string | undefined): string | undefined => {
@@ -38,11 +38,11 @@ export const servicesView = (estate: EstateState, environment: string): Services
   )
   return {
     sources: [
-      status("alerts", state.alerts),
-      status("cluster", state.cluster),
-      status("deploys", state.deploys),
-      status("metrics", state.metrics),
-      status("builds", estate.builds),
+      status("alerts", state.alerts, state.tools.alerts),
+      status("cluster", state.cluster, state.tools.cluster),
+      status("deploys", state.deploys, state.tools.deploys),
+      status("metrics", state.metrics, state.tools.metrics),
+      status("builds", estate.builds, state.tools.builds),
     ],
     environments: Object.entries(estate.environments).map(([name, each]) => ({
       name,

@@ -69,6 +69,24 @@ describe("the overview", () => {
       "Alerts firing: 1",
       "Pods ready: 1/1",
     ])
+    const runtime = (tool: string | undefined, state: "ok" | "off") => ({
+      ...events,
+      services: {
+        ...events.services,
+        sources: events.services.sources.map((source) =>
+          source.kind === "cluster"
+            ? { kind: "cluster" as const, state, ...(tool === undefined ? {} : { tool }) }
+            : source,
+        ),
+      },
+    })
+    expect(tilesOf(runtime("ECS", "ok")).map((tile) => tile.label)).toContain("Tasks ready")
+    expect(tilesOf(runtime(undefined, "off")).map((tile) => tile.label)).toEqual([
+      "Orders",
+      "Services healthy",
+      "Alerts firing",
+      "Deploys stalled",
+    ])
   })
 
   test("draws the headline, the map, the card for what fires, silences, lanes and the feed", () => {
@@ -85,7 +103,7 @@ describe("the overview", () => {
       "Debug until",
       "What changed today",
       "Prometheus did not answer",
-      "Not set up here: GitHub (builds)",
+      "Not set up here: builds.",
       "Postgres",
       "12/s",
     ]) {

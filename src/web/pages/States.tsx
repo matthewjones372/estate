@@ -4,21 +4,25 @@ import { For, Show } from "solid-js"
 import type { ServicesEvent, SourceKind, SourceStatus } from "../../shared/events"
 import { clock, since } from "../format"
 
-const sourceNames: Readonly<Record<SourceKind, string>> = {
+/** What reads each part where no tool is named: the part itself, in the page's words. */
+const kindNames: Readonly<Record<SourceKind, string>> = {
   alerts: "Alerts",
-  cluster: "Kubernetes",
-  deploys: "Flux",
-  metrics: "Prometheus",
-  builds: "GitHub",
+  cluster: "The runtime",
+  deploys: "Deploys",
+  metrics: "Metrics",
+  builds: "Builds",
 }
 
 const parts: Readonly<Record<SourceKind, string>> = {
   alerts: "alerts",
-  cluster: "pods, versions and debug",
-  deploys: "what Flux chose",
+  cluster: "instances, versions and debug",
+  deploys: "what was chosen to run",
   metrics: "load, vitals and the map's rates",
   builds: "builds",
 }
+
+/** The source by its tool's own name, Datadog or Harness, or by the part it reads where none is set up. */
+const nameOf = (source: SourceStatus) => source.tool ?? kindNames[source.kind]
 
 export const SignIn = (props: { readonly returnTo: string }) => (
   <main class="state-page">
@@ -90,7 +94,7 @@ export const Reading = (props: { readonly sources: ReadonlyArray<SourceStatus> |
             {(source) => (
               <li style={{ color: source.state === "ok" ? "var(--ink)" : "var(--ink-2)" }}>
                 <Tick done={source.state === "ok"} />
-                {sourceNames[source.kind]} <span class="muted">{stateWords[source.state]}</span>
+                {nameOf(source)} <span class="muted">{stateWords[source.state]}</span>
               </li>
             )}
           </For>
@@ -113,7 +117,7 @@ export const SourceNotices = (props: { readonly services: ServicesEvent | undefi
       <For each={failing()}>
         {(source) => (
           <div role="status" class="notice">
-            <strong style={{ color: "var(--ink)" }}>{sourceNames[source.kind]} did not answer.</strong>
+            <strong style={{ color: "var(--ink)" }}>{nameOf(source)} did not answer.</strong>
             <span>
               {parts[source.kind]}{" "}
               {source.answeredAt === undefined
@@ -129,7 +133,7 @@ export const SourceNotices = (props: { readonly services: ServicesEvent | undefi
         <div class="notice">
           Not set up here:{" "}
           {off()
-            .map((source) => `${sourceNames[source.kind]} (${parts[source.kind]})`)
+            .map((source) => parts[source.kind])
             .join(", ")}
           .
         </div>
