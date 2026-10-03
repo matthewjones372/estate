@@ -30,6 +30,12 @@ describe("the page's words", () => {
     expect(measured(3, "events")).toBe("3 events")
     expect(measured(3, undefined)).toBe("3")
     expect(measured(null, "/s")).toBe("–")
+    expect(measured(1536, "bytes")).toBe("1.5 KiB")
+    expect(measured(3 * 1024 ** 3, "bytes")).toBe("3 GiB")
+    expect(measured(512, "bytes")).toBe("512 B")
+    expect(measured(1, "cores")).toBe("1 core")
+    expect(measured(0.25, "cores")).toBe("0.25 cores")
+    expect(measured(42.5, "%")).toBe("42.5%")
   })
 
   test("counts are words up to twelve", () => {

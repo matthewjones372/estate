@@ -75,7 +75,15 @@ export const events: Events = {
           },
         ],
         version: "v2",
-        load: { requests: series([10, 12, 14]), errors: series([0, 0, 0]), p99: series([0.1, 0.2, 0.25]) },
+        load: {
+          requests: series([10, 12, 14]),
+          errors: series([0, 0, 0]),
+          p99: series([0.1, 0.2, 0.25]),
+          stats: [
+            { title: "Heap", unit: "bytes", series: series([300 * 1024 ** 2, 310 * 1024 ** 2]) },
+            { title: "Threads", series: series([40, 42]) },
+          ],
+        },
         debug: { level: "DEBUG", on: true, since: "2026-10-03T11:50:00Z", until: "2026-10-03T12:05:00Z", by: "ada" },
       },
       { name: "orders", health: "healthy", reasons: [], pods: [], load: {} },

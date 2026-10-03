@@ -5,6 +5,7 @@
 import { Result } from "effect"
 import { Catalog } from "./catalog"
 import { checkShape, type Mistake } from "./shape"
+import { statsOf } from "./stats"
 
 const pairs: Readonly<Record<string, string>> = { "(": ")", "[": "]", "{": "}" }
 
@@ -59,6 +60,9 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
     query(`${at}.load.requests`, service.load?.requests)
     query(`${at}.load.errors`, service.load?.errors)
     query(`${at}.load.p99`, service.load?.p99)
+    statsOf(service).forEach((stat) => {
+      query(`${at}.stats (${stat.title})`, stat.query)
+    })
     for (const [name, template] of Object.entries(service.links ?? {})) {
       for (const [, placeholder] of template.matchAll(/\{(\w+)\}/g)) {
         if (placeholder !== undefined && !placeholders.has(placeholder)) {

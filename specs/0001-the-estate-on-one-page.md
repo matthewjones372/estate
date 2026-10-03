@@ -236,9 +236,12 @@ Nothing. Its first estate, lark-bank, adopts it in its own spec 0026.
       longer ranges are `GET /api/load` (6 h at 5 min, 24 h at 15 min, 7 d at an hour). A firing alert's card draws the
       measure its alerting rule compares (`measure > threshold`, read from `/api/v1/rules`), for the alert's own labels.
       A query that fails leaves its line empty; Prometheus not answering marks the part failing.
-- [ ] **`stats`** — a service's stats from its preset (`jvm`, `process`, `container`) and its own queries, as charts on
+- [x] **`stats`** — a service's stats from its preset (`jvm`, `process`, `container`) and its own queries, as charts on
       its page. Done when: a JVM service shows heap, GC pauses, threads and CPU from Micrometer's metrics, and a query
       of its own beside them.
+      *Notes:* a preset is narrowed by `selector`, or by `app="<service>"` (a container's by its namespace and pods
+      named after it). Stats are read with the load, every 30 s and over the service page's ranges; their queries are
+      checked with the rest of the catalog. Units the page knows: `bytes`, `cores`, `s`, `%`, and rates as `/s`.
 - [ ] **`jobs`** — Jobs and CronJobs from Kubernetes: schedule, last run, its outcome and duration, whether one runs
       now; a failed or missed run in the service's health and the feed. Done when: a CronJob whose last Job failed
       makes its service need attention, naming the job.

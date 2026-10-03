@@ -37,6 +37,15 @@ export const Service = Schema.Struct({
   ),
   links: optional(Schema.Record(Schema.String, Schema.String)),
   debug: optional(Schema.Struct({ configMap: Schema.String, key: Schema.String, levels: Schema.Array(Schema.String) })),
+  stats: optional(
+    Schema.Struct({
+      preset: optional(Schema.Literals(["jvm", "process", "container"])),
+      selector: optional(Schema.String),
+      extra: optional(
+        Schema.Array(Schema.Struct({ title: Schema.String, query: Schema.String, unit: optional(Schema.String) })),
+      ),
+    }),
+  ),
 })
 export type Service = typeof Service.Type
 
