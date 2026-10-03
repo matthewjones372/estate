@@ -6,6 +6,7 @@ import { loadRoute } from "./http/load"
 import { loadNotes, notesRoute } from "./http/notes"
 import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
+import { silenceRoute, unsilenceRoute } from "./http/silences"
 import { memoryNotes, type Notes } from "./notes"
 import type { Remote } from "./remote"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
@@ -61,7 +62,7 @@ export const prepare = (
   )
 
 /** The routes with what they need, for serving or for a test's web handler. */
-export const application = Layer.mergeAll(routes, signInRoutes, loadRoute, notesRoute)
+export const application = Layer.mergeAll(routes, signInRoutes, loadRoute, notesRoute, silenceRoute, unsilenceRoute)
 
 /** What runs beside the routes for as long as Estate does. */
 export const background = (
