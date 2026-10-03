@@ -22,7 +22,7 @@ you already run and puts it in one place.
 | Metrics | Prometheus (or anything with its query API), Datadog, CloudWatch |
 | Runtime | Kubernetes, ECS |
 | Deploys | Flux, Argo CD, ECS deployments |
-| Builds | GitHub Actions, GitLab CI |
+| Builds | GitHub Actions, GitLab CI, Jenkins |
 | Logs | Loki, Datadog, Elasticsearch/OpenSearch, or pod logs straight from the cluster |
 | Notes | Postgres, DynamoDB, or memory |
 

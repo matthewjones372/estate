@@ -1,4 +1,4 @@
-/** Every service's builds, from the tool its catalog entry names: GitHub Actions or GitLab CI. */
+/** Every service's builds, from the tool its catalog entry names: GitHub Actions, GitLab CI or Jenkins. */
 import { type Duration, Effect, SubscriptionRef } from "effect"
 import type { Service } from "../../shared/catalog"
 import type { Build } from "../../shared/events"
@@ -9,6 +9,7 @@ import { Estate, updateEstate } from "../state"
 import { isoNow } from "../time"
 import { githubBuilds } from "./github"
 import { gitlabBuilds } from "./gitlab"
+import { jenkinsBuilds } from "./jenkins"
 import type { Remembered } from "./remembered"
 import { afterRead, type Failure } from "./run"
 
@@ -23,6 +24,8 @@ const buildsOf = (
   if (build === undefined) return Effect.succeed([])
   if ("gitlab" in build)
     return tools.gitlab === undefined ? Effect.succeed([]) : gitlabBuilds(tools.gitlab, service, remembered)
+  if ("jenkins" in build)
+    return tools.jenkins === undefined ? Effect.succeed([]) : jenkinsBuilds(tools.jenkins, service)
   return tools.github === undefined ? Effect.succeed([]) : githubBuilds(tools.github, service, remembered)
 }
 

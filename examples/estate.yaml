@@ -44,5 +44,7 @@ builds:
   github: {}
   # And GitLab CI, for services whose catalog entry names build: { gitlab: { project, ref } }:
   # gitlab: { url: https://gitlab.example.com, token: ${GITLAB_TOKEN} }
+  # And Jenkins, for services whose catalog entry names build: { jenkins: { job, branch } }, with a user's API token:
+  # jenkins: { url: https://jenkins.example.com, user: estate, token: ${JENKINS_TOKEN} }
   # How often builds are read; once a minute unless set:
   # every: 5m

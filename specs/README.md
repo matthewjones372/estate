@@ -17,4 +17,4 @@ entries, one per pull request, each with what proves it done.
 | [0010](0010-a-thousand-services.md) | a thousand services: each environment's views built once and shared by every page watching it, only changed services sent, the cluster read a namespace at a time, every flow of data a `Stream`, and lanes that look services up by name; done |
 | [0011](0011-staying-fast.md) | staying fast: the bench in the repository, budgets at fifty services that fail the build, and how often each source is read set per environment; done |
 | [0012](0012-through-the-platform.md) | through the platform: Prometheus and Loki through Grafana's data source proxy, and Datadog for alerts, silences, load and logs; done |
-| [0013](0013-jenkins.md) | Jenkins: builds from Jenkins jobs on the pipeline rail; draft |
+| [0013](0013-jenkins.md) | Jenkins: builds from Jenkins jobs on the pipeline rail; done |

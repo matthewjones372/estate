@@ -43,9 +43,9 @@ Nothing.
 
 ## Stack
 
-- [ ] **`jenkins-builds`** — builds from Jenkins jobs and multibranch jobs, with the commit each built.
+- [x] **`jenkins-builds`** — builds from Jenkins jobs and multibranch jobs, with the commit each built.
       Done when: a test against Jenkins' own JSON shows a running build, a failed one and a passing one on the rail.
-- [ ] **`jenkins-doctor`** — `estate doctor` checks each Jenkins job the catalog names, and the README lists Jenkins.
+- [x] **`jenkins-doctor`** — `estate doctor` checks each Jenkins job the catalog names, and the README lists Jenkins.
       Done when: a job that does not exist is named in the doctor's report.
 
 ## Acceptance

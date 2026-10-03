@@ -31,8 +31,9 @@ services:
       requests: SELECT SUM(RequestCount) FROM SCHEMA("AWS/ApplicationELB", LoadBalancer)
 
   - name: payments
-    description: Charges cards, watched in Datadog
+    description: Charges cards, watched in Datadog and built by Jenkins
     environments: [ datadog ]
+    build: { jenkins: { job: shop/payments, branch: main } }
     logs: { mask: [ "\\d{16}" ] }
     load:
       requests: sum:trace.http.request.hits{service:payments}.as_rate()

@@ -40,7 +40,8 @@ export const metricsOf = (section: Sources): "prometheus" | "datadog" | "cloudwa
 }
 
 /** Where each service's builds are read, for the whole estate rather than per environment. */
-export const buildsOf = (settings: Settings): ReadonlyArray<"github" | "gitlab"> => [
+export const buildsOf = (settings: Settings): ReadonlyArray<"github" | "gitlab" | "jenkins"> => [
   ...(settings.builds?.github === undefined ? [] : ["github" as const]),
   ...(settings.builds?.gitlab === undefined ? [] : ["gitlab" as const]),
+  ...(settings.builds?.jenkins === undefined ? [] : ["jenkins" as const]),
 ]

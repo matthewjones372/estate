@@ -46,7 +46,7 @@ test("on ECS: CloudWatch's alarm with its chart, ECS's failed rollout, tasks, a 
   await expect(page.getByText(/failure at integration-tests/)).toBeVisible()
 })
 
-test("on Datadog: a monitor with its chart, silenced with a downtime, and a service's lines from its log search", async ({
+test("on Datadog: a monitor with its chart, silenced with a downtime, a service's lines, and its builds from Jenkins", async ({
   page,
 }) => {
   await page.goto(`${cloud}/?env=datadog`)
@@ -64,4 +64,5 @@ test("on Datadog: a monitor with its chart, silenced with a downtime, and a serv
   await page.goto(`${cloud}/services/payments?env=datadog`)
   await expect(page.getByText("from Datadog")).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText("card ••• declined by the provider").first()).toBeVisible()
+  await expect(page.getByRole("link", { name: "Retry the card provider" })).toBeVisible()
 })

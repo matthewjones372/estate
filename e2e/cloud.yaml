@@ -22,3 +22,4 @@ sources:
 
 builds:
   gitlab: { url: http://127.0.0.1:8283, token: glpat-e2e }
+  jenkins: { url: http://127.0.0.1:8283/jenkins, user: estate, token: jenkins-e2e }
