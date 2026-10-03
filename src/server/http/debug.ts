@@ -3,7 +3,7 @@ import { Clock, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Configured } from "../settings"
 import { showDebug, switchOff, switchOn } from "../sources/debug"
-import { clusterOf, Host } from "../sources/kubernetes"
+import { clusterOf } from "../sources/kubernetes"
 import { Estate } from "../state"
 import { EnvParam, json, Refusal, refused, searchParams, withRole } from "./routes"
 
@@ -27,7 +27,7 @@ const asked = (environment: string, name: string) =>
     if (service.debug === undefined) return yield* refuse(404, `the catalog names no log level for ${name}`)
     const kubernetes = settings.sources[found.sources]?.kubernetes
     if (kubernetes === undefined) return yield* refuse(404, `${environment} has no cluster to switch it in`)
-    const cluster = yield* clusterOf(kubernetes, yield* Host).pipe(
+    const cluster = yield* clusterOf(kubernetes).pipe(
       Effect.mapError((failure) => new Refusal({ status: 502, body: { message: failure.message } })),
     )
     const prefix = kubernetes.impersonationPrefix ?? ""

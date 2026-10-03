@@ -1,5 +1,5 @@
 /** A cluster's API: where it is and how Estate signs in to it, from inside the cluster or from settings. */
-import { Context, Effect, Redacted, Schema } from "effect"
+import { Config, Effect, Option, Redacted, Schema } from "effect"
 import { callJson, type Remote } from "../remote"
 import type { Kubernetes } from "../settings"
 import { type Failure, SourceFailure } from "./run"
@@ -10,10 +10,6 @@ export interface Cluster {
   readonly ca?: string
 }
 
-/** The environment Estate runs with, where a cluster's address is found from inside it. */
-export type Host = Readonly<Record<string, string | undefined>>
-export const Host = Context.Service<Host>("estate/Host")
-
 const serviceAccount = "/var/run/secrets/kubernetes.io/serviceaccount"
 
 const readFile = (path: string): Effect.Effect<string, Failure> =>
@@ -23,12 +19,14 @@ const readFile = (path: string): Effect.Effect<string, Failure> =>
   })
 
 /** The cluster to read: the one Estate runs in, unless the settings name another. */
-export const clusterOf = (
-  settings: Kubernetes,
-  environment: Readonly<Record<string, string | undefined>>,
-): Effect.Effect<Cluster, Failure> =>
+/** Where the cluster Estate runs in is, as Kubernetes tells every pod. */
+const inClusterHost = Config.option(Config.String("KUBERNETES_SERVICE_HOST"))
+const inClusterPort = Config.String("KUBERNETES_SERVICE_PORT").pipe(Config.withDefault("443"))
+
+export const clusterOf = (settings: Kubernetes): Effect.Effect<Cluster, Failure> =>
   Effect.gen(function* () {
-    const { KUBERNETES_SERVICE_HOST, KUBERNETES_SERVICE_PORT = "443" } = environment
+    const KUBERNETES_SERVICE_HOST = Option.getOrUndefined(yield* inClusterHost.pipe(Effect.orElseSucceed(Option.none)))
+    const KUBERNETES_SERVICE_PORT = yield* inClusterPort.pipe(Effect.orElseSucceed(() => "443"))
     const inside = settings.inCluster === true || settings.url === undefined
     if (inside && KUBERNETES_SERVICE_HOST === undefined)
       return yield* new SourceFailure({ message: "Estate is not in a cluster, and no url is set" })

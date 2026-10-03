@@ -2,7 +2,7 @@
  * `estate.yaml`: where Estate listens, its sign-in, its notes database, and each environment's sources. `${NAME}` is
  * read from the environment, so secrets stay out of the file.
  */
-import { Context, Data, Effect, Redacted, Result, Schema } from "effect"
+import { Config, Context, Data, Effect, Option, Redacted, Result, Schema } from "effect"
 import { checkShape, type Mistake } from "../shared/shape"
 
 const optional = Schema.optionalKey
@@ -70,29 +70,31 @@ export type AuthSettings = typeof Auth.Type
 export const SettingsError = Data.TaggedError("SettingsError")<{ readonly mistakes: ReadonlyArray<Mistake> }>
 export type SettingsError = InstanceType<typeof SettingsError>
 
-/** Replaces each `${NAME}` with the environment's value, naming each one that is not set. */
-export const substitute = (
-  text: string,
-  environment: Readonly<Record<string, string | undefined>>,
-): Result.Result<string, ReadonlyArray<Mistake>> => {
-  const missing = new Set<string>()
-  const replaced = text.replace(/\$\{(\w+)\}/g, (_, name: string) => {
-    const value = environment[name]
-    if (value === undefined) missing.add(name)
-    return value ?? ""
+const named = /\$\{(\w+)\}/g
+
+/**
+ * Replaces each `${NAME}` with its value from the `ConfigProvider` (the environment, unless a test says otherwise),
+ * naming each one that is not set.
+ */
+export const substitute = (text: string): Effect.Effect<Result.Result<string, ReadonlyArray<Mistake>>> =>
+  Effect.gen(function* () {
+    const names = [...new Set([...text.matchAll(named)].map((match) => match[1] ?? ""))]
+    const values = new Map<string, string>()
+    const missing: Mistake[] = []
+    for (const name of names) {
+      const value = yield* Config.option(Config.String(name)).pipe(Effect.orElseSucceed(() => Option.none()))
+      if (Option.isSome(value)) values.set(name, value.value)
+      else missing.push({ at: `\${${name}}`, message: "is not set in the environment" })
+    }
+    return missing.length === 0
+      ? Result.succeed(text.replace(named, (_, name: string) => values.get(name) ?? ""))
+      : Result.fail(missing)
   })
-  return missing.size === 0
-    ? Result.succeed(replaced)
-    : Result.fail([...missing].map((name) => ({ at: `\${${name}}`, message: "is not set in the environment" })))
-}
 
 /** The settings from the text of `estate.yaml`, or every mistake in it. */
-export const readSettings = (
-  text: string,
-  environment: Readonly<Record<string, string | undefined>>,
-): Effect.Effect<Settings, SettingsError> =>
+export const readSettings = (text: string): Effect.Effect<Settings, SettingsError> =>
   Effect.gen(function* () {
-    const substituted = substitute(text, environment)
+    const substituted = yield* substitute(text)
     if (Result.isFailure(substituted)) return yield* new SettingsError({ mistakes: substituted.failure })
     const parsed = yield* Effect.try({
       try: () => Bun.YAML.parse(substituted.success),

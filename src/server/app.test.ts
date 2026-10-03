@@ -26,7 +26,7 @@ const files = (settings: (catalog: string) => string, catalog: string) => {
   return join(directory, "estate.yaml")
 }
 
-const start = (path: string) => Effect.runPromise(Effect.result(prepare(path, {})))
+const start = (path: string) => Effect.runPromise(Effect.result(prepare(path)))
 
 describe("starting", () => {
   test("reads both files, and starts every configured source waiting", () =>
@@ -88,7 +88,7 @@ describe("running", () => {
       (started) => {
         if (Result.isFailure(started)) return Promise.reject(started.failure)
         const running = Effect.gen(function* () {
-          const fiber = yield* Effect.forkChild(background(started.success, {}))
+          const fiber = yield* Effect.forkChild(background(started.success))
           yield* Effect.promise(() => Bun.sleep(20))
           yield* Fiber.interrupt(fiber)
           return yield* Fiber.await(fiber)

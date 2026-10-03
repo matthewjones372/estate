@@ -24,7 +24,6 @@ const servicesIn = (environment: string): Effect.Effect<ReadonlyArray<Service>, 
 export const startSources = (
   settings: Settings,
   environments: ReadonlyArray<{ readonly name: string; readonly sources: string }>,
-  host: Readonly<Record<string, string | undefined>>,
 ): Effect.Effect<never, never, Estate | Remote> =>
   Effect.gen(function* () {
     const readers: Array<Effect.Effect<never, never, Estate | Remote>> = []
@@ -53,13 +52,13 @@ export const startSources = (
           ) => Effect.Effect<A, Failure, Remote>,
         ) =>
           Effect.gen(function* () {
-            const cluster = yield* clusterOf(kubernetes, host)
+            const cluster = yield* clusterOf(kubernetes)
             return yield* read(cluster, yield* servicesIn(environment.name))
           })
         readers.push(runSource(environment.name, "cluster", "15 seconds", withCluster(readCluster)))
         if (section.flux !== undefined)
           readers.push(runSource(environment.name, "deploys", "30 seconds", withCluster(readDeploys)))
-        readers.push(revertExpired(environment.name, clusterOf(kubernetes, host)))
+        readers.push(revertExpired(environment.name, clusterOf(kubernetes)))
       }
     }
     if (settings.builds !== undefined) readers.push(runBuilds(settings.builds.github))

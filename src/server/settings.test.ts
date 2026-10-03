@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Redacted, Result } from "effect"
+import { ConfigProvider, Effect, Redacted, Result } from "effect"
 import { readSettings, substitute } from "./settings"
 
 const secretOf = (name: string) => `\${${name}}`
@@ -14,7 +14,12 @@ sources:
   home: { prometheus: { url: http://prometheus:9090 } }
 `
 
-const read = (text: string, environment: Record<string, string> = {}) => Effect.result(readSettings(text, environment))
+/** The environment a test reads, in place of the real one. */
+const within = (environment: Record<string, string>) =>
+  Effect.provideService(ConfigProvider.ConfigProvider, ConfigProvider.fromUnknown(environment))
+
+const read = (text: string, environment: Record<string, string> = {}) =>
+  Effect.result(readSettings(text)).pipe(within(environment))
 
 describe("the settings", () => {
   test("are read with their secrets from the environment", () =>
@@ -27,13 +32,15 @@ describe("the settings", () => {
       }),
     ))
 
-  test("name every secret the environment does not set", () => {
-    const substituted = substitute(`a: ${secretOf("ONE")}\nb: ${secretOf("TWO")}\nc: ${secretOf("ONE")}`, {})
-    expect(Result.isFailure(substituted) && substituted.failure).toEqual([
-      { at: secretOf("ONE"), message: "is not set in the environment" },
-      { at: secretOf("TWO"), message: "is not set in the environment" },
-    ])
-  })
+  test("name every secret the environment does not set", () =>
+    Effect.runPromise(
+      substitute(`a: ${secretOf("ONE")}\nb: ${secretOf("TWO")}\nc: ${secretOf("ONE")}`).pipe(within({})),
+    ).then((substituted) =>
+      expect(Result.isFailure(substituted) && substituted.failure).toEqual([
+        { at: secretOf("ONE"), message: "is not set in the environment" },
+        { at: secretOf("TWO"), message: "is not set in the environment" },
+      ]),
+    ))
 
   test("name every mistake in their shape", () =>
     Effect.runPromise(

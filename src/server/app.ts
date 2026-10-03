@@ -11,7 +11,6 @@ import { silenceRoute, unsilenceRoute } from "./http/silences"
 import { memoryNotes, type Notes } from "./notes"
 import type { Remote } from "./remote"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
-import { Host } from "./sources/kubernetes"
 import { startSources } from "./sources/start"
 import { type Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
 import type { Web } from "./web"
@@ -29,16 +28,13 @@ export interface Started {
 }
 
 /** Reads both files and checks them, naming every mistake before anything starts. */
-export const prepare = (
-  settingsPath: string,
-  environment: Readonly<Record<string, string | undefined>>,
-): Effect.Effect<Started, StartError> =>
+export const prepare = (settingsPath: string): Effect.Effect<Started, StartError> =>
   Effect.gen(function* () {
     const settingsText = yield* Effect.tryPromise({
       try: () => Bun.file(settingsPath).text(),
       catch: () => new StartError({ file: settingsPath, mistakes: [{ at: settingsPath, message: "cannot be read" }] }),
     })
-    const settings = yield* readSettings(settingsText, environment)
+    const settings = yield* readSettings(settingsText)
     const catalogText = yield* readCatalogText(settings.catalog)
     const parsed = parseCatalog(settings.catalog, catalogText)
     if (Result.isFailure(parsed)) return yield* parsed.failure
@@ -77,10 +73,7 @@ export const application = Layer.mergeAll(
 )
 
 /** What runs beside the routes for as long as Estate does. */
-export const background = (
-  started: Started,
-  host: Readonly<Record<string, string | undefined>>,
-): Effect.Effect<never, never, Estate | Remote | Notes> =>
+export const background = (started: Started): Effect.Effect<never, never, Estate | Remote | Notes> =>
   Effect.all(
     [
       loadNotes.pipe(
@@ -91,7 +84,7 @@ export const background = (
       ),
       sweepNotes(started.settings.notes?.keepDays ?? 30),
       reloadCatalog(started.settings.catalog, started.settings, started.catalogText),
-      startSources(started.settings, started.initial.catalog.environments, host),
+      startSources(started.settings, started.initial.catalog.environments),
     ],
     { concurrency: "unbounded" },
   ).pipe(Effect.andThen(Effect.never))
@@ -101,13 +94,4 @@ export const services = <E, F>(
   web: Layer.Layer<Web, E>,
   remote: Layer.Layer<Remote>,
   notes: Layer.Layer<Notes, F> = memoryNotes,
-  host: Host = {},
-) =>
-  Layer.mergeAll(
-    estateLayer(started.initial),
-    web,
-    remote,
-    notes,
-    Layer.succeed(Configured)(started.settings),
-    Layer.succeed(Host)(host),
-  )
+) => Layer.mergeAll(estateLayer(started.initial), web, remote, notes, Layer.succeed(Configured)(started.settings))

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, Redacted, Result, SubscriptionRef } from "effect"
+import { ConfigProvider, Effect, Layer, Redacted, Result, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
 import { catalog, environment, estate, settings, storefront } from "../fixture"
 import { type Call, type Remote, stubRemote } from "../remote"
@@ -11,6 +11,10 @@ import { readDeploys, revisionOf, tagOf } from "./flux"
 import { clusterOf } from "./kubernetes"
 import { afterRead, runSource } from "./run"
 import { startSources } from "./start"
+
+/** The environment a test reads, in place of the real one. */
+const within = (environment: Record<string, string>) =>
+  Effect.provideService(ConfigProvider.ConfigProvider, ConfigProvider.fromUnknown(environment))
 
 const run = <A, E>(effect: Effect.Effect<A, E, Remote>, calls: Call[] = []) =>
   Effect.runPromise(Effect.result(effect.pipe(Effect.provide(stubRemote(answering(undefined, calls))))))
@@ -131,10 +135,12 @@ describe("the cluster", () => {
 
   test("is found from inside it, or from the settings", () =>
     Promise.all([
-      Effect.runPromise(Effect.result(clusterOf({}, {}))),
-      Effect.runPromise(Effect.result(clusterOf({ url: "https://cluster/", token: Redacted.make("t") }, {}))),
-      Effect.runPromise(Effect.result(clusterOf({ inCluster: true }, { KUBERNETES_SERVICE_HOST: "10.0.0.1" }))),
-      Effect.runPromise(Effect.result(clusterOf({ url: "https://cluster", caFile: "/nowhere/ca.crt" }, {}))),
+      Effect.runPromise(Effect.result(clusterOf({}).pipe(within({})))),
+      Effect.runPromise(Effect.result(clusterOf({ url: "https://cluster/", token: Redacted.make("t") }))),
+      Effect.runPromise(
+        Effect.result(clusterOf({ inCluster: true }).pipe(within({ KUBERNETES_SERVICE_HOST: "10.0.0.1" }))),
+      ),
+      Effect.runPromise(Effect.result(clusterOf({ url: "https://cluster", caFile: "/nowhere/ca.crt" }))),
     ]).then(([nowhere, named, inside, noCa]) => {
       expect(Result.isFailure(nowhere) && nowhere.failure.message).toBe("Estate is not in a cluster, and no url is set")
       expect(Result.isSuccess(named) && named.success).toEqual({
@@ -249,7 +255,7 @@ describe("every source", () => {
     const shopEstate = estate({ catalog: { ...catalog, services: [shop] } })
     const program = Effect.gen(function* () {
       const ref = yield* Estate
-      yield* Effect.forkChild(startSources(configured, catalog.environments, {}))
+      yield* Effect.forkChild(startSources(configured, catalog.environments))
       yield* TestClock.adjust("1 second")
       yield* Effect.promise(() => Bun.sleep(30))
       return (yield* SubscriptionRef.get(ref)).environments
