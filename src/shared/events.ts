@@ -39,9 +39,25 @@ export const CatalogEvent = Schema.Struct({
     }),
   ),
   vitals: Schema.Array(Schema.Struct({ title: Schema.String, unit: optional(Schema.String) })),
+  stores: optional(
+    Schema.Array(
+      Schema.Struct({
+        name: Schema.String,
+        description: optional(Schema.String),
+        engine: Schema.String,
+        links: Schema.Array(Link),
+      }),
+    ),
+  ),
   map: Schema.Struct({
     nodes: Schema.Array(
-      Schema.Struct({ id: Schema.String, title: Schema.String, kind: Schema.String, service: optional(Schema.String) }),
+      Schema.Struct({
+        id: Schema.String,
+        title: Schema.String,
+        kind: Schema.String,
+        service: optional(Schema.String),
+        store: optional(Schema.String),
+      }),
     ),
     edges: Schema.Array(
       Schema.Struct({
@@ -127,6 +143,16 @@ export const ServicesEvent = Schema.Struct({
     }),
   ),
   vitals: Schema.Array(Schema.Struct({ title: Schema.String, unit: optional(Schema.String), series: Series })),
+  stores: optional(
+    Schema.Array(
+      Schema.Struct({
+        name: Schema.String,
+        health: Health,
+        reasons: Schema.Array(Schema.String),
+        stats: Schema.Array(Stat),
+      }),
+    ),
+  ),
   edges: Schema.Array(
     Schema.Struct({
       from: Schema.String,
@@ -148,6 +174,7 @@ export const Alert = Schema.Struct({
   state: Schema.Literals(["firing", "pending", "silenced"]),
   severity: Schema.String,
   service: optional(Schema.String),
+  store: optional(Schema.String),
   summary: optional(Schema.String),
   runbook: optional(Schema.String),
   startsAt: Instant,

@@ -1,14 +1,30 @@
 /** The `catalog` event: the chosen environment's services with their links filled in, the vitals and the map. */
 import type { Catalog, Environment, Service } from "../../shared/catalog"
 import type { CatalogEvent } from "../../shared/events"
+import { storesIn } from "./stores"
 
-const fillLink = (template: string, environment: Environment, service: Service): string =>
+interface Named {
+  readonly name: string
+  readonly kubernetes?: { readonly namespace?: string }
+}
+
+const fillLink = (template: string, environment: Environment, named: Named): string =>
   template.replace(/\{(\w+)\}/g, (whole, name: string) => {
     if (name === "env") return environment.name
-    if (name === "service") return service.name
-    if (name === "namespace") return service.kubernetes?.namespace ?? service.name
+    if (name === "service" || name === "store") return named.name
+    if (name === "namespace") return named.kubernetes?.namespace ?? named.name
     return environment.values?.[name] ?? whole
   })
+
+const linksOf = (catalog: Catalog, environment: string, named: Named, links: Readonly<Record<string, string>> = {}) =>
+  Object.entries(links).map(([name, template]) => ({
+    name,
+    url: fillLink(
+      template,
+      catalog.environments.find((each) => each.name === environment) ?? { name: environment, sources: "" },
+      named,
+    ),
+  }))
 
 export const inEnvironment = (catalog: Catalog, environment: string): ReadonlyArray<Service> =>
   catalog.services.filter((service) => service.environments.includes(environment))
@@ -31,26 +47,30 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
     ...(service.owner === undefined ? {} : { owner: service.owner }),
     ...(service.runbook === undefined ? {} : { runbook: service.runbook }),
     ...(service.repository === undefined ? {} : { repository: service.repository }),
-    links: Object.entries(service.links ?? {}).map(([name, template]) => ({
-      name,
-      url: fillLink(
-        template,
-        catalog.environments.find((each) => each.name === environment) ?? { name: environment, sources: "" },
-        service,
-      ),
-    })),
+    links: linksOf(catalog, environment, service, service.links),
     ...(service.debug === undefined ? {} : { debug: { levels: service.debug.levels } }),
   })),
   vitals: (catalog.vitals ?? []).map((vital) => ({
     title: vital.title,
     ...(vital.unit === undefined ? {} : { unit: vital.unit }),
   })),
+  ...(catalog.stores === undefined
+    ? {}
+    : {
+        stores: storesIn(catalog, environment).map((store) => ({
+          name: store.name,
+          ...(store.description === undefined ? {} : { description: store.description }),
+          engine: store.engine,
+          links: linksOf(catalog, environment, store, store.links),
+        })),
+      }),
   map: {
     nodes: mapIn(catalog, environment).nodes.map((node) => ({
       id: node.id,
-      title: node.title ?? node.service ?? node.id,
+      title: node.title ?? node.service ?? node.store ?? node.id,
       kind: node.kind ?? (node.service === undefined ? "store" : "service"),
       ...(node.service === undefined ? {} : { service: node.service }),
+      ...(node.store === undefined ? {} : { store: node.store }),
     })),
     edges: mapIn(catalog, environment).edges.map((edge) => ({
       from: edge.from,

@@ -18,8 +18,17 @@ export const waiting: Part<never> = { state: "waiting" }
 
 export type ServiceLoad = Load
 
+/** One of a store's stats over the last hour. */
+export interface StoreReading {
+  readonly key: string
+  readonly title: string
+  readonly unit?: string
+  readonly series: Series
+}
+
 export interface Metrics {
   readonly services: Readonly<Record<string, ServiceLoad>>
+  readonly stores?: Readonly<Record<string, ReadonlyArray<StoreReading>>>
   readonly vitals: ReadonlyArray<Series>
   readonly edges: ReadonlyArray<number | null>
   readonly charts: Readonly<

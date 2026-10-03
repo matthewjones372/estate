@@ -1,8 +1,9 @@
-/** The `alerts` event: firing, pending and silenced together, each with its service, notes and chart. */
+/** The `alerts` event: firing, pending and silenced together, each with its service or store, notes and chart. */
 import { compact } from "../../shared/compact"
 import type { AlertsEvent } from "../../shared/events"
 import type { EstateState } from "../state"
 import { serviceOf } from "./health"
+import { storeOf, storesIn } from "./stores"
 
 const order = { firing: 0, pending: 1, silenced: 2 } as const
 const severities: Readonly<Record<string, number>> = { critical: 0, warning: 1 }
@@ -11,6 +12,7 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
   const state = estate.environments[environment]
   if (state === undefined) return { alerts: [], resolved: [], silences }
   const services = estate.catalog.services
+  const stores = storesIn(estate.catalog, environment)
   const alerts = (state.alerts.value ?? []).map((alert) => {
     const service = serviceOf(alert.labels, services)
     const runbook = alert.runbook ?? services.find((each) => each.name === service)?.runbook
@@ -19,7 +21,14 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
       .map(({ id, at, by, text }) => ({ id, at, by, text }))
       .sort((a, b) => b.at.localeCompare(a.at))
     const { expression: _, ...shown } = alert
-    return compact({ ...shown, service, runbook, notes, chart: state.metrics.value?.charts[alert.id] })
+    return compact({
+      ...shown,
+      service,
+      store: storeOf(alert.labels, stores),
+      runbook,
+      notes,
+      chart: state.metrics.value?.charts[alert.id],
+    })
   })
   alerts.sort(
     (a, b) =>

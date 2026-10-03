@@ -1,15 +1,16 @@
 /**
- * What Prometheus says of an environment: each service's load over the last hour, the vitals, the map's rates, and
- * for each firing alert the measure its rule watches against its threshold. One query that fails leaves its line
- * empty; Prometheus not answering fails the read.
+ * What Prometheus says of an environment: each service's load and each store's stats over the last hour, the vitals,
+ * the map's rates, and for each firing alert the measure its rule watches against its threshold. One query that fails
+ * leaves its line empty; Prometheus not answering fails the read.
  */
 import { Effect } from "effect"
-import type { Catalog, Service } from "../../shared/catalog"
+import type { Catalog, Service, Store } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Series } from "../../shared/events"
 import { statsOf } from "../../shared/stats"
+import { storeStatsOf } from "../../shared/stores"
 import type { Remote } from "../remote"
-import type { Metrics, ServiceLoad, SourcedAlert } from "../state"
+import type { Metrics, ServiceLoad, SourcedAlert, StoreReading } from "../state"
 import { alertingRules, lastHour, rangeOf, type Span, thresholdOf } from "./prometheus"
 import type { Failure } from "./run"
 
@@ -46,12 +47,29 @@ export const loadOf = (
     return { ...Object.fromEntries(load), ...(stats.length === 0 ? {} : { stats }) }
   })
 
+/** A store's stats over a span, from the preset for its engine and its own queries. */
+const storeLoadOf = (
+  url: string,
+  store: Store,
+  span: Span,
+  now: number,
+): Effect.Effect<ReadonlyArray<StoreReading>, never, Remote> =>
+  Effect.forEach(
+    storeStatsOf(store),
+    (stat) =>
+      quietly(rangeOf(url, stat.query, span, now)).pipe(
+        Effect.map((series) => compact({ key: stat.key, title: stat.title, unit: stat.unit, series })),
+      ),
+    { concurrency: 3 },
+  )
+
 const ignored = new Set(["alertname", "severity", "alertstate"])
 
 export const readMetrics = (
   url: string,
   catalog: Catalog,
   services: ReadonlyArray<Service>,
+  stores: ReadonlyArray<Store>,
   firing: ReadonlyArray<SourcedAlert>,
   now: number,
 ): Effect.Effect<Metrics, Failure, Remote> =>
@@ -63,6 +81,11 @@ export const readMetrics = (
       {
         concurrency: 4,
       },
+    )
+    const storeLoads = yield* Effect.forEach(
+      stores,
+      (store) => storeLoadOf(url, store, lastHour, now).pipe(Effect.map((readings) => [store.name, readings] as const)),
+      { concurrency: 4 },
     )
     const vitals = yield* Effect.forEach(
       catalog.vitals ?? [],
@@ -89,5 +112,11 @@ export const readMetrics = (
       },
       { concurrency: 4 },
     )
-    return { services: Object.fromEntries(loads), vitals, edges, charts: Object.fromEntries(charts.flat()) }
+    return {
+      services: Object.fromEntries(loads),
+      ...(stores.length === 0 ? {} : { stores: Object.fromEntries(storeLoads) }),
+      vitals,
+      edges,
+      charts: Object.fromEntries(charts.flat()),
+    }
   })

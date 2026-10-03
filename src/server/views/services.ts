@@ -1,9 +1,13 @@
-/** The `services` event: each source's state, each environment's worst, each service's health, pods, load and debug. */
+/**
+ * The `services` event: each source's state, each environment's worst, each service's health, pods, load and debug,
+ * and each store's health and stats.
+ */
 import { compact } from "../../shared/compact"
 import type { ServicesEvent, SourceKind, SourceStatus } from "../../shared/events"
 import type { EnvironmentState, EstateState, Part } from "../state"
 import { inEnvironment } from "./catalog"
 import { healthOf, worst } from "./health"
+import { storeHealthOf, storesIn } from "./stores"
 
 const status = (kind: SourceKind, part: Part<unknown>): SourceStatus =>
   compact({ kind, state: part.state, message: part.message, answeredAt: part.answeredAt })
@@ -18,7 +22,12 @@ export const versionOf = (image: string | undefined): string | undefined => {
 }
 
 const environmentWorst = (estate: EstateState, name: string, state: EnvironmentState) =>
-  worst(inEnvironment(estate.catalog, name).map((service) => healthOf(service, state, estate.catalog.services).health))
+  worst([
+    ...inEnvironment(estate.catalog, name).map((service) => healthOf(service, state, estate.catalog.services).health),
+    ...storesIn(estate.catalog, name).map(
+      (store) => storeHealthOf(store, state, storesIn(estate.catalog, name)).health,
+    ),
+  ])
 
 export const servicesView = (estate: EstateState, environment: string): ServicesEvent => {
   const state = estate.environments[environment]
@@ -53,6 +62,15 @@ export const servicesView = (estate: EstateState, environment: string): Services
         debug: state.cluster.value?.debug[service.name],
       })
     }),
+    ...(estate.catalog.stores === undefined
+      ? {}
+      : {
+          stores: storesIn(estate.catalog, environment).map((store) => ({
+            name: store.name,
+            ...storeHealthOf(store, state, storesIn(estate.catalog, environment)),
+            stats: (metrics?.stores?.[store.name] ?? []).map(({ key: _, ...stat }) => stat),
+          })),
+        }),
     vitals: (estate.catalog.vitals ?? []).map((vital, index) =>
       compact({ title: vital.title, unit: vital.unit, series: metrics?.vitals[index] ?? { now: null, points: [] } }),
     ),

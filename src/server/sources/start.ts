@@ -40,7 +40,9 @@ const readersFor = (
       const estate = yield* SubscriptionRef.get(yield* Estate)
       const firing = estate.environments[environment.name]?.alerts.value ?? []
       const now = yield* Clock.currentTimeMillis
-      return yield* readMetrics(url, estate.catalog, inEnvironment(estate.catalog, environment.name), firing, now)
+      const here = environment.name
+      const stores = (estate.catalog.stores ?? []).filter((store) => store.environments.includes(here))
+      return yield* readMetrics(url, estate.catalog, inEnvironment(estate.catalog, here), stores, firing, now)
     })
     readers.push(runSource(environment.name, "metrics", "30 seconds", read))
   }

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Result } from "effect"
+import type { Store } from "../../shared/catalog"
 import { ask, catalog, estate, serverFor, settings, storefront } from "../fixture"
 import { type Call, type Reply, reply, stubRemote } from "../remote"
 import type { SourcedAlert } from "../state"
@@ -68,10 +69,18 @@ const firing: SourcedAlert = {
   labels: { alertname: "OrdersSlow", app: "orders" },
 }
 
-const read = (answer: (call: Call) => Reply | undefined, alerts: ReadonlyArray<SourcedAlert> = [firing]) =>
+const ordersDb: Store = { name: "orders-db", environments: ["staging"], engine: "redis", selector: 'app="orders"' }
+
+const read = (
+  answer: (call: Call) => Reply | undefined,
+  alerts: ReadonlyArray<SourcedAlert> = [firing],
+  stores: ReadonlyArray<Store> = [],
+) =>
   Effect.runPromise(
     Effect.result(
-      readMetrics("http://prometheus", withMetrics, services, alerts, now).pipe(Effect.provide(stubRemote(answer))),
+      readMetrics("http://prometheus", withMetrics, services, stores, alerts, now).pipe(
+        Effect.provide(stubRemote(answer)),
+      ),
     ),
   )
 
@@ -91,6 +100,22 @@ describe("metrics from Prometheus", () => {
       expect(metrics?.vitals.map((series) => series.now)).toEqual([12])
       expect(metrics?.edges).toEqual([12, null, null])
     }))
+
+  test("give each store's stats from its engine's preset, narrowed by its selector", () => {
+    const calls: Call[] = []
+    return read(prometheus(calls), [], [ordersDb]).then((result) => {
+      const readings = Result.isSuccess(result) ? result.success.stores?.["orders-db"] : undefined
+      expect(readings?.map((each) => [each.key, each.series.now])).toEqual([
+        ["memory", 12],
+        ["hits", 12],
+        ["evictions", 12],
+        ["clients", 12],
+      ])
+      expect(calls.some((call) => decodeURIComponent(call.url).includes('redis_connected_clients{app="orders"}'))).toBe(
+        true,
+      )
+    })
+  })
 
   test("draw a firing alert's measure, for its own labels, against its rule's threshold", () =>
     read(prometheus()).then((result) => {
