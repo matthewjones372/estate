@@ -74,5 +74,6 @@ export const Condition = Schema.Struct({
 
 export const Metadata = Schema.Struct({
   name: Schema.String,
+  labels: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
   annotations: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
 })

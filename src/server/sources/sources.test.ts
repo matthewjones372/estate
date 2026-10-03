@@ -173,14 +173,17 @@ describe("the cluster", () => {
         readCluster(cluster, [shop]).pipe(
           Effect.provide(
             stubRemote(
-              answering({ "https://cluster/apis/apps/v1/namespaces/shop/deployments/storefront": { spec: 1 } }),
+              answering({
+                "https://cluster/apis/apps/v1/namespaces/shop/deployments": { items: 1 },
+                "https://cluster/api/v1/namespaces/shop/pods": { items: [] },
+              }),
             ),
           ),
         ),
       ),
     ).then((read) => {
       expect(Result.isFailure(read) && read.failure.message).toBe(
-        "the cluster answered /apis/apps/v1/namespaces/shop/deployments/storefront in a shape Estate does not know",
+        "the cluster answered /apis/apps/v1/namespaces/shop/deployments in a shape Estate does not know",
       )
     }))
 })

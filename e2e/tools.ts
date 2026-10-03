@@ -3,6 +3,8 @@
  * Prometheus (with the stores' exporters' series), Alertmanager (silences kept), a Kubernetes API with Flux (ConfigMaps patched, pods logging), and GitHub
  * Actions.
  */
+import { kube } from "./cluster"
+
 const now = () => Math.floor(Date.now() / 1000)
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
 
@@ -99,25 +101,6 @@ const silencedBy = (labels: Record<string, string>) =>
     .filter((silence) => silence.matchers.every((matcher) => labels[matcher.name] === matcher.value))
     .map((silence) => silence.id)
 
-const condition = (status: string, message?: string) => ({
-  type: "Ready",
-  status,
-  reason: status === "True" ? "Succeeded" : "Failed",
-  lastTransitionTime: minutesAgo(34),
-  ...(message === undefined ? {} : { message }),
-})
-
-const pod = (name: string, image: string) => ({
-  metadata: { name },
-  spec: { nodeName: ["one", "two", "three"][name.length % 3], containers: [{ image }] },
-  status: {
-    phase: "Running",
-    startTime: minutesAgo(180),
-    conditions: [condition("True")],
-    containerStatuses: [{ restartCount: 0 }],
-  },
-})
-
 const configMaps = new Map<
   string,
   { metadata: { name: string; annotations: Record<string, string> }; data: Record<string, string> }
@@ -137,62 +120,6 @@ const run = (
   updated_at: minutesAgo(minutes),
   html_url: `https://github.com/example/runs/${sha}`,
 })
-
-const kube: Record<string, () => unknown> = {
-  "/apis/apps/v1/namespaces/shop/deployments/storefront": () => ({
-    spec: { selector: { matchLabels: { app: "storefront" } } },
-  }),
-  "/apis/apps/v1/namespaces/shop/deployments/orders": () => ({
-    spec: { selector: { matchLabels: { app: "orders" } } },
-  }),
-  "/apis/apps/v1/namespaces/shop/deployments/search": () => ({
-    spec: { selector: { matchLabels: { app: "search" } } },
-  }),
-  "/apis/apps/v1/namespaces/payments/statefulsets/payments": () => ({
-    spec: { selector: { matchLabels: { app: "payments" } } },
-  }),
-  "/api/v1/namespaces/shop/pods?labelSelector=app%3Dstorefront": () => ({
-    items: ["storefront-7d9f-a", "storefront-7d9f-b", "storefront-7d9f-c"].map((name) =>
-      pod(name, "registry.example/storefront:main-212-c556728"),
-    ),
-  }),
-  "/api/v1/namespaces/shop/pods?labelSelector=app%3Dorders": () => ({
-    items: ["orders-5c4-a", "orders-5c4-b"].map((name) => pod(name, "registry.example/orders:main-87-3889c5c")),
-  }),
-  "/api/v1/namespaces/shop/pods?labelSelector=app%3Dsearch": () => ({
-    items: [pod("search-0", "registry.example/search:1.4.2")],
-  }),
-  "/api/v1/namespaces/payments/pods?labelSelector=app%3Dpayments": () => ({
-    items: [pod("payments-0", "registry.example/payments:main-31-17edba9")],
-  }),
-  "/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/shop": () => ({
-    status: { lastAppliedRevision: "main@sha1:c556728aa", conditions: [condition("True")] },
-  }),
-  "/apis/image.toolkit.fluxcd.io/v1/namespaces/flux-system/imagepolicies/storefront": () => ({
-    status: { latestRef: { tag: "main-212-c556728" }, conditions: [condition("True")] },
-  }),
-  "/apis/image.toolkit.fluxcd.io/v1/namespaces/flux-system/imagepolicies/orders": () => ({
-    status: {
-      latestRef: { tag: "main-88-04bc441" },
-      conditions: [condition("False", "cannot list tags: GET registry.example/v2/orders/tags/list: 401 Unauthorized")],
-    },
-  }),
-  "/apis/batch/v1/namespaces/shop/cronjobs/orders-nightly-export": () => ({
-    spec: { schedule: "30 2 * * *" },
-    status: { lastScheduleTime: new Date(new Date().setUTCHours(2, 30, 0, 0)).toISOString() },
-  }),
-  "/apis/batch/v1/namespaces/shop/jobs": () => ({
-    items: [
-      {
-        metadata: {
-          name: "orders-nightly-export-1",
-          ownerReferences: [{ kind: "CronJob", name: "orders-nightly-export" }],
-        },
-        status: { startTime: minutesAgo(600), completionTime: minutesAgo(596), succeeded: 1 },
-      },
-    ],
-  }),
-}
 
 const json = (body: unknown, status = 200) => Response.json(body, { status })
 

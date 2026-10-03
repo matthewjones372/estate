@@ -9,8 +9,8 @@ const condition = (type: string, status: string, message?: string) => ({
   ...(message === undefined ? {} : { message }),
 })
 
-const pod = (name: string, ready: boolean, restarts = 0) => ({
-  metadata: { name },
+const pod = (name: string, ready: boolean, restarts = 0, app = "storefront") => ({
+  metadata: { name, labels: { app } },
   spec: { nodeName: "one", containers: [{ image: "registry.example/storefront:v2" }] },
   status: {
     phase: "Running",
@@ -64,11 +64,14 @@ const answers: Readonly<Record<string, unknown>> = {
       ],
     },
   },
-  "https://cluster/apis/apps/v1/namespaces/shop/deployments/storefront": {
-    spec: { selector: { matchLabels: { app: "storefront" } } },
+  "https://cluster/apis/apps/v1/namespaces/shop/deployments": {
+    items: [
+      { metadata: { name: "storefront" }, spec: { selector: { matchLabels: { app: "storefront" } } } },
+      { metadata: { name: "selects-nothing" }, spec: { selector: {} } },
+    ],
   },
-  "https://cluster/api/v1/namespaces/shop/pods?labelSelector=app%3Dstorefront": {
-    items: [pod("storefront-1", true), pod("storefront-2", false, 3)],
+  "https://cluster/api/v1/namespaces/shop/pods": {
+    items: [pod("storefront-1", true), pod("storefront-2", false, 3), pod("search-1", true, 0, "search")],
   },
   "https://cluster/api/v1/namespaces/shop/configmaps/storefront-logging": {
     metadata: {
@@ -81,14 +84,24 @@ const answers: Readonly<Record<string, unknown>> = {
     },
     data: { level: "DEBUG" },
   },
-  "https://cluster/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/shop": {
-    status: { lastAppliedRevision: "main@sha1:0123456789abcdef", conditions: [condition("Ready", "True")] },
+  "https://cluster/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations": {
+    items: [
+      {
+        metadata: { name: "shop" },
+        status: { lastAppliedRevision: "main@sha1:0123456789abcdef", conditions: [condition("Ready", "True")] },
+      },
+    ],
   },
-  "https://cluster/apis/image.toolkit.fluxcd.io/v1beta2/namespaces/flux-system/imagepolicies/storefront": {
-    status: {
-      latestRef: { tag: "v3" },
-      conditions: [condition("Ready", "False", "cannot list tags: 401 Unauthorized")],
-    },
+  "https://cluster/apis/image.toolkit.fluxcd.io/v1beta2/namespaces/flux-system/imagepolicies": {
+    items: [
+      {
+        metadata: { name: "storefront" },
+        status: {
+          latestRef: { tag: "v3" },
+          conditions: [condition("Ready", "False", "cannot list tags: 401 Unauthorized")],
+        },
+      },
+    ],
   },
 }
 

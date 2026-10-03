@@ -63,7 +63,7 @@ Nothing.
 - [x] **`changed-services`** — the `services` event as the services that changed, merged by the page; numbers to four
       significant figures.
       Done when: at 1,000 services, a page receives under 1 MB a minute once loaded.
-- [ ] **`namespace-lists`** — the cluster and Flux read a namespace at a time.
+- [x] **`namespace-lists`** — the cluster and Flux read a namespace at a time.
       Done when: at 1,000 services in one namespace, calls to the tools fall below 250 a second.
 - [ ] **`streams`** — `Stream.paginate` for paged reads, the log hub's polling a stream.
       Done when: nothing in `src/server` pages or polls by hand.
