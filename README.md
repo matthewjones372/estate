@@ -24,6 +24,8 @@ head across five tabs. Estate does the joining:
 - **Jobs and CronJobs**: last runs, how they ended, the next one, and the run that should have happened and didn't.
 - **Stats for the process behind each service**: heap, GC pauses, threads and CPU for a JVM, or memory and CPU for
   any container, from presets, beside queries of your own.
+- **Charts you can read**: point at any chart, or step through it with the arrow keys, for the time and value of
+  each point, marked on every chart of the service at once; drag across one to zoom them all.
 - **What changed today**: deploys, builds, alerts, silences, notes, debug and jobs, in one feed.
 
 ![A service: its load over a chosen range, its stats, pods, jobs, alerts today, debug switch and builds](docs/service.png)

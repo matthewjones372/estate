@@ -1,7 +1,12 @@
-/** A metric over the last hour, drawn small; amber when it is the thing that needs someone. */
+/** A metric over the last hour, drawn small; amber when it is the thing that needs someone. Pointing reads a point. */
+import { useState } from "react"
 import type { Series } from "../../shared/events"
-import { shape } from "../chart"
-import { measured } from "../format"
+import { reading } from "../chart"
+import { useEstate } from "../context"
+import { clock, measured } from "../format"
+import { Plot } from "./Plot"
+
+const hour = 3_600_000
 
 export const Spark = (props: {
   readonly label: string
@@ -9,34 +14,34 @@ export const Spark = (props: {
   readonly unit?: string
   readonly alarm?: boolean
 }) => {
+  const { now } = useEstate()
+  const [mark, setMark] = useState<number | undefined>(undefined)
   const points = props.series?.points ?? []
-  const drawn = shape(points, 120, 34)
+  const end = now()
+  const read = reading(points, end, hour, mark)
   const ink = props.alarm ? "var(--amber)" : "var(--quiet)"
-  const now = measured(props.series?.now, props.unit)
+  const current = measured(props.series?.now, props.unit)
   return (
     <div className="spark">
       <span className="spark-label">
-        <span>{props.label}</span>
+        <span>{read === undefined ? props.label : clock(new Date(read.at).toISOString())}</span>
         <span className="mono spark-now" style={{ color: props.alarm ? "var(--amber-text)" : undefined }}>
-          {now}
+          {read === undefined ? current : measured(read.value, props.unit)}
         </span>
       </span>
-      <svg
-        viewBox="0 0 120 34"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={`${props.label} over the last hour, now ${now}`}
-      >
-        {drawn.area !== "" && <polygon points={drawn.area} fill={ink} fillOpacity="0.14" />}
-        <polyline
-          points={drawn.line}
-          fill="none"
-          stroke={ink}
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
+      <Plot
+        label={`${props.label} over the last hour, now ${current}`}
+        points={points}
+        end={end}
+        span={hour}
+        width={120}
+        height={34}
+        headroom={1}
+        ink={ink}
+        stroke={1.5}
+        mark={mark}
+        onMark={setMark}
+      />
     </div>
   )
 }
