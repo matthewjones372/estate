@@ -63,7 +63,7 @@ services:
     environments: [ home, staging ]
     kubernetes: { namespace: lark-bank, workloads: [ { kind: StatefulSet, name: lark-bank } ] }
     deploy: { flux: { kustomization: apps, imagePolicy: lark-bank } }
-    load:                               # PromQL; {env} labels are added per environment's source
+    load:                               # PromQL, asked of each environment's own Prometheus
       requests: sum(rate(http_server_requests_total{app="lark-bank"}[1m]))
       errors: sum(rate(http_server_requests_total{app="lark-bank",status=~"5.."}[1m]))
       p99: histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{app="lark-bank"}[5m])))
@@ -231,7 +231,11 @@ Nothing. Its first estate, lark-bank, adopts it in its own spec 0026.
       every minute with the last ETag (a 304 costs nothing of GitHub's rate limit); `builds.github` in `estate.yaml`
       holds the token and, for GitHub Enterprise, the API's URL. The running version is the tag of the image a ready
       pod runs, or its digest's start.
-- [ ] **`load`** — the vitals, sparklines, the service page's charts, the map's rates.
+- [x] **`load`** — the vitals, sparklines, the service page's charts, the map's rates.
+      *Notes:* each environment's Prometheus is asked every 30 s for the last hour, a point a minute; the service page's
+      longer ranges are `GET /api/load` (6 h at 5 min, 24 h at 15 min, 7 d at an hour). A firing alert's card draws the
+      measure its alerting rule compares (`measure > threshold`, read from `/api/v1/rules`), for the alert's own labels.
+      A query that fails leaves its line empty; Prometheus not answering marks the part failing.
 - [ ] **`stats`** — a service's stats from its preset (`jvm`, `process`, `container`) and its own queries, as charts on
       its page. Done when: a JVM service shows heap, GC pauses, threads and CPU from Micrometer's metrics, and a query
       of its own beside them.
