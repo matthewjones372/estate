@@ -23,7 +23,7 @@ you already run and puts it in one place.
 | Runtime | Kubernetes, ECS |
 | Deploys | Flux, Argo CD, ECS deployments |
 | Builds | GitHub Actions, GitLab CI |
-| Logs | Loki, Elasticsearch/OpenSearch, or pod logs straight from the cluster |
+| Logs | Loki, Datadog, Elasticsearch/OpenSearch, or pod logs straight from the cluster |
 | Notes | Postgres, DynamoDB, or memory |
 
 Where Grafana sits in front of Prometheus and Loki, Estate can reach them through Grafana's data source proxy with

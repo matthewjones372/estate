@@ -14,6 +14,7 @@ import { readBuilds } from "./sources/builds"
 import { cloudwatchApi, readAlarms } from "./sources/cloudwatch"
 import { readCluster } from "./sources/cluster"
 import { alertsBeside } from "./sources/datadog"
+import { datadogQueryOf } from "./sources/datadog-logs"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./sources/ecs"
 import { matchOf } from "./sources/elastic"
 import { intervalsOf } from "./sources/every"
@@ -149,7 +150,9 @@ const logsFinding = (section: Sources, services: ReadonlyArray<Service>, now: nu
               .join(", ")}; set logs.elastic.match for ${service.name}`
           : logs.from === "Loki"
             ? `nothing matches its selector; set logs.selector for ${service.name}`
-            : "its pods logged nothing"
+            : logs.from === "Datadog" && section.datadog !== undefined
+              ? `nothing matches ${datadogQueryOf(section.datadog, service)}; set logs.selector for ${service.name}`
+              : "its pods logged nothing"
       return `${logs.from}: ${service.name} 0 lines in 15 min: ${hint}`
     })
   }).pipe(Effect.map((found) => found.filter((each): each is Finding => each !== undefined)))

@@ -1,8 +1,9 @@
 # An estate on other kinds of tool, for the pages' tests: EKS with Grafana's alerting, Elasticsearch, Argo CD and
-# GitLab; and ECS with CloudWatch.
+# GitLab; ECS with CloudWatch; and an environment read wholly from Datadog.
 environments:
   - { name: eks, title: EKS, sources: eks }
   - { name: aws, title: ECS, sources: aws }
+  - { name: datadog, title: Datadog, sources: datadog }
 
 services:
   - name: storefront
@@ -28,3 +29,11 @@ services:
     jobs: [ { kind: ScheduledTask, name: checkout-nightly-export } ]
     load:
       requests: SELECT SUM(RequestCount) FROM SCHEMA("AWS/ApplicationELB", LoadBalancer)
+
+  - name: payments
+    description: Charges cards, watched in Datadog
+    environments: [ datadog ]
+    logs: { mask: [ "\\d{16}" ] }
+    load:
+      requests: sum:trace.http.request.hits{service:payments}.as_rate()
+      p99: p99:trace.http.request{service:payments}

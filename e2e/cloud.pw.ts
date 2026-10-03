@@ -45,3 +45,23 @@ test("on ECS: CloudWatch's alarm with its chart, ECS's failed rollout, tasks, a 
   await expect(page.getByText("2/2 pods")).toBeVisible()
   await expect(page.getByText(/failure at integration-tests/)).toBeVisible()
 })
+
+test("on Datadog: a monitor with its chart, silenced with a downtime, and a service's lines from its log search", async ({
+  page,
+}) => {
+  await page.goto(`${cloud}/?env=datadog`)
+  const card = page.getByRole("article").filter({ hasText: "Payments are slower than customers wait for" })
+  await expect(card).toBeVisible({ timeout: 20_000 })
+  await expect(card.getByRole("img").first()).toBeVisible({ timeout: 10_000 })
+  await card.getByRole("button", { name: "Silence…" }).click()
+  await card.getByRole("button", { name: "1 hour" }).click()
+  await card.getByRole("textbox", { name: /Why/ }).fill("the card provider is down")
+  await card.getByRole("button", { name: /Silence until/ }).click()
+  await page.reload()
+  await expect(page.getByText(/silenced until .* by visitor: “the card provider is down”/)).toBeVisible({
+    timeout: 20_000,
+  })
+  await page.goto(`${cloud}/services/payments?env=datadog`)
+  await expect(page.getByText("from Datadog")).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText("card ••• declined by the provider").first()).toBeVisible()
+})

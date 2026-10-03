@@ -66,7 +66,8 @@ services:
   the keys' owner as a downtime's creator, so Estate writes who asked into its message.
 - **Load** is read through Datadog's timeseries API, the queries a read asks for at once batched fifty to a call.
   A firing monitor's chart is its query against its threshold, as a Prometheus rule's is.
-- **Logs** come from Datadog's log search, filtered by `service:<name>` and the environment's tags.
+- **Logs** come from Datadog's log search, filtered by `service:<name>` and the environment's tags, or by the
+  catalog's `logs.selector` where it gives a query. Loki, where an environment names one too, comes first.
 
 A call Datadog refuses with 429 makes Estate ask nothing more until the time its rate-limit headers give, and the
 metrics read fails saying how long is left.
@@ -96,9 +97,9 @@ Spec 0011's `every:`, so a Datadog environment can be read once a minute or less
 - [x] **`datadog-metrics`** — load, stats and alert charts from Datadog's metric queries, batched.
       Done when: fifty services' load is read in three calls an environment, and a 429 marks metrics failing with
       the wait.
-- [ ] **`datadog-logs`** — a service's lines and error groups from Datadog's log search.
+- [x] **`datadog-logs`** — a service's lines and error groups from Datadog's log search.
       Done when: the logs panel shows a fake Datadog's lines, masked, live.
-- [ ] **`datadog-e2e`** — an estate in Playwright read wholly from a fake Datadog; the README's kinds list Datadog.
+- [x] **`datadog-e2e`** — an estate in Playwright read wholly from a fake Datadog; the README's kinds list Datadog.
       Done when: `bunx playwright test` passes with it.
 
 ## Acceptance

@@ -8,6 +8,7 @@ import { Remote } from "../remote"
 import type { Sources } from "../settings"
 import { iso } from "../time"
 import { podsOf } from "./cluster"
+import { datadogLines } from "./datadog-logs"
 import { elasticLines } from "./elastic"
 import { lokiOf, type Reach } from "./grafana"
 import { type Cluster, clusterOf } from "./kubernetes"
@@ -103,7 +104,7 @@ const podLines = (
 
 export interface ServiceLogs {
   /** Where the lines come from, as the page names it. */
-  readonly from: "Loki" | "Elasticsearch" | "the cluster"
+  readonly from: "Loki" | "Elasticsearch" | "Datadog" | "the cluster"
   /** Lines from `from` to `to` (milliseconds), at most `limit`, oldest first, masked. */
   readonly read: (
     from: number,
@@ -113,12 +114,12 @@ export interface ServiceLogs {
   readonly isError: (line: Line) => boolean
 }
 
-/** A service's lines in an environment, if it has a Loki or Elasticsearch, or a cluster and a namespace to read pods in. */
+/** A service's lines in an environment: from Loki, Datadog or Elasticsearch, or else its pods in the cluster. */
 export const logsFor = (section: Sources, service: Service): ServiceLogs | undefined => {
   const mask = masking(service.logs?.mask)
   const isError = errorTest(service.logs?.errors)
   const namespace = kubernetesOf(service)?.namespace
-  const { elasticsearch, kubernetes } = section
+  const { datadog, elasticsearch, kubernetes } = section
   const loki = lokiOf(section)
   if (loki !== undefined) {
     const selector =
@@ -130,6 +131,13 @@ export const logsFor = (section: Sources, service: Service): ServiceLogs | undef
       read: (from, to, limit) => Effect.map(lokiLines(loki, selector, from, to, limit), (lines) => lines.map(mask)),
     }
   }
+  if (datadog !== undefined)
+    return {
+      from: "Datadog",
+      isError,
+      read: (from, to, limit) =>
+        Effect.map(datadogLines(datadog, service, from, to, limit), (lines) => lines.map(mask)),
+    }
   if (elasticsearch !== undefined)
     return {
       from: "Elasticsearch",

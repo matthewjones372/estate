@@ -67,7 +67,10 @@ export const Service = Schema.Struct({
   /** Where its lines are and which are errors; the defaults suit most services. */
   logs: optional(
     Schema.Struct({
-      /** Loki's stream selector; by default its namespace and its name as the app label. */
+      /**
+       * Loki's stream selector, by default its namespace and its name as the app label; or Datadog's log query, by
+       * default its name as the service tag and the environment's tags.
+       */
       selector: optional(Schema.String),
       /** A pattern for an error, matched against a line's level, or its text if it has none, case aside. */
       errors: optional(Schema.String),
