@@ -8,6 +8,7 @@ import { platform } from "../platform"
 import { type Call, type Reply, reply, stubRemote } from "../remote"
 import { Estate, estateLayer } from "../state"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./ecs"
+import { ecsJobs, withJobs } from "./standalone"
 import { startSources } from "./start"
 
 const orders: Service = {
@@ -258,4 +259,23 @@ describe("services on ECS", () => {
       expect(staging?.deploys.value?.["orders"]?.stalled).toBe("tasks failed to start")
     })
   })
+})
+
+describe("a job no service owns, on ECS", () => {
+  test("is its scheduled task's runs, beside the services' workloads", () =>
+    withEcs(
+      (ecs) =>
+        Effect.map(
+          ecsJobs(ecs, [
+            { name: "export", environments: ["staging"], run: { ecs: { cluster: "shop", scheduledTask: "export" } } },
+            { name: "settle", environments: ["staging"], run: { kubernetes: { namespace: "batch" } } },
+          ]),
+          (jobs) => withJobs({ pods: {}, debug: {}, jobs: { orders: [] } }, jobs),
+        ),
+      fakeEcs([]),
+    ).then((result) => {
+      const workloads = Result.isSuccess(result) ? result.success : undefined
+      expect(Object.keys(workloads?.jobs ?? {})).toEqual(["orders", "export"])
+      expect(workloads?.jobs?.["export"]?.[0]?.runs.map((run) => run.outcome)).toEqual(["succeeded", "failed"])
+    }))
 })

@@ -92,7 +92,7 @@ Spec 0019 for spend in money: this spec's budget is in tokens. The team's agents
 
 - [x] **`categories`** — `category` on every entry; the overview grouped by it; `?category=` on the kiosk.
       Done when: the e2e estate's lanes sit under Payments and Support headings, and a kiosk shows one category.
-- [ ] **`standalone-jobs`** — top-level `jobs:` on Kubernetes and ECS, each with its own lane.
+- [x] **`standalone-jobs`** — top-level `jobs:` on Kubernetes and ECS, each with its own lane.
       Done when: a CronJob that no service owns shows its runs and a missed run, and needs someone when it fails.
 - [ ] **`agent-usage`** — top-level `agents:`, their lane from `usage:` queries, the model in use, the budget.
       Done when: an agent over its token budget needs someone, and its model changing is on the feed.

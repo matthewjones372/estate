@@ -98,6 +98,16 @@ stores:
     selector: 'job="kafka"'
     attention: { underReplicated: 0 }
 
+# Jobs no service owns: a CronJob or Job by name in its namespace, or an ECS scheduled task in its cluster.
+jobs:
+  - name: settlement
+    category: Payments
+    owner: payments
+    description: Settles the day's card payments with the provider
+    environments: [ production ]
+    run: { kubernetes: { namespace: batch, cronJob: payments-settlement } }
+    links: { logs: 'https://grafana.example.com/explore?var-env={env}&namespace={namespace}&job={job}' }
+
 vitals:
   - title: Orders
     query: sum(rate(orders_placed_total[5m]))

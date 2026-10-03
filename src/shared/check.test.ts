@@ -149,6 +149,45 @@ describe("a service's jobs", () => {
   })
 })
 
+describe("jobs no service owns", () => {
+  const environments = [{ name: "a", sources: "a" }]
+  const job = (name: string, run: unknown, more: object = {}) => ({ name, environments: ["a"], run, ...more })
+
+  test("each name a CronJob or a Job in a namespace, or an ECS scheduled task, under a name of their own", () => {
+    expect(
+      mistakes({
+        environments,
+        services: [{ name: "s", environments: ["a"] }],
+        jobs: [
+          job(
+            "settle",
+            { kubernetes: { namespace: "batch", cronJob: "nightly-settle" } },
+            { links: { logs: "https://logs/{env}/{job}" } },
+          ),
+          job("report", { ecs: { cluster: "shop", scheduledTask: "report" } }),
+        ],
+      }),
+    ).toEqual([])
+    expect(
+      mistakes({
+        environments,
+        services: [{ name: "s", environments: ["a"] }],
+        jobs: [
+          job("s", { kubernetes: { namespace: "batch", cronJob: "c", job: "j" } }, { environments: ["b"] }),
+          job("x", { kubernetes: { namespace: "batch" } }),
+          job("x", { kubernetes: { namespace: "batch" } }, { links: { logs: "https://logs/{service}" } }),
+        ],
+      }).map((mistake) => `${mistake.at}: ${mistake.message}`),
+    ).toEqual([
+      'jobs: "x" is named twice',
+      "jobs[0] (s): \"s\" is also a service's or store's name",
+      'jobs[0] (s).environments: "b" is not an environment',
+      "jobs[0] (s).run.kubernetes: names a cronJob or a job, not both",
+      "jobs[2] (x).links.logs: {service} is not one of {env}, {job}, {namespace}, nor a value a names",
+    ])
+  })
+})
+
 describe("a link's values", () => {
   test("may be named when every environment the service runs in has them", () => {
     const valued = {

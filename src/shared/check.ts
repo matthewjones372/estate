@@ -36,6 +36,7 @@ export const queryMistake = (query: string): string | undefined => {
 
 const servicePlaceholders = ["env", "namespace", "service"]
 const storePlaceholders = ["env", "store"]
+const jobPlaceholders = ["env", "job", "namespace"]
 
 const duplicates = (names: ReadonlyArray<string>): ReadonlyArray<string> =>
   [...new Set(names.filter((name, index) => names.indexOf(name) !== index))].sort()
@@ -138,6 +139,19 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
         mistake(`${at}.attention.${key}`, `is not one of ${store.engine}'s: ${[...known].join(", ")}`)
       }
     }
+  })
+
+  for (const name of duplicates((catalog.jobs ?? []).map((job) => job.name)))
+    mistake("jobs", `"${name}" is named twice`)
+  catalog.jobs?.forEach((job, index) => {
+    const at = `jobs[${index}] (${job.name})`
+    if (services.has(job.name) || stores.has(job.name)) mistake(at, `"${job.name}" is also a service's or store's name`)
+    for (const environment of job.environments) {
+      if (!environments.has(environment)) mistake(`${at}.environments`, `"${environment}" is not an environment`)
+    }
+    if ("kubernetes" in job.run && job.run.kubernetes.cronJob !== undefined && job.run.kubernetes.job !== undefined)
+      mistake(`${at}.run.kubernetes`, "names a cronJob or a job, not both")
+    links(at, job.environments, job.links, jobPlaceholders)
   })
 
   const nodes = catalog.map?.nodes ?? []

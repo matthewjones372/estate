@@ -56,6 +56,7 @@ export const healthOf = (
     if (last?.outcome === "failed")
       attention.push(`job ${job.name} failed${last.message === undefined ? "" : `: ${last.message}`}`)
     if (job.missed !== undefined) attention.push(`job ${job.name} missed a run`)
+    if (job.absent !== undefined) attention.push(job.absent)
   }
   const stalled = environment.deploys.value?.[service.name]?.stalled
   if (stalled !== undefined) attention.push(`deploy stalled: ${stalled}`)

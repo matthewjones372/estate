@@ -1,5 +1,12 @@
 /** The `catalog` event: the chosen environment's services with their links filled in, the vitals and the map. */
-import { type Catalog, type Environment, kubernetesOf, type Service } from "../../shared/catalog"
+import {
+  type Catalog,
+  type Environment,
+  kubernetesOf,
+  runsAs,
+  type Service,
+  type StandaloneJob,
+} from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { CatalogEvent } from "../../shared/events"
 import { storesIn } from "./stores"
@@ -12,7 +19,7 @@ interface Named {
 const fillLink = (template: string, environment: Environment, named: Named): string =>
   template.replace(/\{(\w+)\}/g, (whole, name: string) => {
     if (name === "env") return environment.name
-    if (name === "service" || name === "store") return named.name
+    if (name === "service" || name === "store" || name === "job") return named.name
     if (name === "namespace") return named.namespace ?? named.name
     return environment.values?.[name] ?? whole
   })
@@ -29,6 +36,10 @@ const linksOf = (catalog: Catalog, environment: string, named: Named, links: Rea
 
 export const inEnvironment = (catalog: Catalog, environment: string): ReadonlyArray<Service> =>
   catalog.services.filter((service) => service.environments.includes(environment))
+
+/** The jobs no service owns that run in an environment. */
+export const jobsIn = (catalog: Catalog, environment: string): ReadonlyArray<StandaloneJob> =>
+  (catalog.jobs ?? []).filter((job) => job.environments.includes(environment))
 
 /** The map's nodes for services here, and stores; its edges between those. */
 const mapIn = (catalog: Catalog, environment: string) => {
@@ -71,6 +82,29 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
           engine: store.engine,
           links: linksOf(catalog, environment, store, store.links),
         })),
+      }),
+  ...(catalog.jobs === undefined
+    ? {}
+    : {
+        jobs: jobsIn(catalog, environment).map((job) =>
+          compact({
+            name: job.name,
+            description: job.description,
+            owner: job.owner,
+            category: job.category,
+            runbook: job.runbook,
+            kind: runsAs(job).kind,
+            links: linksOf(
+              catalog,
+              environment,
+              {
+                name: job.name,
+                ...compact({ namespace: "kubernetes" in job.run ? job.run.kubernetes.namespace : undefined }),
+              },
+              job.links,
+            ),
+          }),
+        ),
       }),
   map: {
     nodes: mapIn(catalog, environment).nodes.map((node) => ({

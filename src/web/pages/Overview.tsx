@@ -24,7 +24,11 @@ export interface Headline {
 
 export const headlineOf = (events: Partial<Events>): Headline => {
   const firing = (events.alerts?.alerts ?? []).filter((alert) => alert.state === "firing")
-  const services = [...(events.services?.services ?? []), ...(events.services?.stores ?? [])]
+  const services = [
+    ...(events.services?.services ?? []),
+    ...(events.services?.stores ?? []),
+    ...(events.services?.jobs ?? []),
+  ]
   const troubled = services.filter((service) => service.health === "attention" || service.health === "critical")
   const critical =
     firing.some((alert) => alert.severity === "critical") || services.some((service) => service.health === "critical")

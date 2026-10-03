@@ -6,6 +6,7 @@ import { feedView } from "../views/feed"
 import { healthOf } from "../views/health"
 import { readCluster } from "./cluster"
 import { jobsOf, nextRun, runOf } from "./jobs"
+import { kubernetesJobs } from "./standalone"
 
 const now = Date.parse("2026-10-03T12:20:00Z")
 const cluster = { url: "https://cluster", headers: {} }
@@ -171,4 +172,42 @@ describe("what the catalog names and the cluster does not have", () => {
     readWith(() => reply("etcd is unavailable", 500)).then((result) =>
       expect(Result.isFailure(result) && result.failure.message).toStartWith("the cluster answered 500"),
     ))
+})
+
+describe("a job no service owns, in Kubernetes", () => {
+  test("is read as a service's CronJob or Job in its namespace", () =>
+    Effect.runPromise(
+      Effect.result(
+        kubernetesJobs(
+          cluster,
+          [
+            {
+              name: "sitemap",
+              environments: [],
+              run: { kubernetes: { namespace: "shop", cronJob: "storefront-sitemap" } },
+            },
+            {
+              name: "migrate",
+              environments: [],
+              run: { kubernetes: { namespace: "shop", job: "storefront-migrate" } },
+            },
+            { name: "export", environments: [], run: { ecs: { cluster: "shop", scheduledTask: "export" } } },
+          ],
+          now,
+        ).pipe(
+          Effect.provide(
+            stubRemote((call) => (answers[call.url] === undefined ? undefined : reply(answers[call.url]))),
+          ),
+        ),
+      ),
+    ).then((result) => {
+      const jobs = Result.isSuccess(result) ? result.success : {}
+      expect(Object.keys(jobs)).toEqual(["sitemap", "migrate"])
+      expect(jobs["sitemap"]?.[0]).toMatchObject({
+        name: "storefront-sitemap",
+        kind: "CronJob",
+        missed: expect.any(String),
+      })
+      expect(jobs["migrate"]?.[0]).toMatchObject({ name: "storefront-migrate", kind: "Job" })
+    }))
 })

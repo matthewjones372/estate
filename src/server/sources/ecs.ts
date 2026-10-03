@@ -123,6 +123,20 @@ const runOf = (task: Task) => {
   })
 }
 
+/** A scheduled task's last runs, by its task family in its cluster. */
+export const scheduledTaskOf = (ecs: AwsJson, cluster: string, family: string): Effect.Effect<Job, Failure> =>
+  Effect.all([
+    tasksBy(ecs, cluster, { family, desiredStatus: "RUNNING" }),
+    tasksBy(ecs, cluster, { family, desiredStatus: "STOPPED" }),
+  ]).pipe(
+    Effect.map(([running, stopped]) => ({
+      name: family,
+      kind: "ScheduledTask",
+      suspended: false,
+      runs: [...running, ...stopped].slice(0, 5).map(runOf),
+    })),
+  )
+
 /** Each service's running tasks, and its scheduled tasks' last runs. */
 export const readEcsWorkloads = (ecs: AwsJson, services: ReadonlyArray<Service>): Effect.Effect<Workloads, Failure> =>
   Effect.forEach(
@@ -135,20 +149,7 @@ export const readEcsWorkloads = (ecs: AwsJson, services: ReadonlyArray<Service>)
         const tasks = yield* tasksBy(ecs, runtime.cluster, { serviceName: runtime.service, desiredStatus: "RUNNING" })
         const jobs = yield* Effect.forEach(
           (service.jobs ?? []).filter((job) => job.kind === "ScheduledTask"),
-          (job) =>
-            Effect.all([
-              tasksBy(ecs, runtime.cluster, { family: job.name, desiredStatus: "RUNNING" }),
-              tasksBy(ecs, runtime.cluster, { family: job.name, desiredStatus: "STOPPED" }),
-            ]).pipe(
-              Effect.map(
-                ([running, stopped]): Job => ({
-                  name: job.name,
-                  kind: "ScheduledTask",
-                  suspended: false,
-                  runs: [...running, ...stopped].slice(0, 5).map(runOf),
-                }),
-              ),
-            ),
+          (job) => scheduledTaskOf(ecs, runtime.cluster, job.name),
         )
         return [service.name, tasks.map((task) => podOf(service, task)), jobs] as const
       }),

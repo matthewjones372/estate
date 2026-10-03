@@ -1,11 +1,11 @@
 /** Every environment's sources, each read on its own schedule, for as long as Estate runs. */
 import { Clock, Effect, FiberMap, type FileSystem, Stream, SubscriptionRef } from "effect"
-import type { Service } from "../../shared/catalog"
+import type { Service, StandaloneJob } from "../../shared/catalog"
 import { makeAwsJson } from "../aws/json"
 import type { Remote } from "../remote"
 import type { Settings } from "../settings"
 import { Estate, updateEnvironment } from "../state"
-import { inEnvironment } from "../views/catalog"
+import { inEnvironment, jobsIn } from "../views/catalog"
 import { readAlerts, withResolved } from "./alerts"
 import { readArgo } from "./argo"
 import { runBuilds } from "./builds"
@@ -24,12 +24,20 @@ import { alertsOf, buildsOf, deploysOf, runtimeOf } from "./ports"
 import type { Ranges } from "./prometheus"
 import { rangesIn } from "./ranges"
 import { type Failure, runSource } from "./run"
+import { ecsJobs, kubernetesJobs, withJobs } from "./standalone"
 
 /** The services in an environment as the catalog says now, so a reloaded catalog is read from the next time. */
 const servicesIn = (environment: string): Effect.Effect<ReadonlyArray<Service>, never, Estate> =>
   Effect.gen(function* () {
     const { catalog } = yield* SubscriptionRef.get(yield* Estate)
     return inEnvironment(catalog, environment)
+  })
+
+/** The jobs no service owns in an environment, as the catalog says now. */
+const jobsHere = (environment: string): Effect.Effect<ReadonlyArray<StandaloneJob>, never, Estate> =>
+  Effect.gen(function* () {
+    const { catalog } = yield* SubscriptionRef.get(yield* Estate)
+    return jobsIn(catalog, environment)
   })
 
 type Environment = { readonly name: string; readonly sources: string }
@@ -143,7 +151,7 @@ const readersFor = (
     if (runtimeOf(section) === "ecs" && ecs !== undefined) {
       // Task definitions never change, so the image each names is asked for once.
       const images = new Map<string, string | undefined>()
-      const read = <A>(part: (services: ReadonlyArray<Service>) => Effect.Effect<A, Failure>) =>
+      const read = <A>(part: (services: ReadonlyArray<Service>) => Effect.Effect<A, Failure, Estate>) =>
         Effect.flatMap(servicesIn(environment.name), part)
       readers.push(
         Effect.all(
@@ -152,7 +160,12 @@ const readersFor = (
               environment.name,
               "cluster",
               everyOf(section, "cluster"),
-              read((services) => readEcsWorkloads(ecs, services)),
+              read((services) =>
+                Effect.all([
+                  readEcsWorkloads(ecs, services),
+                  Effect.flatMap(jobsHere(environment.name), (jobs) => ecsJobs(ecs, jobs)),
+                ]).pipe(Effect.map(([workloads, jobs]) => withJobs(workloads, jobs))),
+              ),
             ),
             ...(deploysOf(section) === "ecs"
               ? [
@@ -179,13 +192,28 @@ const readersFor = (
             read: (
               cluster: Parameters<typeof readCluster>[0],
               services: ReadonlyArray<Service>,
-            ) => Effect.Effect<A, Failure, Remote>,
+            ) => Effect.Effect<A, Failure, Remote | Estate>,
           ) =>
             Effect.gen(function* () {
               return yield* read(yield* cluster, yield* servicesIn(environment.name))
             })
           const reading = [
-            runSource(environment.name, "cluster", everyOf(section, "cluster"), withCluster(readCluster)),
+            runSource(
+              environment.name,
+              "cluster",
+              everyOf(section, "cluster"),
+              withCluster((cluster, services) =>
+                Effect.gen(function* () {
+                  const jobs = yield* jobsHere(environment.name)
+                  const now = yield* Clock.currentTimeMillis
+                  const [workloads, standalone] = yield* Effect.all(
+                    [readCluster(cluster, services), kubernetesJobs(cluster, jobs, now)],
+                    { concurrency: 2 },
+                  )
+                  return withJobs(workloads, standalone)
+                }),
+              ),
+            ),
             ...(deploysOf(section) === "flux"
               ? [runSource(environment.name, "deploys", everyOf(section, "deploys"), withCluster(readDeploys))]
               : []),

@@ -179,6 +179,39 @@ export const Store = Schema.Struct({
 })
 export type Store = typeof Store.Type
 
+/**
+ * A job no service owns: a Kubernetes CronJob or Job by name in its namespace, or an ECS scheduled task by its task
+ * family in its cluster.
+ */
+export const StandaloneJob = Schema.Struct({
+  name: Schema.String,
+  description: optional(Schema.String),
+  owner: optional(Schema.String),
+  category: optional(Schema.String),
+  runbook: optional(Schema.String),
+  environments: Schema.Array(Schema.String),
+  run: Schema.Union([
+    Schema.Struct({
+      kubernetes: Schema.Struct({
+        namespace: Schema.String,
+        cronJob: optional(Schema.String),
+        job: optional(Schema.String),
+      }),
+    }),
+    Schema.Struct({ ecs: Schema.Struct({ cluster: Schema.String, scheduledTask: Schema.String }) }),
+  ]),
+  links: optional(Schema.Record(Schema.String, Schema.String)),
+})
+export type StandaloneJob = typeof StandaloneJob.Type
+
+/** What a job runs as, by its runtime's own kind and name. */
+export const runsAs = (job: StandaloneJob) =>
+  "ecs" in job.run
+    ? { kind: "ScheduledTask" as const, name: job.run.ecs.scheduledTask }
+    : job.run.kubernetes.job === undefined
+      ? { kind: "CronJob" as const, name: job.run.kubernetes.cronJob ?? job.name }
+      : { kind: "Job" as const, name: job.run.kubernetes.job }
+
 const MapNode = Schema.Struct({
   id: Schema.String,
   service: optional(Schema.String),
@@ -199,6 +232,7 @@ export const Catalog = Schema.Struct({
   environments: Schema.Array(Environment),
   services: Schema.Array(Service),
   stores: optional(Schema.Array(Store)),
+  jobs: optional(Schema.Array(StandaloneJob)),
   vitals: optional(Schema.Array(Vital)),
   map: optional(Schema.Struct({ nodes: Schema.Array(MapNode), edges: Schema.Array(MapEdge) })),
 })

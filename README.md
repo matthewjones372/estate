@@ -118,7 +118,8 @@ Estate reads two files from `/etc/estate`:
 
 - `catalog.yaml` describes your environments and services. [`examples/catalog.yaml`](examples/catalog.yaml) uses
   every option. Give services and stores a `category`, such as payments or data, and the overview groups them under
-  a heading each.
+  a heading each. Jobs no service owns, a CronJob or an ECS scheduled task, go under `jobs:` and get a lane of their
+  own.
 - `estate.yaml` holds settings: sign-in, roles, where each environment's tools are, and where to keep notes. Secrets
   can be written as `${NAME}` and are read from the environment.
 

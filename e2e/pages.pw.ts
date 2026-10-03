@@ -25,6 +25,11 @@ test("the overview says what needs someone, with each service's lane and what ch
   // The catalog's categories, in its order, and what has none last.
   await expect(services(page).getByRole("heading", { level: 2 })).toHaveText(["Shop", "Payments", "Everything else"])
   await expect(page.getByRole("region", { name: "Payments" }).getByRole("link", { name: "orders-db" })).toBeVisible()
+  // A job no service owns, in its category, with its schedule and last run.
+  const settlement = page.getByRole("article", { name: "settlement, a job" })
+  await expect(settlement).toContainText("0 1 * * *")
+  await expect(settlement).toContainText("succeeded")
+  await expect(page.getByRole("region", { name: "Payments" }).getByRole("article", { name: "settlement, a job" })).toBeVisible()
   await shot(page, "overview")
   await accessible(page)
 })

@@ -7,7 +7,7 @@ import { clock, duration, since } from "../format"
 
 const outcomeWords = { running: "running", succeeded: "succeeded", failed: "failed" } as const
 
-const Run = (props: { readonly run: Job["runs"][number]; readonly now: number }) => {
+export const Run = (props: { readonly run: Job["runs"][number]; readonly now: number }) => {
   const took = () =>
     props.run.finishedAt === undefined
       ? `for ${since(props.run.startedAt, props.now)}`

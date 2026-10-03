@@ -1,9 +1,10 @@
 /** @jsxImportSource solid-js */
-/** The overview's lanes: a lane per service and per store, under a heading per category when the catalog names any. */
+/** The overview's lanes: a lane per service, store and job, under a heading per category when the catalog names any. */
 import { For, Show } from "solid-js"
 import { useSnapshot } from "../context"
 import { groupsOf } from "../groups"
 import { byName } from "../indexed"
+import { JobLane } from "./JobLane"
 import { Lane } from "./Lane"
 import { StoreLane } from "./StoreLane"
 
@@ -12,6 +13,7 @@ export const Lanes = () => {
   const events = () => snapshot.events
   const states = byName(() => events().services?.services)
   const storeStates = byName(() => events().services?.stores)
+  const jobStates = byName(() => events().services?.jobs)
   const deployed = byName(() => events().deploys?.services)
   const groups = () => groupsOf(events().catalog)
   const grouped = () => groups()[0]?.title !== undefined
@@ -57,6 +59,10 @@ export const Lanes = () => {
             <For each={group.stores}>
               {(store) => <StoreLane store={store} state={storeStates().get(store.name)} />}
             </For>
+            <Show when={group.title === undefined && group.jobs.length > 0}>
+              <h2 class="section-title">Jobs</h2>
+            </Show>
+            <For each={group.jobs}>{(job) => <JobLane job={job} state={jobStates().get(job.name)} />}</For>
           </section>
         )}
       </For>
