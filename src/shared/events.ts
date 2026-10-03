@@ -82,7 +82,14 @@ export const Debug = Schema.Struct({
 })
 export type Debug = typeof Debug.Type
 
-export const Load = Schema.Struct({ requests: optional(Series), errors: optional(Series), p99: optional(Series) })
+const Stat = Schema.Struct({ title: Schema.String, unit: optional(Schema.String), series: Series })
+
+export const Load = Schema.Struct({
+  requests: optional(Series),
+  errors: optional(Series),
+  p99: optional(Series),
+  stats: optional(Schema.Array(Stat)),
+})
 export type Load = typeof Load.Type
 
 export const ServicesEvent = Schema.Struct({

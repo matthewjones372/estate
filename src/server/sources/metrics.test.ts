@@ -51,7 +51,11 @@ const prometheus =
   }
 
 const services = [
-  { ...storefront, load: { requests: "sum(rate(requests[1m]))", errors: "sum(rate(errors[1m]))", p99: "broken(" } },
+  {
+    ...storefront,
+    load: { requests: "sum(rate(requests[1m]))", errors: "sum(rate(errors[1m]))", p99: "broken(" },
+    stats: { extra: [{ title: "Orders queued", query: "sum(orders_queued)" }] },
+  },
   { name: "search", environments: ["staging"] },
 ]
 const withMetrics = { ...catalog, services, vitals: [{ title: "Orders", query: "sum(orders)", unit: "/s" }] }
@@ -76,7 +80,11 @@ describe("metrics from Prometheus", () => {
     read(prometheus()).then((result) => {
       const metrics = Result.isSuccess(result) ? result.success : undefined
       expect(metrics?.services).toMatchObject({
-        storefront: { requests: { now: 12 }, p99: { now: null, points: [] } },
+        storefront: {
+          requests: { now: 12 },
+          p99: { now: null, points: [] },
+          stats: [{ title: "Orders queued", series: { now: 12 } }],
+        },
         search: {},
       })
       expect(Object.values(metrics?.services ?? {})[0]?.requests?.points).toHaveLength(61)
