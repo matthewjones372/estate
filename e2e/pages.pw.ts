@@ -29,7 +29,9 @@ test("the overview says what needs someone, with each service's lane and what ch
   const settlement = page.getByRole("article", { name: "settlement, a job" })
   await expect(settlement).toContainText("0 1 * * *")
   await expect(settlement).toContainText("succeeded")
-  await expect(page.getByRole("region", { name: "Payments" }).getByRole("article", { name: "settlement, a job" })).toBeVisible()
+  await expect(
+    page.getByRole("region", { name: "Payments" }).getByRole("article", { name: "settlement, a job" }),
+  ).toBeVisible()
   await shot(page, "overview")
   await accessible(page)
 })

@@ -79,7 +79,10 @@ export const kube: Record<string, () => unknown> = {
   "/apis/batch/v1/namespaces/batch/jobs": () => ({
     items: [
       {
-        metadata: { name: "payments-settlement-1", ownerReferences: [{ kind: "CronJob", name: "payments-settlement" }] },
+        metadata: {
+          name: "payments-settlement-1",
+          ownerReferences: [{ kind: "CronJob", name: "payments-settlement" }],
+        },
         status: { startTime: minutesAgo(700), completionTime: minutesAgo(688), succeeded: 1 },
       },
     ],
