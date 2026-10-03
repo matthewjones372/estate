@@ -1,0 +1,59 @@
+# What Estate reads across the cluster, and the one thing it writes: a service's logging ConfigMap, for debug.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: estate-reader
+rules:
+  - apiGroups: [""]
+    resources: [pods, configmaps]
+    verbs: [get, list]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets, daemonsets]
+    verbs: [get, list]
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: [get, list]
+  - apiGroups: [kustomize.toolkit.fluxcd.io]
+    resources: [kustomizations]
+    verbs: [get, list]
+  - apiGroups: [image.toolkit.fluxcd.io]
+    resources: [imagepolicies, imagerepositories]
+    verbs: [get, list]
+  - apiGroups: [helm.toolkit.fluxcd.io]
+    resources: [helmreleases]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: estate-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: estate-reader
+subjects:
+  - kind: ServiceAccount
+    name: estate
+---
+# Debug: patching the logging ConfigMaps the catalog names. An overlay narrows this with resourceNames, or replaces
+# it with impersonation rights when estate.yaml sets kubernetes.impersonate.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: estate-debug
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    verbs: [patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: estate-debug
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: estate-debug
+subjects:
+  - kind: ServiceAccount
+    name: estate

@@ -1,0 +1,140 @@
+/* Header */
+.header {
+  border-bottom: 1px solid var(--line);
+  background: var(--ground);
+}
+.header-inner {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 24px;
+  min-height: 60px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 28px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+.brand:hover {
+  color: var(--ink);
+}
+.switcher {
+  position: relative;
+}
+.switcher-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line-strong);
+  background: var(--ground);
+  border-radius: 999px;
+  padding: 0 12px 0 10px;
+  font-size: 13px;
+  min-height: 32px;
+}
+.switcher-list {
+  position: absolute;
+  z-index: 5;
+  top: 40px;
+  left: 0;
+  min-width: 280px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.switcher-option {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 10px;
+  min-height: 44px;
+}
+.switcher-option[aria-current="true"] {
+  background: var(--line);
+}
+.nav {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.nav a {
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--ink-2);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.nav a[aria-current="page"] {
+  background: var(--chip);
+  color: var(--ink);
+  font-weight: 600;
+}
+.count {
+  background: #3a2a0e;
+  color: var(--amber-text);
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.header-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.live-clock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  background: #232836;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--ink);
+}
+.plain-button {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  border-radius: 8px;
+  padding: 0 12px;
+  min-height: 32px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}

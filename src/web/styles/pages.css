@@ -1,0 +1,140 @@
+/* Tables and pipelines */
+.table-scroll {
+  overflow-x: auto;
+}
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+table.grid th,
+table.grid td {
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+table.grid thead th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+table.grid tbody th {
+  font-weight: 600;
+}
+.cell-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cell-note {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.cell-note.attention {
+  color: var(--amber-text);
+}
+.pipeline-head,
+.pipeline {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.2fr) repeat(4, minmax(120px, 1fr));
+  gap: 16px;
+}
+.pipeline-head {
+  font-size: 12px;
+  padding: 0 18px;
+}
+.pipeline {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  align-items: start;
+}
+.pipeline-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  border-top: 2px solid var(--waiting);
+  padding-top: 8px;
+  font-size: 13px;
+}
+.step.done {
+  border-color: var(--ink-soft);
+}
+.step.active {
+  border-color: var(--link);
+}
+.step.stalled {
+  border-color: var(--amber);
+}
+.step-state {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.step-detail {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.step.stalled .step-state,
+.step.stalled .step-detail {
+  color: var(--amber-text);
+}
+@media (max-width: 900px) {
+  .pipeline-head {
+    display: none;
+  }
+  .pipeline {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.filter {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  border-radius: 8px;
+  padding: 0 12px;
+  min-height: 36px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.filter[aria-pressed="true"] {
+  background: #232836;
+  color: var(--ink);
+}
+.select-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.select {
+  background: var(--ground);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  min-height: 36px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+}
+tr.greyed {
+  opacity: 0.6;
+}
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink-soft);
+}
