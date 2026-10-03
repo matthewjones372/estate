@@ -10,6 +10,7 @@ export const attemptCookie = "estate_sign_in"
 
 export interface Person {
   readonly name: string
+  readonly groups: ReadonlyArray<string>
   readonly role: Role | undefined
 }
 
@@ -24,7 +25,7 @@ export const personAsking: Effect.Effect<
 > = Effect.gen(function* () {
   const { auth } = yield* Configured
   if (auth.oidc === undefined && auth.anonymous !== undefined) {
-    return Option.some({ name: auth.anonymous.name, role: auth.anonymous.role })
+    return Option.some({ name: auth.anonymous.name, groups: [], role: auth.anonymous.role })
   }
   const request = yield* HttpServerRequest.HttpServerRequest
   const cookie = request.cookies[sessionCookie]
@@ -32,6 +33,6 @@ export const personAsking: Effect.Effect<
   const now = yield* Clock.currentTimeMillis
   const opened = yield* unseal(cookie, auth.sessionSecret, now)
   return Option.flatMap(opened, decodeSealed).pipe(
-    Option.map((sealed) => ({ name: sealed.name, role: roleOf(sealed.groups, auth.roles) })),
+    Option.map((sealed) => ({ name: sealed.name, groups: sealed.groups, role: roleOf(sealed.groups, auth.roles) })),
   )
 })

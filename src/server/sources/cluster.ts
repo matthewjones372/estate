@@ -5,6 +5,7 @@ import { compact } from "../../shared/compact"
 import type { Debug, Pod } from "../../shared/events"
 import type { Remote } from "../remote"
 import type { Workloads } from "../state"
+import { debugAnnotations } from "./debug"
 import { jobsOf } from "./jobs"
 import { type Cluster, Condition, kube, Metadata } from "./kubernetes"
 import type { Failure } from "./run"
@@ -37,13 +38,6 @@ const ConfigMap = Schema.Struct({
   metadata: Metadata,
   data: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
 })
-
-const debugAnnotations = {
-  until: "estate.dev/debug-until",
-  since: "estate.dev/debug-since",
-  by: "estate.dev/debug-by",
-  from: "estate.dev/debug-from",
-} as const
 
 const plural = { Deployment: "deployments", StatefulSet: "statefulsets", DaemonSet: "daemonsets" } as const
 

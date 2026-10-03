@@ -44,7 +44,7 @@ const serve = Effect.gen(function* () {
   const started = yield* prepare(ESTATE_SETTINGS ?? "/etc/estate/estate.yaml", process.env)
   const database = started.settings.notes?.postgres
   const notes = database === undefined ? memoryNotes : postgresNotes(sqlOf(database))
-  const provided = services(started, builtWeb, liveRemote, notes)
+  const provided = services(started, builtWeb, liveRemote, notes, process.env)
   const server = HttpRouter.serve(application).pipe(
     Layer.provide(
       BunHttpServer.layer({ port: started.settings.port ?? 8080, hostname: started.settings.host ?? "0.0.0.0" }),
