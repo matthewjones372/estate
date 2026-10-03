@@ -161,10 +161,19 @@ describe("the other pages", () => {
       "Turn off now",
       "Faster pages",
       "threshold 200 ms",
+      "Stats",
+      "310 MiB",
+      "storefront-sitemap",
+      "0 * * * *",
+      "failed in 2 min: BackoffLimitExceeded",
+      "succeeded in 2 min",
+      "missed its run at",
+      "next at",
     ]) {
       expect(page).toContain(words)
     }
     expect(text(render(<ServicePage name="orders" />))).toContain("The catalog names no log level for orders")
+    expect(text(render(<ServicePage name="orders" />))).toContain("No jobs are named for it.")
     expect(text(render(<ServicePage name="nothing" />))).toContain("nothing is not in production")
   })
 

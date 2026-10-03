@@ -70,6 +70,9 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
         }
       }
     }
+    if ((service.jobs ?? []).length > 0 && service.kubernetes === undefined) {
+      mistake(`${at}.jobs`, "needs kubernetes.namespace, where its jobs run")
+    }
     if (service.debug !== undefined && service.debug.levels.length < 2) {
       mistake(`${at}.debug.levels`, "needs the usual level and the debug level, in that order")
     }

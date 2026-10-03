@@ -1,10 +1,11 @@
 /** What the cluster says of each service: its workloads' pods, and its debug level from its logging ConfigMap. */
-import { Effect, Schema } from "effect"
+import { Clock, Effect, Schema } from "effect"
 import type { Service } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Debug, Pod } from "../../shared/events"
 import type { Remote } from "../remote"
 import type { Workloads } from "../state"
+import { jobsOf } from "./jobs"
 import { type Cluster, Condition, kube, Metadata } from "./kubernetes"
 import type { Failure } from "./run"
 
@@ -108,21 +109,24 @@ const debugFor = (cluster: Cluster, service: Service): Effect.Effect<Debug | und
   ).pipe(Effect.map((map) => debugOf(debug.levels, map.data ?? {}, debug.key, map.metadata.annotations ?? {})))
 }
 
-/** Every service's pods and debug, read side by side. */
+/** Every service's pods, jobs and debug, read side by side. */
 export const readCluster = (
   cluster: Cluster,
   services: ReadonlyArray<Service>,
 ): Effect.Effect<Workloads, Failure, Remote> =>
-  Effect.forEach(
-    services,
-    (service) =>
-      Effect.all([podsOf(cluster, service), debugFor(cluster, service)]).pipe(
-        Effect.map(([pods, debug]) => ({ service: service.name, pods, debug })),
-      ),
-    { concurrency: 4 },
-  ).pipe(
-    Effect.map((read) => ({
+  Effect.gen(function* () {
+    const now = yield* Clock.currentTimeMillis
+    const read = yield* Effect.forEach(
+      services,
+      (service) =>
+        Effect.all([podsOf(cluster, service), debugFor(cluster, service), jobsOf(cluster, service, now)]).pipe(
+          Effect.map(([pods, debug, jobs]) => ({ service: service.name, pods, debug, jobs })),
+        ),
+      { concurrency: 4 },
+    )
+    return {
       pods: Object.fromEntries(read.map((each) => [each.service, each.pods])),
+      jobs: Object.fromEntries(read.flatMap((each) => (each.jobs.length === 0 ? [] : [[each.service, each.jobs]]))),
       debug: Object.fromEntries(read.flatMap((each) => (each.debug === undefined ? [] : [[each.service, each.debug]]))),
-    })),
-  )
+    }
+  })

@@ -4,7 +4,7 @@
  */
 import { Context, Effect, Layer, SubscriptionRef } from "effect"
 import type { Catalog } from "../shared/catalog"
-import type { Alert, Build, Debug, Load, Note, Pod, Series, SourceKind } from "../shared/events"
+import type { Alert, Build, Debug, Job, Load, Note, Pod, Series, SourceKind } from "../shared/events"
 
 export interface Part<A> {
   readonly state: "off" | "waiting" | "ok" | "failing"
@@ -34,6 +34,7 @@ export type SourcedAlert = Omit<Alert, "notes" | "service" | "runbook" | "chart"
 
 export interface Workloads {
   readonly pods: Readonly<Record<string, ReadonlyArray<Pod>>>
+  readonly jobs?: Readonly<Record<string, ReadonlyArray<Job>>>
   readonly debug: Readonly<Record<string, Debug>>
 }
 

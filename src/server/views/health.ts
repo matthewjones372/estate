@@ -47,6 +47,12 @@ export const healthOf = (
     if (ready === 0) critical.push("no pod is ready")
     else if (ready < pods.length) attention.push(`${pods.length - ready} of ${pods.length} pods not ready`)
   }
+  for (const job of environment.cluster.value?.jobs?.[service.name] ?? []) {
+    const last = job.runs.find((run) => run.outcome !== "running")
+    if (last?.outcome === "failed")
+      attention.push(`job ${job.name} failed${last.message === undefined ? "" : `: ${last.message}`}`)
+    if (job.missed !== undefined) attention.push(`job ${job.name} missed a run`)
+  }
   const stalled = environment.deploys.value?.[service.name]?.stalled
   if (stalled !== undefined) attention.push(`deploy stalled: ${stalled}`)
 

@@ -47,6 +47,7 @@ export const servicesView = (estate: EstateState, environment: string): Services
         health,
         reasons,
         pods,
+        jobs: state.cluster.value?.jobs?.[service.name] ?? [],
         version: versionOf(pods.find((pod) => pod.ready)?.image ?? pods[0]?.image),
         load: metrics?.services[service.name] ?? {},
         debug: state.cluster.value?.debug[service.name],

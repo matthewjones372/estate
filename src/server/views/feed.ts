@@ -60,6 +60,14 @@ export const feedView = (estate: EstateState, environment: string, now: number):
       )
     }
   }
+  for (const [service, jobs] of Object.entries(state.cluster.value?.jobs ?? {})) {
+    for (const job of jobs) {
+      for (const run of job.runs) {
+        if (run.finishedAt !== undefined)
+          add({ at: run.finishedAt, kind: "job", service, text: `job ${job.name} ${run.outcome}` })
+      }
+    }
+  }
   for (const [service, chosen] of Object.entries(state.deploys.value ?? {})) {
     if (chosen.at !== undefined) add({ at: chosen.at, kind: "deploy", service, text: `${chosen.version} applied` })
   }
