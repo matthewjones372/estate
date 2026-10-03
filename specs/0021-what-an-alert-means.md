@@ -1,4 +1,4 @@
-# 0021 — What an alert means
+# 0021 — What an alert means, and has meant
 
 ## Problem
 
@@ -7,6 +7,10 @@ not say what that means for the people using the product: new products cannot be
 has to work that out, or ask, before they can judge how much it matters, tell support, or decide whether to wake
 someone. The answer is the same every time the alert fires, but there is nowhere to keep it. Today's notes belong to
 one firing and end with it.
+
+Nor does it say whether it has happened before. "Fired four times this month; last time ada restarted the indexer
+and it cleared in ten minutes" is the most useful thing the person who sees it could know. Estate keeps only the last
+day's resolved alerts, in memory, so a restart forgets them, and a note is gone from the page once its firing ends.
 
 ## Not doing
 
@@ -17,6 +21,8 @@ one firing and end with it.
   too, which is fine.
 
 ## Shape
+
+### Impact
 
 An alert's impact can come from three places, and the first found is shown:
 
@@ -43,6 +49,33 @@ An alert's impact can come from three places, and the first found is shown:
   see "Add impact" instead.
 - **Where it is kept**: beside the notes, in the same Postgres or DynamoDB, or in memory when Estate has no store or
   is read-only.
+### History
+
+```text
+┌ WARNING  SearchIndexStale                                    firing 41 min ┐
+│ …                                                                            │
+│ Before  4 times in 30 days, last 6 days ago for 22 min · History             │
+│         “Indexer stuck on a bad product feed; restarted it.” — ada, then     │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+History of SearchIndexStale in production
+  3 Oct 11:46   firing now, 41 min       2 notes
+  27 Sep 09:10  22 min                   silenced by gil: "indexer redeploy" · “Indexer stuck…; restarted it.” — ada
+  19 Sep 14:02  3 min
+```
+
+- **Each firing is kept**: when it started and ended, who silenced it and why, and the notes written while it fired.
+  They are kept by the alert's name and environment, in the same store as notes, for `alerts.historyDays` (90 by
+  default).
+- **On the card**, an alert that has fired before says how often in the last 30 days, when last, and for how long.
+  It also quotes the last note written about it. "History" opens the alert's past firings, newest first, each with
+  its silences and notes.
+- **The resolved list** on the alerts page reads from the same record, so it survives a restart.
+- **Before Estate kept them**, where the alerts come from Prometheus, the firings of the last 30 days are read once
+  from its `ALERTS` series, without notes.
+
+### Both
+
 - **`estate check`** names an impact in the catalog for an alert that no rule Estate has read defines, as a
   warning, since the rule may be in an environment not yet read.
 
@@ -65,7 +98,14 @@ Nothing. Stores keep a second kind of record beside notes.
       Done when: a Prometheus rule with an `impact` annotation shows it on its card and on the kiosk.
 - [ ] **`impact-written`** — written and edited on the page by operators, kept in memory, Postgres and DynamoDB.
       Done when: an impact written on a firing alert is on its next firing, with who wrote it, after a restart.
-- [ ] **`impact-e2e`** — the example estate's SearchIndexStale with an impact; Playwright writes and edits one.
+- [ ] **`alert-history`** — each firing kept with its silences and notes, in memory, Postgres and DynamoDB.
+      Done when: an alert that fired, resolved and fired again shows its first firing's note, after a restart.
+- [ ] **`history-shown`** — "before" on the card, the alert's history, and the resolved list from the record.
+      Done when: a card says how often its alert fired in 30 days, and History lists each firing with its notes.
+- [ ] **`history-backfill`** — the last 30 days' firings read once from Prometheus's `ALERTS`.
+      Done when: a test against Prometheus's range answer gives an alert's earlier firings.
+- [ ] **`impact-e2e`** — the example estate's SearchIndexStale with an impact and a past firing with a note;
+      Playwright writes an impact and opens a history.
       Done when: `bunx playwright test` passes with it.
 
 ## Acceptance
@@ -78,5 +118,8 @@ bun run integration -t "Notes"
 
 ## Open questions
 
+- **How long is history kept?** Recommended: 90 days by default, as `alerts.historyDays`.
+- **Grafana's and Datadog's own history?** Both keep alert state history Estate could read for the time before it
+  ran. Recommended: Prometheus's first, since it needs no extra permission. The others are added when someone asks.
 - **Can viewers write impact, or only operators?** Recommended: operators, since it is shown to everyone as what the
   alert means. Viewers keep notes on a firing.
