@@ -34,7 +34,7 @@ export const loadOf = (
         return query === undefined ? [] : [[kind, query] as const]
       }),
       ([kind, query]) => quietly(ranges.range(query, span, now)).pipe(Effect.map((series) => [kind, series] as const)),
-      { concurrency: 3 },
+      { concurrency: ranges.concurrency ?? 3 },
     )
     const stats = yield* Effect.forEach(
       statsOf(service),
@@ -42,7 +42,7 @@ export const loadOf = (
         quietly(ranges.range(stat.query, span, now)).pipe(
           Effect.map((series) => compact({ title: stat.title, unit: stat.unit, series })),
         ),
-      { concurrency: 3 },
+      { concurrency: ranges.concurrency ?? 3 },
     )
     return { ...Object.fromEntries(load), ...(stats.length === 0 ? {} : { stats }) }
   })
@@ -60,7 +60,7 @@ export const storeLoadOf = (
       quietly(ranges.range(stat.query, span, now)).pipe(
         Effect.map((series) => compact({ key: stat.key, title: stat.title, unit: stat.unit, series })),
       ),
-    { concurrency: 3 },
+    { concurrency: ranges.concurrency ?? 3 },
   )
 
 // Labels that say where an alert came from, not what it measures: Prometheus's own, and Grafana's.
@@ -93,7 +93,7 @@ export const chartsOf = (
         Effect.map((series) => [[alert.id, { points: series.points, threshold: watched.threshold }] as const]),
       )
     },
-    { concurrency: 4 },
+    { concurrency: ranges.concurrency ?? 4 },
   ).pipe(Effect.map((charts) => Object.fromEntries(charts.flat())))
 
 export const readMetrics = (
@@ -109,20 +109,18 @@ export const readMetrics = (
     const loads = yield* Effect.forEach(
       services,
       (service) => loadOf(ranges, service, lastHour, now).pipe(Effect.map((load) => [service.name, load] as const)),
-      {
-        concurrency: 4,
-      },
+      { concurrency: ranges.concurrency ?? 4 },
     )
     const storeLoads = yield* Effect.forEach(
       stores,
       (store) =>
         storeLoadOf(ranges, store, lastHour, now).pipe(Effect.map((readings) => [store.name, readings] as const)),
-      { concurrency: 4 },
+      { concurrency: ranges.concurrency ?? 4 },
     )
     const vitals = yield* Effect.forEach(
       catalog.vitals ?? [],
       (vital) => quietly(ranges.range(vital.query, lastHour, now)),
-      { concurrency: 4 },
+      { concurrency: ranges.concurrency ?? 4 },
     )
     const edges = yield* Effect.forEach(
       catalog.map?.edges ?? [],
@@ -130,7 +128,7 @@ export const readMetrics = (
         edge.rate === undefined
           ? Effect.succeed(null)
           : quietly(ranges.range(edge.rate, lastHour, now)).pipe(Effect.map((series) => series.now)),
-      { concurrency: 4 },
+      { concurrency: ranges.concurrency ?? 4 },
     )
     const charts = yield* chartsOf(ranges, rules, firing, now)
     return {

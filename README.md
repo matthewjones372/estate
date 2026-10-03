@@ -19,7 +19,7 @@ you already run and puts it in one place.
 | | |
 |---|---|
 | Alerts | Alertmanager, Grafana alerting, CloudWatch alarms, Datadog monitors |
-| Metrics | Prometheus (or anything with its query API), CloudWatch |
+| Metrics | Prometheus (or anything with its query API), Datadog, CloudWatch |
 | Runtime | Kubernetes, ECS |
 | Deploys | Flux, Argo CD, ECS deployments |
 | Builds | GitHub Actions, GitLab CI |

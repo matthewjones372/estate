@@ -114,6 +114,8 @@ export interface Ranges {
     labels?: Readonly<Record<string, string>>,
   ) => Effect.Effect<Series, Failure, Remote>
   readonly rules: Effect.Effect<ReadonlyMap<string, string>, Failure, Remote>
+  /** How many queries a read asks at once: all of them, where the source batches them itself. */
+  readonly concurrency?: number | "unbounded"
 }
 
 /** Prometheus, with any rules Prometheus does not hold (Grafana's) beside its own. */

@@ -17,7 +17,7 @@ import { type Failure, SourceFailure } from "./run"
 export type Datadog = NonNullable<Sources["datadog"]>
 
 /** Datadog's API for the site the account is on, with its keys. */
-const datadogReach = (datadog: Datadog): Reach => ({
+export const datadogReach = (datadog: Datadog): Reach => ({
   url: (datadog.url ?? `https://api.${datadog.site ?? "datadoghq.com"}`).replace(/\/$/, ""),
   headers: {
     "dd-api-key": Redacted.value(datadog.apiKey),
@@ -35,6 +35,7 @@ const Monitor = Schema.Struct({
   name: Schema.String,
   message: Schema.optionalKey(Schema.NullOr(Schema.String)),
   tags: Schema.Array(Schema.String),
+  query: Schema.optionalKey(Schema.String),
   overall_state: Schema.optionalKey(Schema.String),
   state: Schema.optionalKey(Schema.Struct({ groups: Schema.optionalKey(Schema.Record(Schema.String, Group)) })),
 })
@@ -103,7 +104,7 @@ const ask = <S extends Schema.Decoder<unknown>>(datadog: Datadog, path: string, 
 const perPage = 1000
 
 /** Every monitor with a group in Alert, Warn or No Data, page by page. */
-const monitors = (datadog: Datadog): Effect.Effect<ReadonlyArray<Monitor>, Failure, Remote> =>
+export const monitorsOf = (datadog: Datadog): Effect.Effect<ReadonlyArray<Monitor>, Failure, Remote> =>
   Stream.paginate(0, (page) =>
     ask(
       datadog,
@@ -221,7 +222,7 @@ const alertsOf = (
 /** Every alerting group of every monitor in the environment's tags, silenced where a downtime covers it. */
 export const datadogAlerts = (datadog: Datadog): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
   Effect.gen(function* () {
-    const found = yield* monitors(datadog)
+    const found = yield* monitorsOf(datadog)
     const silencing = yield* downtimes(datadog)
     return found.flatMap((monitor) => alertsOf(monitor, datadog.tags ?? [], silencing))
   })

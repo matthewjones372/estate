@@ -64,20 +64,21 @@ services:
   `tags`, matched to a service by its `service` tag as a Prometheus label would be.
 - **Silences** are Datadog downtimes scoped to the monitor and group, ended early by cancelling them. Datadog records
   the keys' owner as a downtime's creator, so Estate writes who asked into its message.
-- **Load** is read with one query per series kind for the whole environment, grouped by `service`, wherever the
-  catalog's queries share a shape. Otherwise it is read query by query.
+- **Load** is read through Datadog's timeseries API, the queries a read asks for at once batched fifty to a call.
+  A firing monitor's chart is its query against its threshold, as a Prometheus rule's is.
 - **Logs** come from Datadog's log search, filtered by `service:<name>` and the environment's tags.
 
-A call Datadog refuses with 429 waits for the time its rate-limit headers give, and the part is marked failing with
-that reason until it answers again.
+A call Datadog refuses with 429 makes Estate ask nothing more until the time its rate-limit headers give, and the
+metrics read fails saying how long is left.
 
 ## Why this shape
 
 The platform as intended means asking it, not what is behind it. Grafana's data source proxy keeps one credential
 and Grafana's own permissions. For Datadog, the hard limit is its rate limit on metric queries, counted per
-organisation. Three queries a service every 30 s, as Estate makes of Prometheus, would spend a team's whole hourly
-allowance in minutes at fifty services. Grouping by `service` turns that into three queries an environment, and
-spec 0011's `every:` lets a team read less often still. The alternative, Datadog's dashboards embedded in the page,
+organisation. A call a query every 30 s, as Estate makes of Prometheus, would spend a team's whole hourly allowance
+in minutes at fifty services. Batching turns a read of fifty services into three calls, and spec 0011's `every:`
+lets a team read less often still. Rewriting each kind's queries into one grouped by `service` would cut it to one
+call a kind, but only where every service's query has the same shape; batching works for any queries. The alternative, Datadog's dashboards embedded in the page,
 would show load but not join it to anything. Recommended: read through the API, grouped.
 
 ## Depends on
@@ -92,7 +93,7 @@ Spec 0011's `every:`, so a Datadog environment can be read once a minute or less
 - [x] **`datadog-alerts`** — monitors as alerts, downtimes as silences.
       Done when: a firing monitor group appears with its service, and silencing it creates a downtime that the next
       read shows.
-- [ ] **`datadog-metrics`** — load, stats and alert charts from Datadog's metric queries, grouped by service.
+- [x] **`datadog-metrics`** — load, stats and alert charts from Datadog's metric queries, batched.
       Done when: fifty services' load is read in three calls an environment, and a 429 marks metrics failing with
       the wait.
 - [ ] **`datadog-logs`** — a service's lines and error groups from Datadog's log search.

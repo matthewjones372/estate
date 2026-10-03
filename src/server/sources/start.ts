@@ -9,18 +9,18 @@ import { inEnvironment } from "../views/catalog"
 import { readAlerts, withResolved } from "./alerts"
 import { readArgo } from "./argo"
 import { runBuilds } from "./builds"
-import { cloudwatchApi, cloudwatchRanges, readAlarms } from "./cloudwatch"
+import { cloudwatchApi, readAlarms } from "./cloudwatch"
 import { readCluster } from "./cluster"
 import { alertsBeside } from "./datadog"
 import { revertExpired } from "./debug"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./ecs"
 import { buildsEvery, everyOf } from "./every"
 import { readDeploys } from "./flux"
-import { grafanaRules, prometheusOf } from "./grafana"
 import { clusterOf } from "./kubernetes"
 import { chartsOf, readMetrics } from "./metrics"
-import { alertsOf, buildsOf, deploysOf, metricsOf, runtimeOf } from "./ports"
-import { prometheusRanges, type Ranges } from "./prometheus"
+import { alertsOf, buildsOf, deploysOf, runtimeOf } from "./ports"
+import type { Ranges } from "./prometheus"
+import { rangesIn } from "./ranges"
 import { type Failure, runSource } from "./run"
 
 /** The services in an environment as the catalog says now, so a reloaded catalog is read from the next time. */
@@ -101,14 +101,7 @@ const readersFor = (
         runSource(environment.name, "alerts", everyOf(section, "alerts"), readAlerts(section, alarms), withResolved),
       )
     }
-    const { grafana } = section
-    const prometheus = prometheusOf(section)
-    const ranges =
-      metricsOf(section) === "prometheus" && prometheus !== undefined
-        ? prometheusRanges(prometheus, grafana === undefined ? undefined : grafanaRules(grafana))
-        : metricsOf(section) === "cloudwatch" && cloudwatch !== undefined
-          ? cloudwatchRanges(cloudwatch)
-          : undefined
+    const ranges = yield* rangesIn(section)
     if (ranges !== undefined) {
       const read = Effect.gen(function* () {
         const estate = yield* SubscriptionRef.get(yield* Estate)

@@ -11,19 +11,19 @@ import type { Settings, Sources } from "./settings"
 import { readAlerts } from "./sources/alerts"
 import { readArgo } from "./sources/argo"
 import { readBuilds } from "./sources/builds"
-import { cloudwatchApi, cloudwatchRanges, readAlarms } from "./sources/cloudwatch"
+import { cloudwatchApi, readAlarms } from "./sources/cloudwatch"
 import { readCluster } from "./sources/cluster"
 import { alertsBeside } from "./sources/datadog"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./sources/ecs"
 import { matchOf } from "./sources/elastic"
 import { intervalsOf } from "./sources/every"
 import { readDeploys } from "./sources/flux"
-import { grafanaRules, prometheusOf } from "./sources/grafana"
 import { clusterOf } from "./sources/kubernetes"
 import { logsFor } from "./sources/logs"
 import { loadOf } from "./sources/metrics"
 import { alertsOf, deploysOf, metricsOf, runtimeOf } from "./sources/ports"
-import { lastHour, prometheusRanges, type Ranges, thresholdOf } from "./sources/prometheus"
+import { lastHour, type Ranges, thresholdOf } from "./sources/prometheus"
+import { rangesIn } from "./sources/ranges"
 import type { Failure } from "./sources/run"
 import type { Chosen, SourcedAlert, Workloads } from "./state"
 import { inEnvironment } from "./views/catalog"
@@ -160,17 +160,11 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
     const section = settings.sources[sources] ?? {}
     const services = inEnvironment(catalog, environment)
     const now = yield* Clock.currentTimeMillis
-    const { aws, grafana, kubernetes, argo } = section
-    const prometheus = prometheusOf(section)
+    const { aws, kubernetes, argo } = section
     const ecs = aws === undefined ? undefined : yield* makeAwsJson(ecsApi, aws.region, aws.endpoint)
     const cloudwatch = aws === undefined ? undefined : yield* makeAwsJson(cloudwatchApi, aws.region, aws.endpoint)
     const alarms = alertsBeside(cloudwatch === undefined ? undefined : readAlarms(cloudwatch), section.datadog)
-    const ranges =
-      metricsOf(section) === "prometheus" && prometheus !== undefined
-        ? prometheusRanges(prometheus, grafana === undefined ? undefined : grafanaRules(grafana))
-        : cloudwatch === undefined
-          ? undefined
-          : cloudwatchRanges(cloudwatch)
+    const ranges = yield* rangesIn(section)
     const findings: Array<Finding> = [{ part: "every", ok: true, says: intervalsOf(section) }]
     if (alertsOf(section).length > 0) findings.push(yield* alertsFinding(section, catalog, environment, alarms))
     if (ranges !== undefined) {

@@ -32,9 +32,10 @@ export const alertsOf = (
   ...(section.datadog === undefined ? [] : ["datadog" as const]),
 ]
 
-/** Where queries over a range are answered: Prometheus, or CloudWatch where there is no Prometheus. */
-export const metricsOf = (section: Sources): "prometheus" | "cloudwatch" | undefined => {
+/** Where queries over a range are answered: Prometheus, or else Datadog, or else CloudWatch. */
+export const metricsOf = (section: Sources): "prometheus" | "datadog" | "cloudwatch" | undefined => {
   if (prometheusOf(section) !== undefined) return "prometheus"
+  if (section.datadog !== undefined) return "datadog"
   return section.aws === undefined ? undefined : "cloudwatch"
 }
 
