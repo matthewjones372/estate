@@ -46,7 +46,7 @@ Nothing.
 
 ## Stack
 
-- [ ] **`plot`** — `Plot`, used by the service's charts, the alert card and the sparklines: the mark by pointer and
+- [x] **`plot`** — `Plot`, used by the service's charts, the alert card and the sparklines: the mark by pointer and
       keyboard, shared across a service's charts, and zooming by dragging.
       Done when: stepping with the arrow keys on p99 shows each point's time and value in every chart's caption;
       dragging zooms them all; "Show all" and a new range go back.
