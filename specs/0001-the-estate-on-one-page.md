@@ -253,7 +253,10 @@ Nothing. Its first estate, orders, adopts it in its own spec 0026.
       `estate_notes`, if it is not there. Without it notes are kept in memory, for trying Estate out. A note is 1 to
       2,000 characters, under the name of whoever is signed in; the last 500 are on the stream. A database that does
       not answer as Estate starts stops it, named; one that stops answering later refuses new notes with its words.
-- [ ] **`silences`** — silences through Alertmanager, with a reason.
+- [x] **`silences`** — silences through Alertmanager, with a reason.
+      *Notes:* for operators, in an environment with an Alertmanager: a silence matches the alert's every label,
+      lasts a minute to a week, and carries the person's name and reason; the page shows it at once, and lifting it
+      expires it in Alertmanager. What Alertmanager answers when it refuses is shown in its words.
 - [ ] **`debug`** — the debug switch and its revert.
 - [ ] **`feed`** — what changed today, from the sources and Estate's own records.
 
