@@ -32,6 +32,33 @@ export const managerOf = (sources: Sources): Manager | undefined => {
     : { name: "Alertmanager", url: trimmed(sources.alertmanager.url), headers: {} }
 }
 
+/** Where a tool is asked: its address, and the headers each call carries. */
+export interface Reach {
+  readonly url: string
+  readonly headers: Readonly<Record<string, string>>
+}
+
+/** A data source behind Grafana, reached through its proxy with Grafana's token. */
+const proxied = (grafana: NonNullable<Sources["grafana"]>, uid: string): Reach => ({
+  url: `${trimmed(grafana.url)}/api/datasources/proxy/uid/${encodeURIComponent(uid)}`,
+  headers: grafanaHeaders(grafana),
+})
+
+/** The environment's Prometheus: through Grafana when Grafana names its data source, or else as `prometheus` says. */
+export const prometheusOf = (sources: Sources): Reach | undefined => {
+  const { grafana, prometheus } = sources
+  if (grafana?.prometheus !== undefined) return proxied(grafana, grafana.prometheus)
+  return prometheus === undefined ? undefined : { url: trimmed(prometheus.url), headers: {} }
+}
+
+/** The environment's Loki, likewise; a tenant is sent as Loki's own header. */
+export const lokiOf = (sources: Sources): Reach | undefined => {
+  const { grafana, loki } = sources
+  if (grafana?.loki !== undefined) return proxied(grafana, grafana.loki)
+  if (loki === undefined) return undefined
+  return { url: trimmed(loki.url), headers: loki.tenant === undefined ? {} : { "x-scope-orgid": loki.tenant } }
+}
+
 const Evaluator = Schema.Struct({ type: Schema.String, params: Schema.Array(Schema.Number) })
 
 const Model = Schema.Struct({

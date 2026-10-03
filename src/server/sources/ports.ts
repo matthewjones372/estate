@@ -3,6 +3,7 @@
  * views read Estate's own state whichever kind filled it, so a kind added later is one more case here and its reader.
  */
 import type { Settings, Sources } from "../settings"
+import { prometheusOf } from "./grafana"
 
 /** What the services run on: their instances, jobs and debug switch. An environment runs on one of them. */
 export const runtimeOf = (section: Sources): "kubernetes" | "ecs" | undefined => {
@@ -24,13 +25,13 @@ export const deploysOf = (section: Sources): "argo" | "flux" | "ecs" | undefined
 export const alertsOf = (section: Sources): ReadonlyArray<"alertmanager" | "grafana" | "prometheus" | "cloudwatch"> => [
   ...(section.alertmanager === undefined ? [] : ["alertmanager" as const]),
   ...(section.grafana === undefined ? [] : ["grafana" as const]),
-  ...(section.prometheus === undefined ? [] : ["prometheus" as const]),
+  ...(prometheusOf(section) === undefined ? [] : ["prometheus" as const]),
   ...(section.aws === undefined ? [] : ["cloudwatch" as const]),
 ]
 
 /** Where queries over a range are answered: Prometheus, or CloudWatch where there is no Prometheus. */
 export const metricsOf = (section: Sources): "prometheus" | "cloudwatch" | undefined => {
-  if (section.prometheus !== undefined) return "prometheus"
+  if (prometheusOf(section) !== undefined) return "prometheus"
   return section.aws === undefined ? undefined : "cloudwatch"
 }
 

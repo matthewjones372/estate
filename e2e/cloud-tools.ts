@@ -29,6 +29,12 @@ const silencedBy = (labels: Record<string, string>) =>
 
 const grafana = async (request: Request, path: string): Promise<Response | undefined> => {
   if (request.headers.get("authorization") !== "Bearer glsa-e2e") return json({ message: "Unauthorized" }, 401)
+  // The EKS Prometheus, reached only through Grafana's data source proxy.
+  const proxied = "/api/datasources/proxy/uid/prom-eks"
+  if (path.startsWith(`${proxied}/`))
+    return fetch(
+      `http://127.0.0.1:${process.env["TOOLS_PORT"] ?? 8282}${path.slice(proxied.length)}${new URL(request.url).search}`,
+    )
   const manager = "/api/alertmanager/grafana/api/v2"
   if (path === `${manager}/alerts`) {
     const by = silencedBy(storefrontErrors.labels)
@@ -262,7 +268,9 @@ const server = Bun.serve({
     if (path.startsWith("/aws")) return aws(request)
     if (path.endsWith("/_search")) return elasticsearch(request)
     const answered =
-      (path.startsWith("/api/alertmanager/") || path.startsWith("/api/prometheus/") || path.startsWith("/api/ruler/")
+      (["/api/alertmanager/", "/api/prometheus/", "/api/ruler/", "/api/datasources/"].some((prefix) =>
+        path.startsWith(prefix),
+      )
         ? await grafana(request, path)
         : path.startsWith("/api/v1/applications/")
           ? argo(request, path)

@@ -1,4 +1,5 @@
-# Estate against the fake tools in e2e/cloud-tools.ts (and e2e/tools.ts for EKS's Prometheus and cluster).
+# Estate against the fake tools in e2e/cloud-tools.ts (and e2e/tools.ts for EKS's cluster, and its Prometheus, which
+# Estate reaches only through the fake Grafana's data source proxy).
 port: 8183
 metrics: { port: 9465 }
 catalog: e2e/cloud-catalog.yaml
@@ -10,9 +11,8 @@ auth:
 
 sources:
   eks:
-    prometheus: { url: http://127.0.0.1:8282 }
     kubernetes: { url: http://127.0.0.1:8282, token: fake }
-    grafana: { url: http://127.0.0.1:8283, token: glsa-e2e }
+    grafana: { url: http://127.0.0.1:8283, token: glsa-e2e, prometheus: prom-eks }
     elasticsearch: { url: http://127.0.0.1:8283, apiKey: e2e }
     argo: { url: http://127.0.0.1:8283, token: argo-e2e }
   aws:

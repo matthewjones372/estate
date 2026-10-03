@@ -26,6 +26,9 @@ you already run and puts it in one place.
 | Logs | Loki, Elasticsearch/OpenSearch, or pod logs straight from the cluster |
 | Notes | Postgres, DynamoDB, or memory |
 
+Where Grafana sits in front of Prometheus and Loki, Estate can reach them through Grafana's data source proxy with
+one service account token, rather than with addresses and credentials of their own.
+
 ## What's on the page
 
 The overview starts with whatever is firing, each alert drawn against its threshold with a link to its runbook.

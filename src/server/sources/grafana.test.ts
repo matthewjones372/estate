@@ -1,12 +1,14 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Redacted, Result, SubscriptionRef } from "effect"
+import { Effect, Layer, Redacted, Result, SubscriptionRef } from "effect"
 import { ask, environment, estate, serverFor, settings } from "../fixture"
+import { platform } from "../platform"
 import { type Call, reply, stubRemote } from "../remote"
 import { Estate, type SourcedAlert } from "../state"
 import { readAlerts } from "./alerts"
-import { comparisonOf, grafanaRules } from "./grafana"
+import { comparisonOf, grafanaRules, lokiOf, prometheusOf } from "./grafana"
+import { logsFor } from "./logs"
 import { readMetrics } from "./metrics"
-import { prometheusRanges } from "./prometheus"
+import { lastHour, prometheusRanges } from "./prometheus"
 
 const grafana = { url: "http://grafana/", token: Redacted.make("glsa_secret") }
 
@@ -116,7 +118,7 @@ describe("Grafana's alerting", () => {
       labels,
     }
     const read = readMetrics(
-      prometheusRanges("http://prometheus", grafanaRules(grafana)),
+      prometheusRanges({ url: "http://prometheus", headers: {} }, grafanaRules(grafana)),
       { environments: [], services: [] },
       [],
       [],
@@ -173,5 +175,53 @@ describe("Grafana's alerting", () => {
         expect(environments["staging"]?.alerts.value?.[0]?.silence?.id).toBe("g1")
       }),
     )
+  })
+})
+
+describe("data sources behind Grafana", () => {
+  test("are reached through its proxy with its token, Prometheus for load and Loki for lines", () => {
+    const calls: Call[] = []
+    const behind = { ...grafana, prometheus: "prom-prod", loki: "loki prod" }
+    const answers = (call: Call) => {
+      calls.push(call)
+      if (call.headers?.["authorization"] !== "Bearer glsa_secret") return reply("unauthorised", 401)
+      if (call.url.includes("/query_range?query=up"))
+        return reply({ status: "success", data: { resultType: "matrix", result: [] } })
+      if (call.url.includes("/loki/api/v1/query_range")) return reply({ data: { result: [] } })
+      return undefined
+    }
+    const service = { name: "orders", environments: [] }
+    const prometheus = prometheusOf({ grafana: behind, prometheus: { url: "http://prometheus-elsewhere" } })
+    const loki = lokiOf({ grafana: behind })
+    const lines = logsFor({ grafana: behind }, service)
+    return Effect.runPromise(
+      Effect.result(
+        Effect.all([
+          prometheusRanges(prometheus ?? { url: "", headers: {} }).range("up", lastHour, 0),
+          lines?.read(0, 1, 10) ?? Effect.succeed([]),
+        ]),
+      ).pipe(Effect.provide(Layer.merge(stubRemote(answers), platform))),
+    ).then((read) => {
+      expect(Result.isSuccess(read)).toBe(true)
+      expect(prometheus?.url).toBe("http://grafana/api/datasources/proxy/uid/prom-prod")
+      expect(loki?.url).toBe("http://grafana/api/datasources/proxy/uid/loki%20prod")
+      expect(lines?.from).toBe("Loki")
+      expect(calls.map((call) => new URL(call.url).pathname)).toEqual([
+        "/api/datasources/proxy/uid/prom-prod/api/v1/query_range",
+        "/api/datasources/proxy/uid/loki%20prod/loki/api/v1/query_range",
+      ])
+    })
+  })
+
+  test("leave Prometheus and Loki reached directly when Grafana does not name them", () => {
+    expect(prometheusOf({ grafana, prometheus: { url: "http://prometheus/" } })).toEqual({
+      url: "http://prometheus",
+      headers: {},
+    })
+    expect(lokiOf({ loki: { url: "http://loki", tenant: "shop" } })).toEqual({
+      url: "http://loki",
+      headers: { "x-scope-orgid": "shop" },
+    })
+    expect(lokiOf({ grafana })).toBeUndefined()
   })
 })

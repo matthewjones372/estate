@@ -78,9 +78,14 @@ const read = (
 ) =>
   Effect.runPromise(
     Effect.result(
-      readMetrics(prometheusRanges("http://prometheus"), withMetrics, services, stores, alerts, now).pipe(
-        Effect.provide(stubRemote(answer)),
-      ),
+      readMetrics(
+        prometheusRanges({ url: "http://prometheus", headers: {} }),
+        withMetrics,
+        services,
+        stores,
+        alerts,
+        now,
+      ).pipe(Effect.provide(stubRemote(answer))),
     ),
   )
 

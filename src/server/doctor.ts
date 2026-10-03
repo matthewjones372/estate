@@ -17,7 +17,7 @@ import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./sources/ecs"
 import { matchOf } from "./sources/elastic"
 import { intervalsOf } from "./sources/every"
 import { readDeploys } from "./sources/flux"
-import { grafanaRules } from "./sources/grafana"
+import { grafanaRules, prometheusOf } from "./sources/grafana"
 import { clusterOf } from "./sources/kubernetes"
 import { logsFor } from "./sources/logs"
 import { loadOf } from "./sources/metrics"
@@ -159,13 +159,14 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
     const section = settings.sources[sources] ?? {}
     const services = inEnvironment(catalog, environment)
     const now = yield* Clock.currentTimeMillis
-    const { aws, prometheus, grafana, kubernetes, argo } = section
+    const { aws, grafana, kubernetes, argo } = section
+    const prometheus = prometheusOf(section)
     const ecs = aws === undefined ? undefined : yield* makeAwsJson(ecsApi, aws.region, aws.endpoint)
     const cloudwatch = aws === undefined ? undefined : yield* makeAwsJson(cloudwatchApi, aws.region, aws.endpoint)
     const alarms = cloudwatch === undefined ? undefined : readAlarms(cloudwatch)
     const ranges =
       metricsOf(section) === "prometheus" && prometheus !== undefined
-        ? prometheusRanges(prometheus.url, grafana === undefined ? undefined : grafanaRules(grafana))
+        ? prometheusRanges(prometheus, grafana === undefined ? undefined : grafanaRules(grafana))
         : cloudwatch === undefined
           ? undefined
           : cloudwatchRanges(cloudwatch)

@@ -15,7 +15,7 @@ import { revertExpired } from "./debug"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./ecs"
 import { buildsEvery, everyOf } from "./every"
 import { readDeploys } from "./flux"
-import { grafanaRules } from "./grafana"
+import { grafanaRules, prometheusOf } from "./grafana"
 import { clusterOf } from "./kubernetes"
 import { chartsOf, readMetrics } from "./metrics"
 import { alertsOf, buildsOf, deploysOf, metricsOf, runtimeOf } from "./ports"
@@ -100,10 +100,11 @@ const readersFor = (
         runSource(environment.name, "alerts", everyOf(section, "alerts"), readAlerts(section, alarms), withResolved),
       )
     }
-    const { prometheus, grafana } = section
+    const { grafana } = section
+    const prometheus = prometheusOf(section)
     const ranges =
       metricsOf(section) === "prometheus" && prometheus !== undefined
-        ? prometheusRanges(prometheus.url, grafana === undefined ? undefined : grafanaRules(grafana))
+        ? prometheusRanges(prometheus, grafana === undefined ? undefined : grafanaRules(grafana))
         : metricsOf(section) === "cloudwatch" && cloudwatch !== undefined
           ? cloudwatchRanges(cloudwatch)
           : undefined

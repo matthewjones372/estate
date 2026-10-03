@@ -2,6 +2,7 @@
 import { Effect, Schema } from "effect"
 import type { Series } from "../../shared/events"
 import { callJson, type Remote } from "../remote"
+import type { Reach } from "./grafana"
 import { type Failure, SourceFailure } from "./run"
 
 const Matrix = Schema.Struct({
@@ -60,7 +61,7 @@ const subsetOf = (labels: Readonly<Record<string, string>>, of: Readonly<Record<
 
 /** A query over the span ending now: the result whose labels the alert's include, or the first. */
 const rangeOf = (
-  url: string,
+  prometheus: Reach,
   query: string,
   span: Span,
   now: number,
@@ -69,7 +70,7 @@ const rangeOf = (
   const end = Math.floor(now / 1000 / span.step) * span.step
   const start = end - span.seconds
   const parameters = new URLSearchParams({ query, start: String(start), end: String(end), step: String(span.step) })
-  return callJson({ url: `${url}/api/v1/query_range?${parameters}` }).pipe(
+  return callJson({ url: `${prometheus.url}/api/v1/query_range?${parameters}`, headers: prometheus.headers }).pipe(
     Effect.mapError(failure),
     Effect.flatMap(decoded(Matrix)),
     Effect.map((matrix) => {
@@ -80,8 +81,8 @@ const rangeOf = (
 }
 
 /** Each alerting rule's expression, by the alert's name. */
-const alertingRules = (url: string): Effect.Effect<ReadonlyMap<string, string>, Failure, Remote> =>
-  callJson({ url: `${url}/api/v1/rules?type=alert` }).pipe(
+const alertingRules = (prometheus: Reach): Effect.Effect<ReadonlyMap<string, string>, Failure, Remote> =>
+  callJson({ url: `${prometheus.url}/api/v1/rules?type=alert`, headers: prometheus.headers }).pipe(
     Effect.mapError(failure),
     Effect.flatMap(decoded(Rules)),
     Effect.map(
@@ -115,16 +116,13 @@ export interface Ranges {
   readonly rules: Effect.Effect<ReadonlyMap<string, string>, Failure, Remote>
 }
 
-/** Prometheus at `url`, with any rules Prometheus does not hold (Grafana's) beside its own. */
+/** Prometheus, with any rules Prometheus does not hold (Grafana's) beside its own. */
 export const prometheusRanges = (
-  url: string,
+  prometheus: Reach,
   more: Effect.Effect<ReadonlyMap<string, string>, never, Remote> = Effect.succeed(new Map()),
-): Ranges => {
-  const base = url.replace(/\/$/, "")
-  return {
-    range: (query, span, now, labels) => rangeOf(base, query, span, now, labels),
-    rules: Effect.gen(function* () {
-      return new Map([...(yield* alertingRules(base)), ...(yield* more)])
-    }),
-  }
-}
+): Ranges => ({
+  range: (query, span, now, labels) => rangeOf(prometheus, query, span, now, labels),
+  rules: Effect.gen(function* () {
+    return new Map([...(yield* alertingRules(prometheus)), ...(yield* more)])
+  }),
+})

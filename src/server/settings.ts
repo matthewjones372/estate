@@ -90,8 +90,18 @@ const Sources = Schema.Struct({
     }),
   ),
   alertmanager: optional(Url),
-  /** Grafana's alerting, in place of Alertmanager: its URL and a service account's token. */
-  grafana: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
+  /**
+   * Grafana's alerting, in place of Alertmanager: its URL and a service account's token. Naming a Prometheus or Loki
+   * data source's uid reaches it through Grafana, in place of `prometheus` or `loki`.
+   */
+  grafana: optional(
+    Schema.Struct({
+      url: Schema.String,
+      token: optional(Secret),
+      prometheus: optional(Schema.String),
+      loki: optional(Schema.String),
+    }),
+  ),
   kubernetes: optional(Kubernetes),
   flux: optional(Schema.Struct({})),
   /** AWS, for services on ECS: the region, through the credentials AWS's tools would find. */

@@ -9,7 +9,7 @@ import { callJson, type Remote } from "../remote"
 import type { Sources } from "../settings"
 import type { EnvironmentState, SourcedAlert } from "../state"
 import { before as earlier, epoch, iso } from "../time"
-import { grafanaHeaders, type Manager, managerOf } from "./grafana"
+import { grafanaHeaders, type Manager, managerOf, prometheusOf } from "./grafana"
 import { type Failure, SourceFailure } from "./run"
 
 const Labels = Schema.Record(Schema.String, Schema.String)
@@ -164,8 +164,9 @@ export const readAlerts = (
             grafanaHeaders(grafana),
           )
     const states = new Set(manager === undefined ? ["pending", "firing"] : ["pending"])
+    const reach = prometheusOf(sources)
     const prometheus =
-      sources.prometheus === undefined ? [] : yield* prometheusAlerts(sources.prometheus.url.replace(/\/$/, ""), states)
+      reach === undefined ? [] : yield* prometheusAlerts(reach.url, states, "Prometheus", reach.headers)
     const cloudwatch = alarms === undefined ? [] : yield* alarms
     return [...managed, ...grafanaPending, ...prometheus, ...cloudwatch]
   })

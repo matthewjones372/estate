@@ -86,7 +86,7 @@ Spec 0011's `every:`, so a Datadog environment can be read once a minute or less
 
 ## Stack
 
-- [ ] **`grafana-proxy`** — Prometheus and Loki reached through Grafana's data source proxy when `grafana` names
+- [x] **`grafana-proxy`** — Prometheus and Loki reached through Grafana's data source proxy when `grafana` names
       their uids.
       Done when: the e2e cloud estate's Prometheus is only reachable through a fake Grafana, and its lanes draw.
 - [ ] **`datadog-alerts`** — monitors as alerts, downtimes as silences.

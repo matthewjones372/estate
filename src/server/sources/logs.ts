@@ -9,6 +9,7 @@ import type { Sources } from "../settings"
 import { iso } from "../time"
 import { podsOf } from "./cluster"
 import { elasticLines } from "./elastic"
+import { lokiOf, type Reach } from "./grafana"
 import { type Cluster, clusterOf } from "./kubernetes"
 import { errorTest, type Line, lineOf, masking } from "./lines"
 import { type Failure, SourceFailure } from "./run"
@@ -29,7 +30,7 @@ const decodeStreams = Schema.decodeUnknownEffect(Schema.fromJsonString(LokiStrea
 const nanos = (millis: number) => `${Math.floor(millis)}000000`
 
 const lokiLines = (
-  loki: { readonly url: string; readonly tenant?: string },
+  loki: Reach,
   selector: string,
   from: number,
   to: number,
@@ -47,8 +48,8 @@ const lokiLines = (
     })
     const answered = yield* remote
       .call({
-        url: `${loki.url.replace(/\/$/, "")}/loki/api/v1/query_range?${query}`,
-        headers: loki.tenant === undefined ? {} : { "x-scope-orgid": loki.tenant },
+        url: `${loki.url}/loki/api/v1/query_range?${query}`,
+        headers: loki.headers,
       })
       .pipe(Effect.mapError((error) => new SourceFailure({ message: `Loki ${error.message}` })))
     if (answered.status !== 200)
@@ -117,7 +118,8 @@ export const logsFor = (section: Sources, service: Service): ServiceLogs | undef
   const mask = masking(service.logs?.mask)
   const isError = errorTest(service.logs?.errors)
   const namespace = kubernetesOf(service)?.namespace
-  const { loki, elasticsearch, kubernetes } = section
+  const { elasticsearch, kubernetes } = section
+  const loki = lokiOf(section)
   if (loki !== undefined) {
     const selector =
       service.logs?.selector ??
