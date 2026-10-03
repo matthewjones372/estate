@@ -83,9 +83,11 @@ const fromLabels = (
 const managerAlerts = (url: string): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
   Effect.gen(function* () {
     const alerts = yield* callJson({ url: `${url}/api/v2/alerts?active=true&silenced=true&inhibited=false` }).pipe(
+      Effect.mapError((error) => ({ message: `Alertmanager ${error.message}` })),
       Effect.flatMap(decoded(Schema.Array(ManagerAlert), "Alertmanager")),
     )
     const silences = yield* callJson({ url: `${url}/api/v2/silences` }).pipe(
+      Effect.mapError((error) => ({ message: `Alertmanager ${error.message}` })),
       Effect.flatMap(decoded(Schema.Array(Silence), "Alertmanager")),
     )
     const byId = new Map(silences.map((silence) => [silence.id, silence]))
@@ -117,6 +119,7 @@ const prometheusAlerts = (
   states: ReadonlySet<string>,
 ): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> =>
   callJson({ url: `${url}/api/v1/alerts` }).pipe(
+    Effect.mapError((error) => ({ message: `Prometheus ${error.message}` })),
     Effect.flatMap(decoded(PrometheusAlerts, "Prometheus")),
     Effect.map((body) =>
       body.data.alerts

@@ -50,6 +50,7 @@ describe("calls to other tools", () => {
       ),
     ).then((result) => {
       expect(Result.isFailure(result) && result.failure.url).toBe("http://127.0.0.1:1/nothing")
+      expect(Result.isFailure(result) && result.failure.message).toStartWith("could not reach 127.0.0.1:1: ")
     }))
 
   test("a stub answers what it knows, and 404 for the rest", () =>

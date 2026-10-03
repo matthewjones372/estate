@@ -26,6 +26,8 @@ export const Remote = Context.Service<Remote>("estate/Remote")
 
 const timeout = Duration.seconds(10)
 
+const hostOf = (url: string): string => URL.parse(url)?.host ?? url
+
 export const liveRemote = Layer.succeed(Remote)({
   call: (call) =>
     Effect.tryPromise({
@@ -44,7 +46,10 @@ export const liveRemote = Layer.succeed(Remote)({
         )
       },
       catch: (error) =>
-        new RemoteError({ url: call.url, message: error instanceof Error ? error.message : String(error) }),
+        new RemoteError({
+          url: call.url,
+          message: `could not reach ${hostOf(call.url)}: ${error instanceof Error ? error.message : String(error)}`,
+        }),
     }).pipe(
       Effect.timeoutOrElse({
         duration: timeout,
