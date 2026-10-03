@@ -54,7 +54,7 @@ Nothing.
 
 ## Stack
 
-- [ ] **`kiosk-session`** — `kiosk` in the settings, `/kiosk?token=…`, the kiosk person, and writes refused to them.
+- [x] **`kiosk-session`** — `kiosk` in the settings, `/kiosk?token=…`, the kiosk person, and writes refused to them.
       Done when: a wrong token is refused with 403, and a kiosk session's silence, note and debug calls get 403.
 - [ ] **`kiosk-page`** — the page: headline, cards, tiles worst first, `?team=`, turns, the stale banner, wake lock.
       Done when: a page test shows tiles in order of health and the stale banner after two quiet minutes.

@@ -9,11 +9,11 @@ import { LogHub, serviceLogs } from "../log-hub"
 import { Configured } from "../settings"
 import { groupErrors } from "../sources/lines"
 import { heartbeat } from "../stream"
-import { json, Refusal, refused, searchParams, withRole } from "./routes"
+import { json, Refusal, refused, searchParams, writer } from "./routes"
 
 /** The person asking, if they may read logs here. */
 const reader = Effect.gen(function* () {
-  const person = yield* withRole
+  const person = yield* writer
   const { auth } = yield* Configured
   if (auth.logs === "operator" && person.role !== "operator")
     return yield* new Refusal({ status: 403, body: { message: "logs are for operators here" } })

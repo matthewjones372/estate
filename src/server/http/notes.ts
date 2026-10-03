@@ -6,7 +6,7 @@ import { noteWritten } from "../observed"
 import { forEver } from "../schedule"
 import { Estate, updateEstate } from "../state"
 import { before, iso, isoNow } from "../time"
-import { json, Refusal, refused, withRole } from "./routes"
+import { json, Refusal, refused, writer } from "./routes"
 
 const Asked = Schema.Struct({ environment: Schema.String, alert: Schema.String, text: Schema.String })
 
@@ -17,7 +17,7 @@ export const notesRoute = HttpRouter.add(
   "POST",
   "/api/notes",
   Effect.gen(function* () {
-    const person = yield* withRole
+    const person = yield* writer
     const asked = yield* HttpServerRequest.schemaBodyJson(Asked).pipe(
       Effect.mapError(
         () => new Refusal({ status: 400, body: { message: "a note is an environment, an alert and its text" } }),
@@ -50,7 +50,7 @@ export const removeNoteRoute = HttpRouter.add(
   "DELETE",
   "/api/notes/:id",
   Effect.gen(function* () {
-    const person = yield* withRole
+    const person = yield* writer
     const { id = "" } = yield* HttpRouter.params
     const { notes: shown } = yield* SubscriptionRef.get(yield* Estate)
     const note = shown.find((each) => each.id === id)

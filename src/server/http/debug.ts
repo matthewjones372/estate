@@ -5,7 +5,7 @@ import { Configured } from "../settings"
 import { showDebug, switchOff, switchOn } from "../sources/debug"
 import { clusterOf } from "../sources/kubernetes"
 import { Estate } from "../state"
-import { EnvParam, json, Refusal, refused, searchParams, withRole } from "./routes"
+import { EnvParam, json, Refusal, refused, searchParams, writer } from "./routes"
 
 const Asked = Schema.Struct({ environment: Schema.String, service: Schema.String, minutes: Schema.Number })
 
@@ -17,7 +17,7 @@ const refuse = (status: Refusal["status"], message: string): Effect.Effect<never
 /** The operator asking, the service, and how to reach its environment's cluster, or why not. */
 const asked = (environment: string, name: string) =>
   Effect.gen(function* () {
-    const person = yield* withRole
+    const person = yield* writer
     const settings = yield* Configured
     if (settings.readOnly === true) return yield* refuse(403, "Estate is read-only here: it switches no debug")
     if (person.role !== "operator") return yield* refuse(403, "switching debug is for operators")

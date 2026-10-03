@@ -12,9 +12,15 @@ export interface Person {
   readonly name: string
   readonly groups: ReadonlyArray<string>
   readonly role: Role | undefined
+  /** A screen signed in with the kiosk token: it reads as a viewer does, and writes nothing. */
+  readonly kiosk?: boolean
 }
 
-const Sealed = Schema.Struct({ name: Schema.String, groups: Schema.Array(Schema.String) })
+const Sealed = Schema.Struct({
+  name: Schema.String,
+  groups: Schema.Array(Schema.String),
+  kiosk: Schema.optionalKey(Schema.Boolean),
+})
 const decodeSealed = Schema.decodeUnknownOption(Sealed)
 
 /** The person asking, or none if nobody has signed in. */
@@ -33,6 +39,11 @@ export const personAsking: Effect.Effect<
   const now = yield* Clock.currentTimeMillis
   const opened = yield* unseal(cookie, Redacted.value(auth.sessionSecret), now)
   return Option.flatMap(opened, decodeSealed).pipe(
-    Option.map((sealed) => ({ name: sealed.name, groups: sealed.groups, role: roleOf(sealed.groups, auth.roles) })),
+    Option.map(
+      (sealed): Person =>
+        sealed.kiosk === true
+          ? { name: sealed.name, groups: [], role: "viewer", kiosk: true }
+          : { name: sealed.name, groups: sealed.groups, role: roleOf(sealed.groups, auth.roles) },
+    ),
   )
 })

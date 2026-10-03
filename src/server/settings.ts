@@ -57,6 +57,7 @@ const everyMistakes = (settings: Settings): ReadonlyArray<Mistake> => {
       Object.entries(section.every ?? {}).map(([part, text]) => [`sources.${name}.every.${part}`, text] as const),
     ),
     ...(settings.builds?.every === undefined ? [] : [["builds.every", settings.builds.every] as const]),
+    ...(settings.kiosk?.every === undefined ? [] : [["kiosk.every", settings.kiosk.every] as const]),
   ]
   return set.flatMap(([at, text]) => {
     const seconds = secondsIn(text ?? "")
@@ -150,6 +151,10 @@ export const Settings = Schema.Struct({
     }),
   ),
   sources: Schema.Record(Schema.String, Sources),
+  /** A screen on the wall: the token it signs in with once, the environments it shows in turn, and how long each. */
+  kiosk: optional(
+    Schema.Struct({ token: Secret, environments: optional(Schema.Array(Schema.String)), every: optional(Every) }),
+  ),
   /** Estate's own metrics, for Prometheus to scrape, on a port of their own without sign-in (9464 unless set). */
   metrics: optional(Schema.Struct({ port: optional(Schema.Number) })),
   /** Estate's own traces and logs, sent over OTLP to a collector when one is named. */

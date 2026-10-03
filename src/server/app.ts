@@ -4,6 +4,7 @@ import type { Mistake } from "../shared/shape"
 import { providerLayer } from "./auth/oidc"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
+import { kioskRoute } from "./http/kiosk"
 import { loadRoute, storeLoadRoute } from "./http/load"
 import { errorsRoute, logsRoute } from "./http/logs"
 import { loadNotes, notesRoute, removeNoteRoute, sweepNotes } from "./http/notes"
@@ -70,6 +71,7 @@ export const prepare = (settingsPath: string): Effect.Effect<Started, StartError
 export const application = Layer.mergeAll(
   routes,
   signInRoutes,
+  kioskRoute,
   loadRoute,
   storeLoadRoute,
   notesRoute,

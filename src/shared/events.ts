@@ -275,5 +275,9 @@ export const Me = Schema.Struct({
   environments: Schema.Array(Schema.String),
   /** Estate writes to no tool here: no silences, no debug. */
   readOnly: optional(Schema.Boolean),
+  /** A screen on the wall, signed in with the kiosk token. */
+  kiosk: optional(Schema.Boolean),
+  /** What a screen shows, where the settings say: its environments in turn, each for `every` seconds. */
+  screen: optional(Schema.Struct({ environments: Schema.Array(Schema.String), every: Schema.Number })),
 })
 export type Me = typeof Me.Type

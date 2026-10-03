@@ -8,7 +8,7 @@ import { Configured } from "../settings"
 import { silencerOf } from "../sources/silencers"
 import { Estate, type SourcedAlert, updateEnvironment } from "../state"
 import { after, iso } from "../time"
-import { EnvParam, json, Refusal, refused, searchParams, withRole } from "./routes"
+import { EnvParam, json, Refusal, refused, searchParams, writer } from "./routes"
 
 const Asked = Schema.Struct({
   environment: Schema.String,
@@ -23,7 +23,7 @@ const refuse = (status: Refusal["status"], message: string): Effect.Effect<never
   Effect.fail(new Refusal({ status, body: { message } }))
 
 const operator = Effect.gen(function* () {
-  const person = yield* withRole
+  const person = yield* writer
   if ((yield* Configured).readOnly === true) return yield* refuse(403, "Estate is read-only here: it silences nothing")
   return person.role === "operator" ? person : yield* refuse(403, "silencing is for operators")
 })

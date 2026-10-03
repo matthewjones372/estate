@@ -3,7 +3,7 @@ import { Data, Effect, Layer, Option, Schema, Stream, SubscriptionRef } from "ef
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 import type { Me } from "../../shared/events"
 import { streamClosed, streamOpened } from "../observed"
-import { Configured } from "../settings"
+import { Configured, secondsIn } from "../settings"
 import { silencerOf } from "../sources/silencers"
 import { Estate } from "../state"
 import { eventStream, SharedViews } from "../stream"
@@ -28,14 +28,21 @@ export const withRole: Effect.Effect<
 > = Effect.gen(function* () {
   const person = yield* personAsking
   if (Option.isNone(person)) return yield* new Refusal({ status: 401, body: { signIn: "/auth/login" } })
-  const { name, groups, role } = person.value
+  const { name, groups, role, kiosk } = person.value
   if (role === undefined) {
     const { auth } = yield* Configured
     const groups = [...new Set([...auth.roles.viewer, ...auth.roles.operator])]
     return yield* new Refusal({ status: 403, body: { name, groups } })
   }
-  return { name, groups, role }
+  return { name, groups, role, ...(kiosk === true ? { kiosk } : {}) }
 })
+
+/** The person asking, if they may change something or read lines: anyone with a role but a screen. */
+export const writer = Effect.flatMap(withRole, (person) =>
+  person.kiosk === true
+    ? Effect.fail(new Refusal({ status: 403, body: { message: "a screen changes nothing and reads no lines" } }))
+    : Effect.succeed(person),
+)
 
 /** The query's parameters, decoded by `schema`; a query that does not fit is refused, saying what it should be. */
 export const searchParams = <A, I extends Readonly<Record<string, string | ReadonlyArray<string> | undefined>>>(
@@ -65,6 +72,15 @@ const me = HttpRouter.add(
       role: person.role,
       environments: catalog.environments.map((each) => each.name),
       ...(settings.readOnly === true ? { readOnly: true } : {}),
+      ...(person.kiosk === true ? { kiosk: true } : {}),
+      ...(settings.kiosk === undefined
+        ? {}
+        : {
+            screen: {
+              environments: settings.kiosk.environments ?? catalog.environments.map((each) => each.name),
+              every: secondsIn(settings.kiosk.every ?? "30s") ?? 30,
+            },
+          }),
     }
     return json(body)
   }).pipe(Effect.catchTag("Refusal", refused)),
