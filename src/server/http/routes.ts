@@ -56,10 +56,10 @@ const events = HttpRouter.add("GET", "/events", (request) =>
     const { catalog } = yield* SubscriptionRef.get(ref)
     const asked = new URL(request.url, "http://estate").searchParams.get("env")
     const environment = asked ?? catalog.environments[0]?.name ?? ""
-    if (!catalog.environments.some((each) => each.name === environment)) {
-      return json({ message: `${environment} is not an environment` }, 404)
-    }
-    const silences = person.role === "operator"
+    const found = catalog.environments.find((each) => each.name === environment)
+    if (found === undefined) return json({ message: `${environment} is not an environment` }, 404)
+    const settings = yield* Configured
+    const silences = person.role === "operator" && settings.sources[found.sources]?.alertmanager !== undefined
     const lastEventId = request.headers["last-event-id"]
     const body = eventStream({ environment, silences }, lastEventId).pipe(
       Stream.provideService(Estate, ref),
