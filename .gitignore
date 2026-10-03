@@ -1,8 +1,5 @@
-build/
-.gradle/
-.idea/
-*.iml
+node_modules/
+dist/
+coverage/
 .DS_Store
-.kotlin/
-result
-result-*
+*.log
