@@ -36,15 +36,18 @@ measures, over a minute once the first reads are done:
 | Measured | Budget at 50 services |
 |---|---|
 | Calls to the tools a second | 15 |
-| First data to a page | 0.6 MB |
-| Data to a page a minute, once loaded | 0.15 MB |
+| First data to a page | 0.2 MB |
+| Data to a page a minute, once loaded | 0.05 MB |
 | Estate's CPU, with five pages open | 15% of a core |
 | Estate's memory | 200 MB |
 | Page drawn | 3 s |
-| Page's heap after a collection | 30 MB |
+| Page's heap after a collection | 15 MB |
+| Page's heap at 200 services over its heap at 50 | 4 times |
 
 Calls and bytes are exact for a given Estate, so their budgets are close to what is measured. CPU, memory and time
-have room for a slow machine.
+have room for a slow machine. A page that reads every service for each lane is barely heavier at fifty services
+(9.7 MB against 8) but grows with the square of them, so the page is drawn again at four times the services and its
+heap may grow at most four times: it grows 2.6 times now, and 4.8 times with that mistake put back.
 
 Each environment's sources may say how often each part is read:
 
@@ -74,12 +77,12 @@ Chromium in CI, installed by Playwright in the workflow.
 
 ## Stack
 
-- [ ] **`bench`** — `bench/` in the repository: the fake tools, the catalog it writes, and `bench/run.ts`; the
+- [x] **`bench`** — `bench/` in the repository: the fake tools, the catalog it writes, and `bench/run.ts`; the
       README's table re-measured.
       Done when: `bun bench/run.ts 1000 20` prints the table the README shows.
-- [ ] **`budgets`** — `bun run perf`, run by the workflow after the gate, failing when a budget is broken.
+- [x] **`budgets`** — `bun run perf`, run by the workflow after the gate, failing when a budget is broken.
       Done when: putting back the lane's search through every service fails `bun run perf`.
-- [ ] **`intervals`** — `every:` per environment's sources and for builds; `estate doctor` prints them.
+- [x] **`intervals`** — `every:` per environment's sources and for builds; `estate doctor` prints them.
       Done when: a test with `every: { metrics: 2m }` reads metrics once in two minutes, and settings with `1s` are
       refused with a message naming the part.
 

@@ -8,6 +8,7 @@ import type { ErrorGroups } from "../../shared/log-events"
 import { LogHub, serviceLogs } from "../log-hub"
 import { Configured } from "../settings"
 import { groupErrors } from "../sources/lines"
+import { heartbeat } from "../stream"
 import { json, Refusal, refused, searchParams, withRole } from "./routes"
 
 /** The person asking, if they may read logs here. */
@@ -20,8 +21,6 @@ const reader = Effect.gen(function* () {
 })
 
 const Asked = Schema.Struct({ env: Schema.String, service: Schema.String })
-
-const heartbeat = Duration.seconds(15)
 
 export const logsRoute = HttpRouter.add(
   "GET",

@@ -99,6 +99,29 @@ Estate reads two files from `/etc/estate`:
 Images for amd64 and arm64 are published to `ghcr.io/matthewjones372/estate` from `main`. [`deploy/`](deploy) has a
 Kubernetes base you can overlay with those two files, an ingress and your secrets.
 
+## How many services
+
+Fifty is about the most a team puts on one page, and the build fails if Estate gets slower there. A thousand is a
+stress test. Both are measured by [`bench/`](bench) against fake tools that answer in 20 ms, two environments, each
+service with three load queries, a Deployment and a Flux image policy:
+
+| | 50 services, 5 pages | 1,000 services, 20 pages |
+|---|---|---|
+| Calls to the tools a second | 11 | 101 |
+| First data to a page | 0.1 MB | 2 MB |
+| Data to a page a minute, once loaded | 0.02 MB | 0.01 MB |
+| Estate's CPU | 3% of a core | 52% |
+| Estate's memory | 136 MB | 174 MB |
+| Page drawn | 0.4 s | 2.2 s |
+| Page's heap | 8 MB | 88 MB |
+
+Every page watching an environment shares one stream of its views, so more pages cost little. Each source is read
+on its own interval, which `every:` in `estate.yaml` lengthens for tools that limit or bill each call.
+
+```bash
+bun bench/run.ts 1000 20   # services, pages
+```
+
 ## Development
 
 The server is TypeScript on Bun using [Effect](https://effect.website); the pages use
@@ -108,6 +131,7 @@ The server is TypeScript on Bun using [Effect](https://effect.website); the page
 bun install
 bun run gate          # typecheck, lint, unused code, layering, tests
 bunx playwright test  # browser tests against fake tools in e2e/
+bun run perf          # fifty services against the budgets in bench/run.ts
 ```
 
 [AGENTS.md](AGENTS.md) covers code conventions. Design decisions are written up in [specs/](specs).

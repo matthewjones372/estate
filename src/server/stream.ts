@@ -128,7 +128,8 @@ export const sharedViewsLayer = Layer.effect(SharedViews)(
   }),
 )
 
-const heartbeat = Duration.seconds(15)
+/** Under ten seconds, since Bun closes a connection that has been silent for ten, and the page would connect again. */
+export const heartbeat = Duration.seconds(5)
 
 /** One page's stream: the shared renderings, each sent as what changed since the last this page was sent. */
 export const eventStream = (

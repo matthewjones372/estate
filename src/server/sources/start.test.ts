@@ -57,6 +57,43 @@ describe("the sources", () => {
     })
   })
 
+  test("reads a part as often as its environment's every says, and others as usual", () => {
+    const configured = {
+      ...settings(),
+      sources: {
+        staging: {
+          alertmanager: { url: "http://alertmanager" },
+          prometheus: { url: "http://prometheus" },
+          every: { metrics: "2m" },
+        },
+        production: {},
+      },
+    }
+    const calls: Call[] = []
+    const asked = (path: string) => calls.filter((call) => call.url.includes(path)).length
+    const program = Effect.gen(function* () {
+      yield* Effect.forkChild(startSources(configured))
+      yield* TestClock.adjust("1 second")
+      const first = { metrics: asked("/api/v1/rules"), alerts: asked("/api/v2/alerts") }
+      yield* TestClock.adjust("100 seconds")
+      const later = { metrics: asked("/api/v1/rules"), alerts: asked("/api/v2/alerts") }
+      yield* TestClock.adjust("30 seconds")
+      return { first, later, after: asked("/api/v1/rules") }
+    })
+    return Effect.runPromise(
+      program.pipe(
+        Effect.provide(
+          Layer.mergeAll(estateLayer(estate()), TestClock.layer(), stubRemote(answering({}, calls)), platform),
+        ),
+      ),
+    ).then(({ first, later, after }) => {
+      expect(first.metrics).toBeGreaterThan(0)
+      expect(later.metrics).toBe(first.metrics)
+      expect(after).toBe(first.metrics * 2)
+      expect(later.alerts).toBe(first.alerts * 6)
+    })
+  })
+
   test("charts the alerts firing when Estate starts on its first read, not half a minute later", () => {
     const configured = {
       ...settings(),

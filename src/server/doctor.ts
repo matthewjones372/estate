@@ -15,6 +15,7 @@ import { cloudwatchApi, cloudwatchRanges, readAlarms } from "./sources/cloudwatc
 import { readCluster } from "./sources/cluster"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./sources/ecs"
 import { matchOf } from "./sources/elastic"
+import { intervalsOf } from "./sources/every"
 import { readDeploys } from "./sources/flux"
 import { grafanaRules } from "./sources/grafana"
 import { clusterOf } from "./sources/kubernetes"
@@ -168,7 +169,7 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
         : cloudwatch === undefined
           ? undefined
           : cloudwatchRanges(cloudwatch)
-    const findings: Array<Finding> = []
+    const findings: Array<Finding> = [{ part: "every", ok: true, says: intervalsOf(section) }]
     if (alertsOf(section).length > 0) findings.push(yield* alertsFinding(section, catalog, environment, alarms))
     if (ranges !== undefined) {
       findings.push(yield* chartsFinding(ranges, readAlerts(section, alarms)))

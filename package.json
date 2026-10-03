@@ -25,7 +25,8 @@
     "layers": "depcruise . --config .dependency-cruiser.cjs",
     "slop": "bun tools/slop.ts",
     "test": "bun test --coverage",
-    "gate": "bun tools/gate.ts"
+    "gate": "bun tools/gate.ts",
+    "perf": "bun bench/run.ts 50 5 --check"
   },
   "type": "module",
   "dependencies": {

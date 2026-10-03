@@ -179,7 +179,9 @@ describe("estate doctor", () => {
       expect(deploys).toEqual(["fail Argo CD answered 403: no"])
       const { text, ok } = printed(reports)
       expect(ok).toBe(false)
-      expect(text).toContain("gitops\n  alerts   fail  Grafana answered 403: no")
+      expect(text).toContain(
+        "gitops\n  every    ok    alerts 20s, metrics 30s, cluster 15s, deploys 30s\n  alerts   fail  Grafana answered 403: no",
+      )
     }))
 
   test("reads the builds once, for every environment", () =>

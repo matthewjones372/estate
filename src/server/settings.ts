@@ -37,6 +37,34 @@ const Auth = Schema.Struct({
 
 const Url = Schema.Struct({ url: Schema.String })
 
+/** How often a part is read, as `30s`, `2m` or `1h`. */
+const Every = Schema.String
+
+const units: Readonly<Record<string, number>> = { s: 1, m: 60, h: 3600 }
+
+/** The seconds in `30s`, `2m` or `1h`, or nothing if it is not written so. */
+export const secondsIn = (text: string): number | undefined => {
+  const match = /^(\d+)(s|m|h)$/.exec(text)
+  return match === null ? undefined : Number(match[1]) * (units[match[2] ?? ""] ?? 0)
+}
+
+const shortest = 5
+
+/** Each interval that is not a duration, or is shorter than Estate will read anything. */
+const everyMistakes = (settings: Settings): ReadonlyArray<Mistake> => {
+  const set = [
+    ...Object.entries(settings.sources).flatMap(([name, section]) =>
+      Object.entries(section.every ?? {}).map(([part, text]) => [`sources.${name}.every.${part}`, text] as const),
+    ),
+    ...(settings.builds?.every === undefined ? [] : [["builds.every", settings.builds.every] as const]),
+  ]
+  return set.flatMap(([at, text]) => {
+    const seconds = secondsIn(text ?? "")
+    if (seconds === undefined) return [{ at, message: `"${text}" is not a duration: write 30s, 2m or 1h` }]
+    return seconds < shortest ? [{ at, message: `"${text}" is under ${shortest}s, the most often Estate reads` }] : []
+  })
+}
+
 export const Kubernetes = Schema.Struct({
   url: optional(Schema.String),
   token: optional(Secret),
@@ -70,6 +98,15 @@ const Sources = Schema.Struct({
   aws: optional(Schema.Struct({ region: Schema.String, endpoint: optional(Schema.String) })),
   /** Argo CD, in place of Flux: its URL and a token that may read its Applications. */
   argo: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
+  /** How often each part is read, where its usual interval is too often for the tool or its bill. */
+  every: optional(
+    Schema.Struct({
+      alerts: optional(Every),
+      metrics: optional(Every),
+      cluster: optional(Every),
+      deploys: optional(Every),
+    }),
+  ),
 })
 
 export type Kubernetes = typeof Kubernetes.Type
@@ -102,6 +139,7 @@ export const Settings = Schema.Struct({
     Schema.Struct({
       github: optional(Schema.Struct({ token: optional(Secret), url: optional(Schema.String) })),
       gitlab: optional(Schema.Struct({ token: optional(Secret), url: optional(Schema.String) })),
+      every: optional(Every),
     }),
   ),
 })
@@ -151,6 +189,7 @@ export const readSettings = (text: string): Effect.Effect<Settings, SettingsErro
     if (Redacted.value(settings.auth.sessionSecret).length < 32) {
       sense.push({ at: "auth.sessionSecret", message: "needs at least 32 characters" })
     }
+    sense.push(...everyMistakes(settings))
     return sense.length === 0 ? settings : yield* new SettingsError({ mistakes: sense })
   })
 

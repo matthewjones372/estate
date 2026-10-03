@@ -67,6 +67,20 @@ describe("the settings", () => {
       }),
     ))
 
+  test("read a part no more often than every five seconds, and say so for an interval that is not one", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const result = yield* read(
+          `${good.replace("home: { prometheus: { url: http://prometheus:9090 } }", "home: { every: { metrics: 1s, alerts: soon, cluster: 2m } }")}builds: { every: 1h }\n`,
+          { SECRET: "s".repeat(32), CLIENT_SECRET: "c" },
+        )
+        expect(Result.isFailure(result) && result.failure.mistakes).toEqual([
+          { at: "sources.home.every.alerts", message: '"soon" is not a duration: write 30s, 2m or 1h' },
+          { at: "sources.home.every.metrics", message: '"1s" is under 5s, the most often Estate reads' },
+        ])
+      }),
+    ))
+
   test("that are not YAML say so", () =>
     Effect.runPromise(
       Effect.gen(function* () {

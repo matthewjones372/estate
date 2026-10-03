@@ -13,6 +13,7 @@ import { cloudwatchApi, cloudwatchRanges, readAlarms } from "./cloudwatch"
 import { readCluster } from "./cluster"
 import { revertExpired } from "./debug"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./ecs"
+import { buildsEvery, everyOf } from "./every"
 import { readDeploys } from "./flux"
 import { grafanaRules } from "./grafana"
 import { clusterOf } from "./kubernetes"
@@ -95,7 +96,9 @@ const readersFor = (
     const cloudwatch = aws === undefined ? undefined : yield* makeAwsJson(cloudwatchApi, aws.region, aws.endpoint)
     if (alertsOf(section).length > 0) {
       const alarms = cloudwatch === undefined ? undefined : readAlarms(cloudwatch)
-      readers.push(runSource(environment.name, "alerts", "20 seconds", readAlerts(section, alarms), withResolved))
+      readers.push(
+        runSource(environment.name, "alerts", everyOf(section, "alerts"), readAlerts(section, alarms), withResolved),
+      )
     }
     const { prometheus, grafana } = section
     const ranges =
@@ -118,14 +121,14 @@ const readersFor = (
       readers.push(
         Effect.andThen(
           alertsHeard(environment.name).pipe(Effect.timeout("10 seconds"), Effect.ignore),
-          runSource(environment.name, "metrics", "30 seconds", read),
+          runSource(environment.name, "metrics", everyOf(section, "metrics"), read),
         ),
       )
     }
     const { argo } = section
     if (deploysOf(section) === "argo" && argo !== undefined) {
       const read = Effect.flatMap(servicesIn(environment.name), (services) => readArgo(argo, services))
-      readers.push(runSource(environment.name, "deploys", "30 seconds", read))
+      readers.push(runSource(environment.name, "deploys", everyOf(section, "deploys"), read))
     }
     if (runtimeOf(section) === "ecs" && ecs !== undefined) {
       // Task definitions never change, so the image each names is asked for once.
@@ -138,7 +141,7 @@ const readersFor = (
             runSource(
               environment.name,
               "cluster",
-              "15 seconds",
+              everyOf(section, "cluster"),
               read((services) => readEcsWorkloads(ecs, services)),
             ),
             ...(deploysOf(section) === "ecs"
@@ -146,7 +149,7 @@ const readersFor = (
                   runSource(
                     environment.name,
                     "deploys",
-                    "30 seconds",
+                    everyOf(section, "deploys"),
                     read((services) => readEcsDeploys(ecs, services, images)),
                   ),
                 ]
@@ -172,9 +175,9 @@ const readersFor = (
               return yield* read(yield* cluster, yield* servicesIn(environment.name))
             })
           const reading = [
-            runSource(environment.name, "cluster", "15 seconds", withCluster(readCluster)),
+            runSource(environment.name, "cluster", everyOf(section, "cluster"), withCluster(readCluster)),
             ...(deploysOf(section) === "flux"
-              ? [runSource(environment.name, "deploys", "30 seconds", withCluster(readDeploys))]
+              ? [runSource(environment.name, "deploys", everyOf(section, "deploys"), withCluster(readDeploys))]
               : []),
             ...(settings.readOnly === true ? [] : [revertExpired(environment.name, cluster)]),
           ]
@@ -209,7 +212,7 @@ export const startSources = (
       })
     yield* follow((yield* SubscriptionRef.get(ref)).catalog.environments)
     if (settings.builds !== undefined && buildsOf(settings).length > 0)
-      yield* Effect.forkScoped(runBuilds(settings.builds))
+      yield* Effect.forkScoped(runBuilds(settings.builds, buildsEvery(settings.builds)))
     return yield* SubscriptionRef.changes(ref).pipe(
       Stream.map((estate) => estate.catalog.environments),
       Stream.changes,

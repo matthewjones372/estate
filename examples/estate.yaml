@@ -32,8 +32,13 @@ sources:
     # aws: { region: eu-west-2 }
     # Or Argo CD, in place of Flux, with a token that may read its Applications:
     # argo: { url: https://argocd.production.invalid, token: ${ARGO_TOKEN} }
+    # How often each part is read, where the usual is too often for a tool's limits or its bill
+    # (usually alerts 20s, metrics 30s, cluster 15s, deploys 30s; never more often than 5s):
+    # every: { metrics: 2m, alerts: 1m }
 
 builds:
   github: {}
   # And GitLab CI, for services whose catalog entry names build: { gitlab: { project, ref } }:
   # gitlab: { url: https://gitlab.example.com, token: ${GITLAB_TOKEN} }
+  # How often builds are read; once a minute unless set:
+  # every: 5m
