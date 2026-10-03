@@ -55,7 +55,7 @@ Docker where the suite runs.
       Done when: a line pushed to each is read back, masked, and an error grouped.
 - [x] **`real-notes`** — Postgres and DynamoDB Local.
       Done when: a note survives a restart of Estate's notes against each.
-- [ ] **`real-jenkins`** — Jenkins.
+- [x] **`real-jenkins`** — Jenkins.
       Done when: a job built three times reads as its three builds.
 
 ## Acceptance

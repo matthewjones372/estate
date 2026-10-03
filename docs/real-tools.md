@@ -1,7 +1,10 @@
 # Checking Estate against real tools
 
-Estate's tests run every integration against fakes that answer in each tool's documented shape. This is how to check
-one against the real thing in a few minutes, without Estate changing anything.
+Estate's unit tests run every integration against fakes that answer in each tool's documented shape.
+`bun run integration` runs Estate's readers and writers against the real Prometheus, Alertmanager, Grafana, Loki,
+Elasticsearch, Postgres, DynamoDB Local and Jenkins in containers, in about two minutes. The tools that only run as
+a service (Datadog, Harness, TeamCity Cloud, GitHub) are checked against a real account the way below, in a few
+minutes, without Estate changing anything.
 
 ## Before you start
 
