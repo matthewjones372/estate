@@ -6,7 +6,8 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
 ![Effect](https://img.shields.io/badge/Effect-4-0b0d12)
 ![Solid](https://img.shields.io/badge/Solid-1.9-2c4f7c?logo=solid&logoColor=white)
-![Image](https://img.shields.io/badge/memory-~120%20MB-2a3247)
+![Memory](https://img.shields.io/badge/memory-~120%20MB-2a3247)
+[![License: MIT](https://img.shields.io/badge/license-MIT-3dd68c)](LICENSE)
 
 **Is the estate well, and if not, where do I look?** Estate answers that on one page, for every service your team
 runs, in every environment, without anyone building a dashboard.
@@ -103,3 +104,7 @@ bunx playwright test  # the pages in Chromium against e2e/tools.ts, a fake estat
 ```
 
 [AGENTS.md](AGENTS.md) says how the code is written; the gate holds it to that.
+
+## License
+
+[MIT](LICENSE).
