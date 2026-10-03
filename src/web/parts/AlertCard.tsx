@@ -1,5 +1,6 @@
+/** @jsxImportSource solid-js */
 /** An alert that needs someone: what fired against its threshold, its notes, Silence, and where to look. */
-import { useState } from "react"
+import { createMemo, createSignal, For, on, Show } from "solid-js"
 import type { Alert, CatalogEvent } from "../../shared/events"
 import { reading } from "../chart"
 import { useEstate } from "../context"
@@ -25,41 +26,40 @@ const spansFrom = (now: number) =>
 
 const hour = 3_600_000
 
-const Chart = (props: { readonly alert: Alert }) => {
+type AlertChart = NonNullable<Alert["chart"]>
+
+const Chart = (props: { readonly name: string; readonly chart: AlertChart }) => {
   const { now: clockNow } = useEstate()
-  const [mark, setMark] = useState<number | undefined>(undefined)
-  const chart = props.alert.chart
-  if (chart === undefined) return null
-  const known = chart.points.filter((point): point is number => point !== null)
-  const now = known.at(-1)
-  const end = clockNow()
-  const read = reading(chart.points, end, hour, mark)
+  const [mark, setMark] = createSignal<number | undefined>(undefined)
+  const now = () => props.chart.points.filter((point): point is number => point !== null).at(-1)
+  const end = createMemo(on(() => props.chart.points, clockNow))
+  const read = () => reading(props.chart.points, end(), hour, mark())
   return (
     <div>
       <Plot
-        label={`${props.alert.name} over the last hour against its threshold ${amount(chart.threshold)}, now ${amount(now)}`}
-        points={chart.points}
-        end={end}
+        label={`${props.name} over the last hour against its threshold ${amount(props.chart.threshold)}, now ${amount(now())}`}
+        points={props.chart.points}
+        end={end()}
         span={hour}
         width={400}
         height={80}
         pad={6}
-        headroom={chart.threshold * 1.25}
+        headroom={props.chart.threshold * 1.25}
         ink="#F5A524"
         fill={0.12}
-        limit={{ value: chart.threshold, ink: "#F5A524" }}
-        style={{ width: "100%", height: 80, display: "block" }}
+        limit={{ value: props.chart.threshold, ink: "#F5A524" }}
+        style={{ width: "100%", height: "80px", display: "block" }}
         keys
-        mark={mark}
+        mark={mark()}
         onMark={setMark}
       />
-      <div className="chart-axis mono">
+      <div class="chart-axis mono">
         <span>1 h ago</span>
-        <span>threshold {amount(chart.threshold)}</span>
+        <span>threshold {amount(props.chart.threshold)}</span>
         <span aria-live="polite">
-          {read === undefined
-            ? `now ${amount(now)}`
-            : `${clock(new Date(read.at).toISOString())} ${amount(read.value)}`}
+          {read() === undefined
+            ? `now ${amount(now())}`
+            : `${clock(new Date(read()?.at ?? 0).toISOString())} ${amount(read()?.value)}`}
         </span>
       </div>
     </div>
@@ -68,59 +68,62 @@ const Chart = (props: { readonly alert: Alert }) => {
 
 const Notes = (props: { readonly alert: Alert }) => {
   const { actions, me } = useEstate()
-  const [draft, setDraft] = useState("")
-  const notes = props.alert.notes
-  const post = async () => {
-    const text = draft.trim()
-    if (text !== "" && (await actions.addNote(props.alert.id, text))) setDraft("")
+  const [draft, setDraft] = createSignal("")
+  const notes = () => props.alert.notes
+  const post = () => {
+    const text = draft().trim()
+    if (text === "") return
+    void actions.addNote(props.alert.id, text).then((added) => {
+      if (added) setDraft("")
+    })
   }
   return (
-    <div className="alert-notes">
-      <div className="spread">
-        <span className="alert-label">Notes</span>
-        <span className="alert-quiet">
-          {notes.length === 0 ? "none yet" : `${notes.length} note${notes.length > 1 ? "s" : ""}`}
+    <div class="alert-notes">
+      <div class="spread">
+        <span class="alert-label">Notes</span>
+        <span class="alert-quiet">
+          {notes().length === 0 ? "none yet" : `${notes().length} note${notes().length > 1 ? "s" : ""}`}
         </span>
       </div>
-      {notes.map((note) => (
-        <div key={note.id} className="note">
-          <span className="note-avatar" aria-hidden="true">
-            {initials(note.by)}
-          </span>
-          <div style={{ minWidth: 0 }}>
-            <div className="alert-quiet">
-              <strong className="note-who">{note.by}</strong> · {clock(note.at)}
-              {(note.by === me.name || me.role === "operator") && (
-                <>
+      <For each={notes()}>
+        {(note) => (
+          <div class="note">
+            <span class="note-avatar" aria-hidden="true">
+              {initials(note.by)}
+            </span>
+            <div style={{ "min-width": 0 }}>
+              <div class="alert-quiet">
+                <strong class="note-who">{note.by}</strong> · {clock(note.at)}
+                <Show when={note.by === me.name || me.role === "operator"}>
                   {" · "}
-                  <button type="button" className="note-remove" onClick={() => void actions.removeNote(note.id)}>
-                    Remove<span className="visually-hidden"> the note by {note.by}</span>
+                  <button type="button" class="note-remove" onClick={() => void actions.removeNote(note.id)}>
+                    Remove<span class="visually-hidden"> the note by {note.by}</span>
                   </button>
-                </>
-              )}
+                </Show>
+              </div>
+              <div class="note-text">{note.text}</div>
             </div>
-            <div className="note-text">{note.text}</div>
           </div>
-        </div>
-      ))}
+        )}
+      </For>
       <form
-        className="note-form"
+        class="note-form"
         onSubmit={(event) => {
           event.preventDefault()
-          void post()
+          post()
         }}
       >
-        <label className="note-label">
-          <span className="visually-hidden">Add a note to {props.alert.name}</span>
+        <label class="note-label">
+          <span class="visually-hidden">Add a note to {props.alert.name}</span>
           <input
             type="text"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            value={draft()}
+            onInput={(event) => setDraft(event.currentTarget.value)}
             placeholder="What you found, or that you are on it"
-            className="amber-input"
+            class="amber-input"
           />
         </label>
-        <button type="submit" className="amber-button">
+        <button type="submit" class="amber-button">
           Add note
         </button>
       </form>
@@ -131,46 +134,51 @@ const Notes = (props: { readonly alert: Alert }) => {
 const Silencing = (props: { readonly alert: Alert; readonly close: () => void }) => {
   const { actions, now } = useEstate()
   const spans = spansFrom(now())
-  const [minutes, setMinutes] = useState<number>(spans[0].minutes)
-  const [reason, setReason] = useState("")
-  const until = clock(new Date(now() + minutes * 60_000).toISOString())
-  const silence = async () => {
-    if (reason.trim() !== "" && (await actions.silence(props.alert.id, minutes, reason.trim()))) props.close()
+  const [minutes, setMinutes] = createSignal<number>(spans[0].minutes)
+  const [reason, setReason] = createSignal("")
+  const until = () => clock(new Date(now() + minutes() * 60_000).toISOString())
+  const silence = () => {
+    const why = reason().trim()
+    if (why === "") return
+    void actions.silence(props.alert.id, minutes(), why).then((done) => {
+      if (done) props.close()
+    })
   }
   return (
-    <fieldset className="silencing">
-      <legend style={{ fontSize: 13, fontWeight: 600, padding: 0 }}>Silence {props.alert.name} for</legend>
-      <div className="choices">
-        {spans.map((span) => (
-          <button
-            key={span.label}
-            type="button"
-            aria-pressed={minutes === span.minutes}
-            className="choice"
-            onClick={() => setMinutes(span.minutes)}
-          >
-            {span.label}
-          </button>
-        ))}
+    <fieldset class="silencing">
+      <legend style={{ "font-size": "13px", "font-weight": 600, padding: 0 }}>Silence {props.alert.name} for</legend>
+      <div class="choices">
+        <For each={spans}>
+          {(span) => (
+            <button
+              type="button"
+              aria-pressed={minutes() === span.minutes}
+              class="choice"
+              onClick={() => setMinutes(span.minutes)}
+            >
+              {span.label}
+            </button>
+          )}
+        </For>
       </div>
-      <label className="reason">
+      <label class="reason">
         Why (required, shown to everyone)
         <input
           type="text"
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
+          value={reason()}
+          onInput={(event) => setReason(event.currentTarget.value)}
           placeholder="e.g. vacuum on the database, done by 15:00"
-          className="amber-input"
+          class="amber-input"
         />
       </label>
-      <p className="alert-quiet" style={{ margin: 0 }}>
+      <p class="alert-quiet" style={{ margin: 0 }}>
         It stays on this page, greyed, and fires again if it is still true when the silence ends.
       </p>
-      <div className="choices">
-        <button type="button" className="primary-button" disabled={reason.trim() === ""} onClick={() => void silence()}>
-          Silence until {until}
+      <div class="choices">
+        <button type="button" class="primary-button" disabled={reason().trim() === ""} onClick={silence}>
+          Silence until {until()}
         </button>
-        <button type="button" className="amber-button ghost" onClick={props.close}>
+        <button type="button" class="amber-button ghost" onClick={() => props.close()}>
           Cancel
         </button>
       </div>
@@ -184,52 +192,60 @@ export const AlertCard = (props: {
   readonly canSilence: boolean
 }) => {
   const { now } = useEstate()
-  const [choosing, setChoosing] = useState(false)
-  const { alert } = props
-  const service = props.catalog?.services.find((each) => each.name === alert.service)
-  const logs = service?.links.find((link) => link.name === "logs")
-  const traces = service?.links.find((link) => link.name === "traces")
+  const [choosing, setChoosing] = createSignal(false)
+  const service = () => props.catalog?.services.find((each) => each.name === props.alert.service)
+  const link = (name: string) => service()?.links.find((each) => each.name === name)
   return (
-    <article className={`alert-card ${alert.severity === "critical" ? "critical" : ""}`}>
-      <div className="alert-head">
-        <span className="severity">{alert.severity}</span>
-        <span className="mono alert-name">{alert.name}</span>
-        <span className="alert-for">firing {since(alert.startsAt, now())}</span>
+    <article class={`alert-card ${props.alert.severity === "critical" ? "critical" : ""}`}>
+      <div class="alert-head">
+        <span class="severity">{props.alert.severity}</span>
+        <span class="mono alert-name">{props.alert.name}</span>
+        <span class="alert-for">firing {since(props.alert.startsAt, now())}</span>
       </div>
       <div>
-        <h3 className="alert-title">{alert.summary ?? alert.name}</h3>
-        {alert.service !== undefined && <p className="alert-detail">{alert.service}</p>}
+        <h3 class="alert-title">{props.alert.summary ?? props.alert.name}</h3>
+        <Show when={props.alert.service}>{(name) => <p class="alert-detail">{name()}</p>}</Show>
       </div>
-      <Chart alert={alert} />
-      <Notes alert={alert} />
-      {choosing && <Silencing alert={alert} close={() => setChoosing(false)} />}
-      <div className="choices">
-        {alert.runbook !== undefined && (
-          <Out href={alert.runbook} className="primary-button">
-            Open the runbook
-          </Out>
-        )}
-        {alert.service !== undefined && (
-          <A to={`/services/${encodeURIComponent(alert.service)}`} className="amber-button ghost">
-            {alert.service}
-          </A>
-        )}
-        {logs !== undefined && (
-          <Out href={logs.url} className="amber-button ghost">
-            Logs
-          </Out>
-        )}
-        {traces !== undefined && (
-          <Out href={traces.url} className="amber-button ghost">
-            Traces
-          </Out>
-        )}
-        {props.canSilence && !choosing && (
-          <button type="button" className="amber-button ghost push-right" onClick={() => setChoosing(true)}>
+      <Show when={props.alert.chart}>{(chart) => <Chart name={props.alert.name} chart={chart()} />}</Show>
+      <Notes alert={props.alert} />
+      <Show when={choosing()}>
+        <Silencing alert={props.alert} close={() => setChoosing(false)} />
+      </Show>
+      <div class="choices">
+        <Show when={props.alert.runbook}>
+          {(runbook) => (
+            <Out href={runbook()} class="primary-button">
+              Open the runbook
+            </Out>
+          )}
+        </Show>
+        <Show when={props.alert.service}>
+          {(name) => (
+            <A to={`/services/${encodeURIComponent(name())}`} class="amber-button ghost">
+              {name()}
+            </A>
+          )}
+        </Show>
+        <Show when={link("logs")}>
+          {(logs) => (
+            <Out href={logs().url} class="amber-button ghost">
+              Logs
+            </Out>
+          )}
+        </Show>
+        <Show when={link("traces")}>
+          {(traces) => (
+            <Out href={traces().url} class="amber-button ghost">
+              Traces
+            </Out>
+          )}
+        </Show>
+        <Show when={props.canSilence && !choosing()}>
+          <button type="button" class="amber-button ghost push-right" onClick={() => setChoosing(true)}>
             <Icon name="silence" />
             Silence…
           </button>
-        )}
+        </Show>
       </div>
     </article>
   )

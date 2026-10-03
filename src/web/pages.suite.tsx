@@ -1,7 +1,9 @@
+/** @jsxImportSource solid-js */
+/** What each page draws from the fixture's events: run by \`pages.test.ts\` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
-import { renderToStaticMarkup } from "react-dom/server"
 import { App } from "./App"
-import { events, heard, now, operator, recording, render } from "./fixture"
+import { events, heard, now, operator, recording } from "./fixture"
+import { render } from "./harness"
 import { Alerts, alertsSummary } from "./pages/Alerts"
 import { Deploys, summaryOf } from "./pages/Deploys"
 import { headlineOf, Overview, tilesOf } from "./pages/Overview"
@@ -9,7 +11,11 @@ import { ServicePage } from "./pages/Service"
 import { NoAccess, Reading, SignIn } from "./pages/States"
 import { pipelineOf } from "./parts/Rail"
 
-const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")
+const text = (html: string) =>
+  html
+    .replace(/<!--[^>]*-->/g, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
 
 describe("the overview", () => {
   test("says how many things need someone, and what", () => {
@@ -65,7 +71,7 @@ describe("the overview", () => {
   })
 
   test("draws the headline, the map, the card for what fires, silences, lanes and the feed", () => {
-    const page = text(render(<Overview />))
+    const page = text(render(() => <Overview />))
     for (const words of [
       "One thing needs you.",
       "The estate, live",
@@ -87,11 +93,11 @@ describe("the overview", () => {
   })
 
   test("shows the sources as they answer on the first load", () => {
-    const page = text(renderToStaticMarkup(<Reading sources={events.services.sources} />))
+    const page = text(render(() => <Reading sources={events.services.sources} />))
     expect(page).toContain("Kubernetes read")
     expect(page).toContain("Prometheus did not answer")
     expect(page).not.toContain("GitHub")
-    expect(text(renderToStaticMarkup(<Reading sources={undefined} />))).toContain("Connecting to Estate")
+    expect(text(render(() => <Reading sources={undefined} />))).toContain("Connecting to Estate")
   })
 })
 
@@ -129,7 +135,7 @@ describe("the other pages", () => {
       detail: "orders stalled: cannot scan the registry. orders is building.",
     })
     expect(summaryOf(undefined).title).toBe("Every deploy is in step.")
-    const page = text(render(<Deploys />))
+    const page = text(render(() => <Deploys />))
     for (const words of [
       "Across environments",
       "Pipelines · production",
@@ -143,15 +149,15 @@ describe("the other pages", () => {
   test("alerts lists them all with their latest note, and what resolved", () => {
     expect(alertsSummary(events.alerts.alerts)).toBe("One alert firing, 1 pending, 1 silenced.")
     expect(alertsSummary([])).toBe("Nothing is firing, pending or silenced.")
-    const page = text(render(<Alerts />))
+    const page = text(render(() => <Alerts />))
     for (const words of ["Orders are slow", "On it.", "QueueGrowing", "Unsilence", "resolved at", "after 8 min"])
       expect(page).toContain(words)
   })
 
   test("a service shows its load, pods, alerts today, debug and builds", () => {
-    const page = text(render(<ServicePage name="storefront" />))
+    const page = text(render(() => <ServicePage name="storefront" />))
     for (const words of [
-      "The shop&#x27;s pages",
+      "The shop's pages",
       "Owner web",
       "running v2",
       "storefront-1",
@@ -172,49 +178,47 @@ describe("the other pages", () => {
     ]) {
       expect(page).toContain(words)
     }
-    expect(text(render(<ServicePage name="orders" />))).toContain("The catalog names no log level for orders")
-    expect(text(render(<ServicePage name="orders" />))).toContain("No jobs are named for it.")
-    expect(text(render(<ServicePage name="nothing" />))).toContain("nothing is not in production")
+    expect(text(render(() => <ServicePage name="orders" />))).toContain("The catalog names no log level for orders")
+    expect(text(render(() => <ServicePage name="orders" />))).toContain("No jobs are named for it.")
+    expect(text(render(() => <ServicePage name="nothing" />))).toContain("nothing is not in production")
   })
 
   test("a viewer cannot remove someone else's note", () => {
     const viewer = { ...operator, role: "viewer" as const }
-    expect(text(render(<Overview />, { me: viewer }))).not.toContain("Remove the note")
-    expect(text(render(<Overview />, { me: { ...viewer, name: "gil" } }))).toContain("Remove the note by gil")
+    expect(text(render(() => <Overview />, { me: viewer }))).not.toContain("Remove the note")
+    expect(text(render(() => <Overview />, { me: { ...viewer, name: "gil" } }))).toContain("Remove the note by gil")
   })
 
   test("a viewer sees debug and silences but cannot switch them", () => {
     const viewer = { ...operator, role: "viewer" as const }
-    const page = text(render(<ServicePage name="storefront" />, { me: viewer }))
+    const page = text(render(() => <ServicePage name="storefront" />, { me: viewer }))
     expect(page).not.toContain("Turn off now")
-    expect(text(render(<Overview />, { me: viewer }))).not.toContain("Silence…")
+    expect(text(render(() => <Overview />, { me: viewer }))).not.toContain("Silence…")
   })
 
   test("the app draws the header and the page the address names", () => {
     const { actions } = recording()
     const estate = { live: heard(), me: operator, actions, now: () => now }
-    expect(text(renderToStaticMarkup(<App estate={{ ...estate, page: { page: "alerts" } }} />))).toContain(
+    expect(text(render(() => <App estate={{ ...estate, page: () => ({ page: "alerts" }) }} />))).toContain(
       "ada lovelace · operator",
     )
-    expect(text(renderToStaticMarkup(<App estate={{ ...estate, page: { page: "missing" } }} />))).toContain(
+    expect(text(render(() => <App estate={{ ...estate, page: () => ({ page: "missing" }) }} />))).toContain(
       "There is no such page.",
     )
-    expect(text(renderToStaticMarkup(<App estate={{ ...estate, page: { page: "deploys" } }} />))).toContain(
+    expect(text(render(() => <App estate={{ ...estate, page: () => ({ page: "deploys" }) }} />))).toContain(
       "Across environments",
     )
     expect(
-      text(renderToStaticMarkup(<App estate={{ ...estate, page: { page: "service", name: "orders" } }} />)),
+      text(render(() => <App estate={{ ...estate, page: () => ({ page: "service", name: "orders" }) }} />)),
     ).toContain("Pods")
   })
 
   test("signing in and having no role are pages of their own", () => {
-    expect(renderToStaticMarkup(<SignIn returnTo="/alerts?env=x" />)).toContain(
-      "/auth/login?returnTo=%2Falerts%3Fenv%3Dx",
-    )
-    expect(text(renderToStaticMarkup(<NoAccess name="eve" groups={["ops", "admins"]} />))).toContain(
+    expect(render(() => <SignIn returnTo="/alerts?env=x" />)).toContain("/auth/login?returnTo=%2Falerts%3Fenv%3Dx")
+    expect(text(render(() => <NoAccess name="eve" groups={["ops", "admins"]} />))).toContain(
       "It is open to ops, admins.",
     )
-    expect(text(renderToStaticMarkup(<NoAccess name="eve" groups={[]} />))).toContain("nobody yet")
+    expect(text(render(() => <NoAccess name="eve" groups={[]} />))).toContain("nobody yet")
   })
 })
 
@@ -230,6 +234,6 @@ describe("an environment whose cluster is not read", () => {
         })),
       },
     }
-    expect(text(render(<Deploys />, { sent: unseen }))).toContain("not read here")
+    expect(text(render(() => <Deploys />, { sent: unseen }))).toContain("not read here")
   })
 })

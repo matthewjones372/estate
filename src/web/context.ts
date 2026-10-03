@@ -1,5 +1,6 @@
 /** What every part of the page can reach: the store, the person, where we are, and the actions they may take. */
-import { createContext, useContext, useSyncExternalStore } from "react"
+import { createContext, useContext } from "solid-js"
+import { createStore, reconcile } from "solid-js/store"
 import type { Me, ServiceState } from "../shared/events"
 import type { Live, Snapshot } from "./live"
 import type { Page } from "./route"
@@ -21,7 +22,8 @@ export type Range = "1h" | "6h" | "24h" | "7d"
 export interface Estate {
   readonly live: Live
   readonly me: Me
-  readonly page: Page
+  /** Where we are; it changes as a person moves about, without the page reloading. */
+  readonly page: () => Page
   readonly actions: Actions
   readonly now: () => number
 }
@@ -34,7 +36,19 @@ export const useEstate = (): Estate => {
   return estate
 }
 
+const stores = new WeakMap<Live, Snapshot>()
+
+/**
+ * What the server last sent, as a store: each event is reconciled into it, so a part that reads one field updates
+ * when that field changes, and an alert or a service keeps its place, and its part's state, across events. One store
+ * per page, living as long as the page does.
+ */
 export const useSnapshot = (): Snapshot => {
   const { live } = useEstate()
-  return useSyncExternalStore(live.subscribe, live.snapshot, live.snapshot)
+  const kept = stores.get(live)
+  if (kept !== undefined) return kept
+  const [snapshot, setSnapshot] = createStore<Snapshot>(structuredClone(live.snapshot()))
+  live.subscribe(() => setSnapshot(reconcile(structuredClone(live.snapshot()), { key: "id", merge: true })))
+  stores.set(live, snapshot)
+  return snapshot
 }

@@ -1,4 +1,6 @@
+/** @jsxImportSource solid-js */
 /** Deploys: every service across every environment, then each one's pipeline in the chosen environment. */
+import { For } from "solid-js"
 import type { DeploysEvent } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock, counted, since } from "../format"
@@ -30,10 +32,11 @@ export const summaryOf = (deploys: DeploysEvent | undefined): { readonly title: 
   return { title, detail: parts.length === 0 ? "Each environment runs what it chose." : `${parts.join(". ")}.` }
 }
 
-const Cell = (props: { readonly row: Row; readonly environment: string }) => {
+/** A leaf with no state of its own: drawn again, whole, when what it reads changes. */
+const cell = (props: { readonly row: Row; readonly environment: string }) => {
   const deployed = props.row.environments.find((each) => each.environment === props.environment)
-  if (deployed === undefined) return <td className="muted">not here</td>
-  if (!deployed.seen) return <td className="muted">not read here</td>
+  if (deployed === undefined) return <td class="muted">not here</td>
+  if (!deployed.seen) return <td class="muted">not read here</td>
   const tone = deployed.stalled !== undefined ? "attention" : deployed.running === undefined ? "unknown" : "healthy"
   const note =
     deployed.stalled ??
@@ -46,19 +49,19 @@ const Cell = (props: { readonly row: Row; readonly environment: string }) => {
         : `since ${clock(deployed.chosen.at)}`)
   return (
     <td>
-      <span className="cell-version mono">
-        <span className={`dot ${tone}`} />
+      <span class="cell-version mono">
+        <span class={`dot ${tone}`} />
         {deployed.running ?? "not running"}
       </span>
-      <div className={`cell-note ${deployed.stalled === undefined ? "" : "attention"}`}>{note}</div>
+      <div class={`cell-note ${deployed.stalled === undefined ? "" : "attention"}`}>{note}</div>
     </td>
   )
 }
 
 const stepWords = { done: "done", active: "in progress", stalled: "stalled", waiting: "waiting" } as const
 
-const PipelineRow = (props: { readonly row: Row; readonly environment: string; readonly now: number }) => {
-  const { row } = props
+const pipelineRow = (props: { readonly row: Row; readonly environment: string; readonly now: number }) => {
+  const row = props.row
   const deployed = row.environments.find((each) => each.environment === props.environment)
   const pipeline = pipelineOf(row.builds, deployed, props.now)
   const build = row.builds[0]
@@ -81,26 +84,26 @@ const PipelineRow = (props: { readonly row: Row; readonly environment: string; r
     },
   ]
   return (
-    <article className="pipeline">
-      <div className="pipeline-name">
-        <A to={`/services/${encodeURIComponent(row.name)}`} className="lane-title">
+    <article class="pipeline">
+      <div class="pipeline-name">
+        <A to={`/services/${encodeURIComponent(row.name)}`} class="lane-title">
           {row.name}
         </A>
-        <span className={`rail-note ${pipeline.tone}`}>{pipeline.note}</span>
+        <span class={`rail-note ${pipeline.tone}`}>{pipeline.note}</span>
       </div>
       {pipeline.steps.map((step, index) => {
         const value = values[index]
         return (
-          <div key={["commit", "build", "chosen", "running"][index]} className={`step ${step}`}>
-            <span className="step-state">{stepWords[step]}</span>
+          <div class={`step ${step}`}>
+            <span class="step-state">{stepWords[step]}</span>
             {value?.href === undefined ? (
-              <span className="mono">{value?.value}</span>
+              <span class="mono">{value?.value}</span>
             ) : (
-              <Out href={value.href} className="mono">
+              <Out href={value.href} class="mono">
                 {value.value}
               </Out>
             )}
-            <span className="muted step-detail">{value?.detail}</span>
+            <span class="muted step-detail">{value?.detail}</span>
           </div>
         )
       })}
@@ -110,82 +113,78 @@ const PipelineRow = (props: { readonly row: Row; readonly environment: string; r
 
 export const Deploys = () => {
   const { now } = useEstate()
-  const { events, environment } = useSnapshot()
-  const deploys = events.deploys
-  const summary = summaryOf(deploys)
-  const environments = deploys?.environments ?? []
+  const snapshot = useSnapshot()
+  const deploys = () => snapshot.events.deploys
+  const summary = () => summaryOf(deploys())
+  const environments = () => deploys()?.environments ?? []
+  const here = () =>
+    (deploys()?.services ?? []).filter((row) =>
+      row.environments.some((each) => each.environment === snapshot.environment),
+    )
   return (
-    <main className="main">
-      <section aria-label="Summary" className="stack">
-        <h1 className="headline" style={{ fontSize: 38 }}>
-          {summary.title}
+    <main class="main">
+      <section aria-label="Summary" class="stack">
+        <h1 class="headline" style={{ "font-size": "38px" }}>
+          {summary().title}
         </h1>
-        <p className="lede" style={{ maxWidth: 720 }}>
-          {summary.detail}
+        <p class="lede" style={{ "max-width": "720px" }}>
+          {summary().detail}
         </p>
       </section>
-      <section aria-labelledby="across" className="stack">
-        <div className="spread">
-          <h2 id="across" className="section-title">
+      <section aria-labelledby="across" class="stack">
+        <div class="spread">
+          <h2 id="across" class="section-title">
             Across environments
           </h2>
-          <span className="muted" style={{ fontSize: 12 }}>
+          <span class="muted" style={{ "font-size": "12px" }}>
             What runs in each, and what is waiting to move on
           </span>
         </div>
-        <div className="table-scroll panel">
-          <table className="grid">
+        <div class="table-scroll panel">
+          <table class="grid">
             <thead>
               <tr>
                 <th scope="col">Service</th>
                 <th scope="col">Last build</th>
-                {environments.map((name) => (
-                  <th key={name} scope="col">
-                    {name}
-                  </th>
-                ))}
+                <For each={environments()}>{(name) => <th scope="col">{name}</th>}</For>
               </tr>
             </thead>
             <tbody>
-              {(deploys?.services ?? []).map((row) => (
-                <tr key={row.name}>
-                  <th scope="row">
-                    <A to={`/services/${encodeURIComponent(row.name)}`}>{row.name}</A>
-                  </th>
-                  <td>
-                    <span className="mono">{row.builds[0]?.sha.slice(0, 7) ?? "–"}</span>
-                    <div className="cell-note">
-                      {row.builds[0] === undefined
-                        ? "no builds read"
-                        : `${row.builds[0].status}, ${since(row.builds[0].at, now())} ago`}
-                    </div>
-                  </td>
-                  {environments.map((name) => (
-                    <Cell key={name} row={row} environment={name} />
-                  ))}
-                </tr>
-              ))}
+              <For each={deploys()?.services ?? []}>
+                {(row) => (
+                  <tr>
+                    <th scope="row">
+                      <A to={`/services/${encodeURIComponent(row.name)}`}>{row.name}</A>
+                    </th>
+                    <td>
+                      <span class="mono">{row.builds[0]?.sha.slice(0, 7) ?? "–"}</span>
+                      <div class="cell-note">
+                        {row.builds[0] === undefined
+                          ? "no builds read"
+                          : `${row.builds[0].status}, ${since(row.builds[0].at, now())} ago`}
+                      </div>
+                    </td>
+                    <For each={environments()}>{(name) => cell({ row, environment: name })}</For>
+                  </tr>
+                )}
+              </For>
             </tbody>
           </table>
         </div>
       </section>
-      <section aria-labelledby="pipelines" className="stack">
-        <h2 id="pipelines" className="section-title">
-          Pipelines · {environment}
+      <section aria-labelledby="pipelines" class="stack">
+        <h2 id="pipelines" class="section-title">
+          Pipelines · {snapshot.environment}
         </h2>
-        <div className="pipeline-head muted" aria-hidden="true">
+        <div class="pipeline-head muted" aria-hidden="true">
           <span />
           <span>Commit on main</span>
           <span>Build</span>
           <span>Chosen</span>
           <span>Running</span>
         </div>
-        {(deploys?.services ?? [])
-          .filter((row) => row.environments.some((each) => each.environment === environment))
-          .map((row) => (
-            <PipelineRow key={row.name} row={row} environment={environment} now={now()} />
-          ))}
-        <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+        <For each={here()}>{(row) => pipelineRow({ row, environment: snapshot.environment, now: now() })}</For>
+        <p class="muted" style={{ margin: 0, "font-size": "13px" }}>
           A step that stalls says why, in the words the tool used.
         </p>
       </section>

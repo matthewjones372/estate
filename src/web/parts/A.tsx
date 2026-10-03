@@ -1,16 +1,17 @@
+/** @jsxImportSource solid-js */
 /** A link within Estate: followed without reloading the page, keeping the environment. */
-import type { CSSProperties, MouseEvent, ReactNode } from "react"
+import type { JSX } from "solid-js"
 import { useEstate } from "../context"
 
 export const A = (props: {
   readonly to: string
-  readonly children: ReactNode
-  readonly className?: string
+  readonly children: JSX.Element
+  readonly class?: string
   readonly current?: boolean
-  readonly style?: CSSProperties
+  readonly style?: JSX.CSSProperties
 }) => {
   const { actions } = useEstate()
-  const follow = (event: MouseEvent<HTMLAnchorElement>) => {
+  const follow = (event: MouseEvent) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
     event.preventDefault()
     actions.navigate(props.to)
@@ -19,7 +20,7 @@ export const A = (props: {
     <a
       href={props.to}
       onClick={follow}
-      className={props.className}
+      class={props.class}
       style={props.style}
       aria-current={props.current ? "page" : undefined}
     >
@@ -29,8 +30,8 @@ export const A = (props: {
 }
 
 /** A link out to another tool, in a new tab. */
-export const Out = (props: { readonly href: string; readonly children: ReactNode; readonly className?: string }) => (
-  <a href={props.href} target="_blank" rel="noopener noreferrer" className={props.className}>
+export const Out = (props: { readonly href: string; readonly children: JSX.Element; readonly class?: string }) => (
+  <a href={props.href} target="_blank" rel="noopener noreferrer" class={props.class}>
     {props.children}
   </a>
 )

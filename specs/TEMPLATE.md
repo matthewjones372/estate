@@ -27,7 +27,7 @@ name the alternative in a sentence and say which one is recommended.
 
 ## Depends on
 
-What in the library or the framework this needs and does not have yet: the spec there that adds it, and what the bank
+What this needs from other tools or projects and does not have yet: where that will come from, and what Estate
 does until it lands. "Nothing" is a fine answer.
 
 ## Stack
