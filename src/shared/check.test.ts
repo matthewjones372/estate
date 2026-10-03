@@ -118,7 +118,7 @@ describe("a link's values", () => {
   test("may be named when every environment the service runs in has them", () => {
     const valued = {
       environments: [
-        { name: "home", sources: "home", values: { grafana: "https://grafana.home.arpa" } },
+        { name: "home", sources: "home", values: { grafana: "https://grafana.example" } },
         { name: "kind", sources: "kind", values: { grafana: "http://localhost:3000" } },
       ],
       services: [{ name: "s", environments: ["home", "kind"], links: { dashboard: "{grafana}/d/{service}" } }],

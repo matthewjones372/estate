@@ -1,35 +1,57 @@
 name: image
 
-# On main, the image built on a runner at home and pushed to its registry, tagged main-<run>-<sha> so an estate's
-# Flux image automation takes the newest. RUNNER names another runner; pushing needs the home network.
+# Once the gate has passed on main, the image is built for amd64 and arm64 and pushed to GitHub's registry as
+# ghcr.io/<owner>/estate, tagged main, main-<run>-<sha> and the commit's sha, so a deploy can pin one or follow main.
 on:
-  push: { branches: [ main ] }
+  workflow_run:
+    workflows: [ gate ]
+    branches: [ main ]
+    types: [ completed ]
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   image:
-    runs-on: ${{ vars.RUNNER || 'home-estate' }}
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.11
-      - run: bun install --frozen-lockfile
-      - run: bun run gate
-      - name: Push the image
-        if: runner.environment == 'self-hosted'
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Name the image and its tags
+        id: names
         run: |
-          tag="main-${{ github.run_number }}-${GITHUB_SHA::7}"
-          docker build -t "estate:$tag" .
-          nix run nixpkgs#skopeo -- --insecure-policy copy --dest-tls-verify=false \
-            "docker-daemon:estate:$tag" "docker://${REGISTRY:-registry.home.arpa}/estate:$tag"
-          echo "pushed $tag" >> "$GITHUB_STEP_SUMMARY"
-        env:
-          REGISTRY: ${{ vars.REGISTRY }}
+          sha="${{ github.event.workflow_run.head_sha || github.sha }}"
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/estate"
+          {
+            echo "tags<<EOF"
+            echo "$image:main"
+            echo "$image:main-${{ github.run_number }}-${sha::7}"
+            echo "$image:$sha"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.names.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.description=Is the estate well, and if not, where do I look?
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
