@@ -3,9 +3,11 @@
  * as a line per part: what answered, how much, and what does not fit the catalog, so whoever points Estate at their
  * team's tools sees why a lane is empty before they look at the page.
  */
-import { Clock, Effect, type FileSystem } from "effect"
+import { Clock, Effect } from "effect"
 import { type Catalog, ecsOf, kubernetesOf, type Service } from "../shared/catalog"
 import { makeAwsJson } from "./aws/json"
+import { agentsFindings } from "./doctor-agents"
+import { amount, type Finding, finding, type Needs } from "./doctor-finding"
 import type { Remote } from "./remote"
 import type { Settings, Sources } from "./settings"
 import { readAlerts } from "./sources/alerts"
@@ -28,32 +30,9 @@ import { lastHour, type Ranges, thresholdOf } from "./sources/prometheus"
 import { rangesIn } from "./sources/ranges"
 import type { Failure } from "./sources/run"
 import type { Chosen, SourcedAlert, Workloads } from "./state"
-import { inEnvironment } from "./views/catalog"
+import { agentsIn, inEnvironment } from "./views/catalog"
 import { serviceOf } from "./views/health"
 import { storeOf, storesIn } from "./views/stores"
-
-interface Finding {
-  readonly part: string
-  readonly ok: boolean
-  readonly says: string
-}
-
-export interface Report {
-  readonly environment: string
-  readonly findings: ReadonlyArray<Finding>
-}
-
-type Needs = Remote | FileSystem.FileSystem
-
-const amount = (value: number | null | undefined) =>
-  value === null || value === undefined ? "no data" : String(Math.round(value * 100) / 100)
-
-/** The part's line: what `read` found, put by `say`, or its failure in the tool's words. */
-const finding = <A>(part: string, read: Effect.Effect<A, Failure, Needs>, say: (found: A) => string) =>
-  read.pipe(
-    Effect.map((found): Finding => ({ part, ok: true, says: say(found) })),
-    Effect.catch((failure) => Effect.succeed<Finding>({ part, ok: false, says: failure.message })),
-  )
 
 const alertsFinding = (
   section: Sources,
@@ -158,6 +137,11 @@ const logsFinding = (section: Sources, services: ReadonlyArray<Service>, now: nu
     })
   }).pipe(Effect.map((found) => found.filter((each): each is Finding => each !== undefined)))
 
+export interface Report {
+  readonly environment: string
+  readonly findings: ReadonlyArray<Finding>
+}
+
 /** One environment's parts, each asked once. */
 const examine = (settings: Settings, catalog: Catalog, environment: string, sources: string) =>
   Effect.gen(function* () {
@@ -210,6 +194,7 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
         yield* finding("deploys", readEcsDeploys(ecs, services, new Map()), (found) => deploysSaid("ecs", found)),
       )
     findings.push(...(yield* logsFinding(section, services, now)))
+    findings.push(...(yield* agentsFindings(section, ranges, agentsIn(catalog, environment), now)))
     return { environment, findings }
   })
 

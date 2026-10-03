@@ -96,9 +96,9 @@ Spec 0019 for spend in money: this spec's budget is in tokens. The team's agents
       Done when: a CronJob that no service owns shows its runs and a missed run, and needs someone when it fails.
 - [x] **`agent-usage`** — top-level `agents:`, their lane from `usage:` queries, the model in use, the budget.
       Done when: an agent over its token budget needs someone, and its model changing is on the feed.
-- [ ] **`agent-runs`** — an agent's recent runs from Langfuse, each linking to its trace.
+- [x] **`agent-runs`** — an agent's recent runs from Langfuse, each linking to its trace.
       Done when: a test against Langfuse's API shows a failed and a succeeded run with tokens, cost and a link.
-- [ ] **`agents-e2e`** — an agent and a standalone job in the Playwright estate, against fakes; the README and
+- [x] **`agents-e2e`** — an agent and a standalone job in the Playwright estate, against fakes; the README and
       `examples/` show both; `estate doctor` reads each agent's usage and runs.
       Done when: `bunx playwright test` passes with them.
 

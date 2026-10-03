@@ -34,6 +34,10 @@ test("the overview says what needs someone, with each service's lane and what ch
   const agent = page.getByRole("article", { name: "support-triage, an agent" })
   await expect(agent).toContainText("claude-sonnet")
   await expect(agent).toContainText("6.1M of 20M tokens today")
+  await agent.getByRole("button", { name: "Recent runs" }).click()
+  const runs = agent.getByRole("list", { name: "Recent runs of support-triage" }).getByRole("listitem")
+  await expect(runs).toHaveCount(2)
+  await expect(runs.first()).toContainText("failed in 31 s: tool search_orders timed out")
   // A job no service owns, in its category, with its schedule and last run.
   const settlement = page.getByRole("article", { name: "settlement, a job" })
   await expect(settlement).toContainText("0 1 * * *")

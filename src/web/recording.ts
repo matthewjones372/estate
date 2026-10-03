@@ -4,6 +4,30 @@ import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
 import { groups, lines } from "./fixture-logs"
 
+/** Two runs of the triage agent, as Langfuse would give them: one failed, one through. */
+const runs = [
+  {
+    id: "r2",
+    startedAt: "2026-10-03T11:58:00Z",
+    failed: true,
+    message: "tool search_orders timed out",
+    seconds: 31,
+    tokens: 12_400,
+    cost: 0.041,
+    model: "claude-sonnet",
+    url: "https://langfuse.example/project/p/traces/r2",
+  },
+  {
+    id: "r1",
+    startedAt: "2026-10-03T11:55:00Z",
+    failed: false,
+    seconds: 9.5,
+    tokens: 4_100,
+    cost: 0.012,
+    model: "claude-sonnet",
+  },
+]
+
 export interface Recorded {
   readonly calls: Array<readonly [string, ...ReadonlyArray<unknown>]>
   readonly actions: Actions
@@ -61,6 +85,10 @@ export const recording = (): Recorded => {
       errors: (service, window) => {
         calls.push(["errors", service, window])
         return Promise.resolve(service === "storefront" ? groups : "none")
+      },
+      runs: (agent) => {
+        calls.push(["runs", agent])
+        return Promise.resolve(agent === "triage" ? runs : agent === "broken" ? undefined : "none")
       },
     },
     sendLines: (batch) => {

@@ -124,6 +124,8 @@ const Sources = Schema.Struct({
       tags: optional(Schema.Array(Schema.String)),
     }),
   ),
+  /** Langfuse, where the agents' runs are traced: its URL (Langfuse's cloud unless set) and a project's keys. */
+  langfuse: optional(Schema.Struct({ url: optional(Schema.String), publicKey: Secret, secretKey: Secret })),
   /** How often each part is read, where its usual interval is too often for the tool or its bill. */
   every: optional(
     Schema.Struct({

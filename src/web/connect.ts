@@ -1,9 +1,12 @@
 /** The browser's side of the wire: the event stream, and the POSTs a person's actions make. */
 import { Option, Schema } from "effect"
+import { AgentRun } from "../shared/agents"
 import { type EventName, Load } from "../shared/events"
 import { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { Actions, ErrorWindow, LogHandlers, Range } from "./context"
 import type { Open } from "./live"
+
+const decodeRuns = Schema.decodeUnknownOption(Schema.Array(AgentRun))
 
 const names: ReadonlyArray<EventName> = ["catalog", "services", "alerts", "deploys", "feed"]
 
@@ -74,6 +77,14 @@ export const serverActions = (
   undebug: (service) =>
     send("DELETE", `/api/debug/${encodeURIComponent(service)}?env=${encodeURIComponent(environment())}`),
   watchLogs: (service, handlers) => watchLogs(environment(), service, handlers),
+  runs: (agent) =>
+    fetch(`/api/agents/runs?env=${encodeURIComponent(environment())}&agent=${encodeURIComponent(agent)}`)
+      .then((response): Promise<ReadonlyArray<AgentRun> | "none" | undefined> => {
+        if (response.status === 404 || response.status === 403) return Promise.resolve("none")
+        if (!response.ok) return Promise.resolve(undefined)
+        return response.json().then((body) => Option.getOrUndefined(decodeRuns(body)))
+      })
+      .catch(() => undefined),
   errors: (service, window) =>
     fetch(
       `/api/logs/errors?env=${encodeURIComponent(environment())}&service=${encodeURIComponent(service)}&${windowQuery(window)}`,

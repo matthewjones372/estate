@@ -1,6 +1,7 @@
 /** What every part of the page can reach: the store, the person, where we are, and the actions they may take. */
 import { createContext, useContext } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
+import type { AgentRun } from "../shared/agents"
 import type { Me, ServiceState } from "../shared/events"
 import type { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { Live, Snapshot } from "./live"
@@ -22,6 +23,8 @@ export interface Actions {
   readonly storeLoad: (store: string, range: Range) => Promise<ServiceState["load"] | undefined>
   /** A service's live lines; the returned function stops watching. */
   readonly watchLogs: (service: string, handlers: LogHandlers) => () => void
+  /** An agent's recent runs: "none" where it has no runs to read, undefined where they could not be read. */
+  readonly runs: (agent: string) => Promise<ReadonlyArray<AgentRun> | "none" | undefined>
   /** A service's errors grouped, over a range or since a time: "none" where it has no logs to read. */
   readonly errors: (service: string, window: ErrorWindow) => Promise<ErrorGroups | "none" | undefined>
 }

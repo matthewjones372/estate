@@ -18,6 +18,7 @@ sources:
     alertmanager: { url: http://127.0.0.1:8282 }
     kubernetes: { url: http://127.0.0.1:8282, token: fake }
     flux: {}
+    langfuse: { url: http://127.0.0.1:8282, publicKey: pk-lf-e2e, secretKey: sk-lf-e2e }
 
 builds:
   github: { url: http://127.0.0.1:8282 }

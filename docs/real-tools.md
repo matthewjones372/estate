@@ -113,6 +113,30 @@ This is the integration least proven: the environment and artifact are read from
 execution summaries. If `deploys` does not name payments at all, those fields are named differently in your
 account, and the raw answer of `POST /pipeline/api/pipelines/execution/summary` for one execution is what is needed.
 
+## AI agents and Langfuse
+
+An agent's usage comes from the GenAI metrics it already sends, through the environment's metrics source;
+[`examples/catalog.yaml`](../examples/catalog.yaml) has the OpenTelemetry queries to copy. Its runs come from
+Langfuse, with a project's keys:
+
+```yaml
+    langfuse: { publicKey: "${LANGFUSE_PUBLIC_KEY}", secretKey: "${LANGFUSE_SECRET_KEY}" }   # url: unless Langfuse's cloud
+```
+
+```yaml
+agents:
+  - name: support-triage
+    runs: { langfuse: { name: support-triage } }   # the name its traces have in Langfuse
+```
+
+| Line | Right when |
+|---|---|
+| `agents` | Each agent names the model Langfuse or your provider shows it using, and runs and tokens near what its dashboards say. "its model query gave no labels" means the query names a label the metrics do not carry. |
+| `runs` | `support-triage: 5 recent, N failed`, N being the runs Langfuse shows with an error in them. "no traces by its name" means the name is not the one its traces have. |
+
+This is checked against Langfuse's API reference with fakes. Langfuse itself is too heavy to run beside the rest of
+`bun run integration`.
+
 ## TeamCity and Jenkins
 
 ```yaml

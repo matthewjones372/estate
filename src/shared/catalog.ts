@@ -205,6 +205,8 @@ export const Agent = Schema.Struct({
     }),
   ),
   budget: optional(Schema.Struct({ tokens: Schema.Number, per: Schema.Literals(["day", "month"]) })),
+  /** Where its runs are traced: Langfuse's traces by their name. */
+  runs: optional(Schema.Struct({ langfuse: Schema.Struct({ name: Schema.String }) })),
   /** The share of runs failing that needs someone: 0.1 unless set. */
   failing: optional(Schema.Number),
   links: optional(Schema.Record(Schema.String, Schema.String)),

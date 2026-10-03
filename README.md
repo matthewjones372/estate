@@ -48,7 +48,7 @@ Estate puts the picture together once, keeps it live, and shows it to everyone. 
 | Deploys | Flux, Argo CD, Harness CD, ECS deployments |
 | Builds | GitHub Actions, GitLab CI, Jenkins, TeamCity, Harness CI |
 | Logs | Loki, Datadog, Elasticsearch/OpenSearch, or pod logs straight from the cluster |
-| AI agents | Runs, failures, tokens against a budget and the model in use, from the GenAI metrics they already send |
+| AI agents | Runs, failures, tokens against a budget and the model in use, from the GenAI metrics they already send; recent runs from Langfuse |
 | Notes, impact and alert history | Postgres, DynamoDB, or memory |
 
 Where Grafana sits in front of Prometheus and Loki, Estate reaches them through Grafana with one service account

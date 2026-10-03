@@ -108,6 +108,7 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
             category: agent.category,
             runbook: agent.runbook,
             budget: agent.budget,
+            runs: agent.runs === undefined ? undefined : true,
             links: linksOf(
               catalog,
               environment,

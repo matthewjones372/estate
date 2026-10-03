@@ -80,6 +80,18 @@ const earlierFirings = (end: number, step: number) => {
   return { status: "success", data: { resultType: "matrix", result: [{ metric, values }] } }
 }
 
+const traceOf = (id: string) => ({
+  id,
+  timestamp: new Date(now() - (id === "t2" ? 2 : 5) * 60_000).toISOString(),
+  htmlPath: `/project/shop/traces/${id}`,
+  latency: id === "t2" ? 31.2 : 9.4,
+  totalCost: id === "t2" ? 0.041 : 0.012,
+  observations: [
+    { type: "GENERATION", level: "DEFAULT", model: "claude-sonnet", usage: { total: id === "t2" ? 10_400 : 4_100 } },
+    ...(id === "t2" ? [{ type: "SPAN", level: "ERROR", statusMessage: "tool search_orders timed out" }] : []),
+  ],
+})
+
 const queryRange = (url: URL) => {
   const query = url.searchParams.get("query") ?? ""
   const start = Number(url.searchParams.get("start"))
@@ -155,6 +167,9 @@ const server = Bun.serve({
     const url = new URL(request.url)
     const path = url.pathname
     if (path === "/api/v1/query_range") return json(queryRange(url))
+    // Langfuse's traces of the support agent: one failed on a tool, one through.
+    if (path === "/api/public/traces") return json({ data: [{ id: "t2" }, { id: "t1" }], meta: { page: 1 } })
+    if (path.startsWith("/api/public/traces/")) return json(traceOf(path.split("/").at(-1) ?? ""))
     // The model the support agent uses, as the label of the series its query groups by.
     if (path === "/api/v1/query")
       return json({

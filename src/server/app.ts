@@ -4,6 +4,7 @@ import type { Mistake } from "../shared/shape"
 import { providerLayer } from "./auth/oidc"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { loadHistory, recordFirings, sweepHistory } from "./history"
+import { agentRunsRoute } from "./http/agents"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
 import { impactRoute } from "./http/impacts"
 import { kioskRoute } from "./http/kiosk"
@@ -93,6 +94,7 @@ export const application = Layer.mergeAll(
   debugOffRoute,
   logsRoute,
   errorsRoute,
+  agentRunsRoute,
 )
 
 const historyDays = (settings: Started["settings"]) => settings.alerts?.historyDays ?? 90

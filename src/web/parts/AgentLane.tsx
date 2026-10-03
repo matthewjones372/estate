@@ -3,12 +3,14 @@
  * An AI agent's lane: its health and why, the model it uses and since when, its runs, failures, slowest runs and
  * tokens over the last hour, its tokens against its budget, and its links and team.
  */
-import { Show } from "solid-js"
+import { createSignal, For, Show } from "solid-js"
+import type { AgentRun } from "../../shared/agents"
 import { type AgentState, tokens } from "../../shared/agents"
 import type { CatalogEvent, Series } from "../../shared/events"
-import { useSnapshot } from "../context"
-import { clock } from "../format"
+import { useEstate, useSnapshot } from "../context"
+import { clock, duration } from "../format"
 import { teamOf } from "../teams"
+import { Out } from "./A"
 import { HealthLine, Links } from "./Lane"
 import { Spark } from "./Sparkline"
 import { Owner } from "./Team"
@@ -35,6 +37,70 @@ export const shareOf = (part: Points, whole: Points): Points => {
     now: share(part.now, whole.now),
     points: part.points.map((point, index) => share(point, whole.points[index])),
   }
+}
+
+/** "$0.041", "$1.20": a run's cost, small as it usually is. */
+const dollars = (cost: number) => `$${cost < 1 ? cost.toFixed(3) : cost.toFixed(2)}`
+
+/** The agent's recent runs, read when opened: each one's outcome, how long, tokens, cost and model, and its trace. */
+const Runs = (props: { readonly agent: string }) => {
+  const { actions } = useEstate()
+  const [runs, setRuns] = createSignal<ReadonlyArray<AgentRun> | "closed" | "reading" | "none" | "failed">("closed")
+  const open = () => {
+    setRuns("reading")
+    void actions.runs(props.agent).then((read) => setRuns(read ?? "failed"))
+  }
+  return (
+    <div class="agent-runs">
+      <Show
+        when={runs() !== "closed" && runs() !== "reading"}
+        fallback={
+          <button type="button" class="plain-button" onClick={open} disabled={runs() === "reading"}>
+            {runs() === "reading" ? "Reading runs…" : "Recent runs"}
+          </button>
+        }
+      >
+        <Show
+          when={Array.isArray(runs())}
+          fallback={<p class="muted">{runs() === "none" ? "No runs to read here." : "The runs could not be read."}</p>}
+        >
+          <ol class="job-runs" aria-label={`Recent runs of ${props.agent}`}>
+            <For each={runs() as ReadonlyArray<AgentRun>}>
+              {(run) => (
+                <li class="job-run">
+                  <span class={`dot ${run.failed ? "attention" : "healthy"}`} />
+                  <span class="mono">{clock(run.startedAt)}</span>
+                  <span class={`rail-note ${run.failed ? "attention" : "quiet"}`}>
+                    {run.failed ? "failed" : "done"}
+                    {run.seconds === undefined
+                      ? ""
+                      : ` in ${run.seconds < 60 ? `${Math.round(run.seconds)} s` : duration(run.seconds * 1000)}`}
+                    {run.message === undefined ? "" : `: ${run.message}`}
+                  </span>
+                  <span class="muted mono">
+                    {[
+                      run.tokens === undefined ? undefined : `${tokens(run.tokens)} tokens`,
+                      run.cost === undefined ? undefined : dollars(run.cost),
+                      run.model,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                  <Show when={run.url}>
+                    {(url) => (
+                      <Out href={url()} class="plain-button">
+                        Trace
+                      </Out>
+                    )}
+                  </Show>
+                </li>
+              )}
+            </For>
+          </ol>
+        </Show>
+      </Show>
+    </div>
+  )
 }
 
 export const AgentLane = (props: { readonly agent: DescribedAgent; readonly state: AgentState | undefined }) => {
@@ -67,6 +133,9 @@ export const AgentLane = (props: { readonly agent: DescribedAgent; readonly stat
         <Spark label="p99" unit="s" series={usage()?.p99} />
         <Spark label="Tokens" unit="k/h" series={scaled(usage()?.tokens, 0.001)} />
       </div>
+      <Show when={props.agent.runs}>
+        <Runs agent={props.agent.name} />
+      </Show>
       <Links service={props.agent} />
       <Owner owner={props.agent.owner} team={teamOf(snapshot.events.catalog, props.agent.owner)} />
     </article>

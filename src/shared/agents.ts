@@ -27,7 +27,23 @@ export const DescribedAgent = Schema.Struct({
   runbook: optional(Schema.String),
   links: Schema.Array(Schema.Struct({ name: Schema.String, url: Schema.String })),
   budget: optional(Schema.Struct({ tokens: Schema.Number, per: Schema.Literals(["day", "month"]) })),
+  /** Whether its runs can be read, from the tool that traces them. */
+  runs: optional(Schema.Boolean),
 })
+
+/** One run of an agent, as the tool that traces it says: how it went, how long, its tokens and cost, and where. */
+export const AgentRun = Schema.Struct({
+  id: Schema.String,
+  startedAt: Instant,
+  failed: Schema.Boolean,
+  message: optional(Schema.String),
+  seconds: optional(Schema.Number),
+  tokens: optional(Schema.Number),
+  cost: optional(Schema.Number),
+  model: optional(Schema.String),
+  url: optional(Schema.String),
+})
+export type AgentRun = typeof AgentRun.Type
 
 export const AgentState = Schema.Struct({
   name: Schema.String,

@@ -22,6 +22,7 @@ agents:
       spent: sum(increase(gen_ai_client_token_usage_sum{gen_ai_agent_name="support-triage"}[1d]))
       model: group by (gen_ai_response_model) (gen_ai_client_token_usage_count{gen_ai_agent_name="support-triage"})
     budget: { tokens: 20000000, per: day }
+    runs: { langfuse: { name: support-triage } }
     links: { traces: 'https://grafana.example.com/explore?var-env={env}&agent={agent}' }
 
 # Who owns what: a service's, job's or agent's owner names one of these, and its links go wherever that owner is shown.
