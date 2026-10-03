@@ -291,8 +291,7 @@ bunx playwright test                                       # the pages against e
 
 ## Design notes
 
-The design is a canvas: https://claude.ai/artifact/CH96MB3RQrsthLVtWKNi4p, drawn for an example estate with its
-services, alerts and commits. Where this section and the canvas disagree, the canvas wins.
+The pages as built are in [`docs/overview.png`](../docs/overview.png) and [`docs/service.png`](../docs/service.png).
 
 **The look: a control room at night.** Dark and calm when all is well; amber is the only colour that asks for
 attention, spent on exactly what needs someone. Healthy is a small green dot beside the word, never a fill. Red is for
