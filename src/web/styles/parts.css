@@ -72,3 +72,16 @@
   font-size: 12px;
   color: var(--ink);
 }
+.rail-notes > span,
+.health-why {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.health {
+  min-width: 0;
+}
+.rail-notes > span:first-child {
+  flex: none;
+}

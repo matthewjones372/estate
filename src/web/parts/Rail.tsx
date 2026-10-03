@@ -73,7 +73,9 @@ export const Rail = (props: { readonly pipeline: Pipeline; readonly version: str
       </div>
       <div className="rail-notes mono">
         <span>{sha ?? ""}</span>
-        <span className={`rail-note ${tone}`}>{note}</span>
+        <span className={`rail-note ${tone}`} title={note}>
+          {note}
+        </span>
       </div>
       {props.version !== undefined && <span className="mono rail-version">{props.version}</span>}
     </div>

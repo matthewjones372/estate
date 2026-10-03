@@ -52,14 +52,19 @@ export const HealthLine = (props: { readonly state: ServiceState | undefined }) 
   const health = props.state?.health ?? "unknown"
   const pods = props.state?.pods ?? []
   const ready = pods.filter((pod) => pod.ready).length
-  const why = [...(props.state?.reasons ?? []), ...(pods.length > 0 ? [`${ready}/${pods.length} pods`] : [])].join(
-    " · ",
-  )
+  const reasons = props.state?.reasons ?? []
+  const first = reasons[0]
+  const why = [
+    ...(first === undefined ? [] : [reasons.length > 1 ? `${first} +${reasons.length - 1}` : first]),
+    ...(pods.length > 0 ? [`${ready}/${pods.length} pods`] : []),
+  ].join(" · ")
   return (
     <span className="health">
       <span className={`dot ${health}`} />
       <span className={`health-word ${health}`}>{healthWords[health]}</span>
-      <span className="muted">{why}</span>
+      <span className="muted health-why" title={reasons.join("\n")}>
+        {why}
+      </span>
     </span>
   )
 }

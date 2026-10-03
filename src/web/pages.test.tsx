@@ -113,7 +113,7 @@ describe("the pipeline rail", () => {
       pipelineOf([{ sha: "a", title: "t", status: "failure", at: "2026-10-03T11:00:00Z", url: "u" }], undefined, now),
     ).toMatchObject({ note: "build failed" })
     expect(
-      pipelineOf([], { environment: "x", running: "v1", chosen: { version: "v2", ready: false } }, now),
+      pipelineOf([], { environment: "x", seen: true, running: "v1", chosen: { version: "v2", ready: false } }, now),
     ).toMatchObject({ note: "rolling out" })
     expect(pipelineOf([], undefined, now)).toMatchObject({
       steps: ["waiting", "waiting", "waiting", "waiting"],
@@ -209,5 +209,21 @@ describe("the other pages", () => {
       "It is open to ops, admins.",
     )
     expect(text(renderToStaticMarkup(<NoAccess name="eve" groups={[]} />))).toContain("nobody yet")
+  })
+})
+
+describe("an environment whose cluster is not read", () => {
+  test("says what runs there is not known, rather than that nothing runs", () => {
+    const unseen = {
+      ...events,
+      deploys: {
+        ...events.deploys,
+        services: events.deploys.services.map((service) => ({
+          ...service,
+          environments: service.environments.map((each) => ({ ...each, seen: false })),
+        })),
+      },
+    }
+    expect(text(render(<Deploys />, { sent: unseen }))).toContain("not read here")
   })
 })

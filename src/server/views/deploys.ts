@@ -19,6 +19,7 @@ export const deploysView = (estate: EstateState): DeploysEvent => {
           const chosen = state?.deploys.value?.[service.name]
           return compact({
             environment,
+            seen: state?.cluster.value !== undefined,
             running: versionOf(pods.find((pod) => pod.ready)?.image ?? pods[0]?.image),
             chosen:
               chosen === undefined

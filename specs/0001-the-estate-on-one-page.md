@@ -264,13 +264,18 @@ Nothing. Its first estate, lark-bank, adopts it in its own spec 0026.
       the first level back wherever `debug-until` has passed. With `kubernetes.impersonate`, the patch is made as the
       person and their groups, so the cluster's RBAC decides and its audit names them; `deploy/rbac.yaml` gives Estate
       `patch` on ConfigMaps for the rest.
-- [ ] **`feed`** — what changed today, from the sources and Estate's own records.
+- [x] **`feed`** — what changed today, from the sources and Estate's own records.
+      *Notes:* the last day, newest first, sixty at most: alerts fired and resolved, silences with who and why (as
+      Alertmanager keeps them), notes, debug switched on (from its annotations), what Flux applied, builds that
+      finished, and jobs that ran. Each comes from its source's own time, so it survives Estate restarting, except
+      resolved alerts, which Estate sees go and keeps for a day while it runs.
 
 ## Acceptance
 
 ```bash
 bun run gate
 docker run -v ./examples:/etc/estate -p 8080:8080 estate   # the example catalog, against nothing: every part says why
+bunx playwright test                                       # the pages against e2e/tools.ts, a fake estate's tools
 ```
 
 ## Open questions

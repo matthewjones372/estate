@@ -181,9 +181,15 @@ export const events: Events = {
           },
         ],
         environments: [
-          { environment: "staging", running: "v2", chosen: { version: "v2", ready: true, at: "2026-10-03T11:10:00Z" } },
+          {
+            environment: "staging",
+            seen: true,
+            running: "v2",
+            chosen: { version: "v2", ready: true, at: "2026-10-03T11:10:00Z" },
+          },
           {
             environment: "production",
+            seen: true,
             running: "v2",
             chosen: { version: "v2", ready: true, at: "2026-10-03T11:20:00Z" },
           },
@@ -203,6 +209,7 @@ export const events: Events = {
         environments: [
           {
             environment: "production",
+            seen: true,
             running: "v7",
             chosen: { version: "v8", ready: false },
             stalled: "cannot scan the registry",
