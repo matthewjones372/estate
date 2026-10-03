@@ -33,13 +33,17 @@ export const Service = Schema.Struct({
   runtime: optional(Schema.Struct({ kubernetes: optional(Kubernetes) })),
   /** The same as `runtime.kubernetes`, as catalogs written before `runtime` name it. */
   kubernetes: optional(Kubernetes),
+  /** What deploys it, by that tool's own names: Flux's Kustomization and ImagePolicy, or Argo CD's Application. */
   deploy: optional(
     Schema.Struct({
-      flux: Schema.Struct({
-        kustomization: Schema.String,
-        namespace: optional(Schema.String),
-        imagePolicy: optional(Schema.String),
-      }),
+      flux: optional(
+        Schema.Struct({
+          kustomization: Schema.String,
+          namespace: optional(Schema.String),
+          imagePolicy: optional(Schema.String),
+        }),
+      ),
+      argo: optional(Schema.Struct({ application: Schema.String })),
     }),
   ),
   load: optional(

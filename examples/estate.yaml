@@ -23,6 +23,8 @@ sources:
     # elasticsearch: { url: https://logs.production.invalid:9200, index: "logs-*", apiKey: ${ELASTIC_API_KEY} }
     kubernetes: { url: https://kubernetes.production.invalid:6443 }
     flux: {}
+    # Or Argo CD, in place of Flux, with a token that may read its Applications:
+    # argo: { url: https://argocd.production.invalid, token: ${ARGO_TOKEN} }
 
 builds:
   github: {}

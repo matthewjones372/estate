@@ -14,7 +14,7 @@ runs, in every environment, without anyone building a dashboard.
 
 ![The overview: what needs you, the estate drawn live, each service's lane, and what changed today](docs/overview.png)
 
-Your team already has the answers. The alerts are in Alertmanager or Grafana, what runs where is in Kubernetes and Flux, the
+Your team already has the answers. The alerts are in Alertmanager or Grafana, what runs where is in Kubernetes and Flux or Argo CD, the
 builds are in GitHub, the load is in Prometheus. Each morning, and at every alert, someone joins them up in their
 head across five tabs. Estate does the joining:
 
@@ -27,7 +27,7 @@ head across five tabs. Estate does the joining:
   running, its last hour of requests, errors and p99, and its links (the app, its API docs, logs, traces, dashboard,
   repository, runbook).
 - **Deploys across environments** side by side, so a version moving from staging to production is one row, and a
-  stalled step says why in the words Flux or GitHub used.
+  stalled step says why in the words Flux, Argo CD or GitHub used.
 - **Debug logging with an off switch**: turn it on for fifteen minutes from the page, under your name; it turns
   itself off, and a restart of Estate forgets nothing.
 - **Jobs and CronJobs**: last runs, how they ended, the next one, and the run that should have happened and didn't.

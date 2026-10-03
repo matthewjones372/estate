@@ -8,9 +8,11 @@ import type { Settings, Sources } from "../settings"
 export const runtimeOf = (section: Sources): "kubernetes" | undefined =>
   section.kubernetes === undefined ? undefined : "kubernetes"
 
-/** What chose each version and applied it; Flux reads through the cluster it runs in. */
-export const deploysOf = (section: Sources): "flux" | undefined =>
-  section.flux !== undefined && runtimeOf(section) === "kubernetes" ? "flux" : undefined
+/** What chose each version and applied it: Argo CD through its own API, or Flux through the cluster it runs in. */
+export const deploysOf = (section: Sources): "argo" | "flux" | undefined => {
+  if (section.argo !== undefined) return "argo"
+  return section.flux !== undefined && runtimeOf(section) === "kubernetes" ? "flux" : undefined
+}
 
 /** Where firing, pending and silenced alerts are read. */
 export const alertsOf = (section: Sources): ReadonlyArray<"alertmanager" | "grafana" | "prometheus"> => [

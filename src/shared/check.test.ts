@@ -164,6 +164,17 @@ describe("a link's values", () => {
   })
 })
 
+describe("a service's deploy tool", () => {
+  test("is Flux or Argo CD, one of them", () => {
+    const environments = [{ name: "a", sources: "a" }]
+    const deployed = (deploy: unknown) =>
+      mistakes({ environments, services: [{ name: "s", environments: ["a"], deploy }] })
+    expect(deployed({ argo: { application: "shop-s" } })).toEqual([])
+    expect(deployed({})).toEqual([{ at: "services[0] (s).deploy", message: "names one deploy tool, flux or argo" }])
+    expect(deployed({ argo: { application: "a" }, flux: { kustomization: "k" } })).toHaveLength(1)
+  })
+})
+
 describe("a service's runtime and builds", () => {
   test("may be named by kind, as runtime.kubernetes and build.github, but Kubernetes not both ways", () => {
     const kubernetes = { namespace: "shop", workloads: [{ kind: "Deployment", name: "orders" }] }

@@ -90,6 +90,10 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
       query(`${at}.stats (${stat.title})`, stat.query)
     })
     links(at, service.environments, service.links, servicePlaceholders)
+    const deploy = service.deploy
+    if (deploy !== undefined && (deploy.flux === undefined) === (deploy.argo === undefined)) {
+      mistake(`${at}.deploy`, "names one deploy tool, flux or argo")
+    }
     if (service.kubernetes !== undefined && service.runtime?.kubernetes !== undefined) {
       mistake(at, "names Kubernetes twice, as kubernetes and as runtime.kubernetes; keep one")
     }

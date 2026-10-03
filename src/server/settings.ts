@@ -66,6 +66,8 @@ const Sources = Schema.Struct({
   grafana: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
   kubernetes: optional(Kubernetes),
   flux: optional(Schema.Struct({})),
+  /** Argo CD, in place of Flux: its URL and a token that may read its Applications. */
+  argo: optional(Schema.Struct({ url: Schema.String, token: optional(Secret) })),
 })
 
 export type Kubernetes = typeof Kubernetes.Type

@@ -6,6 +6,7 @@ import type { Settings } from "../settings"
 import { Estate } from "../state"
 import { inEnvironment } from "../views/catalog"
 import { readAlerts, withResolved } from "./alerts"
+import { readArgo } from "./argo"
 import { readCluster } from "./cluster"
 import { revertExpired } from "./debug"
 import { readDeploys } from "./flux"
@@ -48,6 +49,11 @@ const readersFor = (
       return yield* readMetrics(url, grafana, estate.catalog, inEnvironment(estate.catalog, here), stores, firing, now)
     })
     readers.push(runSource(environment.name, "metrics", "30 seconds", read))
+  }
+  const { argo } = section
+  if (deploysOf(section) === "argo" && argo !== undefined) {
+    const read = Effect.flatMap(servicesIn(environment.name), (services) => readArgo(argo, services))
+    readers.push(runSource(environment.name, "deploys", "30 seconds", read))
   }
   const { kubernetes } = section
   if (runtimeOf(section) === "kubernetes" && kubernetes !== undefined) {

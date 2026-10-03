@@ -116,7 +116,7 @@ the image stays small.
       keys above beside today's.
       Done when: every existing test passes through the ports, and a catalog using the new keys for today's kinds
       is the same page.
-- [ ] **`argo`** — Argo CD Applications: sync status, health, the revision chosen, why a sync failed.
+- [x] **`argo`** — Argo CD Applications: sync status, health, the revision chosen, why a sync failed.
       Done when: an Application out of sync shows its rail stalled with Argo's message.
 - [ ] **`gitlab`** — GitLab CI pipelines on a ref, with ETags.
       Done when: a running pipeline shows the build step in progress, and a failed one names its job.

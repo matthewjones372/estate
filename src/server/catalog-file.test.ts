@@ -30,12 +30,14 @@ describe("the catalog file", () => {
         b: { alertmanager: { url: "a" }, kubernetes: {}, flux: {} },
         c: { flux: {} },
         d: { grafana: { url: "g" } },
+        e: { argo: { url: "a" } },
       },
     }
     expect([...configuredKinds(configured, "a")]).toEqual(["metrics", "alerts"])
     expect([...configuredKinds(configured, "b")]).toEqual(["alerts", "cluster", "deploys"])
     expect([...configuredKinds(configured, "c")]).toEqual([])
     expect([...configuredKinds(configured, "d")]).toEqual(["alerts"])
+    expect([...configuredKinds(configured, "e")]).toEqual(["deploys"])
   })
 
   test("a new catalog keeps what is known of environments it keeps, and forgets the rest", () => {
