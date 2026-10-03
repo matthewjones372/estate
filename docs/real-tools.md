@@ -2,10 +2,10 @@
 
 Estate's unit tests run every integration against fakes that answer in each tool's documented shape.
 `bun run integration` runs Estate's readers and writers against the real Prometheus, Alertmanager, Grafana, Loki,
-Elasticsearch, Postgres, DynamoDB Local, Jenkins and Kubernetes (k3s, with Flux's resources) in containers, in about
-three minutes. The tools that only run as
-a service (Datadog, Harness, GitHub), and TeamCity, whose server and build agent are too heavy for the suite, are
-checked against a real account the way below, in a few minutes, without Estate changing anything.
+Elasticsearch, Postgres, DynamoDB Local, Jenkins, CloudWatch's alarms (LocalStack) and Kubernetes (k3s, with Flux's
+resources) in containers, in about three minutes. The tools that only run as a service (Datadog, Harness, GitHub),
+TeamCity and Argo CD, whose servers are too heavy for the suite, and CloudWatch's metrics, which LocalStack cannot
+answer, are checked against a real account the way below, in a few minutes, without Estate changing anything.
 
 ## Before you start
 

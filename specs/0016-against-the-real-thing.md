@@ -11,6 +11,9 @@ trust a fake alone.
 
 - **SaaS-only tools.** Datadog, Harness, GitHub Actions and Argo CD's hosted forms have no container. They stay on
   fakes, checked against a real account with `estate doctor` as `docs/real-tools.md` describes.
+- **Argo CD, ECS and CloudWatch's metrics.** Argo CD's server, repo server and controller are too heavy for a suite
+  beside the rest; ECS is not in LocalStack's free edition; and LocalStack's GetMetricData takes no expressions,
+  which are all Estate sends. Each stays on fakes and `estate doctor`.
 - **Replacing the fakes.** The unit tests and Playwright keep their fakes: fast, exact, and able to play failures a
   real tool will not.
 - **Running in the gate.** Real tools take tens of seconds to start and need Docker. The suite is its own command.
@@ -32,6 +35,7 @@ a log line, an index), and then asks Estate's own readers and writers, the same 
 | Logs | Loki, Elasticsearch | a service's lines, newest first in the window, masked, and its errors grouped |
 | Notes | Postgres, DynamoDB Local | notes kept across a restart, and ended after `keepDays` |
 | Jenkins | Jenkins | a job's running, failed and passing builds |
+| CloudWatch | LocalStack | an alarm in ALARM firing about its service with the expression it charts, INSUFFICIENT_DATA pending, OK not an alert, through Estate's own signed calls |
 | Kubernetes | k3s's control plane, Flux's CRDs | a Deployment's pods by its selector; the debug switch under `deploy/rbac.yaml` alone; a CronJob's runs as the Job controller ended them; the tag an ImagePolicy chose and a policy's stall; a CronJob or ConfigMap the catalog names and the cluster lacks, said for that service alone |
 
 ## Why this shape
@@ -63,6 +67,8 @@ Docker where the suite runs.
       Done when: a note survives a restart of Estate's notes against each.
 - [x] **`real-jenkins`** — Jenkins.
       Done when: a job built three times reads as its three builds.
+- [x] **`real-cloudwatch`** — CloudWatch's alarms, in LocalStack.
+      Done when: alarms set to each state with SetAlarmState read as Estate's alerts.
 - [x] **`real-kubernetes`** — Kubernetes and Flux's resources, Estate signed in with a token held to its own RBAC.
       Done when: a Deployment's pods, the debug switch, a CronJob's runs and Flux's choice read as the cluster has them.
 
