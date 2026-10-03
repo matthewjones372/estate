@@ -10,33 +10,49 @@
 
 **A control room for your engineering estate.**
 
-Estate is designed to answer one question in five seconds: **how is our stack doing right now?**
+When something breaks in production, the problem usually isn't a lack of telemetry. It's that the context you need
+is spread across several systems.
 
-It brings together the signals you already have (alerts, deploys, builds, Kubernetes, load, jobs) into one live
-page per environment. It doesn't replace Prometheus, Grafana, Alertmanager, Datadog, Flux or GitHub Actions. **It
-sits above them**, and everything on the page links back to the tool that owns it, so the place to dig in is one
-click away.
+An alert might be in Grafana. The useful logs might be in Elasticsearch. The deployment is in GitHub or Jenkins. The
+workload is in Kubernetes. Ownership is in your service catalogue. The runbook is in Confluence. The people
+investigating it are in Slack.
+
+**Estate puts that context together on one live page for each service, then takes you to the system that has the
+detail.**
 
 ![The overview: what needs you now, each service's lane, and what changed today](docs/overview.png)
 
-## Why Estate?
+## Why does Estate exist?
 
-Teams rarely lack operational data. What they lack is knowing **what matters right now**. A deploy has just rolled
-out, an alert has fired, a build has failed, a pod is restarting, and each of those is in a different tool. Someone
-opens six tabs to put the picture together, and the next person does it again.
+Estate is not another observability platform, and it isn't trying to replace Grafana, Datadog, Elasticsearch,
+Kubernetes, GitHub or your other engineering tools.
 
-Estate puts the picture together once, keeps it live, and shows it to everyone. It answers:
+If your entire engineering estate has already been standardised around one platform, with your metrics, logs,
+deployments, incidents, ownership and runbooks all integrated into it, you probably don't need Estate.
 
-- **Is anything wrong?** What's firing, drawn against its threshold, with its runbook, what it means for the people
-  using the product, and whether it has happened before.
-- **What changed?** Deploys, builds, alerts, silences and notes from today, in one feed.
-- **What's deployed where?** Each service's path from commit to build to the version running, in every environment,
-  and a deploy that stalled says why in the deploy tool's own words.
-- **How busy is it?** The last hour of requests, errors and p99 for every service, and stats for its databases,
-  queues and caches.
-- **Who do I ask?** Each service's team, with its Slack or Teams channel, its Confluence or Notion pages and its
-  on-call.
-- **Where do I look next?** Its logs, traces, dashboards and API docs, one click away.
+Real engineering estates are often different. Teams accumulate tools over time. One service might use Prometheus and
+Grafana, another Datadog, another CloudWatch. Logs might live in Elasticsearch or Loki. Deployments might run through
+GitHub Actions, Jenkins, Harness or Argo CD. Kubernetes tells you what is running, while Slack, Confluence and your
+service catalogue contain the human context.
+
+Those tools are good at their individual jobs. The problem is the gaps between them. When an alert fires, the
+investigation often looks like this:
+
+> Alert → metrics → logs → recent deployment → repository → ownership → Slack → runbook
+
+Estate turns that investigation into a single starting point. For each service, it brings together:
+
+- **What's wrong?** Alerts, thresholds, impact and history
+- **What changed?** Deployments, builds, alerts, silences and notes
+- **What's running?** Kubernetes and deployment state
+- **How is it behaving?** Request rate, errors, latency and supporting signals
+- **Who owns it?** Team, repository and contact information
+- **Where do I look next?** Logs, dashboards, traces, runbooks and source systems
+
+Estate doesn't ingest your entire estate into another platform. It reads the systems you already use and provides
+the missing context between them.
+
+That's the job of Estate: **something's wrong. What do I need to know, and where do I look next?**
 
 ## What it brings together
 
