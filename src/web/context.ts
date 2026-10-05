@@ -27,6 +27,14 @@ export interface Actions {
   readonly runs: (agent: string) => Promise<ReadonlyArray<AgentRun> | "none" | undefined>
   /** A service's errors grouped, over a range or since a time: "none" where it has no logs to read. */
   readonly errors: (service: string, window: ErrorWindow) => Promise<ErrorGroups | "none" | undefined>
+  /**
+   * Ask AI about an alert: streams text chunks, then returns the structured answer, an error message, or undefined
+   * when Ask AI is not configured or the request failed.
+   */
+  readonly askAlert: (
+    alert: string,
+    onChunk: (text: string) => void,
+  ) => Promise<import("./parts/AskAi").AskAnswer | string | undefined>
 }
 
 export interface LogHandlers {
