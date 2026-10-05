@@ -28,7 +28,7 @@ storage for runners, shard locks and messages) and, in `@effect/platform-bun`, `
   is attached to.
 - **Reads a viewer asks for.** A service's live logs (the log hub), `/api/load` ranges, *Around this alert* and Ask AI
   are read by the replica serving that viewer, on demand, as now. They cost per viewer, not per replica.
-- **Changing the default.** Without a `cluster:` section Estate is the one process it is today: no Sharding layer, no
+- **Changing the default.** Without `cluster: true` Estate is the one process it is today: no Sharding layer, no
   SQL client for it, no extra port.
 - **Sharding by environment, yet.** One owner reads every environment first; spreading environments across runners is
   a later entry, the same code with a different key.
@@ -36,14 +36,25 @@ storage for runners, shard locks and messages) and, in `@effect/platform-bun`, `
 ## Shape
 
 ```yaml
-# estate.yaml: absent means one process, exactly as today
-cluster:
-  runner: ${POD_IP}:34431          # this runner's address as the others reach it
-  listen: 0.0.0.0:34431            # optional; defaults to the runner's port on every interface
-  health: ping                     # or k8s: runners judged by their pods (needs get/list pods)
+# estate.yaml — that's it for most deploys
+cluster: true
 notes:
-  postgres: ${ESTATE_POSTGRES}     # required with cluster: shard locks and runners live beside the notes
+  postgres: ${ESTATE_POSTGRES}   # already required for notes; cluster reuses it
 ```
+
+Defaults when `cluster: true`: runner address from `POD_IP` (Kubernetes downward API) or the hostname, port
+**34431**; listen `0.0.0.0:34431`; health `ping`; `BunClusterSocket` and SQL storage on the same Postgres as notes.
+Absent or false means one process, exactly as today.
+
+Override only when you must (a non-default port, or `k8s` health):
+
+```yaml
+cluster:
+  true                          # or { port: 34431, health: k8s } if you must override
+```
+
+Prefer the boolean. A struct is only for overrides. The `deploy/cluster` kustomize patch just flips `cluster: true`,
+sets `POD_IP`, and opens 34431 between Estate pods — no mini-mesh to invent.
 
 ```mermaid
 flowchart LR
@@ -81,7 +92,7 @@ Every runner, owner included
   shared views, /events, /readyz, kiosk, /mcp read that SubscriptionRef, unchanged
   /readyz: ready once the first whole state has arrived; its body names the role
 
-Without cluster:
+Without `cluster: true`:
   background runs in-process, as today; no effect/cluster module is loaded
 ```
 
@@ -114,12 +125,16 @@ Storage is the Postgres already holding notes, with `SqlRunnerStorage` and `SqlM
 port, which keeps runner RPCs off the ingress that serves the pages; `BunClusterHttp` would share the port and is not
 needed. Bun over Node because Estate is Bun throughout.
 
-The cost is real, and one replica is still the right answer for most estates. Clustering needs Postgres (DynamoDB
-notes cannot hold the locks), a second port open between pods with a network policy that allows it, a pod address
-each runner knows, and a failover that takes up to the shard lock's expiry (35 s by default) plus one read, during
-which pages show the last state with its age, as they do when a source is slow. A single replica restarts in about
-the same time. Recommended: stay on one replica unless the tools' rate limits are being met by N replicas, a node loss
-must not blank the page, or the viewers (a wall of kiosks) outgrow one process.
+The point of the opt-in is **one boolean**, not a second product to configure. `cluster: true` turns on the
+defaults above; Postgres is the notes database you already have, the runner address is `POD_IP` or the hostname, and
+the port is fixed. The Entity / Follow / Apply shape stays; only the operator surface shrinks to a flag.
+
+The cost is still real, and one replica is still the right answer for most estates. Clustering needs Postgres (DynamoDB
+notes cannot hold the locks), port 34431 open between Estate pods, and a failover that takes up to the shard lock's
+expiry (35 s by default) plus one read, during which pages show the last state with its age, as they do when a source
+is slow. A single replica restarts in about the same time. Recommended: stay on one replica unless the tools' rate
+limits are being met by N replicas, a node loss must not blank the page, or the viewers (a wall of kiosks) outgrow
+one process.
 
 ## Depends on
 
@@ -127,9 +142,9 @@ must not blank the page, or the viewers (a wall of kiosks) outgrow one process.
   questions).
 - **An Effect `SqlClient` for Postgres.** Estate's notes use Bun's `SQL` through a small `Query`, not Effect's
   `SqlClient`, and 4.0.0 ships no Postgres client in `effect/sql`. `@effect/sql-pg` is published at 4.0.0; adding it
-  is a `package.json` change in `cluster-opt-in`, not here. Until then nothing changes: no `cluster:`, no client.
-- **Spec 0024's `/mcp`** for the MCP tools to be served by every runner; they read the same `SubscriptionRef`, so they
-  follow for free when that server lands.
+  is a `package.json` change in `cluster-opt-in`, not here. Until then nothing changes: no `cluster: true`, no client.
+- **Spec 0024's `/mcp`** — already on main (PR #7). Every runner serves the same MCP tools from its
+  `SubscriptionRef`; they follow for free.
 
 ## Stack
 
@@ -137,11 +152,12 @@ One entry per pull request, in build order.
 
 - [x] **`spec-0026`** — this spec, and its row in `specs/README.md` as proposed.
       Done when: `specs/0026-one-read-many-pages.md` is committed and the README lists 0026 as proposed.
-- [ ] **`cluster-opt-in`** — `cluster:` in the settings; `@effect/sql-pg` on `notes.postgres`;
+- [ ] **`cluster-opt-in`** — `cluster: true` (boolean) or a small override struct in the settings;
+      `@effect/sql-pg` on `notes.postgres`; defaults for runner/`POD_IP`, listen `0.0.0.0:34431`, health `ping`;
       `BunClusterSocket.layer` with SQL storage under `estate_cluster`; the cluster modules loaded only when
-      `cluster:` is set.
-      Done when: settings tests name `cluster:` without `notes.postgres` as a mistake; a test serves with no
-      `cluster:` and no database and builds no `Sharding`; `bun run gate` passes unchanged.
+      `cluster` is true.
+      Done when: settings tests accept `cluster: true` with `notes.postgres` and reject `cluster: true` without it;
+      a test serves with no `cluster` and no database and builds no `Sharding`; `bun run gate` passes unchanged.
 - [ ] **`scrape-singleton`** — the `Estate` entity, id `"estate"`, running what `background` runs today and kept
       alive; a runner that does not own it runs no readers, sweeps or firing records.
       Done when: under `TestRunner`, the readers start once however many runners follow, and stop when the owning
@@ -161,10 +177,11 @@ One entry per pull request, in build order.
       stub sources that count their calls; the owner killed.
       Done when: two runners make as many calls a read interval as one; after the owner is killed the other reads
       within 60 s, and its pages keep their frames meanwhile.
-- [ ] **`deploy-ha`** — `deploy/cluster/`: a patch for two replicas, `POD_IP`, port 34431, a network policy between
-      Estate's pods and a disruption budget; `examples/cluster/` settings for two local runners; the README's section
-      on when to bother.
-      Done when: `kubectl kustomize deploy/cluster` renders, and the base `deploy/` still says `replicas: 1`.
+- [ ] **`deploy-ha`** — `deploy/cluster/`: a patch that flips `cluster: true`, sets `POD_IP`, opens port 34431
+      between Estate pods, two replicas and a disruption budget; `examples/cluster/` as two lines of yaml each
+      (`cluster: true` + the shared `notes.postgres`); the README's short "when to bother".
+      Done when: examples are two lines of yaml + the patch; `kubectl kustomize deploy/cluster` renders; the base
+      `deploy/` still says `replicas: 1`; README "when to bother" stays short.
 
 Later, not in this stack: **`shard-by-environment`**, the entity keyed by environment so each runner reads some.
 
@@ -185,7 +202,7 @@ bun src/server/main.ts doctor     # cluster: 2 runners, estate read by one
 ## Open questions
 
 - **Adopt now, or wait for Cluster to leave `unstable`?** Every cluster module in 4.0.0 is marked
-  `@stability unstable`. Recommended: adopt now, behind `cluster:` only. The default path never loads the cluster
+  `@stability unstable`. Recommended: adopt now, behind `cluster: true` only. The default path never loads the cluster
   modules, Effect is pinned exactly, and a breaking 4.x change then costs the opt-in path one PR, not every deploy.
   If the opt-in has no user by the time it is built, park `scrape-singleton` onward rather than carry it.
 - **`@effect/sql-pg` or a `SqlClient` over Bun's `SQL`?** Recommended: `@effect/sql-pg`. It is maintained beside
@@ -199,8 +216,8 @@ bun src/server/main.ts doctor     # cluster: 2 runners, estate read by one
 - **Two owners for a moment?** A runner cut off from Postgres keeps reading until it notices its lock is gone (up to
   35 s). Reads are harmless twice; firings are upserted by environment, alert and start, sweeps and debug reverts are
   idempotent. Recommended: accept it, rather than fencing every write with the lock.
-- **`readOnly: true` with `cluster:`?** Today read-only ignores `notes.postgres`. Recommended: allow the cluster tables
-  in read-only, since they are Estate's own and change nothing in the estate's tools; notes stay in memory.
-- **Runner health: `ping` or `k8s`?** Recommended: `ping` by default, since it works wherever Estate runs (ECS, a VM,
-  a laptop). `k8s` judges runners by their pods and notices a lost one sooner; `deploy/rbac.yaml` already lets Estate
-  get and list pods, so it costs nothing extra in Kubernetes.
+- **`readOnly: true` with `cluster: true`?** Today read-only ignores `notes.postgres`. Recommended: allow the cluster
+  tables in read-only, since they are Estate's own and change nothing in the estate's tools; notes stay in memory.
+- **Runner health: `ping` or `k8s`?** Recommended: `ping` when `cluster: true` (works on ECS, a VM, a laptop).
+  Override with `cluster: { health: k8s }` only when you want pods to judge runners sooner; `deploy/rbac.yaml` already
+  lets Estate get and list pods, so it costs nothing extra in Kubernetes.
