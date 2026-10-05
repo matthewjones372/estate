@@ -78,6 +78,7 @@ Grafana's alerting, Argo CD and Elasticsearch, or an environment read wholly fro
 - turn on debug logging for a service for 15 minutes; it switches itself back off
 - watch a service's logs live, or see its errors grouped by message
 - compare what's deployed in each environment
+- ask AI about an alert when `ai` is set in `estate.yaml` (Anthropic, OpenAI, xAI/Grok, Gemini, or any OpenAI-compatible server)
 
 Viewers see everything and add notes. Operators can also silence, switch debug, and write what an alert means.
 
