@@ -7,6 +7,7 @@ import { useEstate } from "../context"
 import { amount, clock, initials, since } from "../format"
 import { chatOf, teamOf } from "../teams"
 import { A, Out } from "./A"
+import { AroundLine } from "./Around"
 import { History } from "./History"
 import { Impact } from "./Impact"
 import { Icon } from "./icons"
@@ -207,7 +208,9 @@ export const AlertCard = (props: {
     <article class={`alert-card ${props.alert.severity === "critical" ? "critical" : ""}`}>
       <div class="alert-head">
         <span class="severity">{props.alert.severity}</span>
-        <span class="mono alert-name">{props.alert.name}</span>
+        <A to={`/alerts/${encodeURIComponent(props.alert.id)}`} class="mono alert-name">
+          {props.alert.name}
+        </A>
         <span class="alert-for">firing {since(props.alert.startsAt, now())}</span>
       </div>
       <div>
@@ -216,6 +219,7 @@ export const AlertCard = (props: {
       </div>
       <Impact alert={props.alert} />
       <History alert={props.alert} />
+      <AroundLine alert={props.alert} />
       <Show when={props.alert.chart}>{(chart) => <Chart name={props.alert.name} chart={chart()} />}</Show>
       <Notes alert={props.alert} />
       <Show when={choosing()}>
