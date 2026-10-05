@@ -182,3 +182,48 @@ test("treats Anthropic empty content as an empty answer to parse", () => {
     ),
   ).then((result) => expect(result._tag).toBe("Failure"))
 })
+
+test("asks xAI (Grok) through its OpenAI-compatible API", () => {
+  const ai: Ai = { provider: "xai", model: "grok-test", apiKey: Redacted.make("sk") }
+  const answer = (call: Call): Reply | undefined => {
+    if (!call.url.startsWith("https://api.x.ai/v1/chat/completions")) return undefined
+    expect(call.headers?.["authorization"]).toBe("Bearer sk")
+    return {
+      status: 200,
+      headers: {},
+      text: JSON.stringify({ choices: [{ message: { content: jsonAnswer } }] }),
+    }
+  }
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const model = yield* Model
+      return yield* model.ask("brief", "why?")
+    }).pipe(Effect.provide(liveModel(ai).pipe(Layer.provide(stubRemote(answer))))),
+  ).then((result) => {
+    expect(result.model).toBe("grok-test")
+    expect(result.likelyCause).toContain("deploy")
+  })
+})
+
+test("asks Gemini through Google's OpenAI-compatible API", () => {
+  const ai: Ai = { provider: "gemini", model: "gemini-test", apiKey: Redacted.make("gk") }
+  const answer = (call: Call): Reply | undefined => {
+    if (!call.url.startsWith("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"))
+      return undefined
+    expect(call.headers?.["authorization"]).toBe("Bearer gk")
+    return {
+      status: 200,
+      headers: {},
+      text: JSON.stringify({ choices: [{ message: { content: jsonAnswer } }] }),
+    }
+  }
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const model = yield* Model
+      return yield* model.ask("brief", "why?")
+    }).pipe(Effect.provide(liveModel(ai).pipe(Layer.provide(stubRemote(answer))))),
+  ).then((result) => {
+    expect(result.model).toBe("gemini-test")
+    expect(result.likelyCause).toContain("deploy")
+  })
+})
