@@ -45,7 +45,7 @@ export const Around = (props: { readonly alert: Alert }) => {
           {(name) => (
             <p class="alert-quiet">
               <A to={`/services/${encodeURIComponent(name())}`}>{name()}</A>
-              {" \u00b7 "}
+              {" · "}
               look at deploys and builds for what changed
             </p>
           )}
