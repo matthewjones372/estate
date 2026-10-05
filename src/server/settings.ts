@@ -106,7 +106,7 @@ const Sources = Schema.Struct({
       loki: optional(Schema.String),
     }),
   ),
-  kube: optional(Kubernetes),
+  kubernetes: optional(Kubernetes),
   flux: optional(Schema.Struct({})),
   /** AWS, for services on ECS: the region, through the credentials AWS's tools would find. */
   aws: optional(Schema.Struct({ region: Schema.String, endpoint: optional(Schema.String) })),
