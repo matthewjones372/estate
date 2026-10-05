@@ -96,3 +96,9 @@ button.map-category:hover {
   flex-direction: column;
   gap: 12px;
 }
+
+/* Dead edges: solid muted red, no dash flow (class flow is omitted). */
+line.dead {
+  stroke-dasharray: none;
+  animation: none;
+}
