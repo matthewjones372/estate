@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 /**
- * The overview: the headline, what needs someone, then vitals and the map, a lane per service and per store, and what
- * changed. Alert → context, not vitals-first.
+ * The overview: the headline, what needs someone, then vitals and the map, services as list lanes or a denser grid,
+ * stores, and what changed. Alert → context, not vitals-first.
  */
 import { For, Show } from "solid-js"
 import type { Alert, Events } from "../../shared/events"

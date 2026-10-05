@@ -36,8 +36,11 @@ Around this alert (no AI needed)
   + depends, errors (link), before, runbook — from views already on the page
 
 Ask AI (when ai: is set)
-  settings.ai → HttpClient model port (Anthropic | OpenAI-compatible)
+  settings.ai → HttpClient model port (Anthropic | OpenAI-compatible | xai | gemini)
   POST /api/alerts/:id/ask  streams a structured answer on the alert page
+
+Overview services layout (viewer preference)
+  List (lanes, default) ↔ Grid (compact cards) — kept in localStorage, not catalog config
 ```
 
 ```yaml
@@ -86,6 +89,8 @@ stack entry there.
 - [ ] **`ask-ai`** — `settings.ai`, model port via HttpClient, `POST /api/alerts/:id/ask` streaming, Ask panel on the
       alert page; structured answer; graceful when unset; light rate limit; fake-model tests.
       Done when: against a fake that calls tools, the panel shows likely cause, evidence, next steps and confidence.
+- [x] **`services-layout`** — overview List/Grid toggle for services; `parts/ServiceGrid.tsx`; preference via `kept`.
+      Done when: lanes suite switches to grid and shows storefront/orders cards.
 - [ ] **`tests-copy`** — unit/e2e assertions for new copy and pages.suite routes.
       Done when: `bun run gate` passes.
 
