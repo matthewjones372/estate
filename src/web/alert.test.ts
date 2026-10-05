@@ -1,4 +1,5 @@
+import { afterAll } from "bun:test"
 import { inBrowser } from "./dom"
 
-inBrowser()
+afterAll(inBrowser())
 await import("./alert.suite")

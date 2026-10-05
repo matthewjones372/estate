@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
+import { changesNear, neighboursOf } from "./around"
 import { events } from "./fixture"
-import { changesNear, neighboursOf } from "./parts/Around"
 
 describe("around an alert on the page", () => {
   test("finds storefront's deploy and build in the hour before OrdersSlow fired", () => {
