@@ -43,10 +43,10 @@ Ask AI (when ai: is set)
 ```yaml
 # estate.yaml — Ask AI (optional)
 ai:
-  provider: anthropic            # or openai | openai-compatible
-  apiKey: ${ANTHROPIC_API_KEY}   # omit for openai-compatible if the server needs none
+  provider: anthropic            # or openai | openai-compatible | xai | gemini
+  apiKey: ${ANTHROPIC_API_KEY}   # XAI_API_KEY / GEMINI_API_KEY (or GOOGLE_API_KEY) for those providers
   model: claude-opus-5-5
-  url: http://vllm.example/v1    # openai-compatible only
+  url: http://vllm.example/v1    # openai-compatible only; xai and gemini have fixed bases
   budget: { tokensPerDay: 500000 }
 ```
 
