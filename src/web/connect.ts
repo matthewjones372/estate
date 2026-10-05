@@ -3,6 +3,7 @@ import { Option, Schema } from "effect"
 import { AgentRun } from "../shared/agents"
 import { type EventName, Load } from "../shared/events"
 import { ErrorGroups, LogBatch } from "../shared/log-events"
+import type { AskAnswer } from "./ask"
 import type { Actions, ErrorWindow, LogHandlers, Range } from "./context"
 import type { Open } from "./live"
 
@@ -103,4 +104,56 @@ export const serverActions = (
     loadFrom(
       `/api/store-load?env=${encodeURIComponent(environment())}&store=${encodeURIComponent(store)}&range=${range}`,
     ),
+  askAlert: (alert, onChunk) => askAlert(environment(), alert, onChunk),
 })
+
+const askAlert = async (
+  environment: string,
+  alert: string,
+  onChunk: (text: string) => void,
+): Promise<AskAnswer | string | undefined> => {
+  try {
+    const response = await fetch(
+      `/api/alerts/${encodeURIComponent(alert)}/ask?env=${encodeURIComponent(environment)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "text/event-stream" },
+        body: "{}",
+      },
+    )
+    if (response.status === 404) return "Ask AI is not configured."
+    if (response.status === 429) return "Ask AI is rate-limited; try again in a minute."
+    if (!response.ok || response.body === null) return undefined
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ""
+    let final: AskAnswer | undefined
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const parts = buffer.split("\n\n")
+      buffer = parts.pop() ?? ""
+      for (const part of parts) {
+        const event = /event: (\w+)/.exec(part)?.[1]
+        const data = part
+          .split("\n")
+          .filter((line) => line.startsWith("data: "))
+          .map((line) => line.slice(6))
+          .join("\n")
+        if (event === "chunk") onChunk(data)
+        if (event === "answer") {
+          try {
+            final = JSON.parse(data) as AskAnswer
+          } catch {
+            return undefined
+          }
+        }
+        if (event === "error") return data
+      }
+    }
+    return final
+  } catch {
+    return undefined
+  }
+}

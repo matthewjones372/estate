@@ -17,11 +17,13 @@ interface Named {
   readonly namespace?: string
 }
 
+/** Fill `{env}`, the named thing, `{namespace}`, and the environment's values. `{alert}` / `{summary}` stay for the page. */
 const fillLink = (template: string, environment: Environment, named: Named): string =>
   template.replace(/\{(\w+)\}/g, (whole, name: string) => {
     if (name === "env") return environment.name
     if (["service", "store", "job", "team", "agent"].includes(name)) return named.name
     if (name === "namespace") return named.namespace ?? named.name
+    if (name === "alert" || name === "summary") return whole
     return environment.values?.[name] ?? whole
   })
 

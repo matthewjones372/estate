@@ -84,6 +84,8 @@ someone opens it.
 # estate.yaml: one of
 ai: { provider: anthropic, apiKey: "${ANTHROPIC_API_KEY}", model: claude-opus-5-5 }
 ai: { provider: openai, apiKey: "${OPENAI_API_KEY}", model: <the model> }
+ai: { provider: xai, apiKey: "${XAI_API_KEY}", model: grok-4 }  # xAI OpenAI-compatible API
+ai: { provider: gemini, apiKey: "${GEMINI_API_KEY}", model: gemini-2.5-flash }  # or GOOGLE_API_KEY
 ai: { provider: openai-compatible, url: http://vllm.ai:8000/v1, model: <the model> }  # self-hosted: vLLM, Ollama, LiteLLM
 ```
 
@@ -105,9 +107,9 @@ ai: { provider: openai-compatible, url: http://vllm.ai:8000/v1, model: <the mode
   the alert and its brief, *Around this alert*, and the same tools the MCP server offers for anything further.
 - **The answer has a shape**: the likely cause, the evidence for it with each piece linked to where it came from,
   what the runbook says to do, and what to check next. A claim with no evidence from Estate's tools is not made.
-- **Any model that calls tools**: Anthropic's Messages API, OpenAI's Chat Completions, or any server that speaks the
-  OpenAI-compatible API, so a team can keep everything on its own hardware. One port, three kinds, as for every
-  other tool Estate reads.
+- **Any model that calls tools**: Anthropic's Messages API, OpenAI's Chat Completions, xAI (Grok), Gemini, or any
+  server that speaks the OpenAI-compatible API, so a team can keep everything on its own hardware. One port, several
+  kinds, as for every other tool Estate reads.
 - **The answer streams onto the card**, with the tools it used listed under it, so whoever reads it can check the
   working. "Keep as note" saves it to the alert under the model's name, "asked by ada", where everyone sees it.
 - **What is sent** is what the tools return: the page's own views and masked log lines. Nothing goes to the model
@@ -134,17 +136,18 @@ Nothing.
 
 ## Stack
 
-- [ ] **`around-alert`** — *Around this alert* on the card: what changed near it, what it depends on, its errors,
-      its history and its runbook's text. No AI needed.
+- [x] **`around-alert`** — *Around this alert* on the card: what changed near it, what it depends on, its errors,
+      its history and its runbook's text. No AI needed. **Lands with spec 0025** (UI part + `/api/alerts/:id/around`).
       Done when: the example estate's OrdersSlow shows orders' deploy before it fired, orders-db's stats, its errors
       and its runbook's text.
 - [ ] **`mcp-server`** — `/mcp` over streamable HTTP with tokens and roles; `estate_now`, `services`, `service`.
       Done when: Claude Code, given the token, lists the tools and answers "what needs someone in production?".
 - [ ] **`mcp-alerts`** — `alerts`, `alert_history`, `changes`, `errors`, `agents`.
       Done when: a test asks for an alert's history and gets its earlier firings with their notes.
-- [ ] **`ask-on-card`** — "Ask AI" on an alert's card, through Anthropic, OpenAI or an OpenAI-compatible server: the
-      tools, the answer streamed, kept as a note.
-      Done when: against fakes of both APIs that call `service` and `changes`, the card shows the answer and the tools
+- [x] **`ask-on-card`** — "Ask AI" on an alert's page (not bloating the card), through Anthropic, OpenAI, xAI, Gemini
+      or an OpenAI-compatible server: the tools, the answer streamed, kept as a note. **Lands with spec 0025** via HttpClient
+      (no MCP SDK until `/mcp`).
+      Done when: against fakes of both APIs that call `service` and `changes`, the page shows the answer and the tools
       used, and Keep as note saves it under the model's name and the asker's.
 - [ ] **`mcp-docs`** — the README's section, `examples/estate.yaml`, and a Playwright-free end-to-end test that
       drives `/mcp` with the MCP SDK's client against the e2e estate.

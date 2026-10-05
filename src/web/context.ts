@@ -4,6 +4,7 @@ import { createStore, reconcile } from "solid-js/store"
 import type { AgentRun } from "../shared/agents"
 import type { Me, ServiceState } from "../shared/events"
 import type { ErrorGroups, LogBatch } from "../shared/log-events"
+import type { AskAnswer } from "./ask"
 import type { Live, Snapshot } from "./live"
 import type { Page } from "./route"
 
@@ -27,6 +28,11 @@ export interface Actions {
   readonly runs: (agent: string) => Promise<ReadonlyArray<AgentRun> | "none" | undefined>
   /** A service's errors grouped, over a range or since a time: "none" where it has no logs to read. */
   readonly errors: (service: string, window: ErrorWindow) => Promise<ErrorGroups | "none" | undefined>
+  /**
+   * Ask AI about an alert: streams text chunks, then returns the structured answer, an error message, or undefined
+   * when Ask AI is not configured or the request failed.
+   */
+  readonly askAlert: (alert: string, onChunk: (text: string) => void) => Promise<AskAnswer | string | undefined>
 }
 
 export interface LogHandlers {

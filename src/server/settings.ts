@@ -140,6 +140,16 @@ const Sources = Schema.Struct({
 export type Kubernetes = typeof Kubernetes.Type
 export type Sources = typeof Sources.Type
 
+/** A model to ask about an alert: Anthropic, OpenAI, xAI, Gemini, or any OpenAI-compatible server. */
+const Ai = Schema.Struct({
+  provider: Schema.Literals(["anthropic", "openai", "openai-compatible", "xai", "gemini"]),
+  apiKey: optional(Secret),
+  model: Schema.String,
+  url: optional(Schema.String),
+  budget: optional(Schema.Struct({ tokensPerDay: optional(Schema.Number) })),
+})
+export type Ai = typeof Ai.Type
+
 export const Settings = Schema.Struct({
   port: optional(Schema.Number),
   host: optional(Schema.String),
@@ -182,6 +192,8 @@ export const Settings = Schema.Struct({
       every: optional(Every),
     }),
   ),
+  /** Ask AI on an alert: Anthropic, OpenAI, xAI, Gemini, or an OpenAI-compatible server. Without it, Ask AI is hidden. */
+  ai: optional(Ai),
 })
 export type Settings = typeof Settings.Type
 export type AuthSettings = typeof Auth.Type

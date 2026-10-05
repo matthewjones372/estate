@@ -1,22 +1,34 @@
 /** @jsxImportSource solid-js */
-/** The overview's lanes: a lane per service, store, job and agent, under a heading per category when the catalog names any. */
-import { For, Show } from "solid-js"
+/** The overview's services as lanes (list) or a denser grid; stores, jobs and agents stay as lanes. */
+import { createSignal, For, Show } from "solid-js"
 import { useSnapshot } from "../context"
 import { groupsOf } from "../groups"
 import { byName } from "../indexed"
+import { kept } from "../kept"
 import { AgentLane } from "./AgentLane"
 import { JobLane } from "./JobLane"
 import { Lane } from "./Lane"
+import { ServiceGrid } from "./ServiceGrid"
 import { StoreLane } from "./StoreLane"
+
+const preference = kept("estate.services.layout")
+type Layout = "list" | "grid"
+const initial = (): Layout => (preference.read() === "grid" ? "grid" : "list")
 
 export const Lanes = () => {
   const snapshot = useSnapshot()
+  const [layout, setLayout] = createSignal<Layout>(initial())
+  const choose = (next: Layout) => {
+    setLayout(next)
+    preference.write(next)
+  }
   const events = () => snapshot.events
   const states = byName(() => events().services?.services)
   const storeStates = byName(() => events().services?.stores)
   const jobStates = byName(() => events().services?.jobs)
   const agentStates = byName(() => events().services?.agents)
   const deployed = byName(() => events().deploys?.services)
+  const alerts = () => events().alerts?.alerts ?? []
   const groups = () => groupsOf(events().catalog)
   const grouped = () => groups()[0]?.title !== undefined
   return (
@@ -33,21 +45,50 @@ export const Lanes = () => {
                 {group.title ?? "Services"}
               </h2>
               <Show when={index() === 0}>
-                <span class="muted" style={{ "font-size": "12px" }}>
-                  Last hour · pipeline: commit, build, chosen, running
-                </span>
+                <fieldset class="choices bare services-layout">
+                  <legend class="visually-hidden">Services layout</legend>
+                  <button
+                    type="button"
+                    class="choice"
+                    aria-pressed={layout() === "list"}
+                    onClick={() => choose("list")}
+                  >
+                    List
+                  </button>
+                  <button
+                    type="button"
+                    class="choice"
+                    aria-pressed={layout() === "grid"}
+                    onClick={() => choose("grid")}
+                  >
+                    Grid
+                  </button>
+                </fieldset>
               </Show>
             </div>
-            <For each={group.services}>
-              {(service) => (
-                <Lane
-                  service={service}
-                  state={states().get(service.name)}
-                  deployed={deployed().get(service.name)}
-                  environment={snapshot.environment}
-                />
-              )}
-            </For>
+            <Show
+              when={layout() === "grid"}
+              fallback={
+                <For each={group.services}>
+                  {(service) => (
+                    <Lane
+                      service={service}
+                      state={states().get(service.name)}
+                      deployed={deployed().get(service.name)}
+                      environment={snapshot.environment}
+                    />
+                  )}
+                </For>
+              }
+            >
+              <ServiceGrid
+                services={group.services}
+                states={states()}
+                deployed={deployed()}
+                alerts={alerts()}
+                environment={snapshot.environment}
+              />
+            </Show>
             <Show when={group.title === undefined && group.stores.length > 0}>
               <div class="spread">
                 <h2 id="stores-title" class="section-title">

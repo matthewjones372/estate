@@ -99,6 +99,7 @@ const me = HttpRouter.add(
       environments: catalog.environments.map((each) => each.name),
       ...(settings.readOnly === true ? { readOnly: true } : {}),
       ...(person.kiosk === true ? { kiosk: true } : {}),
+      ...(settings.ai === undefined ? {} : { ai: true }),
       ...(settings.kiosk === undefined
         ? {}
         : {

@@ -52,7 +52,8 @@ jobs:
           tags: ${{ steps.names.outputs.tags }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.description=Is the estate well, and if not, where do I look?
+            org.opencontainers.image.description=Operational context layer: alert to context to investigation — not a Grafana replacement.
             org.opencontainers.image.licenses=MIT
           cache-from: type=gha
           cache-to: type=gha,mode=max
+

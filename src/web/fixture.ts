@@ -23,6 +23,10 @@ export const events: Events = {
         links: [
           { name: "logs", url: "https://logs.example/storefront" },
           { name: "traces", url: "https://traces.example/storefront" },
+          {
+            name: "incident",
+            url: "https://pd.example/create?service=storefront&title={alert}&details={summary}",
+          },
         ],
         debug: { levels: ["INFO", "DEBUG"] },
       },

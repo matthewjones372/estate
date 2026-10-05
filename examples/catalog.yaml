@@ -64,6 +64,8 @@ services:
       dashboard: https://grafana.example.com/d/{service}?var-env={env}
       api: https://{service}.{env}.example.com/swagger-ui
       app: https://shop.{env}.example.com
+      # Raise incident opens this URL (PagerDuty / Opsgenie / …). Estate does not create incidents.
+      incident: https://example.pagerduty.com/incidents/create?service={service}&env={env}&title={alert}&details={summary}
     debug: { configMap: storefront-logging, key: level, levels: [ INFO, DEBUG ] }
     stats: { preset: container }
 

@@ -4,6 +4,7 @@ import { For, Show } from "solid-js"
 import type { CatalogEvent, DeploysEvent, Health, ServiceState } from "../../shared/events"
 import { useEstate } from "../context"
 import { clock } from "../format"
+import { fillIncident } from "../incident"
 import { A, Out } from "./A"
 import { Icon } from "./icons"
 import { pipelineOf, Rail } from "./Rail"
@@ -36,6 +37,8 @@ const labels: Readonly<Record<string, string>> = {
   swagger: "API",
   openapi: "API",
   oncall: "On call",
+  incident: "Raise incident",
+  "raise-incident": "Raise incident",
 }
 const order = ["app", "frontend", "site", "logs", "traces", "dashboard", "api", "swagger", "openapi"]
 const rank = (name: string) => (order.includes(name) ? order.indexOf(name) : order.length)
@@ -46,7 +49,10 @@ export const Links = (props: { readonly service: Pick<Described, "name" | "links
   <nav aria-label={`${props.service.name} links`} class="links">
     <For each={linksOf(props.service)}>
       {(link) => (
-        <Out href={link.url} class="link-chip">
+        <Out
+          href={link.name === "incident" || link.name === "raise-incident" ? fillIncident(link.url) : link.url}
+          class="link-chip"
+        >
           <Icon name={link.name} />
           {label(link.name)}
         </Out>

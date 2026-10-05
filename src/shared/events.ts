@@ -284,6 +284,8 @@ export const Me = Schema.Struct({
   readOnly: optional(Schema.Boolean),
   /** A screen on the wall, signed in with the kiosk token. */
   kiosk: optional(Schema.Boolean),
+  /** Ask AI is configured: the alert page may ask a model. */
+  ai: optional(Schema.Boolean),
   /** What a screen shows, where the settings say: its environments in turn, each for `every` seconds. */
   screen: optional(Schema.Struct({ environments: Schema.Array(Schema.String), every: Schema.Number })),
 })

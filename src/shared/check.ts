@@ -61,13 +61,14 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
   ) => {
     const valued = catalog.environments.filter((environment) => names.includes(environment.name))
     for (const [name, template] of Object.entries(templates ?? {})) {
+      const allowed = name === "incident" || name === "raise-incident" ? [...own, "alert", "summary"] : own
       for (const [, placeholder = ""] of template.matchAll(/\{(\w+)\}/g)) {
-        if (own.includes(placeholder)) continue
+        if (allowed.includes(placeholder)) continue
         const lacking = valued.filter((each) => each.values?.[placeholder] === undefined).map((each) => each.name)
         if (lacking.length > 0) {
           mistake(
             `${at}.links.${name}`,
-            `{${placeholder}} is not one of ${own.map((each) => `{${each}}`).join(", ")}, nor a value ${[...new Set(lacking)].join(" and ")} names`,
+            `{${placeholder}} is not one of ${allowed.map((each) => `{${each}}`).join(", ")}, nor a value ${[...new Set(lacking)].join(" and ")} names`,
           )
         }
       }

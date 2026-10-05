@@ -1,19 +1,24 @@
 /** @jsxImportSource solid-js */
-/** A service in the chosen environment: its load over a range, its pods, its alerts today, debug, and builds. */
+/**
+ * A service in the chosen environment: what's happening, what changed, where to look, then load, logs and pods.
+ * Alert → context → investigation, not a chart dashboard.
+ */
 import { For, Show } from "solid-js"
 import { useEstate, useSnapshot } from "../context"
-import { since } from "../format"
-import { A, Out } from "../parts/A"
+import { A } from "../parts/A"
 import { Load, Timeline } from "../parts/Charts"
 import { DebugPanel } from "../parts/Debug"
 import { Jobs } from "../parts/Jobs"
 import { HealthLine, Links } from "../parts/Lane"
 import { LogsPanel } from "../parts/Logs"
+import { ServiceAlerts } from "../parts/ServiceAlerts"
+import { ServiceBuilds } from "../parts/ServiceBuilds"
+import { ServicePods } from "../parts/ServicePods"
 import { Owner } from "../parts/Team"
 import { teamOf } from "../teams"
 
 export const ServicePage = (props: { readonly name: string }) => {
-  const { actions, now } = useEstate()
+  const { actions, me, now } = useEstate()
   const snapshot = useSnapshot()
   const events = () => snapshot.events
   const service = () => events().catalog?.services.find((each) => each.name === props.name)
@@ -21,7 +26,8 @@ export const ServicePage = (props: { readonly name: string }) => {
   const alerts = () => (events().alerts?.alerts ?? []).filter((alert) => alert.service === props.name)
   const resolved = () => (events().alerts?.resolved ?? []).filter((each) => each.service === props.name)
   const builds = () => events().deploys?.services.find((each) => each.name === props.name)?.builds ?? []
-  const pods = () => state()?.pods ?? []
+  const canSilence = () => me.role === "operator" && events().alerts?.silences === true
+  const hasDebug = () => (service()?.debug?.levels?.length ?? 0) > 0
   return (
     <Show
       when={events().catalog === undefined || service() !== undefined}
@@ -43,6 +49,11 @@ export const ServicePage = (props: { readonly name: string }) => {
             {props.name}
           </h1>
           <HealthLine state={state()} />
+          <Show when={(state()?.reasons ?? []).length > 1}>
+            <ul class="reasons muted">
+              <For each={state()?.reasons ?? []}>{(reason) => <li>{reason}</li>}</For>
+            </ul>
+          </Show>
           <p class="lede" style={{ "max-width": "760px" }}>
             {[service()?.description, state()?.version === undefined ? undefined : `running ${state()?.version}`]
               .filter(Boolean)
@@ -51,42 +62,12 @@ export const ServicePage = (props: { readonly name: string }) => {
           <Show when={service()}>{(described) => <Links service={described()} />}</Show>
           <Owner owner={service()?.owner} team={teamOf(events().catalog, service()?.owner)} />
         </section>
+        <ServiceAlerts alerts={alerts()} catalog={events().catalog} canSilence={canSilence()} />
         <div class="row">
           <div class="stack" style={{ flex: "999 1 640px", "min-width": 0, gap: "24px" }}>
             <Load name={props.name} hour={state()?.load} read={actions.load} alerts={alerts()} />
             <LogsPanel service={props.name} />
-            <section aria-labelledby="pods" class="stack">
-              <h2 id="pods" class="section-title">
-                Pods
-              </h2>
-              <Show when={pods().length === 0}>
-                <p class="muted" style={{ margin: 0 }}>
-                  No pods read for it here.
-                </p>
-              </Show>
-              <div class="pods">
-                <For each={pods()}>
-                  {(pod) => (
-                    <div class="pod">
-                      <span class="spread">
-                        <span class="mono">{pod.name}</span>
-                        <span class="health">
-                          <span class={`dot ${pod.ready ? "healthy" : "attention"}`} />
-                          {pod.ready ? "Ready" : pod.phase}
-                        </span>
-                      </span>
-                      <span class="muted" style={{ "font-size": "12px" }}>
-                        {pod.node ?? ""}
-                        {pod.startedAt === undefined ? "" : ` · up ${since(pod.startedAt, now())}`}
-                      </span>
-                      <span class="muted" style={{ "font-size": "12px" }}>
-                        {pod.restarts === 0 ? "no restarts" : `${pod.restarts} restarts`}
-                      </span>
-                    </div>
-                  )}
-                </For>
-              </div>
-            </section>
+            <ServicePods pods={state()?.pods ?? []} />
             <section aria-labelledby="jobs" class="stack">
               <h2 id="jobs" class="section-title">
                 Jobs
@@ -104,41 +85,15 @@ export const ServicePage = (props: { readonly name: string }) => {
             </section>
           </div>
           <div class="stack" style={{ flex: "1 1 320px", "min-width": 0, gap: "24px" }}>
-            <section aria-labelledby="debug" class="panel section-box">
-              <h2 id="debug" class="section-title">
-                Debug logging
-              </h2>
-              <Show when={service()}>{(described) => <DebugPanel service={described()} state={state()} />}</Show>
-            </section>
-            <section aria-labelledby="builds" class="panel section-box">
-              <h2 id="builds" class="section-title">
-                Builds on main
-              </h2>
-              <Show when={builds().length === 0}>
-                <p class="muted" style={{ margin: 0 }}>
-                  No builds read.
-                </p>
-              </Show>
-              <ol class="builds">
-                <For each={builds()}>
-                  {(build) => (
-                    <li>
-                      <span
-                        class={`dot ${build.status === "success" ? "healthy" : build.status === "failure" ? "critical" : "unknown"}`}
-                        style={{ "margin-top": "6px" }}
-                      />
-                      <div style={{ "min-width": 0 }}>
-                        <Out href={build.url}>{build.title}</Out>
-                        <div class="muted mono" style={{ "font-size": "12px" }}>
-                          {build.sha.slice(0, 7)} · {build.status}
-                          {build.job === undefined ? "" : ` at ${build.job}`} · {since(build.at, now())} ago
-                        </div>
-                      </div>
-                    </li>
-                  )}
-                </For>
-              </ol>
-            </section>
+            <ServiceBuilds builds={builds()} />
+            <Show when={hasDebug()}>
+              <section aria-labelledby="debug" class="panel section-box">
+                <h2 id="debug" class="section-title">
+                  Debug logging
+                </h2>
+                <Show when={service()}>{(described) => <DebugPanel service={described()} state={state()} />}</Show>
+              </section>
+            </Show>
           </div>
         </div>
       </main>

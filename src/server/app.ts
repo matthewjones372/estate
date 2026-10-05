@@ -5,6 +5,8 @@ import { providerLayer } from "./auth/oidc"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { loadHistory, recordFirings, sweepHistory } from "./history"
 import { agentRunsRoute } from "./http/agents"
+import { aroundRoute } from "./http/around"
+import { askRoute, liveModel } from "./http/ask"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
 import { impactRoute } from "./http/impacts"
 import { kioskRoute } from "./http/kiosk"
@@ -95,6 +97,8 @@ export const application = Layer.mergeAll(
   logsRoute,
   errorsRoute,
   agentRunsRoute,
+  aroundRoute,
+  askRoute,
 )
 
 const historyDays = (settings: Started["settings"]) => settings.alerts?.historyDays ?? 90
@@ -137,6 +141,7 @@ export const services = <E, F, R>(
         remote,
         notes,
         Layer.succeed(Configured)(started.settings),
+        liveModel(started.settings.ai).pipe(Layer.provide(remote)),
         providerLayer,
       ),
     ),

@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 /**
- * The overview: the headline, the vitals, the map, what needs someone, a lane per service and per store, grouped by
- * category when the catalog names any, and what changed.
+ * The overview: the headline, what needs someone, then vitals and the map, services as list lanes or a denser grid,
+ * stores, and what changed. Alert → context, not vitals-first.
  */
 import { For, Show } from "solid-js"
 import type { Alert, Events } from "../../shared/events"
@@ -80,7 +80,6 @@ export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
   const services = events.services?.services ?? []
   const pods = services.flatMap((service) => service.pods)
   const runtime = events.services?.sources.find((source) => source.kind === "cluster")
-  // Builds are the whole estate's: only those of the services in this environment count here.
   const here = new Set(services.map((service) => service.name))
   const failing = (events.deploys?.services ?? [])
     .filter((service) => here.has(service.name) && service.builds[0]?.status === "failure")
@@ -116,7 +115,6 @@ export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
               .join(", "),
       alarm: firing.length > 0,
     },
-    // Instances only where something runs them: an environment read wholly from Datadog has none to count.
     ...(runtime === undefined || runtime.state === "off"
       ? []
       : [
@@ -208,27 +206,7 @@ export const Overview = () => {
             </h1>
             <p class="lede">{headline().lede}</p>
           </div>
-          <div class="vitals">
-            <For each={tilesOf(events())}>
-              {(tile) => (
-                <div class="vital">
-                  <span class="muted" style={{ "font-size": "12px" }}>
-                    {tile.label}
-                  </span>
-                  <span class="vital-value" style={{ color: tile.alarm ? "var(--amber-text)" : undefined }}>
-                    {tile.value}
-                  </span>
-                  <span class="muted" style={{ "font-size": "12px" }}>
-                    {tile.note}
-                  </span>
-                </div>
-              )}
-            </For>
-          </div>
         </div>
-        <Show when={events().catalog}>
-          {(catalog) => <EstateMap catalog={catalog()} services={events().services} />}
-        </Show>
       </section>
       <section aria-labelledby="needs" class="stack">
         <h2 id="needs" class="section-title">
@@ -236,7 +214,7 @@ export const Overview = () => {
         </h2>
         <Show when={firing().length === 0}>
           <p class="muted" style={{ margin: 0 }}>
-            Nothing. When something does, it appears here, above the services.
+            Nothing. When something does, it appears here first.
           </p>
         </Show>
         <div class="cards">
@@ -245,6 +223,28 @@ export const Overview = () => {
           </For>
         </div>
         <Silenced alerts={silenced()} canSilence={canSilence()} />
+      </section>
+      <section aria-label="Vitals and map" class="now">
+        <div class="vitals">
+          <For each={tilesOf(events())}>
+            {(tile) => (
+              <div class="vital">
+                <span class="muted" style={{ "font-size": "12px" }}>
+                  {tile.label}
+                </span>
+                <span class="vital-value" style={{ color: tile.alarm ? "var(--amber-text)" : undefined }}>
+                  {tile.value}
+                </span>
+                <span class="muted" style={{ "font-size": "12px" }}>
+                  {tile.note}
+                </span>
+              </div>
+            )}
+          </For>
+        </div>
+        <Show when={events().catalog}>
+          {(catalog) => <EstateMap catalog={catalog()} services={events().services} />}
+        </Show>
       </section>
       <div class="row">
         <Lanes />

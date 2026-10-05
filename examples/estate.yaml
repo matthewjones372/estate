@@ -58,3 +58,10 @@ builds:
   # harness: { account: ${HARNESS_ACCOUNT}, apiKey: ${HARNESS_API_KEY} }
   # How often builds are read; once a minute unless set:
   # every: 5m
+
+# Ask AI on an alert (optional): Anthropic, OpenAI, xAI (Grok), Gemini, or any OpenAI-compatible server.
+# ai: { provider: anthropic, apiKey: ${ANTHROPIC_API_KEY}, model: claude-sonnet-4-5 }
+# ai: { provider: openai, apiKey: ${OPENAI_API_KEY}, model: gpt-4.1 }
+# ai: { provider: xai, apiKey: ${XAI_API_KEY}, model: grok-4 }
+# ai: { provider: gemini, apiKey: ${GEMINI_API_KEY}, model: gemini-2.5-flash }  # or GOOGLE_API_KEY
+# ai: { provider: openai-compatible, url: http://vllm.example/v1, model: my-model }

@@ -236,3 +236,22 @@
   flex-wrap: wrap;
   gap: 4px 10px;
 }
+
+.alert-around,
+.around-line {
+  font-size: 13px;
+}
+.around-list {
+  margin: 4px 0 0;
+  padding-left: 1.2em;
+}
+.ask-answer .alert-label {
+  display: inline-block;
+  min-width: 7em;
+}
+.ask-stream {
+  white-space: pre-wrap;
+  font-size: 12px;
+  max-height: 120px;
+  overflow: auto;
+}

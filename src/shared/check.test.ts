@@ -150,6 +150,40 @@ describe("a service's jobs", () => {
 })
 
 describe("a link's values", () => {
+  test("lets incident and raise-incident name alert and summary", () => {
+    const base = {
+      environments: [{ name: "a", sources: "a" }],
+      services: [
+        {
+          name: "s",
+          environments: ["a"],
+          links: {
+            incident: "https://pd.example/create?title={alert}&details={summary}&service={service}",
+            "raise-incident": "https://ops.example/?t={alert}&s={summary}",
+          },
+        },
+      ],
+    }
+    expect(mistakes(base)).toEqual([])
+    expect(
+      mistakes({
+        ...base,
+        services: [
+          {
+            name: "s",
+            environments: ["a"],
+            links: { logs: "https://logs.example/{alert}" },
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        at: "services[0] (s).links.logs",
+        message: "{alert} is not one of {env}, {namespace}, {service}, nor a value a names",
+      },
+    ])
+  })
+
   test("may be named when every environment the service runs in has them", () => {
     const valued = {
       environments: [

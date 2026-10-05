@@ -90,6 +90,17 @@ export const recording = (): Recorded => {
         calls.push(["runs", agent])
         return Promise.resolve(agent === "triage" ? runs : agent === "broken" ? undefined : "none")
       },
+      askAlert: (alert, _onChunk) => {
+        calls.push(["askAlert", alert])
+        return Promise.resolve({
+          likelyCause: "A recent deploy raised latency.",
+          evidence: [{ text: "storefront v2 deployed 26 min before it fired" }],
+          nextSteps: ["Check the runbook", "Compare p99 before and after the deploy"],
+          confidence: "medium" as const,
+          tools: ["around_alert", "service"],
+          model: "fake-model",
+        })
+      },
     },
     sendLines: (batch) => {
       for (const handlers of watching) handlers.batch(batch)
