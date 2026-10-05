@@ -1,7 +1,7 @@
 /**
  * `POST /api/alerts/:id/ask?env=`: Ask AI about an alert. Streams SSE chunks then a final `answer` event.
  * 404 when ai is not configured; 429 when asked too often for the same alert.
- * Model calls go through Remote (Anthropic or OpenAI-compatible), never fabricating beyond the around brief.
+ * Model calls go through Remote (Anthropic, OpenAI, xAI, Gemini, or OpenAI-compatible), never fabricating beyond the around brief.
  */
 import { Clock, Context, Data, Effect, Layer, Redacted, Stream, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerResponse } from "effect/http"
@@ -83,6 +83,13 @@ const parseAnswer = (text: string, model: string): Effect.Effect<AskResult, Mode
     }
   })
 
+const openAiBase = (ai: Ai): string => {
+  if (ai.url !== undefined) return ai.url.replace(/\/$/, "")
+  if (ai.provider === "xai") return "https://api.x.ai/v1"
+  if (ai.provider === "gemini") return "https://generativelanguage.googleapis.com/v1beta/openai"
+  return "https://api.openai.com/v1"
+}
+
 const requestOf = (ai: Ai, brief: string, question: string): Effect.Effect<Call, ModelError> => {
   const user = `Brief:\n${brief}\n\nQuestion: ${question}`
   if (ai.provider === "anthropic") {
@@ -104,7 +111,7 @@ const requestOf = (ai: Ai, brief: string, question: string): Effect.Effect<Call,
       }),
     })
   }
-  const base = (ai.url ?? "https://api.openai.com/v1").replace(/\/$/, "")
+  const base = openAiBase(ai)
   const key = ai.apiKey === undefined ? undefined : Redacted.value(ai.apiKey)
   const headers =
     key === undefined
