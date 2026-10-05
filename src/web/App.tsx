@@ -2,9 +2,11 @@
 /** The signed-in page: the header, then the page the address names. */
 import { Match, Show, Switch } from "solid-js"
 import { type Estate, EstateContext } from "./context"
+import { AgentPage } from "./pages/Agent"
 import { AlertPage } from "./pages/Alert"
 import { Alerts } from "./pages/Alerts"
 import { Deploys } from "./pages/Deploys"
+import { JobPage } from "./pages/Job"
 import { Kiosk } from "./pages/Kiosk"
 import { Overview } from "./pages/Overview"
 import { ServicePage } from "./pages/Service"
@@ -29,6 +31,14 @@ const Page = (props: { readonly estate: Estate }) => {
     const now = page()
     return now.page === "store" ? now.name : undefined
   }
+  const job = () => {
+    const now = page()
+    return now.page === "job" ? now.name : undefined
+  }
+  const agent = () => {
+    const now = page()
+    return now.page === "agent" ? now.name : undefined
+  }
   const alert = () => {
     const now = page()
     return now.page === "alert" ? now.id : undefined
@@ -40,6 +50,8 @@ const Page = (props: { readonly estate: Estate }) => {
       </Match>
       <Match when={service()}>{(name) => <ServicePage name={name()} />}</Match>
       <Match when={store()}>{(name) => <StorePage name={name()} />}</Match>
+      <Match when={job()}>{(name) => <JobPage name={name()} />}</Match>
+      <Match when={agent()}>{(name) => <AgentPage name={name()} />}</Match>
       <Match when={alert()}>{(id) => <AlertPage id={id()} />}</Match>
       <Match when={page().page === "deploys"}>
         <Deploys />

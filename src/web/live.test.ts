@@ -92,9 +92,20 @@ describe("the page's store", () => {
 
 describe("where the page is", () => {
   test("the path names the page, and back again", () => {
-    for (const path of ["/", "/deploys", "/alerts", "/alerts/a1", "/services/orders%20api", "/stores/orders-db"])
+    for (const path of [
+      "/",
+      "/deploys",
+      "/alerts",
+      "/alerts/a1",
+      "/services/orders%20api",
+      "/stores/orders-db",
+      "/jobs/nightly-settlement",
+      "/agents/support-triage",
+    ])
       expect(pathOf(pageOf(path))).toBe(path)
     expect(pageOf("/stores/orders-db")).toEqual({ page: "store", name: "orders-db" })
+    expect(pageOf("/jobs/nightly-settlement")).toEqual({ page: "job", name: "nightly-settlement" })
+    expect(pageOf("/agents/support-triage")).toEqual({ page: "agent", name: "support-triage" })
     expect(pageOf("/alerts/a1")).toEqual({ page: "alert", id: "a1" })
     expect(pageOf("/services/orders%20api")).toEqual({ page: "service", name: "orders api" })
     expect(pageOf("/nowhere")).toEqual({ page: "missing" })
