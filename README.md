@@ -134,7 +134,7 @@ services:
     owner: payments
     category: Payments
     environments: [ production ]
-    kube: { namespace: shop, workloads: [ { kind: Deployment, name: payments } ] }
+    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: payments } ] }
     deploy: { flux: { kustomization: shop, imagePolicy: payments } }
     build: { github: { workflow: payments.yml, branch: main } }
     load:
