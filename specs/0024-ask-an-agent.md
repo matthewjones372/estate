@@ -140,7 +140,7 @@ Nothing.
       its history and its runbook's text. No AI needed. **Lands with spec 0025** (UI part + `/api/alerts/:id/around`).
       Done when: the example estate's OrdersSlow shows orders' deploy before it fired, orders-db's stats, its errors
       and its runbook's text.
-- [ ] **`mcp-server`** — `/mcp` over streamable HTTP with tokens and roles; `estate_now`, `services`, `service`.
+- [x] **`mcp-server`** — `/mcp` over streamable HTTP with tokens and roles; `estate_now`, `services`, `service`.
       Done when: Claude Code, given the token, lists the tools and answers "what needs someone in production?".
 - [ ] **`mcp-alerts`** — `alerts`, `alert_history`, `changes`, `errors`, `agents`.
       Done when: a test asks for an alert's history and gets its earlier firings with their notes.
