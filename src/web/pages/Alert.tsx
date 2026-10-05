@@ -9,6 +9,7 @@ import { A, Out } from "../parts/A"
 import { AlertCard } from "../parts/AlertCard"
 import { Around } from "../parts/Around"
 import { AskAi } from "../parts/AskAi"
+import { RaiseIncident } from "../parts/RaiseIncident"
 import { Owner } from "../parts/Team"
 import { chatOf, teamOf } from "../teams"
 
@@ -88,6 +89,7 @@ export const AlertPage = (props: { readonly id: string }) => {
                   </Out>
                 )}
               </Show>
+              <RaiseIncident alert={found()} links={service()?.links} class="primary-button" />
               <Show when={found().service}>
                 {(name) => (
                   <A to={`/services/${encodeURIComponent(name())}`} class="amber-button ghost">
