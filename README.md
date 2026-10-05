@@ -86,7 +86,7 @@ Viewers see everything and add notes. Operators can also silence, switch debug, 
 
 Services, stores and jobs can be grouped by **category**, such as Payments or Data, so a page of forty services
 reads as five areas. The map at the top draws a node per category once there are more than a dozen, and opens one
-in place when you click it. Anything that needs someone is always drawn on its own.
+in place when you click it. Anything that needs someone is always drawn on its own. On the overview, switch services between **List** (lanes) and **Grid** (compact cards) when the estate is long to scroll; the choice is kept in this browser.
 
 ### Also: a screen on the wall
 
