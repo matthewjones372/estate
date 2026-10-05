@@ -22,8 +22,9 @@ storage for runners, shard locks and messages) and, in `@effect/platform-bun`, `
   database, as Effect's cluster does; Estate does not become a product for that.
 - **Prometheus, Alertmanager or any source made highly available.** Estate reads one address per source, as now.
   Their HA is theirs.
-- **Redis, NATS or another broker.** Effect's SQL storage on the Postgres that notes already use is enough; nothing
-  new to run.
+- **Redis, NATS, Dynamo, or another store for the cluster.** Shard locks and runners live in `notes.postgres`
+  only; Effect's SQL storage there is enough. Dynamo notes stay for single-replica estates; they are not an HA
+  option.
 - **The catalog, the pages or their UX.** Same pages, same events, same frames; a page cannot tell which replica it
   is attached to.
 - **Reads a viewer asks for.** A service's live logs (the log hub), `/api/load` ranges, *Around this alert* and Ask AI
@@ -44,7 +45,9 @@ notes:
 
 Defaults when `cluster: true`: runner address from `POD_IP` (Kubernetes downward API) or the hostname, port
 **34431**; listen `0.0.0.0:34431`; health `ping`; `BunClusterSocket` and SQL storage on the same Postgres as notes.
-Absent or false means one process, exactly as today.
+Absent or false means one process, exactly as today. Cluster requires `notes.postgres` — that is the only notes
+store that holds the shard locks. `cluster: true` with Dynamo notes is a settings mistake (`cluster needs
+notes.postgres`).
 
 Override only when you must (a non-default port, or `k8s` health):
 
@@ -129,10 +132,10 @@ The point of the opt-in is **one boolean**, not a second product to configure. `
 defaults above; Postgres is the notes database you already have, the runner address is `POD_IP` or the hostname, and
 the port is fixed. The Entity / Follow / Apply shape stays; only the operator surface shrinks to a flag.
 
-The cost is still real, and one replica is still the right answer for most estates. Clustering needs Postgres (DynamoDB
-notes cannot hold the locks), port 34431 open between Estate pods, and a failover that takes up to the shard lock's
-expiry (35 s by default) plus one read, during which pages show the last state with its age, as they do when a source
-is slow. A single replica restarts in about the same time. Recommended: stay on one replica unless the tools' rate
+The cost is still real, and one replica is still the right answer for most estates. Clustering needs
+`notes.postgres`, port 34431 open between Estate pods, and a failover that takes up to the shard lock's expiry
+(35 s by default) plus one read, during which pages show the last state with its age, as they do when a source is
+slow. A single replica restarts in about the same time. Recommended: stay on one replica unless the tools' rate
 limits are being met by N replicas, a node loss must not blank the page, or the viewers (a wall of kiosks) outgrow
 one process.
 
@@ -156,7 +159,8 @@ One entry per pull request, in build order.
       `@effect/sql-pg` on `notes.postgres`; defaults for runner/`POD_IP`, listen `0.0.0.0:34431`, health `ping`;
       `BunClusterSocket.layer` with SQL storage under `estate_cluster`; the cluster modules loaded only when
       `cluster` is true.
-      Done when: settings tests accept `cluster: true` with `notes.postgres` and reject `cluster: true` without it;
+      Done when: settings tests accept `cluster: true` with `notes.postgres`; reject `cluster: true` without
+      `notes.postgres` and reject `cluster: true` with Dynamo notes as the mistake `cluster needs notes.postgres`;
       a test serves with no `cluster` and no database and builds no `Sharding`; `bun run gate` passes unchanged.
 - [ ] **`scrape-singleton`** — the `Estate` entity, id `"estate"`, running what `background` runs today and kept
       alive; a runner that does not own it runs no readers, sweeps or firing records.
