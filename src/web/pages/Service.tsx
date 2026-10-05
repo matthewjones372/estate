@@ -15,6 +15,7 @@ import { ServiceAlerts } from "../parts/ServiceAlerts"
 import { ServiceBuilds } from "../parts/ServiceBuilds"
 import { ServicePods } from "../parts/ServicePods"
 import { Owner } from "../parts/Team"
+import { Versions } from "../parts/Versions"
 import { teamOf } from "../teams"
 
 export const ServicePage = (props: { readonly name: string }) => {
@@ -59,6 +60,7 @@ export const ServicePage = (props: { readonly name: string }) => {
               .filter(Boolean)
               .join(" · ")}
           </p>
+          <Versions name={props.name} />
           <Show when={service()}>{(described) => <Links service={described()} />}</Show>
           <Owner owner={service()?.owner} team={teamOf(events().catalog, service()?.owner)} />
         </section>
