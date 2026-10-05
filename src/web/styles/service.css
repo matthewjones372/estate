@@ -142,3 +142,50 @@ fieldset.silencing {
   flex-direction: column;
   gap: 2px;
 }
+
+/* Versions across environments on the service page */
+.versions-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.versions-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0;
+  float: none;
+  width: auto;
+}
+.versions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.version-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 120px;
+  text-align: left;
+}
+.version-cell.current {
+  border-color: var(--line-strong);
+  background: var(--raised);
+}
+.version-cell:not(.current):hover {
+  background: var(--raised);
+  border-color: var(--quiet);
+}
+.version-env {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
