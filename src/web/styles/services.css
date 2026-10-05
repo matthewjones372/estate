@@ -1,0 +1,47 @@
+/* Overview services: list (lanes) vs denser grid for scanning many services. */
+.services-layout {
+  margin: 0;
+}
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.5em, 1fr));
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.service-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  min-height: 6.5em;
+}
+.service-card:hover {
+  border-color: var(--ink-soft);
+}
+.service-card.attention {
+  border-color: #3a2c12;
+}
+.service-card.critical {
+  border-color: var(--critical-line);
+}
+.service-card-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+.service-card-meta,
+.service-card-why {
+  font-size: 12px;
+  line-height: 1.35;
+}
+.service-card-why {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
