@@ -105,4 +105,20 @@ describe("the settings", () => {
         expect(Result.isFailure(result) && result.failure.mistakes[0]?.at).toBe("estate.yaml")
       }),
     ))
+
+  test("read mcp tokens with their secrets from the environment", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const result = yield* read(
+          `${good}mcp:\n  tokens:\n    - { name: claude-code, token: ${secretOf("ESTATE_MCP_TOKEN")}, role: viewer }\n`,
+          { SECRET: "s".repeat(32), CLIENT_SECRET: "c", ESTATE_MCP_TOKEN: "agent-secret" },
+        )
+        expect(Result.isSuccess(result)).toBe(true)
+        if (!Result.isSuccess(result)) return
+        const token = result.success.mcp?.tokens[0]
+        expect(token?.name).toBe("claude-code")
+        expect(token?.role).toBe("viewer")
+        expect(token === undefined ? undefined : Redacted.value(token.token)).toBe("agent-secret")
+      }),
+    ))
 })

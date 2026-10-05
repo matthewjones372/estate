@@ -12,6 +12,7 @@ import { impactRoute } from "./http/impacts"
 import { kioskRoute } from "./http/kiosk"
 import { loadRoute, storeLoadRoute } from "./http/load"
 import { errorsRoute, logsRoute } from "./http/logs"
+import { mcpRoute } from "./http/mcp"
 import { loadNotes, notesRoute, removeNoteRoute, sweepNotes } from "./http/notes"
 import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
@@ -99,6 +100,7 @@ export const application = Layer.mergeAll(
   agentRunsRoute,
   aroundRoute,
   askRoute,
+  mcpRoute,
 )
 
 const historyDays = (settings: Started["settings"]) => settings.alerts?.historyDays ?? 90

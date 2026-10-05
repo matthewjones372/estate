@@ -95,6 +95,31 @@ TV; not the main product. Open `/kiosk?token=…` once; it signs in for 30 days 
 
 ![The kiosk on a 1080p screen](docs/kiosk.png)
 
+### Also: MCP for agents
+
+Estate serves an [MCP](https://modelcontextprotocol.io) server at `/mcp`, so an AI agent reads the same estate a
+person sees on the page — read-only, through Estate's own access. Without tokens configured, `/mcp` answers 401.
+
+```yaml
+# estate.yaml
+mcp:
+  tokens:
+    - { name: claude-code, token: "${ESTATE_MCP_TOKEN}", role: viewer }
+```
+
+```bash
+claude mcp add --transport http estate https://estate.example/mcp --header "Authorization: Bearer $ESTATE_MCP_TOKEN"
+```
+
+| Tool | Answers |
+|---|---|
+| `estate_now` | what needs someone in an environment, worst first |
+| `services` | every service, store, job and agent: health, reasons, version, owner, category |
+| `service` | one service: health, load, pods, deploy and builds, alerts, links, team |
+
+Still to come: `alerts`, `alert_history`, `changes`, `errors`, `agents`. Ask AI and *Around this alert* are already
+on the page (when `ai` is set) and do not need MCP.
+
 ## Try it
 
 ```bash

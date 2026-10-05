@@ -150,6 +150,15 @@ const Ai = Schema.Struct({
 })
 export type Ai = typeof Ai.Type
 
+/** An agent's token for `/mcp`: its name, secret, and the role it reads as. */
+const McpToken = Schema.Struct({
+  name: Schema.String,
+  token: Secret,
+  role: Schema.Literals(["viewer", "operator"]),
+})
+const Mcp = Schema.Struct({ tokens: Schema.Array(McpToken) })
+export type Mcp = typeof Mcp.Type
+
 export const Settings = Schema.Struct({
   port: optional(Schema.Number),
   host: optional(Schema.String),
@@ -194,6 +203,8 @@ export const Settings = Schema.Struct({
   ),
   /** Ask AI on an alert: Anthropic, OpenAI, xAI, Gemini, or an OpenAI-compatible server. Without it, Ask AI is hidden. */
   ai: optional(Ai),
+  /** Agents that may ask Estate over `/mcp`: each token and the role it reads as. Without it, `/mcp` answers 401. */
+  mcp: optional(Mcp),
 })
 export type Settings = typeof Settings.Type
 export type AuthSettings = typeof Auth.Type
