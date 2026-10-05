@@ -106,7 +106,7 @@ const Sources = Schema.Struct({
       loki: optional(Schema.String),
     }),
   ),
-  kubernetes: optional(Kubernetes),
+  kube: optional(Kubernetes),
   flux: optional(Schema.Struct({})),
   /** AWS, for services on ECS: the region, through the credentials AWS's tools would find. */
   aws: optional(Schema.Struct({ region: Schema.String, endpoint: optional(Schema.String) })),
@@ -140,9 +140,9 @@ const Sources = Schema.Struct({
 export type Kubernetes = typeof Kubernetes.Type
 export type Sources = typeof Sources.Type
 
-/** A model to ask about an alert: Anthropic, OpenAI, or any OpenAI-compatible server. */
+/** A model to ask about an alert: Anthropic, OpenAI, xAI, Gemini, or any OpenAI-compatible server. */
 const Ai = Schema.Struct({
-  provider: Schema.Literals(["anthropic", "openai", "openai-compatible"]),
+  provider: Schema.Literals(["anthropic", "openai", "openai-compatible", "xai", "gemini"]),
   apiKey: optional(Secret),
   model: Schema.String,
   url: optional(Schema.String),
@@ -192,7 +192,7 @@ export const Settings = Schema.Struct({
       every: optional(Every),
     }),
   ),
-  /** Ask AI on an alert: Anthropic, OpenAI, or an OpenAI-compatible server. Without it, Ask AI is hidden. */
+  /** Ask AI on an alert: Anthropic, OpenAI, xAI, Gemini, or an OpenAI-compatible server. Without it, Ask AI is hidden. */
   ai: optional(Ai),
 })
 export type Settings = typeof Settings.Type
