@@ -3,9 +3,9 @@ import { Option, Schema } from "effect"
 import { AgentRun } from "../shared/agents"
 import { type EventName, Load } from "../shared/events"
 import { ErrorGroups, LogBatch } from "../shared/log-events"
+import type { AskAnswer } from "./ask"
 import type { Actions, ErrorWindow, LogHandlers, Range } from "./context"
 import type { Open } from "./live"
-import type { AskAnswer } from "./parts/AskAi"
 
 const decodeRuns = Schema.decodeUnknownOption(Schema.Array(AgentRun))
 
@@ -38,7 +38,7 @@ const decodeGroups = Schema.decodeUnknownOption(ErrorGroups)
 
 const watchLogs = (environment: string, service: string, handlers: LogHandlers) => {
   const source = new EventSource(`/logs?env=${encodeURIComponent(environment)}&service=${encodeURIComponent(service)}`)
-  let opened = false
+  let opened = true
   source.addEventListener("from", (event) => {
     opened = true
     handlers.from(JSON.parse((event as MessageEvent<string>).data))

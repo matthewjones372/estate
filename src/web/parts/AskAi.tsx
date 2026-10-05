@@ -2,16 +2,10 @@
 /** Ask AI about an alert: streams a structured answer when `ai` is configured; otherwise says so. */
 import { createSignal, For, Show } from "solid-js"
 import type { Alert } from "../../shared/events"
+import type { AskAnswer } from "../ask"
 import { useEstate, useSnapshot } from "../context"
 
-export interface AskAnswer {
-  readonly likelyCause: string
-  readonly evidence: ReadonlyArray<{ readonly text: string; readonly href?: string }>
-  readonly nextSteps: ReadonlyArray<string>
-  readonly confidence: "low" | "medium" | "high"
-  readonly tools: ReadonlyArray<string>
-  readonly model: string
-}
+export type { AskAnswer } from "../ask"
 
 export const AskAi = (props: { readonly alert: Alert }) => {
   const { me, actions } = useEstate()
