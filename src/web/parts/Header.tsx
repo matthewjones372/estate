@@ -5,6 +5,7 @@ import type { Health } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock, initials } from "../format"
 import { A } from "./A"
+import { Jump } from "./Jump"
 
 const worstWords: Readonly<Record<Health, string>> = {
   healthy: "all quiet",
@@ -120,6 +121,7 @@ export const Header = () => {
             Alerts {firing() > 0 && <span class="count">{firing()}</span>}
           </A>
         </nav>
+        <Jump />
         <div class="header-end">
           <span class="live-clock">
             <span
