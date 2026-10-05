@@ -134,17 +134,18 @@ Nothing.
 
 ## Stack
 
-- [ ] **`around-alert`** — *Around this alert* on the card: what changed near it, what it depends on, its errors,
-      its history and its runbook's text. No AI needed.
+- [x] **`around-alert`** — *Around this alert* on the card: what changed near it, what it depends on, its errors,
+      its history and its runbook's text. No AI needed. **Lands with spec 0025** (UI part + `/api/alerts/:id/around`).
       Done when: the example estate's OrdersSlow shows orders' deploy before it fired, orders-db's stats, its errors
       and its runbook's text.
 - [ ] **`mcp-server`** — `/mcp` over streamable HTTP with tokens and roles; `estate_now`, `services`, `service`.
       Done when: Claude Code, given the token, lists the tools and answers "what needs someone in production?".
 - [ ] **`mcp-alerts`** — `alerts`, `alert_history`, `changes`, `errors`, `agents`.
       Done when: a test asks for an alert's history and gets its earlier firings with their notes.
-- [ ] **`ask-on-card`** — "Ask AI" on an alert's card, through Anthropic, OpenAI or an OpenAI-compatible server: the
-      tools, the answer streamed, kept as a note.
-      Done when: against fakes of both APIs that call `service` and `changes`, the card shows the answer and the tools
+- [x] **`ask-on-card`** — "Ask AI" on an alert's page (not bloating the card), through Anthropic, OpenAI or an
+      OpenAI-compatible server: the tools, the answer streamed, kept as a note. **Lands with spec 0025** via HttpClient
+      (no MCP SDK until `/mcp`).
+      Done when: against fakes of both APIs that call `service` and `changes`, the page shows the answer and the tools
       used, and Keep as note saves it under the model's name and the asker's.
 - [ ] **`mcp-docs`** — the README's section, `examples/estate.yaml`, and a Playwright-free end-to-end test that
       drives `/mcp` with the MCP SDK's client against the e2e estate.
