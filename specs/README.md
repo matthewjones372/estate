@@ -32,3 +32,4 @@ entries, one per pull request, each with what proves it done.
 | [0026](0026-one-read-many-pages.md) | one read, many pages: with `cluster:` set, one runner reads every source, through an Effect Cluster entity with its shard lock in the notes' Postgres, and every replica serves the same state to its pages, `/events` and `/mcp`; writes reach the owner; one process stays the default; proposed |
 | [0027](0027-jump-to.md) | jump to: header search and ⌘K palette to open a service, store, job or agent by name across the estate; thin `/jobs/:name` and `/agents/:name` pages so every kind has an address; proposed |
 | [0028](0028-versions-across.md) | versions across environments: on the service page, a strip of that service's version in every environment from the deploys event, with a click to switch; done |
+| [0029](0029-dead-map-edges.md) | dead map edges: null/zero rate or a failing source draws solid muted red with no dash flow; proposed |

@@ -28,6 +28,8 @@ export interface DrawnEdge {
   /** The rate of what it stands for, summed; null when none of them has one. */
   readonly rate: number | null
   readonly alerting: boolean
+  /** No traffic, or the source needs someone: solid and still on the map. */
+  readonly dead: boolean
 }
 
 export interface Drawn {
@@ -40,6 +42,8 @@ export interface Drawn {
 }
 
 export const categoryId = (category: string) => `category:${category}`
+
+const isCategory = (node: DrawnNode): node is DrawnCategory => "kind" in node && node.kind === "category"
 
 const order: Readonly<Record<Health, number>> = { critical: 0, attention: 1, unknown: 2, healthy: 3 }
 const worstOf = (healths: ReadonlyArray<Health>): Health =>
@@ -133,16 +137,25 @@ export const drawnOf = (
       count: was.count + 1,
     })
   }
+  const healthAt = new Map<string, Health>()
+  for (const node of drawnNodes) {
+    if (isCategory(node)) healthAt.set(node.id, node.health)
+    else healthAt.set(node.id, nodeHealth(node))
+  }
   return {
     nodes: drawnNodes,
-    edges: [...merged.values()].map(({ from, to, label, rates, alerting, count }) => ({
-      from,
-      to,
-      // A label names one edge; an edge standing for several is its rate alone.
-      ...(label === undefined || count > 1 ? {} : { label }),
-      rate: rates.length === 0 ? null : rates.reduce((total, rate) => total + rate, 0),
-      alerting,
-    })),
+    edges: [...merged.values()].map(({ from, to, label, rates, alerting, count }) => {
+      const rate = rates.length === 0 ? null : rates.reduce((total, each) => total + each, 0)
+      return {
+        from,
+        to,
+        // A label names one edge; an edge standing for several is its rate alone.
+        ...(label === undefined || count > 1 ? {} : { label }),
+        rate,
+        alerting,
+        dead: rate === null || rate === 0 || needs(healthAt.get(from) ?? "unknown"),
+      }
+    }),
     closed: [...shut],
     opened: collapsing ? categories.filter((each) => opened.has(each)) : [],
   }

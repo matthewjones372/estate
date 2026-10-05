@@ -55,7 +55,7 @@ describe("the map drawn", () => {
     const small = catalogOf({ Shop: ["web"], Payments: ["orders"] }, [{ from: "web", to: "orders", label: "orders" }])
     const drawn = drawnOf(small, servicesOf({}, [{ from: "web", to: "orders", rate: 3, alerting: false }]), new Set())
     expect(drawn.nodes.map((node) => node.id)).toEqual(["web", "orders", "provider"])
-    expect(drawn.edges).toEqual([{ from: "web", to: "orders", label: "orders", rate: 3, alerting: false }])
+    expect(drawn.edges).toEqual([{ from: "web", to: "orders", label: "orders", rate: 3, alerting: false, dead: false }])
     expect([drawn.closed, drawn.opened]).toEqual([[], []])
   })
 
@@ -67,8 +67,8 @@ describe("the map drawn", () => {
       { id: "provider", title: "Card provider", kind: "external" },
     ])
     expect(drawn.edges).toEqual([
-      { from: categoryId("Shop"), to: categoryId("Payments"), rate: 42, alerting: true },
-      { from: categoryId("Payments"), to: "provider", label: "charges", rate: null, alerting: false },
+      { from: categoryId("Shop"), to: categoryId("Payments"), rate: 42, alerting: true, dead: false },
+      { from: categoryId("Payments"), to: "provider", label: "charges", rate: null, alerting: false, dead: true },
     ])
     expect(drawn.closed).toEqual(["Shop", "Payments"])
   })
@@ -82,6 +82,7 @@ describe("the map drawn", () => {
       label: "orders",
       rate: 30,
       alerting: false,
+      dead: false,
     })
     expect([opened.closed, opened.opened]).toEqual([["Shop"], ["Payments"]])
     const urgent = drawnOf(big, servicesOf({ shop3: "critical", shop4: "healthy" }, flows), new Set())
@@ -93,6 +94,53 @@ describe("the map drawn", () => {
     ])
     expect(urgent.nodes[0]).toMatchObject({ members: 6, beside: 1 })
     expect(urgent.closed).toEqual(["Shop", "Payments"])
+  })
+
+  test("marks an edge dead when its rate is null or zero, or its source needs someone", () => {
+    const small = catalogOf({ Shop: ["web"], Payments: ["orders"] }, [
+      { from: "web", to: "orders", label: "orders" },
+      { from: "orders", to: "provider", label: "charges" },
+    ])
+    const none = drawnOf(
+      small,
+      servicesOf({ web: "healthy", orders: "healthy" }, [
+        { from: "web", to: "orders", rate: null, alerting: false },
+        { from: "orders", to: "provider", rate: 0, alerting: false },
+      ]),
+      new Set(),
+    )
+    expect(none.edges).toEqual([
+      { from: "web", to: "orders", label: "orders", rate: null, alerting: false, dead: true },
+      { from: "orders", to: "provider", label: "charges", rate: 0, alerting: false, dead: true },
+    ])
+    const failing = drawnOf(
+      small,
+      servicesOf({ web: "critical", orders: "healthy" }, [{ from: "web", to: "orders", rate: 9, alerting: true }]),
+      new Set(),
+    )
+    expect(failing.edges).toContainEqual({
+      from: "web",
+      to: "orders",
+      label: "orders",
+      rate: 9,
+      alerting: true,
+      dead: true,
+    })
+    const attention = drawnOf(
+      small,
+      servicesOf({ web: "attention", orders: "healthy" }, [{ from: "web", to: "orders", rate: 4, alerting: false }]),
+      new Set(),
+    )
+    expect(attention.edges[0]?.dead).toBe(true)
+  })
+
+  test("an edge out of a failing node drawn beside its category is dead", () => {
+    const drawn = drawnOf(big, servicesOf({ shop0: "critical", orders: "healthy" }, flows), new Set())
+    expect(drawn.edges.find((edge) => edge.from === "shop0")).toMatchObject({
+      to: categoryId("Payments"),
+      rate: 30,
+      dead: true,
+    })
   })
 
   test("never collapses when the catalog says never, or names no categories", () => {

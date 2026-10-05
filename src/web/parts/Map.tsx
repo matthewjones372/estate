@@ -52,7 +52,8 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
   const Line = (line: { readonly edge: DrawnEdge }) => (
     <Show when={ends(line.edge)}>
       {(at) => {
-        const hot = () => line.edge.alerting
+        const dead = () => line.edge.dead
+        const hot = () => !dead() && line.edge.alerting
         return (
           <g>
             <line
@@ -60,17 +61,17 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
               y1={at().from.y}
               x2={at().to.x}
               y2={at().to.y}
-              stroke={hot() ? "#4A3510" : "#232836"}
+              stroke={dead() ? "#5A1F22" : hot() ? "#4A3510" : "#232836"}
               stroke-width="1"
               vector-effect="non-scaling-stroke"
             />
             <line
-              class="flow"
+              class={dead() ? "dead" : "flow"}
               x1={at().from.x}
               y1={at().from.y}
               x2={at().to.x}
               y2={at().to.y}
-              stroke={hot() ? "#F5A524" : "#5F6B85"}
+              stroke={dead() ? "#A84848" : hot() ? "#F5A524" : "#5F6B85"}
               stroke-width={hot() ? 2.5 : 1.5}
               stroke-linecap="round"
               vector-effect="non-scaling-stroke"
