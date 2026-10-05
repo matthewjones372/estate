@@ -2,6 +2,7 @@
 /** The signed-in page: the header, then the page the address names. */
 import { Match, Show, Switch } from "solid-js"
 import { type Estate, EstateContext } from "./context"
+import { AlertPage } from "./pages/Alert"
 import { Alerts } from "./pages/Alerts"
 import { Deploys } from "./pages/Deploys"
 import { Kiosk } from "./pages/Kiosk"
@@ -28,6 +29,10 @@ const Page = (props: { readonly estate: Estate }) => {
     const now = page()
     return now.page === "store" ? now.name : undefined
   }
+  const alert = () => {
+    const now = page()
+    return now.page === "alert" ? now.id : undefined
+  }
   return (
     <Switch fallback={<Missing />}>
       <Match when={page().page === "overview"}>
@@ -35,6 +40,7 @@ const Page = (props: { readonly estate: Estate }) => {
       </Match>
       <Match when={service()}>{(name) => <ServicePage name={name()} />}</Match>
       <Match when={store()}>{(name) => <StorePage name={name()} />}</Match>
+      <Match when={alert()}>{(id) => <AlertPage id={id()} />}</Match>
       <Match when={page().page === "deploys"}>
         <Deploys />
       </Match>
