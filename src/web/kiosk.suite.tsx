@@ -98,4 +98,13 @@ describe("the screen", () => {
     expect(page.container.querySelector("nav")).toBeNull()
     page.dispose()
   })
+
+  test("has no jump field or ⌘K listener", async () => {
+    const page = mount(() => <App estate={useEstate()} />, { me: screen, page: { page: "kiosk" } })
+    expect(page.container.querySelector("input.jump-input")).toBeNull()
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true, cancelable: true }))
+    await page.settle()
+    expect(page.container.querySelector('[aria-label="Jump to"]')).toBeNull()
+    page.dispose()
+  })
 })
