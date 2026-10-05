@@ -54,9 +54,7 @@ export const jumpHits = (catalog: CatalogEvent | undefined, query: string): Read
   for (const each of catalog.stores ?? []) push("store", each.name, each.engine)
   for (const each of catalog.jobs ?? []) push("job", each.name, each.kind)
   for (const each of catalog.agents ?? []) push("agent", each.name, each.category)
-  candidates.sort(
-    (a, b) => a.rank - b.rank || kindOrder[a.kind] - kindOrder[b.kind] || a.name.localeCompare(b.name),
-  )
+  candidates.sort((a, b) => a.rank - b.rank || kindOrder[a.kind] - kindOrder[b.kind] || a.name.localeCompare(b.name))
   return candidates.slice(0, cap).map(({ rank: _, ...hit }) => hit)
 }
 
