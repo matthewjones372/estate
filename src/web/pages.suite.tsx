@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-/** What each page draws from the fixture's events: run by \`pages.test.ts\` once Solid's compiler is in place. */
+/** What each page draws from the fixture's events: run by `pages.test.ts` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
 import { App } from "./App"
 import { events, heard, now, operator } from "./fixture"
@@ -194,15 +194,17 @@ describe("the other pages", () => {
       expect(page).toContain(words)
   })
 
-  test("a service shows its load, pods, alerts today, debug and builds", () => {
+  test("a service shows what's happening, what changed, load, pods, debug and builds", () => {
     const page = text(render(() => <ServicePage name="storefront" />))
     for (const words of [
       "The shop's pages",
       "Owned by web",
       "running v2",
+      "What's happening",
+      "OrdersSlow",
+      "What changed",
       "storefront-1",
       "up 2 h",
-      "OrdersSlow",
       "On until",
       "Turn off now",
       "Faster pages",
@@ -218,8 +220,11 @@ describe("the other pages", () => {
     ]) {
       expect(page).toContain(words)
     }
-    expect(text(render(() => <ServicePage name="orders" />))).toContain("The catalog names no log level for orders")
-    expect(text(render(() => <ServicePage name="orders" />))).toContain("No jobs are named for it.")
+    const orders = text(render(() => <ServicePage name="orders" />))
+    expect(orders).toContain("What's happening")
+    expect(orders).toContain("Nothing firing")
+    expect(orders).not.toContain("Debug logging")
+    expect(orders).toContain("No jobs are named for it.")
     expect(text(render(() => <ServicePage name="nothing" />))).toContain("nothing is not in production")
   })
 
