@@ -39,6 +39,8 @@ const synonyms: Readonly<Record<string, string>> = {
   wiki: "doc",
   pagerduty: "oncall",
   opsgenie: "oncall",
+  incident: "oncall",
+  "raise-incident": "oncall",
 }
 
 const iconFor = (name: string): string => {
