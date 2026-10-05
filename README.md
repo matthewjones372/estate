@@ -8,51 +8,43 @@
 ![Solid](https://img.shields.io/badge/Solid-1.9-2c4f7c?logo=solid&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-3dd68c)](LICENSE)
 
-**A control room for your engineering estate.**
+**An operational context layer for your engineering estate.**
 
-When something breaks in production, the problem usually isn't a lack of telemetry. It's that the context you need
-is spread across several systems.
+Estate is not a Grafana replacement, and it is not trying to be another dashboard. When an alert fires, the problem
+is rarely a missing chart — it is that the context is scattered: the alert in one tool, the deploy in another, the
+runbook in a third, ownership in the catalogue, the people in Slack.
 
-An alert might be in Grafana. The useful logs might be in Elasticsearch. The deployment is in GitHub or Jenkins. The
-workload is in Kubernetes. Ownership is in your service catalogue. The runbook is in Confluence. The people
-investigating it are in Slack.
-
-**Estate puts that context together on one live page for each service, then takes you to the system that has the
-detail.**
+**Estate's path is ALERT → CONTEXT → INVESTIGATION.** It puts what is firing first, correlates what changed near it,
+names who owns it, and links you into the system that has the detail.
 
 ![The overview: what needs you now, each service's lane, and what changed today](docs/overview.png)
 
 ## Why does Estate exist?
 
-Estate is not another observability platform, and it isn't trying to replace Grafana, Datadog, Elasticsearch,
-Kubernetes, GitHub or your other engineering tools.
+Estate is an **operational context layer**, not another observability platform. It does **not** replace Grafana,
+Datadog, Elasticsearch, Kubernetes, GitHub or your other engineering tools — and it is deliberately not a place to
+build boards.
 
-If your entire engineering estate has already been standardised around one platform, with your metrics, logs,
-deployments, incidents, ownership and runbooks all integrated into it, you probably don't need Estate.
+If your entire engineering estate is already standardised around one platform, with metrics, logs, deployments,
+incidents, ownership and runbooks all integrated into it, you probably don't need Estate.
 
-Real engineering estates are often different. Teams accumulate tools over time. One service might use Prometheus and
-Grafana, another Datadog, another CloudWatch. Logs might live in Elasticsearch or Loki. Deployments might run through
-GitHub Actions, Jenkins, Harness or Argo CD. Kubernetes tells you what is running, while Slack, Confluence and your
-service catalogue contain the human context.
+Real estates accumulate tools. One service uses Prometheus and Grafana; another Datadog; logs sit in Elasticsearch or
+Loki; deploys run through GitHub Actions, Jenkins, Harness or Argo CD. Those tools are good at their jobs. The gaps
+between them are where incidents get expensive.
 
-Those tools are good at their individual jobs. The problem is the gaps between them. When an alert fires, the
-investigation often looks like this:
+### A concrete morning
 
-> Alert → metrics → logs → recent deployment → repository → ownership → Slack → runbook
+> **11:46** — `OrdersSlow` fires. Instead of opening five tabs, you open the alert in Estate.
+>
+> **What's happening** — warning, firing 14 minutes, customers wait to place orders.
+> **What changed** — `storefront` `main-88-04bc441` deployed 2 minutes before it fired (Flux); payments unchanged.
+> **Who owns it** — web · Orders on Slack.
+> **Where to look** — runbook, logs, traces, the service page.
+> **Ask AI** (optional) — reads the same brief, answers with likely cause, evidence links, runbook next steps and
+> confidence — and never invents what Estate did not see.
 
-Estate turns that investigation into a single starting point. For each service, it brings together:
-
-- **What's wrong?** Alerts, thresholds, impact and history
-- **What changed?** Deployments, builds, alerts, silences and notes
-- **What's running?** Kubernetes and deployment state
-- **How is it behaving?** Request rate, errors, latency and supporting signals
-- **Who owns it?** Team, repository and contact information
-- **Where do I look next?** Logs, dashboards, traces, runbooks and source systems
-
-Estate doesn't ingest your entire estate into another platform. It reads the systems you already use and provides
-the missing context between them.
-
-That's the job of Estate: **something's wrong. What do I need to know, and where do I look next?**
+That is ALERT → CONTEXT → INVESTIGATION. Estate reads your tools live and keeps only what it adds: notes, impact, and
+alert history.
 
 ## What it brings together
 
@@ -95,12 +87,10 @@ Services, stores and jobs can be grouped by **category**, such as Payments or Da
 reads as five areas. The map at the top draws a node per category once there are more than a dozen, and opens one
 in place when you click it. Anything that needs someone is always drawn on its own.
 
-### On a screen
+### Also: a screen on the wall
 
-`/kiosk` is for the screen on the wall: the headline, what's firing and every service worst first, in type you can
-read across a room, with nothing to press. Open `/kiosk?token=…` once on the screen; it signs in for 30 days and can
-read but never change anything. Environments take turns; `?team=payments` or `?category=Payments` narrows it; and
-if the screen stops hearing from Estate, it says so in red.
+`/kiosk` is optional wall-display mode — headline and what's firing, large type, nothing to press. Useful on a NOC
+TV; not the main product. Open `/kiosk?token=…` once; it signs in for 30 days and never changes anything.
 
 ![The kiosk on a 1080p screen](docs/kiosk.png)
 
@@ -143,7 +133,7 @@ services:
     owner: payments
     category: Payments
     environments: [ production ]
-    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: payments } ] }
+    kube: { namespace: shop, workloads: [ { kind: Deployment, name: payments } ] }
     deploy: { flux: { kustomization: shop, imagePolicy: payments } }
     build: { github: { workflow: payments.yml, branch: main } }
     load:
@@ -170,7 +160,7 @@ and vitals.
 Estate sits beside these tools, not instead of them, and links into each.
 
 - **Backstage, Port, Cortex** catalog what you own. Estate shows how it's doing right now.
-- **Grafana** can chart anything, but someone has to build and maintain the boards. Estate needs none.
+- **Grafana** is for charts and boards you build and maintain. Estate is not a Grafana replacement; it links into Grafana (and others) when you need the deep dive.
 - **k9s, Lens, Headlamp** go deep on one cluster. Estate covers several environments and links into them.
 - **Argo CD's UI, Weave GitOps** show the deploy tool. Estate puts that next to the build and what's running.
 - **Karma, Keep** handle alerts on their own. Estate shows each one next to the service it's about.
@@ -215,7 +205,7 @@ flowchart LR
 The server and the pages never import each other, and `shared` imports nothing of ours. Those boundaries are
 checked on every build.
 
-### Performance
+### Performance (secondary)
 
 Fifty is about the most a team puts on one page, and the build fails if Estate gets slower there. A thousand is a
 stress test. Both are measured by [`bench/`](bench) against fake tools that answer in 20 ms:
