@@ -30,7 +30,7 @@ sources:
     # grafana: { url: https://grafana.production.invalid, token: ${GRAFANA_TOKEN}, prometheus: prom-prod, loki: loki-prod }
     # Services' lines from Elasticsearch or OpenSearch, in place of Loki:
     # elasticsearch: { url: https://logs.production.invalid:9200, index: "logs-*", apiKey: ${ELASTIC_API_KEY} }
-    kube: { url: https://kubernetes.production.invalid:6443 }
+    kubernetes: { url: https://kubernetes.production.invalid:6443 }
     flux: {}
     # Or services on ECS, with CloudWatch's alarms and metrics, through the credentials AWS's tools would find:
     # aws: { region: eu-west-2 }
