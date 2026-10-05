@@ -17,6 +17,8 @@ followed.
 - **Rewriting the overview's lanes, map layout or kiosk.** Kiosk and Performance stay; they are demoted in the README
   only.
 - **GitHub repo topics.** Left alone.
+- **Owning or creating incidents.** A catalog `incident` link opens PagerDuty / Opsgenie / etc.; Estate does
+  not call their APIs or keep an incident model.
 
 ## Shape
 
@@ -39,11 +41,22 @@ Ask AI (when ai: is set)
   settings.ai → HttpClient model port (Anthropic | OpenAI-compatible | xai | gemini)
   POST /api/alerts/:id/ask  streams a structured answer on the alert page
 
+Raise incident (when catalog link configured)
+  service.links.incident (or raise-incident): URL template with {service} {env} {alert} {summary}
+  Out / target blank on AlertCard + alert page (+ service Links chip); hidden when unset
+  Estate does not create incidents — link out only
+
 Overview services layout (viewer preference)
   List (lanes, default) ↔ Grid (compact cards) — kept in localStorage, not catalog config
 ```
 
 ```yaml
+# catalog.yaml — Raise incident (optional link out)
+services:
+  - name: storefront
+    links:
+      incident: https://example.pagerduty.com/incidents/create?service={service}&env={env}&title={alert}&details={summary}
+
 # estate.yaml — Ask AI (optional)
 ai:
   provider: anthropic            # or openai | openai-compatible | xai | gemini
@@ -91,6 +104,9 @@ stack entry there.
       Done when: against a fake that calls tools, the panel shows likely cause, evidence, next steps and confidence.
 - [x] **`services-layout`** — overview List/Grid toggle for services; `parts/ServiceGrid.tsx`; preference via `kept`.
       Done when: lanes suite switches to grid and shows storefront/orders cards.
+- [ ] **`raise-incident`** — catalog `incident` / `raise-incident` link template; Raise incident Out on alert
+      context (and service Links) when configured; `{alert}` / `{summary}` filled at open time; no API create.
+      Done when: tests show the control when configured, hide when not, and the URL fills placeholders.
 - [ ] **`tests-copy`** — unit/e2e assertions for new copy and pages.suite routes.
       Done when: `bun run gate` passes.
 
