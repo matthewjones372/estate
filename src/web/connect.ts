@@ -38,7 +38,7 @@ const decodeGroups = Schema.decodeUnknownOption(ErrorGroups)
 
 const watchLogs = (environment: string, service: string, handlers: LogHandlers) => {
   const source = new EventSource(`/logs?env=${encodeURIComponent(environment)}&service=${encodeURIComponent(service)}`)
-  let opened = true
+  let opened = false
   source.addEventListener("from", (event) => {
     opened = true
     handlers.from(JSON.parse((event as MessageEvent<string>).data))
