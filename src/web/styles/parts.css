@@ -121,3 +121,8 @@
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
+/* A service found in a cluster rather than written in the catalog: said quietly, as its cost is. */
+.found {
+  display: block;
+  font-size: 12px;
+}

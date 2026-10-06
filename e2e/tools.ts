@@ -52,6 +52,7 @@ const series: Array<[RegExp, (at: number) => number]> = [
   [/orders_waiting/, wave(12, 5, 14)],
   [/app="storefront"/, wave(118, 14, 0)],
   [/app="orders"/, wave(42, 6, 3)],
+  [/app="basket"/, wave(23, 4, 15)],
 ]
 
 /** A pod's latest lines, with the timestamps the cluster puts in front: a few each read, now and then an error. */

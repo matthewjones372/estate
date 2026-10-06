@@ -4,6 +4,7 @@ import type { Mistake } from "../shared/shape"
 import { liveAskLimits } from "./ask-limits"
 import { providerLayer } from "./auth/oidc"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
+import { discoverServices, makeCatalogs, written } from "./discover/run"
 import { loadHistory, recordFirings, sweepHistory } from "./history"
 import { agentRunsRoute } from "./http/agents"
 import { aroundRoute } from "./http/around"
@@ -129,7 +130,20 @@ export const background = (
       ),
       sweepNotes(started.settings.notes?.keepDays ?? 30),
       sweepHistory(historyDays(started.settings)),
-      reloadCatalog(started.settings.catalog, started.settings, started.catalogText),
+      Effect.flatMap(makeCatalogs(started.initial.catalog), (catalogs) =>
+        Effect.all(
+          [
+            reloadCatalog(
+              started.settings.catalog,
+              started.settings,
+              started.catalogText,
+              written(catalogs, started.settings),
+            ),
+            discoverServices(catalogs, started.settings),
+          ],
+          { concurrency: "unbounded" },
+        ),
+      ),
       startSources(started.settings),
     ],
     { concurrency: "unbounded" },

@@ -46,6 +46,8 @@ export const CatalogEvent = Schema.Struct({
       repository: optional(Schema.String),
       links: Schema.Array(Link),
       debug: optional(Schema.Struct({ levels: Schema.Array(Schema.String) })),
+      /** Found, not written: where, and the entry as YAML to put in the catalog. */
+      discovered: optional(Schema.Struct({ from: Schema.String, yaml: Schema.String })),
     }),
   ),
   vitals: Schema.Array(Schema.Struct({ title: Schema.String, unit: optional(Schema.String) })),

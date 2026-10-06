@@ -76,22 +76,22 @@ does not become a lane.
 
 ## Stack
 
-- [ ] **`discover-catalog`** — `discover:` in the catalog: its shape, and checks that a rule names a selector and only
+- [x] **`discover-catalog`** — `discover:` in the catalog: its shape, and checks that a rule names a selector and only
       placeholders it can fill.
       Done when: a rule with no selector, or with `{lable:x}`, is a catalog mistake that says so.
-- [ ] **`discover-kubernetes`** — from a rule and the workloads a cluster lists, the entries found.
+- [x] **`discover-kubernetes`** — from a rule and the workloads a cluster lists, the entries found.
       Done when: against a stub cluster, labelled workloads in two environments are one service in both, with the
       rule's fields filled from their labels and their annotations' runbook and repository, and an unlabelled one is
       not found.
-- [ ] **`discover-merge`** — every minute, the found entries checked and put after the written ones; written wins by
+- [x] **`discover-merge`** — every minute, the found entries checked and put after the written ones; written wins by
       name; a reload of the file keeps what was found; a cluster that fails keeps what it found last.
       Done when: a written orders replaces a discovered one, an entry with a mistake is left out and logged, and a
       catalog reload keeps the discovered services.
-- [ ] **`discover-page`** — "found in Kubernetes" on a discovered lane and page, and "Copy as YAML" on its page.
+- [x] **`discover-page`** — "found in Kubernetes" on a discovered lane and page, and "Copy as YAML" on its page.
       Done when: the page suite shows the mark and copies an entry that parses as a catalog service.
-- [ ] **`discover-doctor`** — the doctor's `discover` line per environment.
+- [x] **`discover-doctor`** — the doctor's `discover` line per environment.
       Done when: it names the services found, those written over and those left out with why.
-- [ ] **`discover-e2e`** — the e2e cluster labels one Deployment that the catalog does not name.
+- [x] **`discover-e2e`** — the e2e cluster labels one Deployment that the catalog does not name.
       Done when: Playwright sees it on the overview, marked as found, with its load.
 
 ## Acceptance

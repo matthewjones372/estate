@@ -9,6 +9,7 @@ import { A } from "../parts/A"
 import { Load, Timeline } from "../parts/Charts"
 import { CostLine } from "../parts/CostLine"
 import { DebugPanel } from "../parts/Debug"
+import { FoundEntry } from "../parts/Found"
 import { Jobs } from "../parts/Jobs"
 import { HealthLine, Links } from "../parts/Lane"
 import { LogsPanel } from "../parts/Logs"
@@ -65,6 +66,7 @@ export const ServicePage = (props: { readonly name: string }) => {
           <Versions name={props.name} />
           <Show when={service()}>{(described) => <Links service={described()} />}</Show>
           <Owner owner={service()?.owner} team={teamOf(events().catalog, service()?.owner)} />
+          <FoundEntry discovered={service()?.discovered} />
         </section>
         <ServiceAlerts alerts={alerts()} catalog={events().catalog} canSilence={canSilence()} />
         <div class="row">

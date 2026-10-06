@@ -12,6 +12,10 @@ import { compact } from "../../shared/compact"
 import type { CatalogEvent } from "../../shared/events"
 import { storesIn } from "./stores"
 
+/** A discovered entry as it would be written under `services:`, without the mark only discovery sets. */
+const asYaml = ({ discovered: _, ...entry }: Service): string =>
+  `- ${Bun.YAML.stringify(entry, null, 2).replace(/ +$/gm, "").trimEnd().split("\n").join("\n  ")}\n`
+
 interface Named {
   readonly name: string
   readonly namespace?: string
@@ -74,6 +78,9 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
       service.links,
     ),
     ...(service.debug === undefined ? {} : { debug: { levels: service.debug.levels } }),
+    ...(service.discovered === undefined
+      ? {}
+      : { discovered: { from: service.discovered.from, yaml: asYaml(service) } }),
   })),
   vitals: (catalog.vitals ?? []).map((vital) => ({
     title: vital.title,

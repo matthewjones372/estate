@@ -24,10 +24,23 @@ const workload = (name: string) => ({ metadata: { name }, spec: { selector: { ma
 const pods = (app: string, names: ReadonlyArray<string>, image: string) =>
   names.map((name) => ({ ...pod(name, image), metadata: { name, labels: { app } } }))
 
+/** basket, which the catalog does not name: labelled for its discover rule to find. */
+const basket = {
+  ...workload("basket"),
+  metadata: {
+    name: "basket",
+    namespace: "shop",
+    labels: { "estate.dev/show": "true", "app.kubernetes.io/part-of": "Shop", team: "web" },
+    annotations: { "estate.dev/description": "Keeps what each customer means to buy" },
+  },
+}
+
 export const kube: Record<string, () => unknown> = {
   "/apis/apps/v1/namespaces/shop/deployments": () => ({
-    items: ["storefront", "orders", "search"].map(workload),
+    items: [...["storefront", "orders", "search"].map(workload), basket],
   }),
+  "/apis/apps/v1/namespaces/shop/deployments?labelSelector=estate.dev%2Fshow%3Dtrue": () => ({ items: [basket] }),
+  "/apis/apps/v1/namespaces/shop/statefulsets?labelSelector=estate.dev%2Fshow%3Dtrue": () => ({ items: [] }),
   "/apis/apps/v1/namespaces/payments/statefulsets": () => ({ items: [workload("payments")] }),
   "/api/v1/namespaces/shop/pods": () => ({
     items: [
@@ -38,6 +51,7 @@ export const kube: Record<string, () => unknown> = {
       ),
       ...pods("orders", ["orders-5c4-a", "orders-5c4-b"], "registry.example/orders:main-87-3889c5c"),
       ...pods("search", ["search-0"], "registry.example/search:1.4.2"),
+      ...pods("basket", ["basket-6b8-a", "basket-6b8-b"], "registry.example/basket:main-14-6b8e2d1"),
     ],
   }),
   "/api/v1/namespaces/payments/pods": () => ({

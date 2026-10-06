@@ -240,7 +240,22 @@ alerts:
 Secrets are written as `${NAME}` and read from the environment.
 
 `estate check catalog.yaml` reports every mistake in one go, with where it is, so it fits in CI. Estate reloads the
-catalog when it changes. There is deliberately no automatic discovery: the catalog is explicit and reviewed.
+catalog when it changes.
+
+Where most entries would be written the same way, a `discover:` rule in the catalog has Estate find them instead: the
+Deployments and StatefulSets a label selector matches, each made the entry the rule describes, its owner and category
+from labels, its description, repository and runbook from `estate.dev/` annotations. Each is checked as a written entry
+is and marked "found in Kubernetes" on the page, which offers its YAML to copy into the catalog; a written entry of the
+same name wins.
+
+```yaml
+discover:
+  - kubernetes: { selector: estate.dev/show=true, namespaces: [ shop ] }
+    service:
+      owner: "{label:team}"
+      category: "{label:app.kubernetes.io/part-of}"
+      load: { requests: 'sum(rate(http_requests_total{app="{name}"}[1m]))' }
+```
 [`examples/catalog.yaml`](examples/catalog.yaml) uses every option, including stores, jobs no service owns, the map
 and vitals.
 
@@ -347,7 +362,8 @@ Kubernetes.
 - **One operational view.** The state of the estate should be obvious without opening six dashboards.
 - **Not another system of record.** Prometheus owns metrics, Alertmanager owns alerts, Kubernetes owns workloads,
   Git owns configuration. Estate combines them.
-- **Configuration over discovery.** The catalog is explicit and reviewable in Git.
+- **Configuration over discovery.** The catalog is explicit and reviewable in Git; it may ask for services to be
+  found, and anything it writes wins.
 - **Fail explicitly.** Tools go down, tokens expire, APIs change. When a source stops answering, the page says which
   and since when, rather than showing stale data as if it were current.
 - **Keep the browser simple.** The integration work happens on the server, once, for every page.

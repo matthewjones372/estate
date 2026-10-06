@@ -8,6 +8,7 @@ import { type Catalog, ecsOf, kubernetesOf, type Service } from "../shared/catal
 import { costLine } from "../shared/costs"
 import { makeAwsJson } from "./aws/json"
 import { agentsFindings } from "./doctor-agents"
+import { discoverFinding } from "./doctor-discover"
 import { amount, type Finding, finding, type Needs } from "./doctor-finding"
 import type { Remote } from "./remote"
 import type { Settings, Sources } from "./settings"
@@ -205,6 +206,8 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
             : entries.map(([name, cost]) => `${name} ${costLine(cost) || "no spend"} (${cost.from})`).join("; ")
         }),
       )
+    const discovered = yield* discoverFinding(section, catalog, environment)
+    if (discovered !== undefined) findings.push(discovered)
     findings.push(...(yield* logsFinding(section, services, now)))
     findings.push(...(yield* agentsFindings(section, ranges, agentsIn(catalog, environment), now)))
     return { environment, findings }

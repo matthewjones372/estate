@@ -7,6 +7,19 @@ environments:
     title: Production, three machines
     sources: production
 
+# Services found rather than written: each Deployment in shop labelled estate.dev/show=true becomes an entry like this,
+# its category and owner from its labels, its description, repository and runbook from estate.dev/ annotations.
+# A service written below with the same name wins whole.
+discover:
+  - kubernetes: { selector: estate.dev/show=true, namespaces: [ shop ] }
+    service:
+      category: "{label:app.kubernetes.io/part-of}"
+      owner: "{label:team}"
+      load:
+        requests: sum(rate(http_requests_total{app="{name}"}[1m]))
+        errors: sum(rate(http_requests_total{app="{name}",code=~"5.."}[1m]))
+        p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="{name}"}[5m])))
+
 # AI agents run in production, their usage from OpenTelemetry's GenAI metrics in the environment's Prometheus.
 agents:
   - name: support-triage

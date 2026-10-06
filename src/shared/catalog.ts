@@ -125,8 +125,18 @@ export const Service = Schema.Struct({
       ),
     }),
   ),
+  /** Set by discovery, never written: where the entry was found. */
+  discovered: optional(Schema.Struct({ from: Schema.Literal("kubernetes") })),
 })
 export type Service = typeof Service.Type
+
+const { description, owner, category, repository, runbook, load, links, logs, stats } = Service.fields
+/** Where to find services the catalog does not write, and what each found becomes (spec 0031). */
+const DiscoverRule = Schema.Struct({
+  kubernetes: Schema.Struct({ selector: Schema.String, namespaces: optional(Schema.Array(Schema.String)) }),
+  service: optional(Schema.Struct({ description, owner, category, repository, runbook, load, links, logs, stats })),
+})
+export type DiscoverRule = typeof DiscoverRule.Type
 
 /** Where a service runs on Kubernetes, however the catalog names it. */
 export const kubernetesOf = (service: Service): typeof Kubernetes.Type | undefined =>
@@ -275,5 +285,6 @@ export const Catalog = Schema.Struct({
   alerts: optional(Schema.Record(Schema.String, Schema.Struct({ impact: optional(Schema.String) }))),
   vitals: optional(Schema.Array(Vital)),
   map: optional(CatalogMap),
+  discover: optional(Schema.Array(DiscoverRule)),
 })
 export type Catalog = typeof Catalog.Type

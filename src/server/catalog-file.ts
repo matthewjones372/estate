@@ -76,6 +76,8 @@ export const reloadCatalog = (
   path: string,
   settings: Settings,
   firstText: string,
+  taken: (catalog: Catalog) => Effect.Effect<void, never, Estate> = (catalog) =>
+    updateEstate((estate) => withCatalog(estate, catalog, settings)),
 ): Effect.Effect<never, never, Estate | FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const last = yield* Ref.make(firstText)
@@ -86,7 +88,7 @@ export const reloadCatalog = (
       const parsed = parseCatalog(path, text)
       const mistakes = Result.isFailure(parsed) ? parsed.failure.mistakes : crossCheck(settings, parsed.success)
       if (Result.isSuccess(parsed) && mistakes.length === 0) {
-        yield* updateEstate((estate) => withCatalog(estate, parsed.success, settings))
+        yield* taken(parsed.success)
         yield* Effect.logInfo(`catalog reloaded from ${path}`)
       } else {
         yield* Effect.logWarning(
