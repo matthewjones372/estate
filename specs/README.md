@@ -35,3 +35,4 @@ entries, one per pull request, each with what proves it done.
 | [0028](0028-versions-across.md) | versions across environments: on the service page, a strip of that service's version in every environment from the deploys event, with a click to switch; done |
 | [0029](0029-dead-map-edges.md) | dead map edges: null/zero rate or a failing source draws solid muted red with no dash flow; done |
 | [0030](0030-follow-frame-budget.md) | the follow frame budget: what a clustered Estate sends each follower, measured by `bench/frames.ts`, held to a budget in `bun run perf`, and metrics changes sent as what changed within them; proposed |
+| [0031](0031-discovered-services.md) | discovered services: a `discover:` rule in the catalog finds labelled workloads in Kubernetes and makes each an ordinary catalog entry, checked as one, marked as found, with written entries winning by name; proposed |
