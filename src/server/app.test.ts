@@ -41,6 +41,7 @@ describe("starting", () => {
             alerts: { state: "waiting" },
             cluster: { state: "waiting" },
             deploys: { state: "waiting" },
+            costs: { state: "off" },
             tools: {
               alerts: "Prometheus",
               metrics: "Prometheus",

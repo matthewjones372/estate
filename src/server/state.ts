@@ -2,9 +2,11 @@
  * Everything Estate knows, in one `SubscriptionRef`: the catalog, and what each environment's sources last said.
  * Sources write their part; the event stream reads the whole and sends what changed.
  */
+
 import { Context, Effect, Layer, SubscriptionRef } from "effect"
 import type { AgentUsage } from "../shared/agents"
 import type { Catalog } from "../shared/catalog"
+import type { Cost } from "../shared/costs"
 import type { Alert, Build, Debug, Job, Load, Note, Pod, Series, SourceKind } from "../shared/events"
 
 export interface Part<A> {
@@ -87,6 +89,8 @@ export interface EnvironmentState {
   readonly alerts: Part<ReadonlyArray<SourcedAlert>>
   readonly cluster: Part<Workloads>
   readonly deploys: Part<Readonly<Record<string, Chosen>>>
+  /** What each service, job and agent costs, by its name, from the environment's cost tools. */
+  readonly costs: Part<Readonly<Record<string, Cost>>>
   /** The tool each part is read from, by its own name, for the page to say: Prometheus, Datadog, Harness… */
   readonly tools: Tools
   readonly resolved: ReadonlyArray<{
@@ -122,6 +126,7 @@ export const emptyEnvironment = (configured: ReadonlySet<SourceKind>, tools: Too
   alerts: configured.has("alerts") ? waiting : off,
   cluster: configured.has("cluster") ? waiting : off,
   deploys: configured.has("deploys") ? waiting : off,
+  costs: off,
   tools,
   resolved: [],
 })

@@ -4,11 +4,11 @@
  */
 import { Config, Context, Data, Effect, Option, Redacted, Result, Schema } from "effect"
 import { checkShape, type Mistake } from "../shared/shape"
+import { Secret } from "./secret"
+import { Ai, Mcp } from "./settings-ai"
+import { Costs, Prices } from "./settings-costs"
 
 const optional = Schema.optionalKey
-
-/** A secret: read as text, kept `Redacted` so it cannot reach a log line or an error, unwrapped only where it is sent. */
-const Secret = Schema.RedactedFromValue(Schema.String)
 
 const Roles = Schema.Struct({
   viewer: Schema.Array(Schema.String),
@@ -138,6 +138,8 @@ const Sources = Schema.Struct({
   ),
   /** Langfuse, where the agents' runs are traced: its URL (Langfuse's cloud unless set) and a project's keys. */
   langfuse: optional(Schema.Struct({ url: optional(Schema.String), publicKey: Secret, secretKey: Secret })),
+  /** What this environment costs: its bill by tag, Kubernetes' share, and the AI providers' reports. */
+  costs: optional(Costs),
   /** How often each part is read, where its usual interval is too often for the tool or its bill. */
   every: optional(
     Schema.Struct({
@@ -145,31 +147,13 @@ const Sources = Schema.Struct({
       metrics: optional(Every),
       cluster: optional(Every),
       deploys: optional(Every),
+      costs: optional(Every),
     }),
   ),
 })
 
 export type Kubernetes = typeof Kubernetes.Type
 export type Sources = typeof Sources.Type
-
-/** A model to ask about an alert: Anthropic, OpenAI, xAI, Gemini, or any OpenAI-compatible server. */
-const Ai = Schema.Struct({
-  provider: Schema.Literals(["anthropic", "openai", "openai-compatible", "xai", "gemini"]),
-  apiKey: optional(Secret),
-  model: Schema.String,
-  url: optional(Schema.String),
-  budget: optional(Schema.Struct({ tokensPerDay: optional(Schema.Number) })),
-})
-export type Ai = typeof Ai.Type
-
-/** An agent's token for `/mcp`: its name, secret, and the role it reads as. */
-const McpToken = Schema.Struct({
-  name: Schema.String,
-  token: Secret,
-  role: Schema.Literals(["viewer", "operator"]),
-})
-const Mcp = Schema.Struct({ tokens: Schema.Array(McpToken) })
-export type Mcp = typeof Mcp.Type
 
 export const Settings = Schema.Struct({
   port: optional(Schema.Number),
@@ -221,8 +205,11 @@ export const Settings = Schema.Struct({
   ai: optional(Ai),
   /** Agents that may ask Estate over `/mcp`: each token and the role it reads as. Without it, `/mcp` answers 401. */
   mcp: optional(Mcp),
+  /** What models' tokens cost, per million, for the estimate of an agent's spend between the providers' reports. */
+  prices: optional(Prices),
 })
 export type Settings = typeof Settings.Type
+export type { Ai, Mcp } from "./settings-ai"
 export type AuthSettings = typeof Auth.Type
 
 export const SettingsError = Data.TaggedError("SettingsError")<{ readonly mistakes: ReadonlyArray<Mistake> }>

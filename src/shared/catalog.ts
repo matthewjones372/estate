@@ -1,5 +1,6 @@
 /** The catalog: an estate's environments, services, vitals and map, as its owner writes it in `catalog.yaml`. */
 import { Schema } from "effect"
+import { CostOf } from "./costs"
 
 const optional = Schema.optionalKey
 
@@ -38,6 +39,8 @@ export const Service = Schema.Struct({
   owner: optional(Schema.String),
   /** The area it belongs to, such as payments or data: the overview groups lanes by it, and a screen can show one. */
   category: optional(Schema.String),
+  /** Where its cost is found, where its name is not enough, and its budget. */
+  cost: optional(CostOf),
   repository: optional(Schema.String),
   /**
    * Its builds: `{ github: { workflow, branch } }` or the workflow alone, meaning GitHub Actions; or
@@ -188,6 +191,8 @@ export const Agent = Schema.Struct({
   description: optional(Schema.String),
   owner: optional(Schema.String),
   category: optional(Schema.String),
+  /** Where its cost is found, where its name is not enough, and its budget. */
+  cost: optional(CostOf),
   runbook: optional(Schema.String),
   environments: Schema.Array(Schema.String),
   runtime: optional(Schema.Struct({ kubernetes: optional(Kubernetes) })),
@@ -229,6 +234,8 @@ export const StandaloneJob = Schema.Struct({
   description: optional(Schema.String),
   owner: optional(Schema.String),
   category: optional(Schema.String),
+  /** Where its cost is found, where its name is not enough, and its budget. */
+  cost: optional(CostOf),
   runbook: optional(Schema.String),
   environments: Schema.Array(Schema.String),
   run: Schema.Union([

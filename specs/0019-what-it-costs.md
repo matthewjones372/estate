@@ -19,17 +19,18 @@ spend a week's budget in an afternoon.
 ## Shape
 
 ```yaml
-# estate.yaml
-costs:
-  aws: { region: us-east-1, tag: service }          # Cost Explorer, by the cost allocation tag naming the service
-  opencost: { url: http://opencost.opencost:9003 }   # Kubernetes' share, by namespace and workload
-  anthropic: { adminKey: "${ANTHROPIC_ADMIN_KEY}" }  # the provider's own cost report
-  openai: { adminKey: "${OPENAI_ADMIN_KEY}" }
-  every: 6h                                          # billing data changes a few times a day at most
-  currency: USD
-ai:
-  prices:                                            # per million tokens, for the live estimate between reports
-    claude-sonnet-…: { input: 3, output: 15 }
+# estate.yaml: each environment's costs are read with its other tools, since each usually bills to its own account
+sources:
+  production:
+    costs:
+      aws: { region: us-east-1, tag: service }          # Cost Explorer, by the cost allocation tag naming the service
+      opencost: { url: http://opencost.opencost:9003 }   # Kubernetes' share, by namespace and workload
+      anthropic: { adminKey: "${ANTHROPIC_ADMIN_KEY}" }  # the provider's own cost report
+      openai: { adminKey: "${OPENAI_ADMIN_KEY}" }
+      currency: USD
+    every: { costs: 6h }                                # billing data changes a few times a day at most; 6h unless set
+prices:                                                 # per million tokens, for the live estimate between reports
+  claude-sonnet-5-5: { input: 3, output: 15 }
 ```
 
 ```yaml
@@ -69,7 +70,8 @@ labelled as an estimate, and only fills the time the bill has not reached. Readi
 resources itself, keeps Estate out of the business of knowing every price. The price table for tokens is the one
 place it needs to, because no provider reports cost live.
 
-Tags are how AWS splits a bill by service, and a team that has not tagged can use OpenCost for what runs in
+Costs sit with each environment's other tools because an environment is usually its own account, so its bill, its
+anomalies and its budgets belong to its page. Tags are how AWS splits a bill by service, and a team that has not tagged can use OpenCost for what runs in
 Kubernetes. The alternative, Estate pricing usage from CloudWatch, would be wrong in the ways that matter most:
 discounts, data transfer and support fees. Recommended: as above.
 
@@ -83,7 +85,7 @@ discounts, data transfer and support fees. Recommended: as above.
 
 ## Stack
 
-- [ ] **`aws-costs`** — Cost Explorer by tag, the month's forecast, and anomalies as needing someone.
+- [x] **`aws-costs`** — Cost Explorer by tag, the month's forecast, and anomalies as needing someone.
       Done when: a test against Cost Explorer's answers shows each service's month to date and an anomaly.
 - [ ] **`opencost`** — Kubernetes' share by namespace and workload.
       Done when: a service with no tag shows its cost from OpenCost.

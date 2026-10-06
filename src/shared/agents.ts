@@ -1,5 +1,6 @@
 /** An AI agent as the events carry it: its usage over the last hour, its tokens against its budget, and its model. */
 import { Schema } from "effect"
+import { Cost } from "./costs"
 import { Series } from "./workloads"
 
 const optional = Schema.optionalKey
@@ -51,6 +52,7 @@ export const AgentState = Schema.Struct({
   reasons: Schema.Array(Schema.String),
   usage: AgentUsage,
   pods: optional(Schema.Array(Schema.Struct({ name: Schema.String, ready: Schema.Boolean }))),
+  cost: optional(Cost),
 })
 export type AgentState = typeof AgentState.Type
 

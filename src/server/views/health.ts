@@ -1,5 +1,6 @@
 /** A service's health in an environment, with the reasons in plain words, from what its sources said. */
 import { ecsOf, kubernetesOf, type Service } from "../../shared/catalog"
+import { costReasons } from "../../shared/costs"
 import type { Health } from "../../shared/events"
 import type { EnvironmentState, SourcedAlert } from "../state"
 
@@ -60,6 +61,7 @@ export const healthOf = (
   }
   const stalled = environment.deploys.value?.[service.name]?.stalled
   if (stalled !== undefined) attention.push(`deploy stalled: ${stalled}`)
+  attention.push(...costReasons(environment.costs.value?.[service.name]))
 
   if (critical.length > 0) return { health: "critical", reasons: [...critical, ...attention] }
   if (attention.length > 0) return { health: "attention", reasons: attention }

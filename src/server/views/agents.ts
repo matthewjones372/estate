@@ -2,6 +2,7 @@
 import { type AgentState, tokens } from "../../shared/agents"
 import type { Agent } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
+import { costReasons } from "../../shared/costs"
 import type { Health } from "../../shared/events"
 import type { EnvironmentState } from "../state"
 
@@ -38,6 +39,7 @@ export const agentStateOf = (agent: Agent, environment: EnvironmentState): Agent
         `on course for ${tokens(hourly * hoursIn[budget.per])} tokens a ${budget.per}, over its ${tokens(budget.tokens)}`,
       )
   }
+  attention.push(...costReasons(environment.costs.value?.[agent.name]))
   const read = environment.metrics.state === "ok" || environment.alerts.state === "ok"
   const health: Health =
     critical.length > 0 ? "critical" : attention.length > 0 ? "attention" : read ? "healthy" : "unknown"
@@ -47,5 +49,6 @@ export const agentStateOf = (agent: Agent, environment: EnvironmentState): Agent
     reasons: health === "unknown" ? ["not read yet"] : [...critical, ...attention],
     usage,
     pods: pods?.map((pod) => ({ name: pod.name, ready: pod.ready })),
+    cost: environment.costs.value?.[agent.name],
   })
 }

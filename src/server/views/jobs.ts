@@ -1,5 +1,6 @@
 /** Jobs no service owns: each one's health from its last runs and the alerts about it. */
 import type { StandaloneJob } from "../../shared/catalog"
+import { costReasons } from "../../shared/costs"
 import type { Health, Job } from "../../shared/events"
 import type { EnvironmentState } from "../state"
 
@@ -19,6 +20,7 @@ export const jobHealthOf = (
     attention.push(`its last run failed${last.message === undefined ? "" : `: ${last.message}`}`)
   if (read?.missed !== undefined) attention.push("it missed a run")
   if (read?.absent !== undefined) attention.push(read.absent)
+  attention.push(...costReasons(environment.costs.value?.[job.name]))
   const withJob = read === undefined ? {} : { job: read }
   if (critical.length > 0) return { health: "critical", reasons: [...critical, ...attention], ...withJob }
   if (attention.length > 0) return { health: "attention", reasons: attention, ...withJob }

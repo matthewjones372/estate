@@ -13,7 +13,7 @@ export const SourceFailure = Data.TaggedError("SourceFailure")<{ readonly messag
 export type SourceFailure = InstanceType<typeof SourceFailure>
 export type Failure = SourceFailure
 
-type Parts = "metrics" | "alerts" | "cluster" | "deploys"
+type Parts = "metrics" | "alerts" | "cluster" | "deploys" | "costs"
 type ValueOf<K extends Parts> = NonNullable<EnvironmentState[K]["value"]>
 
 /** The part after a read: what it read, or what it last read with why it failed. */

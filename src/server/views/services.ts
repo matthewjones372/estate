@@ -64,6 +64,7 @@ export const servicesView = (estate: EstateState, environment: string): Services
         version: versionOf(pods.find((pod) => pod.ready)?.image ?? pods[0]?.image),
         load: metrics?.services[service.name] ?? {},
         debug: state.cluster.value?.debug[service.name],
+        cost: state.costs.value?.[service.name],
       })
     }),
     ...(estate.catalog.stores === undefined
@@ -80,7 +81,11 @@ export const servicesView = (estate: EstateState, environment: string): Services
       : { agents: agentsIn(estate.catalog, environment).map((agent) => agentStateOf(agent, state)) }),
     ...(estate.catalog.jobs === undefined
       ? {}
-      : { jobs: jobsIn(estate.catalog, environment).map((job) => ({ name: job.name, ...jobHealthOf(job, state) })) }),
+      : {
+          jobs: jobsIn(estate.catalog, environment).map((job) =>
+            compact({ name: job.name, ...jobHealthOf(job, state), cost: state.costs.value?.[job.name] }),
+          ),
+        }),
     vitals: (estate.catalog.vitals ?? []).map((vital, index) =>
       compact({ title: vital.title, unit: vital.unit, series: metrics?.vitals[index] ?? { now: null, points: [] } }),
     ),

@@ -12,6 +12,7 @@ import { readArgo } from "./argo"
 import { runBuilds } from "./builds"
 import { cloudwatchApi, readAlarms } from "./cloudwatch"
 import { readCluster } from "./cluster"
+import { costsReader } from "./costs"
 import { alertsBeside } from "./datadog"
 import { revertExpired } from "./debug"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./ecs"
@@ -129,6 +130,8 @@ const readersFor = (
         ),
       )
     }
+    const costs = yield* costsReader(section, environment.name)
+    if (costs !== undefined) readers.push(runSource(environment.name, "costs", everyOf(section, "costs"), costs))
     const ranges = yield* rangesIn(section)
     if (ranges !== undefined) {
       const read = Effect.gen(function* () {

@@ -4,6 +4,7 @@
  */
 import { Schema } from "effect"
 import { AgentState, DescribedAgent } from "./agents"
+import { Cost } from "./costs"
 import { Debug, Job, Pod, Series } from "./workloads"
 
 const optional = Schema.optionalKey
@@ -133,6 +134,7 @@ export const ServicesEvent = Schema.Struct({
       version: optional(Schema.String),
       load: Load,
       debug: optional(Debug),
+      cost: optional(Cost),
     }),
   ),
   vitals: Schema.Array(Schema.Struct({ title: Schema.String, unit: optional(Schema.String), series: Series })),
@@ -150,7 +152,13 @@ export const ServicesEvent = Schema.Struct({
   /** Jobs no service owns: each one's health, and what its runtime last said of it. */
   jobs: optional(
     Schema.Array(
-      Schema.Struct({ name: Schema.String, health: Health, reasons: Schema.Array(Schema.String), job: optional(Job) }),
+      Schema.Struct({
+        name: Schema.String,
+        health: Health,
+        reasons: Schema.Array(Schema.String),
+        job: optional(Job),
+        cost: optional(Cost),
+      }),
     ),
   ),
   edges: Schema.Array(
