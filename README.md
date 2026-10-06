@@ -181,6 +181,11 @@ docker run -v ./examples:/etc/estate -p 8080:8080 ghcr.io/matthewjones372/estate
 Then open <http://localhost:8080>. The example points at tools that don't exist, so each part of the page says
 what it couldn't reach. Edit `examples/estate.yaml` to point it at your own.
 
+To see it with live data, [petshop's demo](https://github.com/matthewjones372/petshop/tree/main/demo) runs Estate
+in Docker Compose against a real Prometheus and Alertmanager watching a small Kotlin service. Stopping the demo's
+chip registry fires an alert, which appears at the top of the page and resolves once the registry is back. Its
+`estate/` folder is a working `estate.yaml` and `catalog.yaml` to start from.
+
 To try it against your team's real tools, set `readOnly: true` in `estate.yaml` so Estate writes nothing (no
 silences, no debug switching, notes only in memory), then run the `doctor` command:
 
