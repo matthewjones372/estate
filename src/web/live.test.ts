@@ -57,6 +57,23 @@ describe("the page's store", () => {
     expect(live.snapshot().events.services?.partial).toBeUndefined()
   })
 
+  test("takes a partial event's other parts over those it has, and keeps the ones it leaves out", () => {
+    const { live, streams } = opened()
+    streams[0]?.handlers.onEvent("services", JSON.stringify(events.services))
+    const vitals = [{ title: "Orders", series: { now: 7, points: [7] } }]
+    streams[0]?.handlers.onEvent("services", JSON.stringify({ partial: true, services: [], vitals }))
+    expect(live.snapshot().events.services?.vitals).toEqual(vitals)
+    expect(live.snapshot().events.services?.sources).toEqual(events.services.sources)
+    expect(live.snapshot().events.services?.services).toEqual(events.services.services)
+  })
+
+  test("leaves what it has when a whole services event lacks a part", () => {
+    const { live, streams } = opened()
+    const { sources: _, ...lacking } = events.services
+    streams[0]?.handlers.onEvent("services", JSON.stringify(lacking))
+    expect(live.snapshot().events.services).toBeUndefined()
+  })
+
   test("takes a partial services event whole when it has none yet", () => {
     const { live, streams } = opened()
     streams[0]?.handlers.onEvent("services", JSON.stringify({ ...events.services, partial: true }))

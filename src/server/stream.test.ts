@@ -57,7 +57,16 @@ describe("the services event", () => {
     const data = servicesData(framesFor(sent, one, undefined)[1])
     expect(data.partial).toBe(true)
     expect(data.services.map((each: { name: string }) => each.name)).toEqual([services[0]?.name])
-    expect(data.sources).toEqual(base.services.sources)
+    expect(data.sources).toBeUndefined()
+  })
+
+  test("after the first, carries only the other parts that changed", () => {
+    const [sent] = framesFor(undefined, views, undefined)
+    const vitals = [{ title: "Orders", series: { now: 7, points: [7] } }]
+    const data = servicesData(
+      framesFor(sent, rendered({ ...base, services: { ...base.services, vitals } }), undefined)[1],
+    )
+    expect(data).toEqual({ partial: true, services: [], shifts: [], vitals })
   })
 
   test("carries a service whose series only moved along as the points it gained", () => {

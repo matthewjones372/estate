@@ -35,32 +35,48 @@ export interface Rendered {
   readonly sent: Sent
   readonly services: ReadonlyMap<string, string>
   readonly states: ReadonlyMap<string, ServiceState>
-  /** The services event's text but for its services, without its opening brace. */
-  readonly servicesRest: string
+  /** The services event's other parts (its sources, vitals, edges…), each as the text sent for it. */
+  readonly rest: ReadonlyMap<string, string>
   readonly id: string
 }
+
+/** Parts as the members of a JSON object, each with a comma before it, to follow what comes first. */
+const members = (parts: Iterable<readonly [string, string]>): string =>
+  [...parts].map(([key, text]) => `,${JSON.stringify(key)}:${text}`).join("")
 
 export const rendered = (views: Events): Rendered => {
   const { services: list, ...rest } = views.services
   const services = new Map(list.map((service) => [service.name, JSON.stringify(service)]))
-  const servicesRest = JSON.stringify(rest).slice(1)
-  const servicesText = `{"services":[${[...services.values()].join(",")}]${servicesRest === "}" ? "}" : `,${servicesRest}`}`
+  const restParts = new Map(
+    Object.entries(rest)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => [key, JSON.stringify(value)] as const),
+  )
+  const servicesText = `{"services":[${[...services.values()].join(",")}]${members(restParts)}}`
   const sent = Object.fromEntries(
     names.map((name) => [name, name === "services" ? servicesText : JSON.stringify(views[name])]),
   ) as Sent
   const states = new Map(list.map((service) => [service.name, service]))
-  return { sent, services, states, servicesRest, id: Bun.hash(names.map((name) => sent[name]).join("\n")).toString(36) }
+  return {
+    sent,
+    services,
+    states,
+    rest: restParts,
+    id: Bun.hash(names.map((name) => sent[name]).join("\n")).toString(36),
+  }
 }
 
 /**
- * The services event that brings a page from `before` to `now`: only the services that changed, when it has the same
- * services; all of them otherwise.
+ * The services event that brings a page from `before` to `now`: only the services and other parts that changed, when
+ * it has the same services and parts; all of them otherwise.
  */
 const servicesData = (before: Rendered | undefined, now: Rendered): string => {
   const same =
     before !== undefined &&
     before.services.size === now.services.size &&
-    [...now.services.keys()].every((name) => before.services.has(name))
+    [...now.services.keys()].every((name) => before.services.has(name)) &&
+    before.rest.size === now.rest.size &&
+    [...now.rest.keys()].every((key) => before.rest.has(key))
   if (!same) return now.sent.services
   const changed = [...now.services].filter(([name, text]) => before.services.get(name) !== text)
   const moved = changed.map(([name, text]) => {
@@ -70,7 +86,8 @@ const servicesData = (before: Rendered | undefined, now: Rendered): string => {
   })
   const whole = moved.filter((each) => each.shifts === undefined).map((each) => each.text)
   const shifts = moved.flatMap((each) => each.shifts ?? [])
-  return `{"partial":true,"services":[${whole.join(",")}],"shifts":${JSON.stringify(shifts)}${now.servicesRest === "}" ? "}" : `,${now.servicesRest}`}`
+  const rest = [...now.rest].filter(([key, text]) => before.rest.get(key) !== text)
+  return `{"partial":true,"services":[${whole.join(",")}],"shifts":${JSON.stringify(shifts)}${members(rest)}}`
 }
 
 /** The messages that bring a page showing `before` up to `now`; it then shows `now`. */

@@ -253,6 +253,16 @@ export type FeedItem = typeof FeedItem.Type
 export const FeedEvent = Schema.Struct({ items: Schema.Array(FeedItem) })
 export type FeedEvent = typeof FeedEvent.Type
 
+/** A partial services event: the services and other parts that changed, the rest as the page already has them. */
+export const ServicesPartEvent = Schema.Struct({
+  ...ServicesEvent.fields,
+  sources: optional(ServicesEvent.fields.sources),
+  environments: optional(ServicesEvent.fields.environments),
+  vitals: optional(ServicesEvent.fields.vitals),
+  edges: optional(ServicesEvent.fields.edges),
+})
+export type ServicesPartEvent = typeof ServicesPartEvent.Type
+
 export const events = {
   catalog: CatalogEvent,
   services: ServicesEvent,

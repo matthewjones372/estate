@@ -3,7 +3,7 @@
  * `useSyncExternalStore`. Opening the stream is passed in, so a test feeds it by hand.
  */
 import { Option, Schema } from "effect"
-import { type EventName, type Events, events } from "../shared/events"
+import { type EventName, type Events, events, ServicesPartEvent } from "../shared/events"
 import { applyShifts } from "../shared/shifts"
 
 export interface Snapshot {
@@ -23,8 +23,12 @@ export interface Handlers {
 
 export type Open = (environment: string, handlers: Handlers) => () => void
 
+// A services event may be partial, its parts the page already has left out.
 const decoders = Object.fromEntries(
-  Object.entries(events).map(([name, schema]) => [name, Schema.decodeUnknownOption(schema)]),
+  Object.entries({ ...events, services: ServicesPartEvent }).map(([name, schema]) => [
+    name,
+    Schema.decodeUnknownOption(schema),
+  ]),
 ) as Readonly<Record<EventName, (input: unknown) => Option.Option<unknown>>>
 
 const parse = (data: string): unknown => {
@@ -32,13 +36,23 @@ const parse = (data: string): unknown => {
   return Option.getOrUndefined(parsed)
 }
 
-/** A services event as the page should hold it: a partial one's services merged by name into those it has. */
-const merged = (held: Events["services"] | undefined, sent: Events["services"]): Events["services"] => {
-  if (sent.partial !== true || held === undefined) return sent
-  const changed = new Map(sent.services.map((service) => [service.name, service]))
+/**
+ * A services event as the page should hold it: a partial one's services merged by name into those it has, and its
+ * other parts over the ones it has; a whole one, or a partial one with nothing yet to merge into, as it is, if it has
+ * every part.
+ */
+const merged = (held: Events["services"] | undefined, sent: ServicesPartEvent): Events["services"] | undefined => {
   const { partial: _, shifts = [], ...rest } = sent
+  if (sent.partial !== true || held === undefined) {
+    const { sources, environments, vitals, edges } = rest
+    return sources === undefined || environments === undefined || vitals === undefined || edges === undefined
+      ? held
+      : { ...rest, sources, environments, vitals, edges }
+  }
+  const changed = new Map(sent.services.map((service) => [service.name, service]))
   return {
-    ...rest,
+    ...held,
+    ...Object.fromEntries(Object.entries(rest).filter(([, value]) => value !== undefined)),
     services: held.services.map((service) => changed.get(service.name) ?? applyShifts(service, shifts)),
   }
 }
@@ -65,7 +79,7 @@ export const createLive = (open: Open, environment: string, now: () => number = 
         const decoded = decoders[name](parse(data))
         if (Option.isSome(decoded)) {
           const value =
-            name === "services" ? merged(snapshot.events.services, decoded.value as Events["services"]) : decoded.value
+            name === "services" ? merged(snapshot.events.services, decoded.value as ServicesPartEvent) : decoded.value
           set({
             ...snapshot,
             connection: "open",
