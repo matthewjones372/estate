@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Duration, Effect, Layer, Redacted, Result } from "effect"
-import { liveModel, Model } from "./model"
+import { liveModel, Model, type Tools } from "./model"
 import { type Call, type Reply, reply, stubRemote } from "./remote"
 import type { Ai } from "./settings"
 
@@ -92,6 +92,7 @@ describe("the model Ask AI asks", () => {
           ],
         },
         model: "claude-opus-5-5",
+        called: [],
         tokens: 900,
       })
       expect(results.map((result) => succeeded(result)?.tokens)).toEqual([900, 900, 900, 900, 900])
@@ -120,5 +121,105 @@ describe("the model Ask AI asks", () => {
         "the model did not answer in the shape it was asked for",
       ]),
     )
+  })
+
+  test("may call Estate's read tools before answering, through either API, and lists what it called", () => {
+    const asked: Array<ReadonlyArray<string>> = []
+    const tools: Tools = {
+      offers: [
+        { name: "service", description: "one service", schema: { type: "object" } },
+        { name: "changes", description: "what changed", schema: { type: "object" } },
+      ],
+      run: (call) => {
+        asked.push([call.name, JSON.stringify(call.input)])
+        return Effect.succeed(call.name === "service" ? '{"health":"attention"}' : '{"items":[]}')
+      },
+    }
+    // Each fake asks for both tools first, then answers once it has read their results.
+    const anthropicFake = (call: Call) => {
+      const body = JSON.parse(call.body ?? "{}")
+      const answered = JSON.stringify(body.messages).includes("tool_result")
+      return answered
+        ? anthropic(JSON.stringify(answer))
+        : reply({
+            content: [
+              { type: "tool_use", id: "t1", name: "service", input: { name: "orders" } },
+              { type: "tool_use", id: "t2", name: "changes", input: {} },
+            ],
+            usage: { input_tokens: 100, output_tokens: 20 },
+          })
+    }
+    const chatFake = (call: Call) => {
+      const body = JSON.parse(call.body ?? "{}")
+      const answered = body.messages.some((message: { role: string }) => message.role === "tool")
+      return answered
+        ? chat(JSON.stringify(answer))
+        : reply({
+            choices: [
+              {
+                message: {
+                  content: null,
+                  tool_calls: [
+                    { id: "c1", function: { name: "service", arguments: '{"name":"orders"}' } },
+                    { id: "c2", function: { name: "changes", arguments: "{}" } },
+                  ],
+                },
+              },
+            ],
+            usage: { total_tokens: 120 },
+          })
+    }
+    const claude: Ai = { provider: "anthropic", model: "claude-opus-5-5", apiKey: Redacted.make("ak") }
+    const local: Ai = { provider: "openai-compatible", url: "http://vllm.test/v1", model: "local" }
+    const asking = (ai: Ai, answering: (call: Call) => Reply) =>
+      Effect.runPromise(
+        Effect.flatMap(Model, (model) => model.ask("the brief", "why?", tools)).pipe(
+          Effect.provide(liveModel(ai).pipe(Layer.provide(stubRemote(answering)))),
+        ),
+      )
+    return Promise.all([asking(claude, anthropicFake), asking(local, chatFake)]).then(([fromClaude, fromLocal]) => {
+      expect(fromClaude.called).toEqual(["service orders", "changes"])
+      expect(fromLocal.called).toEqual(["service orders", "changes"])
+      expect(fromClaude.tokens).toBe(1020)
+      expect(fromLocal.tokens).toBe(1020)
+      expect(asked).toEqual([
+        ["service", '{"name":"orders"}'],
+        ["changes", "{}"],
+        ["service", '{"name":"orders"}'],
+        ["changes", "{}"],
+      ])
+    })
+  })
+
+  test("is told to answer with what it has once its rounds of tools are spent", () => {
+    let offered = 0
+    const tools: Tools = {
+      offers: [{ name: "changes", description: "what changed", schema: { type: "object" } }],
+      run: () => Effect.succeed("{}"),
+    }
+    const insistent = (call: Call) => {
+      const body = JSON.parse(call.body ?? "{}")
+      if (body.tools === undefined) return chat(JSON.stringify(answer))
+      offered += 1
+      return reply({
+        choices: [
+          {
+            message: {
+              content: null,
+              tool_calls: [{ id: `c${offered}`, function: { name: "changes", arguments: "{}" } }],
+            },
+          },
+        ],
+      })
+    }
+    const local: Ai = { provider: "openai-compatible", url: "http://vllm.test/v1", model: "local" }
+    return Effect.runPromise(
+      Effect.flatMap(Model, (model) => model.ask("the brief", "why?", tools)).pipe(
+        Effect.provide(liveModel(local).pipe(Layer.provide(stubRemote(insistent)))),
+      ),
+    ).then((asked) => {
+      expect(offered).toBe(4)
+      expect(asked.called).toEqual(["changes", "changes", "changes", "changes"])
+    })
   })
 })

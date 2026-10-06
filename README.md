@@ -119,8 +119,9 @@ it calls or what calls it, from the hour before it fired; how those neighbours a
 ten minutes before it fired, grouped by message; its earlier firings and what was written then; and its runbook's
 text, where the runbook is a page Estate can read.
 
-With a model set, **Ask AI** gives that brief to the model, which answers with the likely cause, the lines of the
-brief that show it, and what to do next. Keep the answer as a note and everyone sees it. The model is sent only what
+With a model set, **Ask AI** gives that brief to the model, which may call the same read tools agents use over
+`/mcp` for what the brief does not say, and answers with the likely cause, the evidence for it, and what to do next.
+The answer lists what it read and called, so whoever reads it can check the working. Keep the answer as a note and everyone sees it. The model is sent only what
 the person asking could see on the page, one answer an alert a minute, within a budget of tokens a day.
 
 ```yaml

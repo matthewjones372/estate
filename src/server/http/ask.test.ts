@@ -78,6 +78,7 @@ describe("POST /api/alerts/:id/ask", () => {
           confidence: "medium",
           model: "fake-model",
           read: ["Changed", "Depends"],
+          called: [],
         },
       ])
       expect(calls.find((call) => call.url.endsWith("/chat/completions"))?.body).toContain(
@@ -129,4 +130,51 @@ describe("POST /api/alerts/:id/ask", () => {
         [429, "Ask AI has used today's 500 tokens"],
       ]),
     ))
+
+  test("lets the model call Estate's read tools as the person asking, and says which it called", () => {
+    const sent: Array<string> = []
+    const curious = (call: Call): Reply | undefined => {
+      if (!call.url.includes("/chat/completions")) return undefined
+      sent.push(call.body ?? "")
+      const body = JSON.parse(call.body ?? "{}")
+      return body.messages.some((message: { role: string }) => message.role === "tool")
+        ? modelReply(call)
+        : reply({
+            choices: [
+              {
+                message: {
+                  content: null,
+                  tool_calls: [
+                    { id: "c1", function: { name: "service", arguments: '{"name":"storefront"}' } },
+                    // A tool Estate does not offer, and one asked for wrongly: each is told so, and the ask goes on.
+                    { id: "c2", function: { name: "silence", arguments: "{}" } },
+                    { id: "c3", function: { name: "service", arguments: "{}" } },
+                  ],
+                },
+              },
+            ],
+          })
+    }
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(withAi(), withAlert, curious)
+        return yield* ask(server, asked("a1"))
+      }),
+    ).then((answer) => {
+      expect((answer.json() as { called: ReadonlyArray<string> }).called).toEqual([
+        "service storefront",
+        "silence",
+        "service",
+      ])
+      // The tools offered are the read ones, and the service's own answer went back to the model.
+      expect(
+        JSON.parse(sent[0] ?? "{}").tools.map((tool: { function: { name: string } }) => tool.function.name),
+      ).toEqual(["service", "changes", "alert_history", "errors", "alerts"])
+      expect(sent[1]).toContain('\\"name\\":\\"storefront\\"')
+      expect(sent[1]).toContain("there is no tool silence")
+      // The tools answer about the alert's environment, and say why where they cannot.
+      expect(sent[1]).toContain("storefront is attention: OrdersSlow is firing")
+      expect(sent[1]).toContain("ToolParameterValidationError")
+    })
+  })
 })

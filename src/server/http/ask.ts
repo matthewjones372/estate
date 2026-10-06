@@ -1,6 +1,6 @@
 /**
  * `POST /api/alerts/:id/ask?env=`: Ask AI about an alert. The model reads the alert's brief, *Around this alert*,
- * and answers with a likely cause, the evidence for it, and what to do next. 404 when `ai` is not set; 429 when the
+ * may call Estate's read tools as the person asking, and answers with a likely cause, its evidence and what to do next. 404 when `ai` is not set; 429 when the
  * alert was asked about within the minute or the day's tokens are spent; 502 when the model failed.
  */
 import { Effect, SubscriptionRef } from "effect"
@@ -11,6 +11,7 @@ import { AskLimits } from "../ask-limits"
 import { Model } from "../model"
 import { Configured } from "../settings"
 import { Estate } from "../state"
+import { askTools } from "./ask-tools"
 import { EnvParam, json, refused, searchParams, writer } from "./routes"
 
 export const askRoute = HttpRouter.add(
@@ -35,15 +36,17 @@ export const askRoute = HttpRouter.add(
       return json({ message: `there is no alert ${id} in ${environment}` }, 404)
     }
     const model = yield* Model
+    const tools = yield* askTools({ name: person.name, role: person.role }, environment)
     const result = yield* Effect.result(
-      model.ask(briefText(brief), `What is the likely cause of ${brief.name}, and what should we do next?`),
+      model.ask(briefText(brief), `What is the likely cause of ${brief.name}, and what should we do next?`, tools),
     )
     if (result._tag === "Failure") {
       yield* limits.giveBack(turn)
       return json({ message: result.failure.message }, 502)
     }
     yield* limits.spend(result.success.tokens)
-    const body: AskAnswer = { ...result.success.answer, model: result.success.model, read: sectionsOf(brief) }
+    const { answer, model: name, called } = result.success
+    const body: AskAnswer = { ...answer, model: name, read: sectionsOf(brief), called }
     return json(body)
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

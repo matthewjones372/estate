@@ -25,7 +25,7 @@ describe("Ask AI on an alert", () => {
     const shown = page.container.textContent ?? ""
     expect(page.calls).toContainEqual(["askAlert", "a1"])
     expect(shown).toContain("Likely cause A recent deploy raised latency.")
-    expect(shown).toContain("fake-model · read: Changed · Runbook")
+    expect(shown).toContain("fake-model · read: Changed · Runbook · called: service orders")
     expect(page.container.querySelector('a[href="https://ci.example/1"]')?.textContent).toContain("deployed 26 min")
     page.click(page.button("Keep as note"))
     await page.settle()

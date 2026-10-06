@@ -151,7 +151,7 @@ Nothing.
 - [x] **`mcp-alerts`** — `alerts`, `alert_history`, `changes`, `errors`, `agents` and `around_alert`, with the
       token's role in the call's context.
       Done when: a test asks for an alert's history and gets its earlier firings with their notes.
-- [ ] **`ask-with-tools`** — the model may call those read tools for anything the brief does not answer, a few calls
+- [x] **`ask-with-tools`** — the model may call those read tools for anything the brief does not answer, a few calls
       at most, and the page lists the tools it called.
       Done when: against fakes of both APIs that call `service` and `changes`, the page shows the answer and the tools
       used.

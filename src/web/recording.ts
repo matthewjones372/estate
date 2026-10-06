@@ -127,6 +127,7 @@ export const recording = (): Recorded => {
                 confidence: "medium" as const,
                 model: "fake-model",
                 read: ["Changed", "Runbook"],
+                called: ["service orders"],
               }
             : "this alert was asked about less than a minute ago",
         )

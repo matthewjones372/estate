@@ -114,6 +114,7 @@ export const AskAi = (props: { readonly alert: Alert }) => {
                 </div>
                 <p class="alert-quiet">
                   {found().model} · read: {found().read.join(" · ")}
+                  {found().called.length === 0 ? "" : ` · called: ${found().called.join(" · ")}`}
                 </p>
               </article>
             )}

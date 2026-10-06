@@ -18,5 +18,7 @@ export const AskAnswer = Schema.Struct({
   model: Schema.String,
   /** The parts of the brief the model was given: Changed, Depends, Errors, Before, Runbook. */
   read: Schema.Array(Schema.String),
+  /** The read tools the model called beyond the brief, each with what it asked about: "service orders". */
+  called: Schema.Array(Schema.String),
 })
 export type AskAnswer = typeof AskAnswer.Type
