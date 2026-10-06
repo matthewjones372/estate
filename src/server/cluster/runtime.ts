@@ -11,13 +11,13 @@ import type { Clustered } from "../settings-cluster"
 const prefix = "estate_cluster"
 
 /** Where other runners reach this one: the pod's IP when Kubernetes gives it, else the host's name. */
-const runnerHost = Config.String("POD_IP").pipe(
+export const runnerHost = Config.String("POD_IP").pipe(
   Config.withDefault(hostname()),
   Effect.orElseSucceed(() => hostname()),
 )
 
 /** Sharding, and its configuration, for a runner on `host`, its tables in the database Estate's pool reaches. */
-const layerOn = (clustered: Clustered, host: string) => {
+export const clusterLayer = (clustered: Clustered, host: string) => {
   const config = {
     runnerAddress: Option.some(RunnerAddress.make(host, clustered.port)),
     runnerListenAddress: Option.some(RunnerAddress.make("0.0.0.0", clustered.port)),
@@ -34,7 +34,3 @@ const layerOn = (clustered: Clustered, host: string) => {
     shardingConfig: config,
   }).pipe(Layer.provide(storage), Layer.provideMerge(ShardingConfig.layer(config)))
 }
-
-/** The cluster this runner joins, at its own address. */
-export const clusterLayer = (clustered: Clustered) =>
-  Layer.unwrap(Effect.map(runnerHost, (host) => layerOn(clustered, host)))

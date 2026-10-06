@@ -1,11 +1,11 @@
 /** Estate assembled: settings and catalog read and checked, the routes, the catalog's reload and the sources. */
-import { Data, Effect, type FileSystem, Layer, Result } from "effect"
+import { Data, Effect, type FileSystem, Layer, Result, Stream, SubscriptionRef } from "effect"
 import type { Mistake } from "../shared/shape"
 import { liveAskLimits } from "./ask-limits"
 import { providerLayer } from "./auth/oidc"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { discoverServices, makeCatalogs, written } from "./discover/run"
-import { loadHistory, recordFirings, sweepHistory } from "./history"
+import { keptHere, loadHistory, recordFirings, sweepHistory } from "./history"
 import { agentRunsRoute } from "./http/agents"
 import { aroundRoute } from "./http/around"
 import { askRoute } from "./http/ask"
@@ -22,7 +22,7 @@ import { silenceRoute, unsilenceRoute } from "./http/silences"
 import { tellRoute } from "./http/tell"
 import { logHubLayer } from "./log-hub"
 import { liveModel } from "./model"
-import { memoryNotes, type Notes } from "./notes"
+import { memoryNotes, type Notes, type StoredFiring } from "./notes"
 import { platform, readText } from "./platform"
 import type { Remote } from "./remote"
 import { type Role, roleLayer } from "./role"
@@ -31,7 +31,7 @@ import { Configured, readSettings, type Settings, type SettingsError } from "./s
 import { backfillHistory } from "./sources/backfill"
 import { toolsOf } from "./sources/ports"
 import { startSources } from "./sources/start"
-import { type Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
+import { Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
 import { sharedViewsLayer } from "./stream"
 import type { Web } from "./web"
 import { localWrites, type Writes } from "./writes"
@@ -112,20 +112,17 @@ export const application = Layer.mergeAll(
 
 const historyDays = (settings: Started["settings"]) => settings.alerts?.historyDays ?? 90
 
-/** What runs beside the routes for as long as Estate does. */
-export const background = (
+/** The estate's own work: its notes and firings loaded and swept, its catalog reloaded and discovered, its builds. */
+export const estateWork = (
   started: Started,
 ): Effect.Effect<never, never, Estate | Remote | Notes | FileSystem.FileSystem> =>
   Effect.all(
     [
-      // The firings kept are read before any are recorded, so one still open when Estate stopped is ended, not begun.
       loadNotes.pipe(
         Effect.andThen(loadHistory(historyDays(started.settings))),
         Effect.tapError((failure) => Effect.logWarning(`notes cannot be read yet: ${failure.message}`)),
         Effect.retry(backOff),
         Effect.orDie,
-        Effect.andThen(backfillHistory(started.settings)),
-        Effect.andThen(recordFirings(started.settings.slack)),
         Effect.andThen(Effect.never),
       ),
       sweepNotes(started.settings.notes?.keepDays ?? 30),
@@ -144,10 +141,47 @@ export const background = (
           { concurrency: "unbounded" },
         ),
       ),
-      startSources(started.settings),
+      startSources(started.settings, { environments: () => false, builds: true }),
     ],
     { concurrency: "unbounded" },
   ).pipe(Effect.andThen(Effect.never))
+
+/** Once the firings kept are loaded, so one still open when Estate stopped is ended, not begun. */
+const firingsLoaded = Effect.gen(function* () {
+  yield* SubscriptionRef.changes(yield* Estate).pipe(
+    Stream.filter((state) => state.firings !== undefined),
+    Stream.runHead,
+  )
+})
+
+/**
+ * One environment's work, or every environment's: its sources read, its debug reverted, its earlier firings
+ * backfilled and its firings recorded. `shown` puts the firings where the estate's are.
+ */
+export const environmentWork = <R = never>(
+  started: Started,
+  only?: string,
+  shown: (kept: ReadonlyArray<StoredFiring>) => Effect.Effect<void, never, R | Estate> = keptHere,
+): Effect.Effect<never, never, R | Estate | Remote | Notes | FileSystem.FileSystem> =>
+  Effect.all(
+    [
+      startSources(started.settings, { environments: (name) => only === undefined || name === only, builds: false }),
+      firingsLoaded.pipe(
+        Effect.andThen(backfillHistory(started.settings, only, shown)),
+        Effect.andThen(recordFirings(started.settings.slack, shown)),
+        Effect.andThen(Effect.never),
+      ),
+    ],
+    { concurrency: "unbounded" },
+  ).pipe(Effect.andThen(Effect.never))
+
+/** What runs beside the routes for as long as one process holds the estate: its own work, and every environment's. */
+export const background = (
+  started: Started,
+): Effect.Effect<never, never, Estate | Remote | Notes | FileSystem.FileSystem> =>
+  Effect.all([estateWork(started), environmentWork(started)], { concurrency: "unbounded" }).pipe(
+    Effect.andThen(Effect.never),
+  )
 
 /** How this process holds the estate: alone, or as a runner whose writes go to the owner and which joins first. */
 interface Holding<W> {

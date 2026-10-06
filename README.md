@@ -288,10 +288,11 @@ Kubernetes base to overlay with your two files, an ingress and your secrets. It 
 One replica is right for most estates: it restarts in about the time a failover takes. Run more when the tools'
 rate limits are being met, a node's loss must not blank the page, or a wall of kiosks outgrows one process. Set
 `cluster: true` beside `database: { postgres: … }` and add the [`deploy/cluster`](deploy/cluster) component to your
-overlay. Every replica serves the pages, and one of them reads the tools, so two replicas make the calls one does.
-A note or silence made on any replica shows on all of them. When the reading replica goes, another reads within a
-minute, and the pages keep the last state meanwhile. `/readyz` says `ready, reading` or `ready, following <runner>`,
-and `estate doctor` names the runners and the one reading. [`examples/cluster`](examples/cluster) runs two on one
+overlay. Every replica serves the pages, and each environment is read by one of them, the estate's own work (its
+catalog, builds, notes and history) by one too, so the reading spreads between replicas and two make the calls one
+does. A note or silence made on any replica shows on all of them. When a replica goes, the others take what it read
+within a minute, and the pages keep the last state meanwhile. `/readyz` says what a replica reads and whom it follows
+for the rest, and `estate doctor` names the runners and who reads the estate and each environment. [`examples/cluster`](examples/cluster) runs two on one
 machine.
 
 ### Architecture

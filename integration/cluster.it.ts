@@ -24,10 +24,19 @@ const runners: Record<string, { port: number; process?: Subprocess }> = {
   b: { port: 18082 },
 }
 
+/** Four environments, so the estate's five entities have room to spread between two runners. */
+const places = ["north", "south", "east", "west"]
+const catalogPath = "/tmp/estate-cluster-catalog.yaml"
+const catalog = `environments:
+${places.map((place) => `  - { name: ${place}, sources: ${place} }`).join("\n")}
+services:
+  - { name: shop, environments: [ ${places.join(", ")} ], load: { requests: 'sum(rate(http_requests_total{app="shop"}[1m]))' } }
+`
+
 const settingsOf = (name: string, port: number, database: string) => `
 port: ${port}
 metrics: { port: ${port + 1000} }
-catalog: ${process.cwd()}/examples/catalog.yaml
+catalog: ${catalogPath}
 auth:
   sessionSecret: a-session-secret-for-the-cluster-test-only
   roles: { viewer: [ developers ], operator: [ ops ] }
@@ -35,14 +44,14 @@ auth:
 database: { postgres: ${database} }
 cluster: { port: ${port + 16000} }
 sources:
-  staging: { prometheus: { url: http://127.0.0.1:${prometheus.port} }, every: { metrics: 5s } }
-  production: { prometheus: { url: http://127.0.0.1:${prometheus.port} }, every: { metrics: 5s } }
+${places.map((place) => `  ${place}: { prometheus: { url: http://127.0.0.1:${prometheus.port} }, every: { metrics: 5s } }`).join("\n")}
 `
 
 const start = async (name: string, database: string) => {
   const runner = runners[name]
   if (runner === undefined) throw new Error(`no runner ${name}`)
   const path = `/tmp/estate-cluster-${name}.yaml`
+  await Bun.write(catalogPath, catalog)
   await Bun.write(path, settingsOf(name, runner.port, database))
   runner.process = Bun.spawn(["bun", "src/server/main.ts"], {
     env: { ...process.env, ESTATE_SETTINGS: path, POD_IP: "127.0.0.1" },
@@ -78,42 +87,43 @@ afterAll(async () => {
   await postgres?.stop()
 })
 
+const reads = (text: string) => /^ready, reading /.test(text)
+const everything = `ready, reading estate, ${[...places].sort().join(", ")}`
+
 describe("a cluster of two runners", () => {
-  test("reads each source as often as one runner, and keeps reading when the reader is killed", async () => {
+  test("spreads the reading between them, reads each source as often as one runner, and keeps reading when one dies", async () => {
     const database = `postgres://postgres:estate@${postgres.getHost()}:${postgres.getMappedPort(5432)}/estate`
     await start("a", database)
     await eventually(
       () => readiness("a"),
-      (ready) => ready.text === "ready, reading",
+      (ready) => ready.text === everything,
     )
     const alone = await callsOver(20)
     await start("b", database)
-    // Settled once one runner reads and the other follows it, wherever the entity's shard has gone.
+    // Settled once both are ready and each reads some of the estate: the entities' shards spread between them.
     const settled = await eventually(
       () => Promise.all([readiness("a"), readiness("b")]),
-      (both) =>
-        both.every((each) => each.status === 200) &&
-        both.filter((each) => each.text === "ready, reading").length === 1 &&
-        both.some((each) => each.text.startsWith("ready, following")),
+      (both) => both.every((each) => each.status === 200 && reads(each.text)),
+      120,
     )
     const together = await callsOver(20)
     expect(together).toBeGreaterThan(0)
     expect(together).toBeLessThanOrEqual(alone * 1.5)
 
-    const [reader, follower] = settled[0]?.text === "ready, reading" ? ["a", "b"] : ["b", "a"]
-    runners[reader]?.process?.kill(9)
+    const [gone, kept] = settled[0]?.text.includes("estate") === true ? ["a", "b"] : ["b", "a"]
+    runners[gone]?.process?.kill(9)
     const killed = Date.now()
     const watched: Array<number> = []
     await eventually(
       async () => {
-        const now = await readiness(follower)
+        const now = await readiness(kept)
         watched.push(now.status)
         return now
       },
-      (now) => now.text === "ready, reading",
+      (now) => now.text === everything,
       60,
     )
     expect(Date.now() - killed).toBeLessThan(60_000)
     expect(watched.every((status) => status === 200)).toBe(true)
-  }, 300_000)
+  }, 400_000)
 })

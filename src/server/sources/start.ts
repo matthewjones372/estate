@@ -261,20 +261,29 @@ const keyOf = (environment: Environment) => `${environment.name}\u0000${environm
  */
 export const startSources = (
   settings: Settings,
+  /** Which of it to read, when a cluster has the estate's work and each environment's on different runners. */
+  scope: { readonly environments: (name: string) => boolean; readonly builds: boolean } = {
+    environments: () => true,
+    builds: true,
+  },
 ): Effect.Effect<never, never, Estate | Remote | FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const fibers = yield* FiberMap.make<string>()
     const ref = yield* Estate
     const follow = (environments: ReadonlyArray<Environment>) =>
       Effect.gen(function* () {
-        const wanted = new Map(environments.map((environment) => [keyOf(environment), environment]))
+        const wanted = new Map(
+          environments
+            .filter((environment) => scope.environments(environment.name))
+            .map((environment) => [keyOf(environment), environment]),
+        )
         const running = [...fibers].map(([key]) => key)
         for (const key of running) if (!wanted.has(key)) yield* FiberMap.remove(fibers, key)
         for (const [key, environment] of wanted)
           yield* FiberMap.run(fibers, key, readersFor(settings, environment), { onlyIfMissing: true })
       })
     yield* follow((yield* SubscriptionRef.get(ref)).catalog.environments)
-    if (settings.builds !== undefined && buildsOf(settings).length > 0)
+    if (scope.builds && settings.builds !== undefined && buildsOf(settings).length > 0)
       yield* Effect.forkScoped(runBuilds(settings.builds, buildsEvery(settings.builds)))
     return yield* SubscriptionRef.changes(ref).pipe(
       Stream.map((estate) => estate.catalog.environments),

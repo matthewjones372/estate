@@ -84,7 +84,7 @@ const serve = Effect.gen(function* () {
       Effect.provide(telemetry),
     )
   // The cluster's modules are loaded only for a cluster; one process never loads them.
-  const runner = (yield* Effect.promise(() => import("./cluster/serve"))).asRunner(started, clustered)
+  const runner = yield* (yield* Effect.promise(() => import("./cluster/serve"))).asRunner(started, clustered)
   return yield* Effect.all([...serving, runner.alongside], { concurrency: "unbounded" }).pipe(
     Effect.provide(services(started, builtWeb, liveRemote, notes, runner.holding)),
     Effect.provide(runner.sharding),
@@ -126,7 +126,10 @@ const diagnose = Effect.gen(function* () {
           environment: "the cluster",
           findings: [
             yield* Effect.gen(function* () {
-              return yield* clusterFinding(queryOf(yield* SqlClient))
+              return yield* clusterFinding(
+                queryOf(yield* SqlClient),
+                started.initial.catalog.environments.map((each) => each.name),
+              )
             }).pipe(Effect.provide(postgresLayer(postgres))),
           ],
         },

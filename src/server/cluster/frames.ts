@@ -49,12 +49,42 @@ const patched = (
     ? Object.fromEntries(Object.entries(parts).map(([key, patch]) => [key, applied(Reflect.get(before, key), patch)]))
     : undefined
 
+/** What an entity owns of the estate, and so what of its whole a follower takes. */
+export type Owned =
+  | { readonly _tag: "All" }
+  /** All but the environments, whose catalog's new ones start waiting, as `withCatalog` makes them. */
+  | {
+      readonly _tag: "Estate"
+      readonly withCatalog: (estate: EstateState, catalog: EstateState["catalog"]) => EstateState
+    }
+  | { readonly _tag: "Environment"; readonly name: string }
+
+const wholeFrom = (estate: EstateState, sent: EstateState, from: Owned): Result.Result<EstateState, string> => {
+  switch (from._tag) {
+    case "All":
+      return Result.succeed(sent)
+    case "Estate":
+      return Result.succeed(from.withCatalog({ ...sent, environments: estate.environments }, sent.catalog))
+    case "Environment": {
+      const mine = sent.environments[from.name]
+      if (mine === undefined || estate.environments[from.name] === undefined)
+        return Result.fail(`${from.name} is not in this runner's catalog yet`)
+      return Result.succeed({ ...estate, environments: { ...estate.environments, [from.name]: mine } })
+    }
+  }
+}
+
 /**
  * The owner's frame taken into a follower's state; or why it cannot be, when a patch does not apply to what the
  * follower has, so it follows again and is sent the whole.
  */
-export const followed = (estate: EstateState, frame: Frame): Result.Result<EstateState, string> => {
-  if (frame._tag === "Whole") return Result.succeed(fromWire(frame.estate))
+export const followed = (
+  estate: EstateState,
+  frame: Frame,
+  /** What the frame's sender owns: the whole estate, the estate's own parts, or one environment. */
+  from: Owned = { _tag: "All" },
+): Result.Result<EstateState, string> => {
+  if (frame._tag === "Whole") return wholeFrom(estate, fromWire(frame.estate), from)
   const environments: Record<string, EnvironmentState> = { ...estate.environments }
   for (const [name, parts] of Object.entries(frame.environments)) {
     const was = environments[name]

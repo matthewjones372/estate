@@ -88,14 +88,20 @@ const known = (kept: ReadonlyArray<StoredFiring>, firing: StoredFiring) =>
   )
 
 /** Every environment's earlier firings from its Prometheus, kept beside those Estate recorded; a failure is logged. */
-export const backfillHistory = (settings: Settings) =>
+export const backfillHistory = <R = never>(
+  settings: Settings,
+  /** One environment's, or else every environment's. */
+  only?: string,
+  shown: (fresh: ReadonlyArray<StoredFiring>) => Effect.Effect<void, never, R | Estate> = (fresh) =>
+    updateEstate((estate) => ({ ...estate, firings: [...(estate.firings ?? []), ...fresh] })),
+) =>
   Effect.gen(function* () {
     const { catalog, firings = [] } = yield* SubscriptionRef.get(yield* Estate)
     const notes = yield* Notes
     const now = yield* Clock.currentTimeMillis
     const since = iso(before(now, Duration.days(days)))
     const read = yield* Effect.forEach(
-      catalog.environments,
+      catalog.environments.filter((environment) => only === undefined || environment.name === only),
       (environment) => {
         const prometheus = prometheusOf(settings.sources[environment.sources] ?? {})
         return prometheus === undefined
@@ -112,5 +118,5 @@ export const backfillHistory = (settings: Settings) =>
     yield* Effect.forEach(fresh, (firing) => notes.keepFiring(firing), { discard: true }).pipe(
       Effect.catch((failure) => Effect.logWarning(`earlier firings could not be kept: ${failure.message}`)),
     )
-    yield* updateEstate((estate) => ({ ...estate, firings: [...(estate.firings ?? []), ...fresh] }))
+    if (fresh.length > 0) yield* shown(fresh)
   })

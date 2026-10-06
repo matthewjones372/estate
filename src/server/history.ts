@@ -53,13 +53,23 @@ export const changed = (
   ),
 ]
 
-const withFirings = (estate: EstateState, kept: ReadonlyArray<StoredFiring>): EstateState => ({
+export const withFirings = (estate: EstateState, kept: ReadonlyArray<StoredFiring>): EstateState => ({
   ...estate,
   firings: [...kept, ...(estate.firings ?? []).filter((each) => !kept.some((one) => sameFiring(one, each)))],
 })
 
-/** For as long as Estate runs: each firing kept as it begins, is silenced and ends; a told one's end said in Slack. */
-export const recordFirings = (slack?: SlackSettings) =>
+/** Firings kept, into this process's own state. */
+export const keptHere = (kept: ReadonlyArray<StoredFiring>): Effect.Effect<void, never, Estate> =>
+  updateEstate((estate) => withFirings(estate, kept))
+
+/**
+ * For as long as Estate runs: each firing kept as it begins, is silenced and ends; a told one's end said in Slack.
+ * `shown` puts what was kept where the estate's firings are: this process's state, or the cluster's estate owner.
+ */
+export const recordFirings = <R = never>(
+  slack?: SlackSettings,
+  shown: (kept: ReadonlyArray<StoredFiring>) => Effect.Effect<void, never, R | Estate> = keptHere,
+) =>
   Effect.gen(function* () {
     const ref = yield* Estate
     const notes = yield* Notes
@@ -75,7 +85,7 @@ export const recordFirings = (slack?: SlackSettings) =>
           yield* Effect.forEach(kept, (firing) => notes.keepFiring(firing), { discard: true }).pipe(
             Effect.catch((failure) => Effect.logWarning(`a firing could not be kept: ${failure.message}`)),
           )
-          yield* updateEstate((estate) => withFirings(estate, kept))
+          yield* shown(kept)
           yield* Effect.forEach(
             kept.filter((firing) => firing.endsAt !== undefined),
             (firing) =>

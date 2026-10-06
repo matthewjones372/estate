@@ -4,6 +4,7 @@
  */
 import { Context, Effect, Layer, SubscriptionRef } from "effect"
 import type { Write } from "./cluster/wire"
+import { withFirings } from "./history"
 import { debugShown } from "./sources/debug"
 import { holdSilence, holdUnsilence } from "./sources/held"
 import { type EnvironmentState, Estate, type EstateState } from "./state"
@@ -45,6 +46,8 @@ export const applied = (write: Write): ((estate: EstateState) => EstateState) =>
       return (estate) => ({ ...estate, threads: [...(estate.threads ?? []), write.thread] })
     case "DebugShown":
       return inEnvironment(write.environment, (state) => debugShown(state, write.service, write.debug))
+    case "FiringsKept":
+      return (estate) => withFirings(estate, write.firings)
   }
 }
 

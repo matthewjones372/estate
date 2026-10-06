@@ -1,6 +1,7 @@
 /**
- * The doctor's `cluster` line: the runners registered in Estate's Postgres, and the one the owner's beat names, with
- * how long since it beat. Fails with no runner, or with no beat in the shard lock's lifetime, when no runner reads.
+ * The doctor's `cluster` line: the runners registered in Estate's Postgres, and who reads the estate and each of its
+ * environments, by their owners' beats, with how long since each beat. Fails with no runner, or with an entity no one
+ * has beat for within the shard lock's lifetime.
  */
 import { Effect } from "effect"
 import type { Finding } from "./doctor-finding"
@@ -10,28 +11,37 @@ import type { Query } from "./notes"
 const lockSeconds = 35
 
 const runnersSql = "SELECT address FROM estate_cluster_runners WHERE healthy ORDER BY address"
-const ownerSql = "SELECT address, EXTRACT(EPOCH FROM now() - beat) AS ago FROM estate_cluster_owner WHERE id = 1"
+const ownersSql = "SELECT entity, address, EXTRACT(EPOCH FROM now() - beat) AS ago FROM estate_cluster_owners"
 
 const plural = (count: number) => `${count} runner${count === 1 ? "" : "s"}`
 
-export const clusterFinding = (query: Query): Effect.Effect<Finding> =>
+/** The line, for the estate and the environments the catalog names. */
+export const clusterFinding = (query: Query, environments: ReadonlyArray<string>): Effect.Effect<Finding> =>
   Effect.all({
     runners: query(runnersSql, []),
-    // No beat table yet is no runner having read the estate yet.
-    owner: query(ownerSql, []).pipe(Effect.orElseSucceed(() => [])),
+    // No beat table yet is no runner having read anything yet.
+    owners: query(ownersSql, []).pipe(Effect.orElseSucceed(() => [])),
   }).pipe(
-    Effect.map(({ runners, owner }): Finding => {
+    Effect.map(({ runners, owners }): Finding => {
       const addresses = runners.map((row) => String(row["address"]))
-      const listed = `${plural(addresses.length)} (${addresses.join(", ")})`
-      const reader = owner[0]
-      const ago = Math.round(Number(reader?.["ago"] ?? Number.POSITIVE_INFINITY))
       if (addresses.length === 0) return { part: "cluster", ok: false, says: "no runner is registered" }
-      if (reader === undefined || ago > lockSeconds)
-        return { part: "cluster", ok: false, says: `${listed}; no runner reads the estate` }
+      const beats = new Map(
+        owners.map((row) => [
+          String(row["entity"]),
+          { by: String(row["address"]), ago: Math.round(Number(row["ago"])) },
+        ]),
+      )
+      const entities = [["estate", "estate"], ...environments.map((name) => [`env:${name}`, name])] as const
+      const said = entities.map(([entity, name]) => {
+        const beat = beats.get(entity)
+        return beat === undefined || beat.ago > lockSeconds
+          ? { ok: false, text: `no runner reads ${name}` }
+          : { ok: true, text: `${name} read by ${beat.by}, beat ${beat.ago} s ago` }
+      })
       return {
         part: "cluster",
-        ok: true,
-        says: `${listed}; estate read by ${String(reader["address"])}, beat ${ago} s ago`,
+        ok: said.every((each) => each.ok),
+        says: `${plural(addresses.length)} (${addresses.join(", ")}); ${said.map((each) => each.text).join("; ")}`,
       }
     }),
     Effect.catch((error) =>

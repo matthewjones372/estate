@@ -108,7 +108,8 @@ Without `cluster: true`:
 ```bash
 estate doctor
 # the cluster
-#   cluster  ok    2 runners (10.0.4.12:34431, 10.0.7.3:34431); estate read by 10.0.4.12:34431, beat 4 s ago
+#   cluster  ok    2 runners (10.0.4.12:34431, 10.0.7.3:34431); estate read by 10.0.4.12:34431, beat 4 s ago;
+#                  production read by 10.0.7.3:34431, beat 2 s ago   (each environment its own entity: spec 0032)
 ```
 
 ## Why this shape

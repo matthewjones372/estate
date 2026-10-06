@@ -181,6 +181,7 @@ export const Write = Schema.Union([
   Schema.TaggedStruct("Unheld", { environment: Schema.String, id: Schema.String, at: Schema.Number }),
   Schema.TaggedStruct("ThreadKept", { thread: Thread }),
   Schema.TaggedStruct("DebugShown", { environment: Schema.String, service: Schema.String, debug: Debug }),
+  Schema.TaggedStruct("FiringsKept", { firings: Schema.Array(Firing) }),
 ])
 export type Write = typeof Write.Type
 
