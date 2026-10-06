@@ -8,7 +8,7 @@
 ![Solid](https://img.shields.io/badge/Solid-1.9-2c4f7c?logo=solid&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-3dd68c)](LICENSE)
 
-Estate is a small web app that shows the state of a set of services on one page, built as a personal project.
+Estate shows the state of a set of services on one page.
 
 When something breaks in production, the information you need to look into it is usually spread across several
 systems. An alert might be in Grafana, the logs in Elasticsearch, the deployment in GitHub or Jenkins, the workload in
