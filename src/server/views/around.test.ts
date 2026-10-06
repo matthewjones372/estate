@@ -1,116 +1,58 @@
 import { describe, expect, test } from "bun:test"
+import type { Catalog } from "../../shared/catalog"
 import { catalog, environment, estate } from "../fixture"
-import { aroundOf } from "./around"
+import type { SourcedAlert } from "../state"
+import { aroundView } from "./around"
 
 const ok = <A>(value: A) => ({ state: "ok" as const, value, answeredAt: "2026-10-03T12:00:00Z" })
 
-const withAround = estate({
-  catalog,
-  environments: {
-    production: environment({
-      alerts: ok([
-        {
-          id: "a1",
-          name: "OrdersSlow",
-          state: "firing",
-          severity: "warning",
-          startsAt: "2026-10-03T11:46:00Z",
-          labels: { service: "storefront" },
-          summary: "Orders are slow",
-        },
-      ]),
-      deploys: ok({ storefront: { version: "v2", ready: true, at: "2026-10-03T11:20:00Z" } }),
-    }),
+const withStore: Catalog = {
+  ...catalog,
+  stores: [{ name: "orders-db", environments: ["production"], engine: "postgres", selector: 'db="orders"' }],
+  map: {
+    nodes: [...(catalog.map?.nodes ?? []).filter((node) => node.id !== "db"), { id: "db", store: "orders-db" }],
+    edges: catalog.map?.edges ?? [],
   },
-  builds: ok({
-    storefront: [
-      {
-        sha: "c556728aa",
-        title: "Faster pages",
-        status: "success",
-        at: "2026-10-03T11:00:00Z",
-        url: "https://github.example/run/1",
-      },
-    ],
-  }),
+}
+
+const alert = (labels: Record<string, string>): SourcedAlert => ({
+  id: "x-1",
+  name: "Slow",
+  state: "firing",
+  severity: "critical",
+  startsAt: "2026-10-03T11:00:00Z",
+  labels,
 })
 
-describe("around an alert", () => {
-  test("names the deploy and build in the hour before it fired", () => {
-    const brief = aroundOf(withAround, "production", "a1")
-    expect(brief?.service).toBe("storefront")
-    expect(brief?.changed.map((each) => each.kind).sort()).toEqual(["build", "deploy"])
-    expect(brief?.summaryText).toContain("deployed")
-    expect(brief?.summaryText).toContain("before it fired")
-    expect(brief?.depends.some((each) => each.name === "orders")).toBe(true)
-    expect(brief?.runbook).toContain("storefront")
+const firing = (catalog: Catalog, labels: Record<string, string>) =>
+  estate({
+    catalog,
+    environments: {
+      staging: environment(),
+      production: environment({
+        alerts: ok([alert(labels)]),
+        deploys: ok({ orders: { version: "main-89", ready: true, at: "2026-10-03T11:20:00Z" } }),
+      }),
+    },
   })
 
-  test("says when nothing changed in the hour before", () => {
-    const quiet = estate({
-      environments: {
-        production: environment({
-          alerts: ok([
-            {
-              id: "a1",
-              name: "OrdersSlow",
-              state: "firing",
-              severity: "warning",
-              startsAt: "2026-10-03T11:46:00Z",
-              labels: { service: "storefront" },
-            },
-          ]),
-          deploys: ok({}),
-        }),
-      },
-      builds: ok({}),
-    })
-    const brief = aroundOf(quiet, "production", "a1")
-    expect(brief?.summaryText).toContain("No deploys or builds")
+describe("an alert's brief", () => {
+  test("about a store names what calls it, with that service's health, and a change since it fired", () => {
+    const brief = aroundView(firing(withStore, { database: "orders-db" }), "production", "x-1")
+    expect(brief?.subject).toBe("orders-db")
+    expect(brief?.depends.map(({ name, kind, side }) => [name, kind, side])).toEqual([
+      ["orders", "service", "called by"],
+    ])
+    expect(brief?.changed).toEqual([
+      { at: "2026-10-03T11:20:00Z", service: "orders", kind: "deploy", text: "main-89 deployed" },
+    ])
   })
 
-  test("is missing when the alert is not there", () => {
-    expect(aroundOf(withAround, "production", "nope")).toBeUndefined()
-  })
-
-  test("includes earlier firings and their notes in the brief", () => {
-    const withHistory = estate({
-      environments: {
-        production: environment({
-          alerts: ok([
-            {
-              id: "a1",
-              name: "OrdersSlow",
-              state: "firing",
-              severity: "warning",
-              startsAt: "2026-10-03T11:46:00Z",
-              labels: { service: "storefront" },
-            },
-          ]),
-        }),
-      },
-      firings: [
-        {
-          environment: "production",
-          alert: "a1",
-          name: "OrdersSlow",
-          startsAt: "2026-09-27T10:00:00Z",
-          endsAt: "2026-09-27T10:22:00Z",
-        },
-      ],
-      notes: [
-        {
-          id: "n1",
-          environment: "production",
-          alert: "a1",
-          at: "2026-09-27T10:10:00Z",
-          by: "ada",
-          text: "vacuumed the orders table",
-        },
-      ],
-    })
-    const brief = aroundOf(withHistory, "production", "a1")
-    expect(brief?.before[0]?.notes[0]?.text).toContain("vacuumed")
-    expect(brief?.summaryText).toContain("Before")
+  test("has nothing around it without a map, and is nothing for an alert that is not there", () => {
+    const { map: _, ...unmapped } = withStore
+    const brief = aroundView(firing(unmapped, { app: "payments" }), "production", "x-1")
+    expect([brief?.subject, brief?.depends, brief?.changed]).toEqual(["payments", [], []])
+    expect(aroundView(firing(withStore, {}), "production", "nope")).toBeUndefined()
+    expect(aroundView(firing(withStore, {}), "nowhere", "x-1")).toBeUndefined()
   })
 })

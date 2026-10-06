@@ -1,4 +1,5 @@
 /** Actions that record what they were asked, answering as the server would, for the pages' tests. */
+import type { AroundAlert } from "../shared/around"
 import type { LogBatch } from "../shared/log-events"
 import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
@@ -27,6 +28,31 @@ const runs = [
     model: "claude-sonnet",
   },
 ]
+
+/** The brief of the fixture's OrdersSlow, as the server would gather it. */
+export const brief: AroundAlert = {
+  alert: "a1",
+  name: "OrdersSlow",
+  startsAt: "2026-10-03T11:46:00Z",
+  subject: "storefront",
+  changed: [
+    { at: "2026-10-03T11:44:00Z", service: "storefront", kind: "deploy", text: "main-88-04bc441 deployed" },
+    { at: "2026-10-03T11:50:00Z", service: "orders", kind: "build", text: "build passed: Retry", url: "https://ci/9" },
+  ],
+  depends: [
+    {
+      name: "orders-db",
+      kind: "store",
+      side: "calls",
+      health: "attention",
+      reasons: ["connections are high"],
+      readings: [{ title: "Connections used", now: 92, unit: "%" }],
+    },
+  ],
+  errors: groups,
+  before: [],
+  runbook: { url: "https://runbooks.example/orders-slow", text: "If p99 is high after a deploy, roll back." },
+}
 
 export interface Recorded {
   readonly calls: Array<readonly [string, ...ReadonlyArray<unknown>]>
@@ -90,16 +116,24 @@ export const recording = (): Recorded => {
         calls.push(["runs", agent])
         return Promise.resolve(agent === "triage" ? runs : agent === "broken" ? undefined : "none")
       },
-      askAlert: (alert, _onChunk) => {
+      askAlert: (alert) => {
         calls.push(["askAlert", alert])
-        return Promise.resolve({
-          likelyCause: "A recent deploy raised latency.",
-          evidence: [{ text: "storefront v2 deployed 26 min before it fired" }],
-          nextSteps: ["Check the runbook", "Compare p99 before and after the deploy"],
-          confidence: "medium" as const,
-          tools: ["around_alert", "service"],
-          model: "fake-model",
-        })
+        return Promise.resolve(
+          alert === "a1"
+            ? {
+                likelyCause: "A recent deploy raised latency.",
+                evidence: [{ text: "storefront v2 deployed 26 min before it fired", href: "https://ci.example/1" }],
+                nextSteps: ["Check the runbook", "Compare p99 before and after the deploy"],
+                confidence: "medium" as const,
+                model: "fake-model",
+                read: ["Changed", "Runbook"],
+              }
+            : "this alert was asked about less than a minute ago",
+        )
+      },
+      around: (alert) => {
+        calls.push(["around", alert])
+        return Promise.resolve(alert === "a1" ? brief : undefined)
       },
     },
     sendLines: (batch) => {

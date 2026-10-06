@@ -1,12 +1,13 @@
 /** Estate assembled: settings and catalog read and checked, the routes, the catalog's reload and the sources. */
 import { Data, Effect, type FileSystem, Layer, Result } from "effect"
 import type { Mistake } from "../shared/shape"
+import { liveAskLimits } from "./ask-limits"
 import { providerLayer } from "./auth/oidc"
 import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
 import { loadHistory, recordFirings, sweepHistory } from "./history"
 import { agentRunsRoute } from "./http/agents"
 import { aroundRoute } from "./http/around"
-import { askRoute, liveModel } from "./http/ask"
+import { askRoute } from "./http/ask"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
 import { impactRoute } from "./http/impacts"
 import { kioskRoute } from "./http/kiosk"
@@ -18,6 +19,7 @@ import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
 import { silenceRoute, unsilenceRoute } from "./http/silences"
 import { logHubLayer } from "./log-hub"
+import { liveModel } from "./model"
 import { memoryNotes, type Notes } from "./notes"
 import { platform, readText } from "./platform"
 import type { Remote } from "./remote"
@@ -144,6 +146,7 @@ export const services = <E, F, R>(
         notes,
         Layer.succeed(Configured)(started.settings),
         liveModel(started.settings.ai).pipe(Layer.provide(remote)),
+        liveAskLimits(started.settings.ai?.budget?.tokensPerDay),
         providerLayer,
       ),
     ),

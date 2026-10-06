@@ -10,6 +10,9 @@ auth:
 # A screen on the wall signs in at /kiosk?token=e2e-screen, and shows each environment for a few seconds.
 kiosk: { token: e2e-screen, environments: [ production, staging ], every: 5s }
 
+# A self-hosted model, faked in e2e/tools.ts, for Ask AI.
+ai: { provider: openai-compatible, url: http://127.0.0.1:8282/v1, model: e2e-model }
+
 sources:
   staging:
     prometheus: { url: http://127.0.0.1:8282 }

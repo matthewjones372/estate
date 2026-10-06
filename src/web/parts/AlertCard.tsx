@@ -1,6 +1,7 @@
 /** @jsxImportSource solid-js */
 /** An alert that needs someone: what fired against its threshold, its notes, Silence, and where to look. */
 import { createMemo, createSignal, For, on, Show } from "solid-js"
+import { Dynamic } from "solid-js/web"
 import type { Alert, CatalogEvent } from "../../shared/events"
 import { reading } from "../chart"
 import { useEstate } from "../context"
@@ -198,6 +199,8 @@ export const AlertCard = (props: {
   readonly alert: Alert
   readonly catalog: CatalogEvent | undefined
   readonly canSilence: boolean
+  /** The level of its title: 3 among other cards under a section, 2 on the alert's own page. */
+  readonly level?: 2 | 3
 }) => {
   const { now } = useEstate()
   const [choosing, setChoosing] = createSignal(false)
@@ -215,7 +218,9 @@ export const AlertCard = (props: {
         <span class="alert-for">firing {since(props.alert.startsAt, now())}</span>
       </div>
       <div>
-        <h3 class="alert-title">{props.alert.summary ?? props.alert.name}</h3>
+        <Dynamic component={props.level === 2 ? "h2" : "h3"} class="alert-title">
+          {props.alert.summary ?? props.alert.name}
+        </Dynamic>
         <Show when={props.alert.service}>{(name) => <p class="alert-detail">{name()}</p>}</Show>
       </div>
       <Impact alert={props.alert} />

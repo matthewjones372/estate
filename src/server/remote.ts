@@ -10,6 +10,8 @@ export interface Call {
   readonly body?: string
   /** A CA to trust beyond the system's, as for a cluster's API server. */
   readonly ca?: string
+  /** How long to wait for an answer, for the calls that think before answering: ten seconds unless set. */
+  readonly timeout?: Duration.Duration
 }
 
 export interface Reply {
@@ -84,8 +86,14 @@ export const liveRemote = Layer.effect(Remote)(
               new RemoteError({ url: call.url, message: `could not reach ${hostOf(call.url)}: ${reasonOf(error)}` }),
           ),
           Effect.timeoutOrElse({
-            duration: timeout,
-            orElse: () => Effect.fail(new RemoteError({ url: call.url, message: "did not answer in 10 s" })),
+            duration: call.timeout ?? timeout,
+            orElse: () =>
+              Effect.fail(
+                new RemoteError({
+                  url: call.url,
+                  message: `did not answer in ${Duration.toSeconds(call.timeout ?? timeout)} s`,
+                }),
+              ),
           }),
           Effect.withSpan("upstream", { attributes: { host: hostOf(call.url), method: call.method ?? "GET" } }),
         ),

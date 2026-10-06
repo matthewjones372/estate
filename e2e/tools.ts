@@ -117,10 +117,34 @@ const silences = new Map<
   }
 >()
 
+const port = Number(process.env["TOOLS_PORT"] ?? 8282)
+const here = `http://127.0.0.1:${port}`
+
+/** OrdersSlow's runbook, kept as Markdown in the repository it names. */
+const runbook = `# Orders are slow
+
+If p99 is high after a deploy, roll back. If the database is the cause, check for long-running vacuums.
+`
+
+/** A self-hosted model behind the OpenAI-compatible API, answering from the brief it was sent. */
+const modelAnswer = async (request: Request) => {
+  const body = await request.json()
+  const brief: string = body.messages?.at(-1)?.content ?? ""
+  const answer = {
+    likelyCause: brief.includes("stalled")
+      ? "orders' new version never rolled out: its image policy cannot list tags."
+      : "Nothing in the brief explains it.",
+    evidence: [{ text: brief.split("\n").find((line) => line.includes("stalled")) ?? "no change near it" }],
+    nextSteps: ["Fix the registry credentials Flux uses for orders"],
+    confidence: "medium",
+  }
+  return json({ choices: [{ message: { content: JSON.stringify(answer) } }], usage: { total_tokens: 1200 } })
+}
+
 const firing = [
   {
     labels: { alertname: "OrdersSlow", severity: "warning", app: "orders" },
-    annotations: { summary: "Orders are slow to place", runbook_url: "https://example.com/runbooks/orders-slow" },
+    annotations: { summary: "Orders are slow to place", runbook_url: `${here}/runbooks/orders-slow.md` },
     startsAt: minutesAgo(14),
   },
   {
@@ -161,12 +185,15 @@ const run = (
 const json = (body: unknown, status = 200) => Response.json(body, { status })
 
 const server = Bun.serve({
-  port: Number(process.env["TOOLS_PORT"] ?? 8282),
+  port,
   hostname: "127.0.0.1",
   fetch: async (request) => {
     const url = new URL(request.url)
     const path = url.pathname
     if (path === "/api/v1/query_range") return json(queryRange(url))
+    if (path === "/runbooks/orders-slow.md")
+      return new Response(runbook, { headers: { "content-type": "text/markdown" } })
+    if (path === "/v1/chat/completions") return modelAnswer(request)
     // Langfuse's traces of the support agent: one failed on a tool, one through.
     if (path === "/api/public/traces") return json({ data: [{ id: "t2" }, { id: "t1" }], meta: { page: 1 } })
     if (path.startsWith("/api/public/traces/")) return json(traceOf(path.split("/").at(-1) ?? ""))

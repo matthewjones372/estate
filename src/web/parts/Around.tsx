@@ -1,57 +1,49 @@
 /** @jsxImportSource solid-js */
-/** What changed near an alert: deploys and builds in the hour before it fired. Useful with no AI set up. */
-import { For, Show } from "solid-js"
+/** *Around this alert* on its page, and the line on its card that says what was deployed just before it fired. */
+import { createEffect, createSignal, on, onCleanup, Show } from "solid-js"
+import type { AroundAlert } from "../../shared/around"
 import type { Alert } from "../../shared/events"
-import { type ChangeNear, changesNear, neighboursOf } from "../around"
-import { useSnapshot } from "../context"
+import { changesNear, neighboursOf } from "../around"
+import { useEstate, useSnapshot } from "../context"
 import { since } from "../format"
-import { A } from "./A"
+import { Brief } from "./Brief"
 
-const lineOf = (change: ChangeNear, firedAt: string): string => {
-  const before = Date.parse(firedAt) - Date.parse(change.at)
-  const gap = since(change.at, Date.parse(firedAt))
-  const when = before >= 0 ? `${gap} before it fired` : `${since(firedAt, Date.parse(change.at))} after it fired`
-  return `${change.service} ${change.text} ${when}`
-}
-
+/** The brief, read from the server when the alert's page opens, so it costs nothing until someone looks. */
 export const Around = (props: { readonly alert: Alert }) => {
-  const snapshot = useSnapshot()
-  const catalog = () => snapshot.events.catalog
-  const deploys = () => snapshot.events.deploys
-  const environment = () => catalog()?.environment
-  const neighbours = () => neighboursOf(catalog(), props.alert.service)
-  const changes = () => changesNear(props.alert.startsAt, props.alert.service, deploys(), environment(), neighbours())
+  const { actions } = useEstate()
+  const [brief, setBrief] = createSignal<AroundAlert | "loading" | "failed">("loading")
+  createEffect(
+    on(
+      () => props.alert.id,
+      (id) => {
+        let current = true
+        setBrief("loading")
+        void actions.around(id).then((read) => {
+          if (current) setBrief(read ?? "failed")
+        })
+        onCleanup(() => {
+          current = false
+        })
+      },
+    ),
+  )
+  const read = () => {
+    const value = brief()
+    return typeof value === "object" ? value : undefined
+  }
   return (
-    <div class="alert-around">
-      <span class="alert-label">Around this alert</span>
+    <section class="alert-around" aria-label={`Around ${props.alert.name}`}>
       <Show
-        when={props.alert.service !== undefined}
-        fallback={<p class="alert-detail muted">No service is named on this alert, so nothing nearby to correlate.</p>}
+        when={read()}
+        fallback={
+          <p class="muted" style={{ margin: 0 }}>
+            {brief() === "loading" ? "Gathering what is around it…" : "Estate could not gather what is around it."}
+          </p>
+        }
       >
-        <Show
-          when={changes().length > 0}
-          fallback={
-            <p class="alert-detail">
-              No deploys or builds of {props.alert.service}
-              {neighbours().length === 0 ? "" : ` (or ${neighbours().join(", ")})`} in the hour before it fired.
-            </p>
-          }
-        >
-          <ul class="around-list">
-            <For each={changes()}>{(change) => <li>{lineOf(change, props.alert.startsAt)}</li>}</For>
-          </ul>
-        </Show>
-        <Show when={props.alert.service}>
-          {(name) => (
-            <p class="alert-quiet">
-              <A to={`/services/${encodeURIComponent(name())}`}>{name()}</A>
-              {" · "}
-              look at deploys and builds for what changed
-            </p>
-          )}
-        </Show>
+        {(found) => <Brief brief={found()} />}
       </Show>
-    </div>
+    </section>
   )
 }
 

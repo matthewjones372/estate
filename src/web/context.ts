@@ -2,9 +2,10 @@
 import { createContext, useContext } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
 import type { AgentRun } from "../shared/agents"
+import type { AroundAlert } from "../shared/around"
+import type { AskAnswer } from "../shared/ask"
 import type { Me, ServiceState } from "../shared/events"
 import type { ErrorGroups, LogBatch } from "../shared/log-events"
-import type { AskAnswer } from "./ask"
 import type { Live, Snapshot } from "./live"
 import type { Page } from "./route"
 
@@ -32,7 +33,10 @@ export interface Actions {
    * Ask AI about an alert: streams text chunks, then returns the structured answer, an error message, or undefined
    * when Ask AI is not configured or the request failed.
    */
-  readonly askAlert: (alert: string, onChunk: (text: string) => void) => Promise<AskAnswer | string | undefined>
+  /** An alert's brief, *Around this alert*: undefined where it could not be gathered. */
+  readonly around: (alert: string) => Promise<AroundAlert | undefined>
+  /** Ask AI about an alert: its answer, or why there is none; `signal` stops the ask when the page is left. */
+  readonly askAlert: (alert: string, signal: AbortSignal) => Promise<AskAnswer | string>
 }
 
 export interface LogHandlers {

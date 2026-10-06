@@ -37,12 +37,28 @@ export const withRole: Effect.Effect<
   return { name, groups, role, ...(kiosk === true ? { kiosk } : {}) }
 })
 
-/** The person asking, if they may change something or read lines: anyone with a role but a screen. */
-export const writer = Effect.flatMap(withRole, (person) =>
-  person.kiosk === true
-    ? Effect.fail(new Refusal({ status: 403, body: { message: "a screen changes nothing and reads no lines" } }))
-    : Effect.succeed(person),
-)
+/**
+ * Whether a request that changes something came from Estate's own pages. A browser says where a request came from in
+ * `Sec-Fetch-Site` and `Origin`; one sent from another site, as by a form on a page someone was lured to, is refused,
+ * since its cookie, or anonymous sign-in, would otherwise let it act as the person.
+ */
+const fromOurPages = (request: HttpServerRequest.HttpServerRequest): boolean => {
+  if (request.method === "GET" || request.method === "HEAD") return true
+  const site = request.headers["sec-fetch-site"]
+  if (site !== undefined) return site === "same-origin" || site === "none"
+  const origin = request.headers["origin"]
+  return origin === undefined || URL.parse(origin)?.host === request.headers["host"]
+}
+
+/** The person asking, if they may change something or read lines: anyone with a role but a screen, from our pages. */
+export const writer = Effect.gen(function* () {
+  const person = yield* withRole
+  if (person.kiosk === true)
+    return yield* new Refusal({ status: 403, body: { message: "a screen changes nothing and reads no lines" } })
+  if (!fromOurPages(yield* HttpServerRequest.HttpServerRequest))
+    return yield* new Refusal({ status: 403, body: { message: "changes are made from Estate's own pages" } })
+  return person
+})
 
 /** The query's parameters, decoded by `schema`; a query that does not fit is refused, saying what it should be. */
 export const searchParams = <A, I extends Readonly<Record<string, string | ReadonlyArray<string> | undefined>>>(

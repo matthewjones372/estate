@@ -1,13 +1,17 @@
 /** The browser's side of the wire: the event stream, and the POSTs a person's actions make. */
 import { Option, Schema } from "effect"
 import { AgentRun } from "../shared/agents"
+import { AroundAlert } from "../shared/around"
+import { AskAnswer } from "../shared/ask"
 import { type EventName, Load } from "../shared/events"
 import { ErrorGroups, LogBatch } from "../shared/log-events"
-import type { AskAnswer } from "./ask"
 import type { Actions, ErrorWindow, LogHandlers, Range } from "./context"
 import type { Open } from "./live"
 
 const decodeRuns = Schema.decodeUnknownOption(Schema.Array(AgentRun))
+const decodeAround = Schema.decodeUnknownOption(AroundAlert)
+const decodeAsk = Schema.decodeUnknownOption(AskAnswer)
+const decodeMessage = Schema.decodeUnknownOption(Schema.Struct({ message: Schema.String }))
 
 const names: ReadonlyArray<EventName> = ["catalog", "services", "alerts", "deploys", "feed"]
 
@@ -104,56 +108,38 @@ export const serverActions = (
     loadFrom(
       `/api/store-load?env=${encodeURIComponent(environment())}&store=${encodeURIComponent(store)}&range=${range}`,
     ),
-  askAlert: (alert, onChunk) => askAlert(environment(), alert, onChunk),
+  around: (alert) =>
+    fetch(`/api/alerts/${encodeURIComponent(alert)}/around?env=${encodeURIComponent(environment())}`)
+      .then((response) =>
+        response.ok ? response.json().then((body) => Option.getOrUndefined(decodeAround(body))) : undefined,
+      )
+      .catch(() => undefined),
+  askAlert: (alert, signal) => askAlert(environment(), alert, signal),
 })
 
-const askAlert = async (
-  environment: string,
-  alert: string,
-  onChunk: (text: string) => void,
-): Promise<AskAnswer | string | undefined> => {
-  try {
-    const response = await fetch(
-      `/api/alerts/${encodeURIComponent(alert)}/ask?env=${encodeURIComponent(environment)}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json", accept: "text/event-stream" },
-        body: "{}",
-      },
+/** Why an ask got no answer, in the server's words where it gave them. */
+const refusalOf = (response: Response): Promise<string> =>
+  response
+    .json()
+    .then((body) => Option.getOrUndefined(decodeMessage(body))?.message)
+    .catch(() => undefined)
+    .then((message) => message ?? `Ask AI could not answer (${response.status}).`)
+
+const askAlert = (environment: string, alert: string, signal: AbortSignal): Promise<AskAnswer | string> =>
+  fetch(`/api/alerts/${encodeURIComponent(alert)}/ask?env=${encodeURIComponent(environment)}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+    signal,
+  })
+    .then(
+      (response): Promise<AskAnswer | string> =>
+        response.ok
+          ? response
+              .json()
+              .then(
+                (body) => Option.getOrUndefined(decodeAsk(body)) ?? "Ask AI answered in a shape the page cannot read.",
+              )
+          : refusalOf(response),
     )
-    if (response.status === 404) return "Ask AI is not configured."
-    if (response.status === 429) return "Ask AI is rate-limited; try again in a minute."
-    if (!response.ok || response.body === null) return undefined
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ""
-    let final: AskAnswer | undefined
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      const parts = buffer.split("\n\n")
-      buffer = parts.pop() ?? ""
-      for (const part of parts) {
-        const event = /event: (\w+)/.exec(part)?.[1]
-        const data = part
-          .split("\n")
-          .filter((line) => line.startsWith("data: "))
-          .map((line) => line.slice(6))
-          .join("\n")
-        if (event === "chunk") onChunk(data)
-        if (event === "answer") {
-          try {
-            final = JSON.parse(data) as AskAnswer
-          } catch {
-            return undefined
-          }
-        }
-        if (event === "error") return data
-      }
-    }
-    return final
-  } catch {
-    return undefined
-  }
-}
+    .catch(() => "Ask AI could not be reached.")

@@ -71,6 +71,27 @@ test("an alert says what it means for users, from its rule or the catalog, and a
   await accessible(page)
 })
 
+test("an alert's own page gathers what is around it, and Ask AI reads it and is kept as a note", async ({ page }) => {
+  await page.goto("/?env=production")
+  await page.getByRole("link", { name: "OrdersSlow" }).first().click()
+  await expect(page).toHaveURL(/\/alerts\//)
+  const around = page.getByRole("region", { name: "Around OrdersSlow" })
+  // orders' image policy stalled before it fired, and storefront, which calls it, had just been built.
+  await expect(around).toContainText(/orders main-[\w-]+ stalled: cannot list tags.*before it fired/, {
+    timeout: 20_000,
+  })
+  await expect(around).toContainText("storefront build passed: Faster product pages")
+  await expect(around).toContainText(/orders-db calls (healthy|attention)/)
+  await expect(around).toContainText("payment provider timed out")
+  await expect(around).toContainText("If p99 is high after a deploy, roll back.")
+  await page.getByRole("button", { name: "Ask AI" }).click()
+  await expect(page.getByText("orders' new version never rolled out")).toBeVisible()
+  await expect(page.getByText("e2e-model · read: Changed · Depends · Errors · Runbook")).toBeVisible()
+  await page.getByRole("button", { name: "Keep as note" }).click()
+  await expect(page.getByText("Kept as a note.")).toBeVisible()
+  await accessible(page)
+})
+
 test("a note added to an alert is there for everyone", async ({ page }) => {
   await page.goto("/?env=production")
   const card = page.getByRole("article").filter({ hasText: "Orders are slow to place" })

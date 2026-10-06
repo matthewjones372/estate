@@ -187,6 +187,10 @@ export const Settings = Schema.Struct({
   metrics: optional(Schema.Struct({ port: optional(Schema.Number) })),
   /** Estate's own traces and logs, sent over OTLP to a collector when one is named. */
   telemetry: optional(Schema.Struct({ otlp: optional(Schema.String) })),
+  /** Credentials for reading runbooks' text, by the host their links name: a token, with a user for Basic. */
+  runbooks: optional(
+    Schema.Array(Schema.Struct({ host: Schema.String, user: optional(Schema.String), token: optional(Secret) })),
+  ),
   /** Where builds are read, for the whole estate: GitHub Actions, GitLab CI, or both. */
   builds: optional(
     Schema.Struct({

@@ -210,3 +210,26 @@ describe("the pages", () => {
       }),
     ))
 })
+
+describe("a change", () => {
+  const note = (headers: Record<string, string>) =>
+    new Request("http://estate/api/notes", {
+      method: "POST",
+      headers: { "content-type": "application/json", host: "estate", ...headers },
+      body: JSON.stringify({ environment: "production", alert: "a1", text: "on it" }),
+    })
+
+  test("is refused when another site sent it, and made when Estate's own page did", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(settings({ anonymous: { name: "gil", role: "operator" } }))
+        return [
+          yield* ask(server, note({ "sec-fetch-site": "cross-site" })),
+          yield* ask(server, note({ "sec-fetch-site": "same-site" })),
+          yield* ask(server, note({ origin: "https://elsewhere.example" })),
+          yield* ask(server, note({ "sec-fetch-site": "same-origin" })),
+          yield* ask(server, note({ origin: "http://estate" })),
+        ].map((answer) => answer.status)
+      }),
+    ).then((statuses) => expect(statuses).toEqual([403, 403, 403, 201, 201])))
+})

@@ -1,17 +1,17 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Redacted } from "effect"
 import { ask, catalog, environment, estate, serverFor, settings } from "../fixture"
-import type { Call, Reply } from "../remote"
+import { type Call, type Reply, reply } from "../remote"
 import type { Settings } from "../settings"
-import { resetAskLimits } from "./ask"
 
-const withAi = (): Settings => ({
+const withAi = (tokensPerDay?: number): Settings => ({
   ...settings({ anonymous: { name: "gil", role: "operator" } }),
   ai: {
     provider: "openai-compatible",
     url: "http://model.test/v1",
     model: "fake-model",
     apiKey: Redacted.make("sk-test"),
+    ...(tokensPerDay === undefined ? {} : { budget: { tokensPerDay } }),
   },
 })
 
@@ -48,93 +48,85 @@ const modelReply = (call: Call): Reply | undefined => {
   if (!call.url.includes("/chat/completions")) return undefined
   const answer = {
     likelyCause: "A recent deploy raised latency.",
-    evidence: [{ text: "storefront v2 deployed before it fired" }, "skip", { no: "text" }],
-    nextSteps: ["Check the runbook", 3],
+    evidence: [{ text: "storefront v2 deployed before it fired" }],
+    nextSteps: ["Check the runbook"],
     confidence: "medium",
-    tools: ["changed", null],
   }
-  return {
-    status: 200,
-    headers: { "content-type": "application/json" },
-    text: JSON.stringify({ choices: [{ message: { content: JSON.stringify(answer) } }] }),
-  }
+  return reply({ choices: [{ message: { content: JSON.stringify(answer) } }], usage: { total_tokens: 400 } })
 }
 
-const brokenReply = (call: Call): Reply | undefined => {
-  if (!call.url.includes("/chat/completions")) return undefined
-  return { status: 500, headers: {}, text: "down" }
-}
+const asked = (alert: string) => new Request(`http://estate/api/alerts/${alert}/ask?env=production`, { method: "POST" })
 
 describe("POST /api/alerts/:id/ask", () => {
-  test("streams an answer when ai is configured and the model calls tools", () => {
-    resetAskLimits()
+  test("answers with the model's reading of the brief, the model's name and what it read", () => {
+    const calls: Call[] = []
     return Effect.runPromise(
       Effect.gen(function* () {
-        const server = yield* serverFor(withAi(), withAlert, modelReply)
-        return yield* ask(server, new Request("http://estate/api/alerts/a1/ask?env=production", { method: "POST" }))
+        const server = yield* serverFor(withAi(), withAlert, (call) => {
+          calls.push(call)
+          return modelReply(call)
+        })
+        return yield* ask(server, asked("a1"))
       }),
     ).then((answer) => {
-      expect(answer.status).toBe(200)
-      expect(answer.headers.get("content-type")).toContain("text/event-stream")
-      expect(answer.text).toContain("event: answer")
-      expect(answer.text).toContain("A recent deploy raised latency.")
-      expect(answer.text).toContain("event: chunk")
+      expect([answer.status, answer.json()]).toEqual([
+        200,
+        {
+          likelyCause: "A recent deploy raised latency.",
+          evidence: [{ text: "storefront v2 deployed before it fired" }],
+          nextSteps: ["Check the runbook"],
+          confidence: "medium",
+          model: "fake-model",
+          read: ["Changed", "Depends"],
+        },
+      ])
+      expect(calls.find((call) => call.url.endsWith("/chat/completions"))?.body).toContain(
+        "storefront: v2 deployed, 26 min before it fired",
+      )
     })
   })
 
-  test("is 404 when Ask AI is not configured", () =>
+  test("is not found without ai or without the alert, and says why the model failed", () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        const server = yield* serverFor(settings({ anonymous: { name: "gil", role: "operator" } }), withAlert)
-        return yield* ask(server, new Request("http://estate/api/alerts/a1/ask?env=production", { method: "POST" }))
-      }),
-    ).then((answer) => {
-      expect(answer.status).toBe(404)
-      expect((answer.json() as { message: string }).message).toContain("not configured")
-    }))
-
-  test("is 404 for a missing alert", () => {
-    resetAskLimits()
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const server = yield* serverFor(withAi(), withAlert, modelReply)
-        return yield* ask(server, new Request("http://estate/api/alerts/nope/ask?env=production", { method: "POST" }))
-      }),
-    ).then((answer) => expect(answer.status).toBe(404))
-  })
-
-  test("streams an error when the model fails", () => {
-    resetAskLimits()
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const server = yield* serverFor(withAi(), withAlert, brokenReply)
-        return yield* ask(server, new Request("http://estate/api/alerts/a2/ask?env=production", { method: "POST" }))
-      }),
-    ).then((answer) => {
-      expect(answer.status).toBe(200)
-      expect(answer.text).toContain("event: error")
-    })
-  })
-
-  test("rate-limits a second ask for the same alert within a minute", () => {
-    resetAskLimits()
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const server = yield* serverFor(withAi(), withAlert, modelReply)
-        const first = yield* ask(
-          server,
-          new Request("http://estate/api/alerts/a1/ask?env=production", { method: "POST" }),
+        const bare = yield* serverFor(settings({ anonymous: { name: "gil", role: "operator" } }), withAlert)
+        const broken = yield* serverFor(withAi(), withAlert, (call) =>
+          call.url.includes("/chat/completions") ? reply("down", 500) : undefined,
         )
-        const second = yield* ask(
-          server,
-          new Request("http://estate/api/alerts/a1/ask?env=production", { method: "POST" }),
-        )
-        return [first.status, second.status, (second.json() as { message: string }).message] as const
+        return [
+          yield* ask(bare, asked("a1")),
+          yield* ask(broken, asked("nope")),
+          yield* ask(broken, asked("a2")),
+          // A failed ask gives its turn back, so it can be asked again at once.
+          yield* ask(broken, asked("a2")),
+        ].map((answer) => [answer.status, answer.json()])
       }),
-    ).then(([first, second, message]) => {
-      expect(first).toBe(200)
-      expect(second).toBe(429)
-      expect(message).toContain("rate-limited")
-    })
-  })
+    ).then((answers) =>
+      expect(answers).toEqual([
+        [404, { message: "Ask AI is not configured" }],
+        [404, { message: "there is no alert nope in production" }],
+        [502, { message: "the model answered 500" }],
+        [502, { message: "the model answered 500" }],
+      ]),
+    ))
+
+  test("answers an alert once a minute, and nothing once the day's tokens are spent", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(withAi(500), withAlert, modelReply)
+        return [
+          yield* ask(server, asked("a1")),
+          yield* ask(server, asked("a1")),
+          yield* ask(server, asked("a2")),
+          yield* ask(server, asked("a1")),
+        ].map((answer) => [answer.status, (answer.json() as { message?: string }).message])
+      }),
+    ).then((answers) =>
+      expect(answers).toEqual([
+        [200, undefined],
+        [429, "this alert was asked about less than a minute ago"],
+        [200, undefined],
+        [429, "Ask AI has used today's 500 tokens"],
+      ]),
+    ))
 })

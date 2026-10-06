@@ -1,178 +1,122 @@
 /**
- * An alert's brief: what changed near it, what it depends on, earlier firings and its runbook link.
- * Built from the views the page already has; no AI needed. Feeds Ask AI when configured.
+ * An alert's brief from the state Estate holds: what changed near it, what sits next to it on the map and how that
+ * is, and its earlier firings. Its errors and its runbook's text are read when asked, beside this.
  */
 import { Duration } from "effect"
+import type { Change, Neighbour } from "../../shared/around"
 import { compact } from "../../shared/compact"
+import type { Alert } from "../../shared/events"
 import type { EstateState } from "../state"
 import { before, iso } from "../time"
-import { serviceOf } from "./health"
+import { alertsView } from "./alerts"
+import { healthOf } from "./health"
+import { storeHealthOf, storesIn } from "./stores"
 
-const hour = Duration.hours(1)
+/** How long before it fired a change counts as near it. */
+const near = Duration.hours(1)
 
-interface AroundChange {
-  readonly kind: "deploy" | "build"
-  readonly service: string
-  readonly text: string
-  readonly at: string
+export interface Brief {
+  readonly alert: Alert
+  readonly subject?: string
+  readonly changed: ReadonlyArray<Change>
+  readonly depends: ReadonlyArray<Neighbour>
 }
 
-interface AroundNeighbour {
-  readonly name: string
-  readonly health: string
-  readonly reasons: ReadonlyArray<string>
-}
-
-export interface AroundBrief {
-  readonly alert: string
-  readonly name: string
-  readonly service?: string
-  readonly startsAt: string
-  readonly summary?: string
-  readonly runbook?: string
-  readonly changed: ReadonlyArray<AroundChange>
-  readonly depends: ReadonlyArray<AroundNeighbour>
-  readonly before: ReadonlyArray<{
-    readonly startsAt: string
-    readonly endsAt?: string
-    readonly notes: ReadonlyArray<{ readonly by: string; readonly text: string }>
-  }>
-  /** One-line summary for the page and for a model. */
-  readonly summaryText: string
-}
-
-const neighboursOf = (estate: EstateState, service: string | undefined): ReadonlyArray<string> => {
-  if (service === undefined) return []
+/** The services and stores either side of `subject` on the map, and which side each is on. */
+const neighboursOf = (estate: EstateState, subject: string) => {
   const map = estate.catalog.map
   if (map === undefined) return []
-  const node = map.nodes.find((each) => each.service === service)?.id
-  if (node === undefined) return []
-  const ids = new Set<string>()
-  for (const edge of map.edges) {
-    if (edge.from === node) ids.add(edge.to)
-    if (edge.to === node) ids.add(edge.from)
+  const named = (id: string) => {
+    const node = map.nodes.find((each) => each.id === id)
+    return node?.service !== undefined
+      ? { name: node.service, kind: "service" as const }
+      : node?.store !== undefined
+        ? { name: node.store, kind: "store" as const }
+        : undefined
   }
-  return map.nodes
-    .filter((each) => ids.has(each.id) && each.service !== undefined && each.service !== service)
-    .map((each) => each.service as string)
+  const here = map.nodes.filter((node) => node.service === subject || node.store === subject).map((node) => node.id)
+  const found = map.edges.flatMap((edge) => {
+    const other = here.includes(edge.from)
+      ? { id: edge.to, side: "calls" as const }
+      : here.includes(edge.to)
+        ? { id: edge.from, side: "called by" as const }
+        : undefined
+    const node = other === undefined ? undefined : named(other.id)
+    return node === undefined || other === undefined || node.name === subject ? [] : [{ ...node, side: other.side }]
+  })
+  return found.filter((each, index) => found.findIndex((other) => other.name === each.name) === index)
 }
 
-const changesNear = (
+const changesOf = (estate: EstateState, environment: string, services: ReadonlyArray<string>, since: string) => {
+  const deploys = estate.environments[environment]?.deploys.value ?? {}
+  const changes: Array<Change> = []
+  for (const service of services) {
+    const chosen = deploys[service]
+    if (chosen?.at !== undefined && chosen.at >= since)
+      changes.push({
+        at: chosen.at,
+        service,
+        kind: "deploy",
+        text:
+          chosen.stalled === undefined ? `${chosen.version} deployed` : `${chosen.version} stalled: ${chosen.stalled}`,
+      })
+    for (const build of estate.builds.value?.[service] ?? [])
+      if (build.at >= since && (build.status === "success" || build.status === "failure"))
+        changes.push({
+          at: build.at,
+          service,
+          kind: "build",
+          text: `build ${build.status === "success" ? "passed" : "failed"}: ${build.title}`,
+          url: build.url,
+        })
+  }
+  return changes.sort((a, b) => b.at.localeCompare(a.at))
+}
+
+const dependsOf = (
   estate: EstateState,
   environment: string,
-  service: string | undefined,
-  startsAt: string,
-): ReadonlyArray<AroundChange> => {
-  if (service === undefined) return []
-  const fired = Date.parse(startsAt)
-  const windowStart = before(fired, hour)
-  const names = new Set([service, ...neighboursOf(estate, service)])
-  const found: AroundChange[] = []
+  neighbours: ReturnType<typeof neighboursOf>,
+): ReadonlyArray<Neighbour> => {
   const state = estate.environments[environment]
-  for (const name of names) {
-    const chosen = state?.deploys.value?.[name]
-    if (chosen?.at !== undefined) {
-      const when = Date.parse(chosen.at)
-      if (when >= windowStart && when <= fired) {
-        found.push({
-          kind: "deploy",
-          service: name,
-          text: `${chosen.version} deployed`,
-          at: chosen.at,
-        })
-      }
+  if (state === undefined) return []
+  const stores = storesIn(estate.catalog, environment)
+  return neighbours.flatMap((neighbour): ReadonlyArray<Neighbour> => {
+    if (neighbour.kind === "store") {
+      const store = stores.find((each) => each.name === neighbour.name)
+      if (store === undefined) return []
+      const readings = (state.metrics.value?.stores?.[store.name] ?? []).map((reading) =>
+        compact({ title: reading.title, now: reading.series.now, unit: reading.unit }),
+      )
+      return [{ ...neighbour, ...storeHealthOf(store, state, stores), readings }]
     }
-    for (const build of estate.builds.value?.[name] ?? []) {
-      const when = Date.parse(build.at)
-      if (when >= windowStart && when <= fired) {
-        found.push({
-          kind: "build",
-          service: name,
-          text: `build ${build.status}: ${build.title}`,
-          at: build.at,
-        })
-      }
-    }
-  }
-  return found.sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+    const service = estate.catalog.services.find((each) => each.name === neighbour.name)
+    if (service === undefined || !service.environments.includes(environment)) return []
+    const load = state.metrics.value?.services[service.name] ?? {}
+    const readings = [
+      { title: "requests", now: load.requests?.now, unit: "/s" },
+      { title: "errors", now: load.errors?.now, unit: "/s" },
+      { title: "p99", now: load.p99?.now, unit: "s" },
+    ].flatMap((each) => (each.now === undefined ? [] : [{ ...each, now: each.now }]))
+    return [{ ...neighbour, ...healthOf(service, state, estate.catalog.services), readings }]
+  })
 }
 
-const minutesBetween = (earlier: string, later: string): number =>
-  Math.max(0, Math.round((Date.parse(later) - Date.parse(earlier)) / 60_000))
-
-const summaryOf = (brief: Omit<AroundBrief, "summaryText">): string => {
-  const lines: string[] = []
-  if (brief.changed.length === 0) {
-    lines.push(
-      brief.service === undefined
-        ? "No service is named on this alert."
-        : `No deploys or builds of ${brief.service} in the hour before it fired.`,
-    )
-  } else {
-    for (const change of brief.changed) {
-      lines.push(`${change.service} ${change.text} ${minutesBetween(change.at, brief.startsAt)} min before it fired.`)
-    }
-  }
-  for (const neighbour of brief.depends) {
-    lines.push(
-      `${neighbour.name}: ${neighbour.health}${neighbour.reasons[0] === undefined ? "" : ` (${neighbour.reasons[0]})`}`,
-    )
-  }
-  if (brief.before[0] !== undefined) {
-    const last = brief.before[0]
-    const note = last.notes[0]
-    lines.push(
-      `Before: ${brief.before.length === 1 ? "once" : `${brief.before.length} times`}, last ${iso(last.startsAt)}${
-        note === undefined ? "" : `: "${note.text}" (${note.by})`
-      }`,
-    )
-  }
-  if (brief.runbook !== undefined) lines.push(`Runbook: ${brief.runbook}`)
-  return lines.join("\n")
-}
-
-/** The brief for one alert in an environment, or undefined when that alert is not there. */
-export const aroundOf = (estate: EstateState, environment: string, id: string): AroundBrief | undefined => {
-  const state = estate.environments[environment]
-  const alert = state?.alerts.value?.find((each) => each.id === id)
-  if (alert === undefined || state === undefined) return undefined
-  const service = serviceOf(alert.labels, estate.catalog.services)
-  const runbook = alert.runbook ?? estate.catalog.services.find((each) => each.name === service)?.runbook
-  const neighbourNames = neighboursOf(estate, service)
-  const firing = (state.alerts.value ?? []).filter((each) => each.state === "firing")
-  const depends: ReadonlyArray<AroundNeighbour> = neighbourNames.map((name) => {
-    const about = firing.filter((each) => serviceOf(each.labels, estate.catalog.services) === name)
-    return about.length > 0
-      ? { name, health: "attention", reasons: about.map((each) => `${each.name} is firing`) }
-      : { name, health: "unknown", reasons: [] }
+/** The brief of the alert `id` in `environment`, or nothing where no such alert is there now. */
+export const aroundView = (estate: EstateState, environment: string, id: string): Brief | undefined => {
+  const alert = alertsView(estate, environment, false).alerts.find((each) => each.id === id)
+  if (alert === undefined) return undefined
+  const subject = alert.service ?? alert.store
+  const neighbours = subject === undefined ? [] : neighboursOf(estate, subject)
+  const since = iso(before(Date.parse(alert.startsAt), near))
+  const services = [
+    ...(alert.service === undefined ? [] : [alert.service]),
+    ...neighbours.filter((each) => each.kind === "service").map((each) => each.name),
+  ]
+  return compact({
+    alert,
+    subject,
+    changed: changesOf(estate, environment, services, since),
+    depends: dependsOf(estate, environment, neighbours),
   })
-  const notes = estate.notes
-    .filter((note) => note.environment === environment && note.alert === alert.id)
-    .map(({ at, by, text }) => ({ at, by, text }))
-  const earlier = (estate.firings ?? [])
-    .filter(
-      (firing) => firing.environment === environment && firing.alert === alert.id && firing.startsAt < alert.startsAt,
-    )
-    .toSorted((a, b) => b.startsAt.localeCompare(a.startsAt))
-    .slice(0, 5)
-  const beforeRows = earlier.map((firing, index) => {
-    const until = earlier[index - 1]?.startsAt ?? alert.startsAt
-    return compact({
-      startsAt: firing.startsAt,
-      endsAt: firing.endsAt,
-      notes: notes.filter((note) => note.at >= firing.startsAt && note.at < until),
-    })
-  })
-  const base = compact({
-    alert: alert.id,
-    name: alert.name,
-    service,
-    startsAt: alert.startsAt,
-    summary: alert.summary,
-    runbook,
-    changed: changesNear(estate, environment, service, alert.startsAt),
-    depends,
-    before: beforeRows,
-  })
-  return { ...base, summaryText: summaryOf(base) }
 }

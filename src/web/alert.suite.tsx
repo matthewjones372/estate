@@ -1,6 +1,7 @@
 /** @jsxImportSource solid-js */
 /** The alert permalink: run by `alert.test.ts` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
+import { events } from "./fixture"
 import { render } from "./harness"
 import { AlertPage } from "./pages/Alert"
 
@@ -10,22 +11,22 @@ const text = (html: string) =>
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
 
-describe("an alert permalink", () => {
-  test("shows what's happening, what changed, ownership and Ask AI", () => {
+describe("an alert's own page", () => {
+  test("shows what's happening, what is around it, who owns it and Ask AI", () => {
     const page = text(render(() => <AlertPage id="a1" />))
     for (const words of [
       "What's happening",
       "OrdersSlow",
-      "What changed",
       "Around this alert",
       "Who owns it",
-      "Environment",
-      "Where to investigate",
-      "Ask AI",
       "Ask AI is not configured",
-    ]) {
+    ])
       expect(page).toContain(words)
-    }
-    expect(text(render(() => <AlertPage id="missing" />))).toContain("There is no alert missing")
+  })
+
+  test("says an alert is not firing once the alerts are read, and waits for them before", () => {
+    expect(text(render(() => <AlertPage id="missing" />))).toContain("missing is not firing in production now.")
+    const { alerts: _, ...unread } = events
+    expect(text(render(() => <AlertPage id="a1" />, { sent: unread }))).toContain("Reading the alerts…")
   })
 })
