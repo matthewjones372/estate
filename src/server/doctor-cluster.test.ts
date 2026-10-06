@@ -2,16 +2,17 @@ import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { clusterFinding } from "./doctor-cluster"
 import type { Query } from "./notes"
+import { SourceFailure } from "./sources/run"
 
 /** A database answering the runners and the owner's beat from rows, or failing as a missing table does. */
 const database =
   (runners: ReadonlyArray<string>, owner?: { readonly address: string; readonly ago: number }): Query =>
   (statement) =>
     statement.includes("estate_cluster_runners")
-      ? Promise.resolve(runners.map((address) => ({ address })))
+      ? Effect.succeed(runners.map((address) => ({ address })))
       : owner === undefined
-        ? Promise.reject(new Error('relation "estate_cluster_owner" does not exist'))
-        : Promise.resolve([{ address: owner.address, ago: String(owner.ago) }])
+        ? Effect.fail(new SourceFailure({ message: 'relation "estate_cluster_owner" does not exist' }))
+        : Effect.succeed([{ address: owner.address, ago: String(owner.ago) }])
 
 describe("the doctor's cluster line", () => {
   test("names every runner and the one reading the estate", () =>
@@ -40,11 +41,14 @@ describe("the doctor's cluster line", () => {
 
   test("fails with no runner, or no database", () =>
     Effect.runPromise(
-      Effect.all([clusterFinding(database([])), clusterFinding(() => Promise.reject(new Error("refused")))]),
+      Effect.all([
+        clusterFinding(database([])),
+        clusterFinding(() => Effect.fail(new SourceFailure({ message: "the database: refused" }))),
+      ]),
     ).then((found) =>
       expect(found.map((each) => [each.ok, each.says])).toEqual([
         [false, "no runner is registered"],
-        [false, "the cluster's tables: Error: refused"],
+        [false, "the cluster's tables: the database: refused"],
       ]),
     ))
 })

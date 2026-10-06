@@ -13,9 +13,11 @@ auth:
     operator: [ ops ]
   anonymous: { name: visitor, role: operator }
 
-# Notes are kept in memory here. An estate people use keeps them in Postgres or, on AWS, in DynamoDB:
-# notes: { postgres: ${NOTES_DATABASE_URL} }
-# notes: { dynamodb: { table: estate-notes, region: eu-west-2 } }
+# Estate's own database, for its notes, impacts, alert history and threads; in memory here. An estate people use
+# keeps them in Postgres or, on AWS, in DynamoDB; and notes for 30 days unless set:
+# database: { postgres: ${DATABASE_URL} }
+# database: { dynamodb: { table: estate-notes, region: eu-west-2 } }
+# notes: { keepDays: 30 }
 
 sources:
   staging:

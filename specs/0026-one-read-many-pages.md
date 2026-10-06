@@ -22,7 +22,7 @@ storage for runners, shard locks and messages) and, in `@effect/platform-bun`, `
   database, as Effect's cluster does; Estate does not become a product for that.
 - **Prometheus, Alertmanager or any source made highly available.** Estate reads one address per source, as now.
   Their HA is theirs.
-- **Redis, NATS, Dynamo, or another store for the cluster.** Shard locks and runners live in `notes.postgres`
+- **Redis, NATS, Dynamo, or another store for the cluster.** Shard locks and runners live in `database.postgres`
   only; Effect's SQL storage there is enough. Dynamo notes stay for single-replica estates; they are not an HA
   option.
 - **The catalog, the pages or their UX.** Same pages, same events, same frames; a page cannot tell which replica it
@@ -39,16 +39,16 @@ storage for runners, shard locks and messages) and, in `@effect/platform-bun`, `
 ```yaml
 # estate.yaml — that's it for most deploys
 cluster: true
-notes:
-  postgres: ${ESTATE_POSTGRES}   # already required for notes; cluster reuses it
+database:
+  postgres: ${DATABASE_URL}   # Estate's own database, for its notes and history; the cluster shares it
 ```
 
 Defaults when `cluster: true`: runner address from `POD_IP` (Kubernetes downward API) or the hostname, port
 **34431**; listen `0.0.0.0:34431`; health `ping`; `BunClusterSocket` with NDJSON frames (Effect's binary layout cannot
-tell apart the unions the state holds), and SQL storage on the same Postgres as notes through `@effect/sql-pg`.
-Absent or false means one process, exactly as today. Cluster requires `notes.postgres` — that is the only notes
-store that holds the shard locks. `cluster: true` with Dynamo notes is a settings mistake (`cluster needs
-notes.postgres`).
+tell apart the unions the state holds), and SQL storage in Estate's Postgres. Notes and the cluster share one
+`@effect/sql-pg` pool. Absent or false means one process, exactly as today. Cluster requires `database.postgres`, the
+only database that holds the shard locks; `cluster: true` without it, or with DynamoDB, is the settings mistake
+`cluster: needs database.postgres, where the runners find each other`.
 
 Override only when you must (a non-default port, or `k8s` health):
 
@@ -141,7 +141,7 @@ defaults above; Postgres is the notes database you already have, the runner addr
 the port is fixed. The Entity / Follow / Apply shape stays; only the operator surface shrinks to a flag.
 
 The cost is still real, and one replica is still the right answer for most estates. Clustering needs
-`notes.postgres`, port 34431 open between Estate pods, and a failover that takes up to the shard lock's expiry
+`database.postgres`, port 34431 open between Estate pods, and a failover that takes up to the shard lock's expiry
 (35 s by default) plus one read, during which pages show the last state with its age, as they do when a source is
 slow. A single replica restarts in about the same time. Recommended: stay on one replica unless the tools' rate
 limits are being met by N replicas, a node loss must not blank the page, or the viewers (a wall of kiosks) outgrow
@@ -152,7 +152,7 @@ one process.
 - **`effect/cluster` and `BunClusterSocket`** at 4.0.0: in the tree now, marked `@stability unstable` (see Open
   questions).
 - **`@effect/sql-pg` 4.0.0**, pinned beside `effect`: the `SqlClient` the cluster's storage runs on, speaking
-  Postgres's protocol itself. Notes stay on Bun's `SQL`; the two share a database, not a client.
+  Postgres's protocol itself, for the notes and the cluster alike: one pool.
 - **Spec 0024's `/mcp`** — `/mcp` exists. Every runner serves the same MCP tools from its
   `SubscriptionRef`; they follow for free.
 
@@ -163,11 +163,11 @@ One entry per pull request, in build order.
 - [x] **`spec-0026`** — this spec, and its row in `specs/README.md` as proposed.
       Done when: `specs/0026-one-read-many-pages.md` is committed and the README lists 0026 as proposed.
 - [x] **`cluster-opt-in`** — `cluster: true` (boolean) or a small override struct in the settings;
-      `@effect/sql-pg` on `notes.postgres`; defaults for runner/`POD_IP`, listen `0.0.0.0:34431`, health `ping`;
+      `@effect/sql-pg` on `database.postgres`; defaults for runner/`POD_IP`, listen `0.0.0.0:34431`, health `ping`;
       `BunClusterSocket.layer` with SQL storage under `estate_cluster`; the cluster modules loaded only when
       `cluster` is true.
-      Done when: settings tests accept `cluster: true` with `notes.postgres`; reject `cluster: true` without
-      `notes.postgres` and reject `cluster: true` with Dynamo notes as the mistake `cluster needs notes.postgres`;
+      Done when: settings tests accept `cluster: true` with `database.postgres`; reject `cluster: true` without it
+      or with DynamoDB, saying it needs `database.postgres`;
       a test serves with no `cluster` and no database and builds no `Sharding`; `bun run gate` passes unchanged.
 - [x] **`scrape-singleton`** — the `Estate` entity, id `"estate"`, running what `background` runs today and kept
       alive; a runner that does not own it runs no readers, sweeps or firing records.
@@ -205,7 +205,7 @@ bun run integration     # includes the two-runner case against Postgres
 
 ```bash
 # two runners on one machine, the same database
-export NOTES_DATABASE_URL=postgres://estate@localhost/estate
+export DATABASE_URL=postgres://estate@localhost/estate
 ESTATE_SETTINGS=examples/cluster/a.yaml bun src/server/main.ts &
 ESTATE_SETTINGS=examples/cluster/b.yaml bun src/server/main.ts &
 ESTATE_SETTINGS=examples/cluster/a.yaml bun src/server/main.ts doctor     # cluster: 2 runners, estate read by one
@@ -225,7 +225,7 @@ ESTATE_SETTINGS=examples/cluster/a.yaml bun src/server/main.ts doctor     # clus
 - **Two owners for a moment?** A runner cut off from Postgres keeps reading until it notices its lock is gone (up to
   35 s). Reads are harmless twice; firings are upserted by environment, alert and start, sweeps and debug reverts are
   idempotent. Recommended: accept it, rather than fencing every write with the lock.
-- **`readOnly: true` with `cluster: true`?** Today read-only ignores `notes.postgres`. Recommended: allow the cluster
+- **`readOnly: true` with `cluster: true`?** Read-only keeps notes in memory whatever `database` says. Recommended: allow the cluster
   tables in read-only, since they are Estate's own and change nothing in the estate's tools; notes stay in memory.
 - **Runner health: `ping` or `k8s`?** Recommended: `ping` when `cluster: true` (works on ECS, a VM, a laptop).
   Override with `cluster: { health: k8s }` only when you want pods to judge runners sooner; `deploy/rbac.yaml` already

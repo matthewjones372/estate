@@ -2,7 +2,7 @@
 port: 8080
 metrics: { port: 9464 }
 cluster: { port: 34431 }
-notes: { postgres: ${NOTES_DATABASE_URL} }
+database: { postgres: ${DATABASE_URL} }
 catalog: examples/catalog.yaml
 auth:
   sessionSecret: an-example-secret-for-trying-estate-out-only

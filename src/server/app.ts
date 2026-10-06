@@ -143,11 +143,11 @@ interface Holding<W> {
 
 const alone: Holding<Estate> = { writes: localWrites, role: { _tag: "Alone" } }
 
-export const services = <E, F, R, W = Estate>(
+export const services = <E, F, R, W = Estate, N = never>(
   started: Started,
   web: Layer.Layer<Web, E, R>,
   remote: Layer.Layer<Remote>,
-  notes: Layer.Layer<Notes, F> = memoryNotes,
+  notes: Layer.Layer<Notes, F, N> = memoryNotes,
   holding: Holding<W | Estate> = alone,
 ) =>
   Layer.mergeAll(logHubLayer, sharedViewsLayer, holding.writes, roleLayer(holding.role)).pipe(

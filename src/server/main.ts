@@ -3,27 +3,22 @@
  * the settings from `ESTATE_SETTINGS` (by default `/etc/estate/estate.yaml`).
  */
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun"
-import { SQL } from "bun"
-import { Config, Console, Effect, Layer, Logger, Redacted, Result } from "effect"
+import { Config, Console, Effect, Layer, Logger, Result } from "effect"
 import { FetchHttpClient, HttpRouter } from "effect/http"
 import { Otlp, OtlpSerialization, PrometheusMetrics } from "effect/observability"
+import { SqlClient } from "effect/sql/SqlClient"
 import type { Mistake } from "../shared/shape"
 import { application, background, prepare, services } from "./app"
 import { parseCatalog, readCatalogText } from "./catalog-file"
 import { doctor, printed } from "./doctor"
 import { clusterFinding } from "./doctor-cluster"
-import { memoryNotes, postgresNotes, type Query } from "./notes"
+import { memoryNotes, type Notes, type NotesError } from "./notes"
 import { dynamodbNotes } from "./notes-dynamodb"
 import { platform } from "./platform"
+import { notesInPostgres, postgresLayer, queryOf } from "./postgres"
 import { liveRemote } from "./remote"
 import { clusteredBy } from "./settings-cluster"
 import { builtWeb } from "./web"
-
-/** Bun's Postgres client, as the little the notes need of one. */
-const sqlOf = (url: string): Query => {
-  const sql = new SQL(url)
-  return (statement, parameters) => sql.unsafe(statement, [...parameters])
-}
 
 const listMistakes = (file: string, mistakes: ReadonlyArray<Mistake>) =>
   Console.error(
@@ -52,15 +47,12 @@ const serve = Effect.gen(function* () {
     Effect.orElseSucceed(() => "/etc/estate/estate.yaml"),
   )
   const started = yield* prepare(settingsPath)
-  const { postgres, dynamodb } = started.settings.notes ?? {}
-  const notes =
-    started.settings.readOnly === true
+  const { postgres, dynamodb } = started.settings.database ?? {}
+  const readOnly = started.settings.readOnly === true
+  const elsewhere =
+    readOnly || dynamodb === undefined
       ? memoryNotes
-      : postgres !== undefined
-        ? postgresNotes(sqlOf(Redacted.value(postgres)))
-        : dynamodb !== undefined
-          ? dynamodbNotes(dynamodb).pipe(Layer.provide([liveRemote, platform]))
-          : memoryNotes
+      : dynamodbNotes(dynamodb).pipe(Layer.provide([liveRemote, platform]))
   const hostname = started.settings.host ?? "0.0.0.0"
   const server = HttpRouter.serve(application).pipe(
     Layer.provide(BunHttpServer.layer({ port: started.settings.port ?? 8080, hostname })),
@@ -77,22 +69,32 @@ const serve = Effect.gen(function* () {
         )
   const serving = [Layer.launch(server), Layer.launch(metrics)] as const
   const clustered = clusteredBy(started.settings.cluster)
-  if (clustered === undefined || postgres === undefined)
-    return yield* Effect.all([...serving, background(started)], { concurrency: "unbounded" }).pipe(
+  const alone = Effect.all([...serving, background(started)], { concurrency: "unbounded" })
+  if (postgres === undefined)
+    return yield* alone.pipe(
+      Effect.provide(services(started, builtWeb, liveRemote, elsewhere)),
+      Effect.provide(telemetry),
+    )
+  // One pool for the notes and, when clustered, the runners; read-only keeps notes in memory but may still cluster.
+  const notes: Layer.Layer<Notes, NotesError, SqlClient> = readOnly ? memoryNotes : notesInPostgres
+  if (clustered === undefined)
+    return yield* alone.pipe(
       Effect.provide(services(started, builtWeb, liveRemote, notes)),
+      Effect.provide(postgresLayer(postgres)),
       Effect.provide(telemetry),
     )
   // The cluster's modules are loaded only for a cluster; one process never loads them.
-  const runner = (yield* Effect.promise(() => import("./cluster/serve"))).asRunner(started, clustered, postgres)
+  const runner = (yield* Effect.promise(() => import("./cluster/serve"))).asRunner(started, clustered)
   return yield* Effect.all([...serving, runner.alongside], { concurrency: "unbounded" }).pipe(
     Effect.provide(services(started, builtWeb, liveRemote, notes, runner.holding)),
     Effect.provide(runner.sharding),
+    Effect.provide(postgresLayer(postgres)),
     Effect.provide(telemetry),
   )
 }).pipe(
   Effect.catchTags({
     StartError: (error) => listMistakes(error.file, error.mistakes),
-    NotesError: (error) => listMistakes("estate.yaml", [{ at: "notes", message: error.message }]),
+    NotesError: (error) => listMistakes("estate.yaml", [{ at: "database", message: error.message }]),
   }),
   Effect.provide(platform),
 )
@@ -116,10 +118,19 @@ const diagnose = Effect.gen(function* () {
   )
   const started = yield* prepare(settingsPath)
   const reports = yield* doctor(started.settings, started.initial.catalog)
-  const postgres = started.settings.notes?.postgres
+  const postgres = started.settings.database?.postgres
   const clustered = clusteredBy(started.settings.cluster) !== undefined && postgres !== undefined
   const cluster = clustered
-    ? [{ environment: "the cluster", findings: [yield* clusterFinding(sqlOf(Redacted.value(postgres)))] }]
+    ? [
+        {
+          environment: "the cluster",
+          findings: [
+            yield* Effect.gen(function* () {
+              return yield* clusterFinding(queryOf(yield* SqlClient))
+            }).pipe(Effect.provide(postgresLayer(postgres))),
+          ],
+        },
+      ]
     : []
   const { text, ok } = printed([...reports, ...cluster])
   yield* Console.log(text)

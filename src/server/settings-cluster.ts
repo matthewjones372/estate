@@ -1,6 +1,7 @@
 /**
  * `cluster:` in the settings: off, or on as one boolean with an override for the port or how runners judge each other.
- * Clustered, the runners share the notes' Postgres for their shard locks, so it needs `notes.postgres`.
+ * Clustered, the runners find each other and hold their shard locks in Estate's Postgres, so it needs
+ * `database.postgres`.
  */
 import { Schema } from "effect"
 import type { Mistake } from "../shared/shape"
@@ -31,8 +32,8 @@ export const clusteredBy = (cluster: typeof ClusterSettings.Type | undefined): C
 
 export const clusterMistakes = (settings: {
   readonly cluster?: typeof ClusterSettings.Type
-  readonly notes?: { readonly postgres?: unknown }
+  readonly database?: { readonly postgres?: unknown }
 }): ReadonlyArray<Mistake> =>
-  clusteredBy(settings.cluster) !== undefined && settings.notes?.postgres === undefined
-    ? [{ at: "cluster", message: "cluster needs notes.postgres" }]
+  clusteredBy(settings.cluster) !== undefined && settings.database?.postgres === undefined
+    ? [{ at: "cluster", message: "needs database.postgres, where the runners find each other" }]
     : []

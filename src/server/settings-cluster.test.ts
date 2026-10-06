@@ -15,10 +15,10 @@ const read = (text: string) =>
   )
 
 describe("cluster in the settings", () => {
-  test("is one boolean, with the notes' Postgres", () =>
+  test("is one boolean, with Estate's Postgres", () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        const result = yield* read("cluster: true\nnotes: { postgres: postgres://estate@db/estate }\n")
+        const result = yield* read("cluster: true\ndatabase: { postgres: postgres://estate@db/estate }\n")
         expect(Result.isSuccess(result) && clusteredBy(result.success.cluster)).toEqual({ port: 34431, health: "ping" })
       }),
     ))
@@ -26,18 +26,18 @@ describe("cluster in the settings", () => {
   test("overrides only what it names", () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        const result = yield* read("cluster: { health: k8s }\nnotes: { postgres: postgres://estate@db/estate }\n")
+        const result = yield* read("cluster: { health: k8s }\ndatabase: { postgres: postgres://estate@db/estate }\n")
         expect(Result.isSuccess(result) && clusteredBy(result.success.cluster)).toEqual({ port: 34431, health: "k8s" })
       }),
     ))
 
-  test("needs notes.postgres, which DynamoDB notes are not", () =>
+  test("needs database.postgres, which DynamoDB is not", () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        for (const notes of ["", "notes: { dynamodb: { table: notes, region: eu-west-1 } }\n"]) {
+        for (const notes of ["", "database: { dynamodb: { table: notes, region: eu-west-1 } }\n"]) {
           const result = yield* read(`cluster: true\n${notes}`)
           expect(Result.isFailure(result) && result.failure.mistakes).toEqual([
-            { at: "cluster", message: "cluster needs notes.postgres" },
+            { at: "cluster", message: "needs database.postgres, where the runners find each other" },
           ])
         }
       }),
@@ -60,7 +60,7 @@ describe("cluster in the settings", () => {
             Effect.flatMap(readSettings),
             Effect.provideService(
               ConfigProvider.ConfigProvider,
-              ConfigProvider.fromUnknown({ NOTES_DATABASE_URL: "postgres://estate@localhost/estate" }),
+              ConfigProvider.fromUnknown({ DATABASE_URL: "postgres://estate@localhost/estate" }),
             ),
           ),
         )

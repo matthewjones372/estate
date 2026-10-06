@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
-import { SQL } from "bun"
-import { ConfigProvider, Effect, Layer } from "effect"
+import { ConfigProvider, Effect, Layer, Redacted } from "effect"
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers"
-import { Notes, type Notes as NotesService, postgresNotes, type Query, type StoredNote } from "../src/server/notes"
+import { Notes, type Notes as NotesService, type StoredNote } from "../src/server/notes"
 import { dynamodbNotes } from "../src/server/notes-dynamodb"
 import { platform } from "../src/server/platform"
+import { notesInPostgres, postgresLayer } from "../src/server/postgres"
 import { liveRemote } from "../src/server/remote"
 import { urlOf } from "./real"
 
@@ -38,18 +38,18 @@ const note = (id: string, at: string): StoredNote => ({
   text: `note ${id}`,
 })
 
-/** Bun's Postgres client as the server makes it, given only the URL. */
-const sqlOf = (url: string): Query => {
-  const sql = new SQL(url)
-  return (statement, parameters) => sql.unsafe(statement, [...parameters])
-}
-
 /** The notes as a fresh Estate would have them: a new store each time, over the same database. */
 const kinds: ReadonlyArray<readonly [string, () => Layer.Layer<Notes, unknown>]> = [
   [
     "Postgres",
     () =>
-      postgresNotes(sqlOf(`postgres://postgres:estate@${postgres.getHost()}:${postgres.getMappedPort(5432)}/estate`)),
+      notesInPostgres.pipe(
+        Layer.provide(
+          postgresLayer(
+            Redacted.make(`postgres://postgres:estate@${postgres.getHost()}:${postgres.getMappedPort(5432)}/estate`),
+          ),
+        ),
+      ),
   ],
   [
     "DynamoDB Local",

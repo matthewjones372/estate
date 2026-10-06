@@ -124,7 +124,7 @@ describe("an alert's firings", () => {
     ]
     const query: Query = (statement, parameters) => {
       statements.push([statement.replace(/\s+/g, " ").trim(), parameters])
-      return Promise.resolve(statement.includes("from estate_firings") ? rows : [])
+      return Effect.succeed(statement.includes("from estate_firings") ? rows : [])
     }
     return Effect.runPromise(
       Effect.gen(function* () {

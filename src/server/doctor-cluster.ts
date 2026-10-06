@@ -1,5 +1,5 @@
 /**
- * The doctor's `cluster` line: the runners registered in the notes' Postgres, and the one the owner's beat names, with
+ * The doctor's `cluster` line: the runners registered in Estate's Postgres, and the one the owner's beat names, with
  * how long since it beat. Fails with no runner, or with no beat in the shard lock's lifetime, when no runner reads.
  */
 import { Effect } from "effect"
@@ -14,14 +14,11 @@ const ownerSql = "SELECT address, EXTRACT(EPOCH FROM now() - beat) AS ago FROM e
 
 const plural = (count: number) => `${count} runner${count === 1 ? "" : "s"}`
 
-const asked = (query: Query, statement: string) =>
-  Effect.tryPromise({ try: () => query(statement, []), catch: (error) => error })
-
 export const clusterFinding = (query: Query): Effect.Effect<Finding> =>
   Effect.all({
-    runners: asked(query, runnersSql),
+    runners: query(runnersSql, []),
     // No beat table yet is no runner having read the estate yet.
-    owner: asked(query, ownerSql).pipe(Effect.orElseSucceed(() => [])),
+    owner: query(ownerSql, []).pipe(Effect.orElseSucceed(() => [])),
   }).pipe(
     Effect.map(({ runners, owner }): Finding => {
       const addresses = runners.map((row) => String(row["address"]))
@@ -38,6 +35,6 @@ export const clusterFinding = (query: Query): Effect.Effect<Finding> =>
       }
     }),
     Effect.catch((error) =>
-      Effect.succeed<Finding>({ part: "cluster", ok: false, says: `the cluster's tables: ${String(error)}` }),
+      Effect.succeed<Finding>({ part: "cluster", ok: false, says: `the cluster's tables: ${error.message}` }),
     ),
   )

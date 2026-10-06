@@ -236,7 +236,7 @@ alerts:
   PaymentsFailing: { impact: "Customers cannot pay; orders wait in their baskets." }
 ```
 
-`estate.yaml` holds the settings: sign-in, roles, where each environment's tools are, and where to keep notes.
+`estate.yaml` holds the settings: sign-in, roles, where each environment's tools are, and Estate's own database for its notes and history.
 Secrets are written as `${NAME}` and read from the environment.
 
 `estate check catalog.yaml` reports every mistake in one go, with where it is, so it fits in CI. Estate reloads the
@@ -272,7 +272,7 @@ Kubernetes base to overlay with your two files, an ingress and your secrets. It 
 
 One replica is right for most estates: it restarts in about the time a failover takes. Run more when the tools'
 rate limits are being met, a node's loss must not blank the page, or a wall of kiosks outgrows one process. Set
-`cluster: true` beside `notes: { postgres: … }` and add the [`deploy/cluster`](deploy/cluster) component to your
+`cluster: true` beside `database: { postgres: … }` and add the [`deploy/cluster`](deploy/cluster) component to your
 overlay. Every replica serves the pages, and one of them reads the tools, so two replicas make the calls one does.
 A note or silence made on any replica shows on all of them. When the reading replica goes, another reads within a
 minute, and the pages keep the last state meanwhile. `/readyz` says `ready, reading` or `ready, following <runner>`,

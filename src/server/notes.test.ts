@@ -30,7 +30,7 @@ const database =
         by: parameters[4],
         text: parameters[5],
       })
-    return Promise.resolve(statement.startsWith("select") ? rows : [])
+    return Effect.succeed(statement.startsWith("select") ? rows : [])
   }
 
 describe("notes in Postgres", () => {
@@ -56,13 +56,13 @@ describe("notes in Postgres", () => {
       Effect.result(
         Effect.provide(
           Notes,
-          postgresNotes(() => Promise.reject(new Error("refused"))),
+          postgresNotes(() => Effect.fail(new SourceFailure({ message: "the database: refused" }))),
         ),
       ),
     ).then((result) => {
       expect(Result.isFailure(result) && result.failure).toMatchObject({
         _tag: "NotesError",
-        message: "the notes database: Error: refused",
+        message: "the database: refused",
       })
     }))
 })

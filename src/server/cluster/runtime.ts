@@ -1,11 +1,10 @@
 /**
  * The cluster a runner joins when `cluster:` is on: Effect's sharding over Bun sockets on its own port, with runners,
- * shard locks and messages kept in the notes' Postgres under `estate_cluster`. Loaded only when clustered.
+ * shard locks and messages kept in Estate's Postgres under `estate_cluster`. Loaded only when clustered.
  */
 import { hostname } from "node:os"
 import { BunClusterSocket, BunCrypto } from "@effect/platform-bun"
-import { PgClient } from "@effect/sql-pg"
-import { Config, Effect, Layer, Option, type Redacted } from "effect"
+import { Config, Effect, Layer, Option } from "effect"
 import { RunnerAddress, ShardingConfig, SqlMessageStorage, SqlRunnerStorage } from "effect/cluster"
 import type { Clustered } from "../settings-cluster"
 
@@ -17,8 +16,8 @@ const runnerHost = Config.String("POD_IP").pipe(
   Effect.orElseSucceed(() => hostname()),
 )
 
-/** Sharding, and its configuration, for a runner on `host` with the cluster's tables in `postgres`. */
-const layerOn = (clustered: Clustered, host: string, postgres: Redacted.Redacted) => {
+/** Sharding, and its configuration, for a runner on `host`, its tables in the database Estate's pool reaches. */
+const layerOn = (clustered: Clustered, host: string) => {
   const config = {
     runnerAddress: Option.some(RunnerAddress.make(host, clustered.port)),
     runnerListenAddress: Option.some(RunnerAddress.make("0.0.0.0", clustered.port)),
@@ -33,13 +32,9 @@ const layerOn = (clustered: Clustered, host: string, postgres: Redacted.Redacted
     serialization: "ndjson",
     runnerHealth: clustered.health,
     shardingConfig: config,
-  }).pipe(
-    Layer.provide(storage),
-    Layer.provideMerge(ShardingConfig.layer(config)),
-    Layer.provideMerge(Layer.orDie(PgClient.layer({ url: postgres, applicationName: "estate" }))),
-  )
+  }).pipe(Layer.provide(storage), Layer.provideMerge(ShardingConfig.layer(config)))
 }
 
 /** The cluster this runner joins, at its own address. */
-export const clusterLayer = (clustered: Clustered, postgres: Redacted.Redacted) =>
-  Layer.unwrap(Effect.map(runnerHost, (host) => layerOn(clustered, host, postgres)))
+export const clusterLayer = (clustered: Clustered) =>
+  Layer.unwrap(Effect.map(runnerHost, (host) => layerOn(clustered, host)))

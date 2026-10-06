@@ -32,7 +32,7 @@ auth:
   sessionSecret: a-session-secret-for-the-cluster-test-only
   roles: { viewer: [ developers ], operator: [ ops ] }
   anonymous: { name: ${name}, role: operator }
-notes: { postgres: ${database} }
+database: { postgres: ${database} }
 cluster: { port: ${port + 16000} }
 sources:
   staging: { prometheus: { url: http://127.0.0.1:${prometheus.port} }, every: { metrics: 5s } }

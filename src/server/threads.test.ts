@@ -39,7 +39,7 @@ describe("a firing's Slack thread", () => {
         Effect.provide(
           postgresNotes((statement, parameters) => {
             statements.push([statement, parameters])
-            return Promise.resolve(statement.startsWith("select") ? rows : [])
+            return Effect.succeed(statement.startsWith("select") ? rows : [])
           }),
         ),
       ),

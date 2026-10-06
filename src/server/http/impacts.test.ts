@@ -97,7 +97,7 @@ describe("impacts kept", () => {
     const rows = [{ alert: "OrdersSlow", text: "Orders fail.", by: "ada", at: new Date("2026-10-03T12:00:00Z") }]
     const query: Query = (statement, parameters) => {
       statements.push([statement.replace(/\s+/g, " ").trim(), parameters])
-      return Promise.resolve(statement.includes("from estate_impacts") ? rows : [])
+      return Effect.succeed(statement.includes("from estate_impacts") ? rows : [])
     }
     const program = Effect.gen(function* () {
       const notes = yield* Notes

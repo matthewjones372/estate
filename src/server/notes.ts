@@ -4,7 +4,7 @@
  */
 import { Context, Data, Effect, Layer, Ref } from "effect"
 import type { Note } from "../shared/events"
-import { type Failure, SourceFailure } from "./sources/run"
+import type { Failure } from "./sources/run"
 import type { StoredFiring, StoredThread } from "./state"
 import { iso } from "./time"
 
@@ -41,12 +41,13 @@ export interface Notes {
 export const Notes = Context.Service<Notes>("estate/Notes")
 
 export const NotesError = Data.TaggedError("NotesError")<{ readonly message: string }>
+export type NotesError = InstanceType<typeof NotesError>
 
 /** The little of a SQL client the notes need: a statement with its parameters, and the rows it returns. */
 export type Query = (
   statement: string,
   parameters: ReadonlyArray<unknown>,
-) => Promise<ReadonlyArray<Record<string, unknown>>>
+) => Effect.Effect<ReadonlyArray<Record<string, unknown>>, Failure>
 
 const kept = 200
 
@@ -102,11 +103,9 @@ const firingOf = (row: Record<string, unknown>): StoredFiring => ({
     : { silence: { by: String(row["silenced_by"]), reason: String(row["silence_reason"] ?? "") } }),
 })
 
+/** The statement, run each time the effect is, not once as it is made. */
 const run = (query: Query, statement: string, parameters: ReadonlyArray<unknown> = []) =>
-  Effect.tryPromise({
-    try: () => query(statement, parameters),
-    catch: (error) => new SourceFailure({ message: `the notes database: ${String(error)}` }),
-  })
+  Effect.suspend(() => query(statement, parameters))
 
 const asNote = ({ id, environment, alert, at, by, text }: Record<string, unknown>): StoredNote => ({
   id: String(id),

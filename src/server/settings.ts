@@ -8,6 +8,7 @@ import { Secret } from "./secret"
 import { Ai, Mcp } from "./settings-ai"
 import { ClusterSettings, clusterMistakes } from "./settings-cluster"
 import { Costs, Prices } from "./settings-costs"
+import { Database, databaseMistakes, misplacedDatabase } from "./settings-database"
 
 const optional = Schema.optionalKey
 
@@ -165,16 +166,10 @@ export const Settings = Schema.Struct({
   auth: Auth,
   /** How many days each alert's firings are kept, with who silenced them and why: 90 unless set. */
   alerts: optional(Schema.Struct({ historyDays: optional(Schema.Number) })),
-  /** Where notes are kept: Postgres, a DynamoDB table, or else memory; and for how many days. */
-  notes: optional(
-    Schema.Struct({
-      postgres: optional(Secret),
-      dynamodb: optional(
-        Schema.Struct({ table: Schema.String, region: Schema.String, endpoint: optional(Schema.String) }),
-      ),
-      keepDays: optional(Schema.Number),
-    }),
-  ),
+  /** Estate's own database, for its notes, impacts, alert history and threads: Postgres, DynamoDB, or else memory. */
+  database: optional(Database),
+  /** How many days notes are kept: 30 unless set. */
+  notes: optional(Schema.Struct({ keepDays: optional(Schema.Number) })),
   sources: Schema.Record(Schema.String, Sources),
   /** A screen on the wall: the token it signs in with once, the environments it shows in turn, and how long each. */
   kiosk: optional(
@@ -269,6 +264,8 @@ export const readSettings = (text: string): Effect.Effect<Settings, SettingsErro
       try: () => Bun.YAML.parse(substituted.success),
       catch: (error) => new SettingsError({ mistakes: [{ at: "estate.yaml", message: String(error) }] }),
     })
+    const misplaced = misplacedDatabase(parsed)
+    if (misplaced.length > 0) return yield* new SettingsError({ mistakes: misplaced })
     const shaped = checkShape(Settings, parsed)
     if (Result.isFailure(shaped)) return yield* new SettingsError({ mistakes: shaped.failure })
     const settings = shaped.success
@@ -279,7 +276,12 @@ export const readSettings = (text: string): Effect.Effect<Settings, SettingsErro
     if (Redacted.value(settings.auth.sessionSecret).length < 32) {
       sense.push({ at: "auth.sessionSecret", message: "needs at least 32 characters" })
     }
-    sense.push(...everyMistakes(settings), ...askMistakes(settings), ...clusterMistakes(settings))
+    sense.push(
+      ...everyMistakes(settings),
+      ...askMistakes(settings),
+      ...databaseMistakes(settings.database),
+      ...clusterMistakes(settings),
+    )
     return sense.length === 0 ? settings : yield* new SettingsError({ mistakes: sense })
   })
 
