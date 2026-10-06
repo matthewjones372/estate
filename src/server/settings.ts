@@ -210,6 +210,7 @@ export const Settings = Schema.Struct({
 })
 export type Settings = typeof Settings.Type
 export type { Ai, Mcp } from "./settings-ai"
+export type { Prices } from "./settings-costs"
 export type AuthSettings = typeof Auth.Type
 
 export const SettingsError = Data.TaggedError("SettingsError")<{ readonly mistakes: ReadonlyArray<Mistake> }>

@@ -11,6 +11,11 @@ export const AgentUsage = Schema.Struct({
   errors: optional(Series),
   p99: optional(Series),
   tokens: optional(Series),
+  /** Tokens an hour in and out, where the catalog splits them. */
+  input: optional(Series),
+  output: optional(Series),
+  /** What an hour at this rate costs, by the settings' price for the model in use: an estimate, never the bill. */
+  perHour: optional(Schema.Number),
   /** Tokens spent over the budget's period, the last day or month; null where the source had nothing. */
   spent: optional(Schema.NullOr(Schema.Number)),
   model: optional(Schema.String),

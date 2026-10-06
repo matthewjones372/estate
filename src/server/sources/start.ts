@@ -6,7 +6,7 @@ import type { Remote } from "../remote"
 import type { Settings } from "../settings"
 import { Estate, updateEnvironment } from "../state"
 import { agentsIn, inEnvironment, jobsIn } from "../views/catalog"
-import { withModels } from "./agents"
+import { priced, withModels } from "./agents"
 import { readAlerts, withResolved } from "./alerts"
 import { readArgo } from "./argo"
 import { runBuilds } from "./builds"
@@ -141,7 +141,16 @@ const readersFor = (
         const here = environment.name
         const stores = (estate.catalog.stores ?? []).filter((store) => store.environments.includes(here))
         const services = inEnvironment(estate.catalog, here)
-        return yield* readMetrics(ranges, estate.catalog, services, stores, firing, now, agentsIn(estate.catalog, here))
+        const metrics = yield* readMetrics(
+          ranges,
+          estate.catalog,
+          services,
+          stores,
+          firing,
+          now,
+          agentsIn(estate.catalog, here),
+        )
+        return priced(metrics, settings.prices)
       })
       readers.push(chartNewlyFiring(environment.name, ranges))
       // The first read waits a little for the alerts, so those firing as Estate starts are charted on it.

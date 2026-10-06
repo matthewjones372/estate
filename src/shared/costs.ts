@@ -41,7 +41,7 @@ export const Cost = Schema.Struct({
   budget: optional(Budget),
   anomaly: optional(Anomaly),
   /** Estate's own estimate from tokens and the price table, between the provider's reports: never the bill. */
-  estimate: optional(Schema.Struct({ lastHour: Schema.Number, today: Schema.Number, atThisRate: Schema.Number })),
+  estimate: optional(Schema.Struct({ lastHour: Schema.Number, atThisRate: Schema.Number })),
 })
 export type Cost = typeof Cost.Type
 
@@ -64,4 +64,20 @@ export const costReasons = (cost: Cost | undefined): ReadonlyArray<string> => {
   else if (budget?.per === "day" && yesterday !== undefined && yesterday > budget.amount)
     reasons.push(`spent ${money(yesterday, currency)} yesterday, over its ${money(budget.amount, currency)} a day`)
   return reasons
+}
+
+/**
+ * An agent's cost with Estate's estimate beside the bill: what the last hour cost at its rate, and what a day at that
+ * rate comes to. Where no tool reports its cost, the estimate stands alone, and is still named as one.
+ */
+export const withEstimate = (
+  cost: Cost | undefined,
+  perHour: number | undefined,
+  budget: CostOf["budget"],
+): Cost | undefined => {
+  if (perHour === undefined) return cost
+  const estimate = { lastHour: perHour, atThisRate: perHour * 24 }
+  return cost === undefined
+    ? { from: "Estate's estimate", currency: "USD", ...(budget === undefined ? {} : { budget }), estimate }
+    : { ...cost, estimate }
 }

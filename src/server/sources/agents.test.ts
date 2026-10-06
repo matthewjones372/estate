@@ -3,7 +3,7 @@ import { Effect } from "effect"
 import type { Agent } from "../../shared/catalog"
 import { catalog, environment } from "../fixture"
 import { reply, stubRemote } from "../remote"
-import { agentUsageOf, modelOf, withModels } from "./agents"
+import { agentUsageOf, modelOf, priced, withModels } from "./agents"
 import { readMetrics } from "./metrics"
 import { prometheusRanges, type Ranges } from "./prometheus"
 import { SourceFailure } from "./run"
@@ -116,5 +116,33 @@ describe("an agent's model", () => {
     ).toEqual({ model: "claude-b" })
     const unread = environment()
     expect(withModels(read("claude-a"), unread, metricsOf(read("claude-b")), "t4")).toBe(unread)
+  })
+})
+
+describe("an agent's spend an hour", () => {
+  test("is its tokens in and out at the price of the model it uses, and nothing where it has no price", () => {
+    const metrics = {
+      services: {},
+      vitals: [],
+      edges: [],
+      charts: {},
+      agents: {
+        triage: {
+          model: "claude-sonnet-5-5",
+          input: { now: 2_000_000, points: [] },
+          output: { now: 100_000, points: [] },
+        },
+        unpriced: { model: "local-llm", input: { now: 10, points: [] }, output: { now: 10, points: [] } },
+        quiet: { model: "claude-sonnet-5-5", input: { now: null, points: [] } },
+      },
+    }
+    const prices = { "claude-sonnet-5-5": { input: 3, output: 15 } }
+    const agents = priced(metrics, prices).agents ?? {}
+    expect([agents["triage"]?.perHour, agents["unpriced"]?.perHour, agents["quiet"]?.perHour]).toEqual([
+      7.5,
+      undefined,
+      undefined,
+    ])
+    expect(priced(metrics, undefined)).toBe(metrics)
   })
 })

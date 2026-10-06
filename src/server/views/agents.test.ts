@@ -121,3 +121,39 @@ describe("an agent on the page", () => {
     ])
   })
 })
+
+describe("an agent's spend", () => {
+  test("spending fast, will pass its budget today at this rate, said before its provider reports it", () => {
+    const fast = { ...triage, cost: { budget: { amount: 40, per: "day" as const } } }
+    const state = agentStateOf(fast, using({ runs: at(1), errors: at(0), perHour: 4.2 }))
+    expect(state.cost).toEqual({
+      from: "Estate's estimate",
+      currency: "USD",
+      budget: { amount: 40, per: "day" },
+      estimate: { lastHour: 4.2, atThisRate: 100.80000000000001 },
+    })
+    expect(state.reasons).toContain("will pass its $40.00 today at this rate (est.)")
+    expect(state.health).toBe("attention")
+  })
+
+  test("is the provider's report where there is one, with the estimate beside it, and nothing without either", () => {
+    const reported = using(
+      { perHour: 0.5 },
+      {
+        costs: {
+          state: "ok",
+          value: { "support-triage": { from: "Anthropic", currency: "USD", monthToDate: 120, yesterday: 9 } },
+          answeredAt: "2026-10-03T12:00:00Z",
+        },
+      },
+    )
+    expect(agentStateOf(triage, reported).cost).toEqual({
+      from: "Anthropic",
+      currency: "USD",
+      monthToDate: 120,
+      yesterday: 9,
+      estimate: { lastHour: 0.5, atThisRate: 12 },
+    })
+    expect(agentStateOf(triage, using({})).cost).toBeUndefined()
+  })
+})

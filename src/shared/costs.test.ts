@@ -20,7 +20,7 @@ describe("an entry's cost", () => {
         from: "Anthropic",
         currency: "USD",
         budget: { amount: 40, per: "day" },
-        estimate: { lastHour: 4.2, today: 31, atThisRate: 76 },
+        estimate: { lastHour: 4.2, atThisRate: 100.8 },
         anomaly: { since: "2026-10-05", impact: 12 },
       }),
     ).toEqual(["cost anomaly: +$12.00 a day since 2026-10-05", "will pass its $40.00 today at this rate (est.)"])

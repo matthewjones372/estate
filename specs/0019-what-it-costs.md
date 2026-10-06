@@ -57,8 +57,8 @@ Needs someone:          Cost anomaly: checkout's NAT gateway, +$140 a day since 
   tag per service. Kubecost answers the same API.
 - **AI, from the provider:** each provider's own cost report, by the workspace, project or API key that the catalog
   gives the agent. This is the bill, and it can lag by hours.
-- **AI, the live estimate:** the agent's `tokens` usage query (spec 0018), split into input and output, times the
-  price table. It shows spend in the last hour, between reports, and whether today will pass the budget at this
+- **AI, the live estimate:** the agent's tokens an hour, as its `usage.input` and `usage.output` queries give them,
+  times the price table for the model in use (spec 0018's `usage.model`). It shows spend in the last hour, between reports, and whether today will pass the budget at this
   rate. It is labelled as an estimate wherever it appears. The provider's report replaces it once it covers the hour.
 - **Bedrock** spend comes through Cost Explorer like any AWS service, by the tag on its inference profile.
 
@@ -91,7 +91,7 @@ discounts, data transfer and support fees. Recommended: as above.
       Done when: a service with no tag shows its cost from OpenCost.
 - [x] **`ai-costs`** — Anthropic's and OpenAI's cost reports by workspace or project.
       Done when: an agent shows yesterday's spend from the provider's report.
-- [ ] **`ai-estimate`** — the live estimate from tokens and the price table, labelled, and the budget at this rate.
+- [x] **`ai-estimate`** — the live estimate from tokens and the price table, labelled, and the budget at this rate.
       Done when: an agent spending fast shows that it will pass its budget today, before the provider reports it.
 - [ ] **`costs-e2e`** — cost on lanes and the service page, against fakes; the doctor reads each cost source.
       Done when: `bunx playwright test` passes with them.

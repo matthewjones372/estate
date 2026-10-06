@@ -5,10 +5,11 @@ import type { Agent } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { Series } from "../../shared/events"
 import type { Remote } from "../remote"
+import type { Prices } from "../settings"
 import type { EnvironmentState, Metrics } from "../state"
 import { lastHour, type Ranges } from "./prometheus"
 
-const series = ["runs", "errors", "p99", "tokens"] as const
+const series = ["runs", "errors", "p99", "tokens", "input", "output"] as const
 
 const quietly = <A>(read: Effect.Effect<A, unknown, Remote>) =>
   read.pipe(
@@ -71,4 +72,19 @@ export const withModels = (
   return after.metrics.value === undefined
     ? after
     : { ...after, metrics: { ...after.metrics, value: { ...after.metrics.value, agents } } }
+}
+
+/** Each agent's spend an hour at its current rate, where the model it uses has a price: an estimate between bills. */
+export const priced = (metrics: Metrics, prices: Prices | undefined): Metrics => {
+  if (prices === undefined || metrics.agents === undefined) return metrics
+  const agents = Object.fromEntries(
+    Object.entries(metrics.agents).map(([name, usage]) => {
+      const price = usage.model === undefined ? undefined : prices[usage.model]
+      const input = usage.input?.now
+      const output = usage.output?.now
+      if (price === undefined || input == null || output == null) return [name, usage]
+      return [name, { ...usage, perHour: (input * price.input + output * price.output) / 1_000_000 }]
+    }),
+  )
+  return { ...metrics, agents }
 }

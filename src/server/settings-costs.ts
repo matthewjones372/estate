@@ -18,3 +18,4 @@ export const Costs = Schema.Struct({
 
 /** What a model's tokens cost, per million, for the estimate between the providers' reports. */
 export const Prices = Schema.Record(Schema.String, Schema.Struct({ input: Schema.Number, output: Schema.Number }))
+export type Prices = typeof Prices.Type

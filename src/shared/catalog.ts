@@ -1,6 +1,7 @@
 /** The catalog: an estate's environments, services, vitals and map, as its owner writes it in `catalog.yaml`. */
 import { Schema } from "effect"
 import { CostOf } from "./costs"
+import { CatalogMap } from "./map"
 
 const optional = Schema.optionalKey
 
@@ -204,6 +205,9 @@ export const Agent = Schema.Struct({
       p99: optional(Schema.String),
       /** Tokens an hour now, and tokens spent over the budget's period: the last day or month. */
       tokens: optional(Schema.String),
+      /** Tokens an hour in and out, priced by the settings' `prices` for the estimate of what it spends. */
+      input: optional(Schema.String),
+      output: optional(Schema.String),
       spent: optional(Schema.String),
       /** A query grouped by the model's label, such as `group by (gen_ai_response_model) (…)`: the model in use. */
       model: optional(Schema.String),
@@ -260,22 +264,6 @@ export const runsAs = (job: StandaloneJob) =>
       ? { kind: "CronJob" as const, name: job.run.kubernetes.cronJob ?? job.name }
       : { kind: "Job" as const, name: job.run.kubernetes.job }
 
-const MapNode = Schema.Struct({
-  id: Schema.String,
-  service: optional(Schema.String),
-  store: optional(Schema.String),
-  title: optional(Schema.String),
-  kind: optional(Schema.Literals(["service", "store", "external"])),
-})
-
-const MapEdge = Schema.Struct({
-  from: Schema.String,
-  to: Schema.String,
-  label: optional(Schema.String),
-  rate: optional(Schema.String),
-  alert: optional(Schema.String),
-})
-
 export const Catalog = Schema.Struct({
   environments: Schema.Array(Environment),
   services: Schema.Array(Service),
@@ -286,13 +274,6 @@ export const Catalog = Schema.Struct({
   /** What each alert, by name, means for the people using the product, kept in code beside the services. */
   alerts: optional(Schema.Record(Schema.String, Schema.Struct({ impact: optional(Schema.String) }))),
   vitals: optional(Schema.Array(Vital)),
-  map: optional(
-    Schema.Struct({
-      nodes: Schema.Array(MapNode),
-      edges: Schema.Array(MapEdge),
-      /** Past how many nodes the map draws a node a category: 12 unless set, or never. */
-      collapse: optional(Schema.Union([Schema.Number, Schema.Literal("never")])),
-    }),
-  ),
+  map: optional(CatalogMap),
 })
 export type Catalog = typeof Catalog.Type
