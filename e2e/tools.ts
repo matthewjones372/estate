@@ -4,6 +4,7 @@
  * Actions.
  */
 import { modelAnswer, runbook } from "./ask-fakes"
+import { backstageCatalog } from "./backstage-fakes"
 import { kube } from "./cluster"
 import { allocation, costReport } from "./cost-fakes"
 import { slack } from "./slack-fakes"
@@ -177,21 +178,7 @@ const server = Bun.serve({
     const url = new URL(request.url)
     const path = url.pathname
     if (path === "/api/v1/query_range") return json(queryRange(url))
-    // Backstage's catalog: one Component, a page of it, that the catalog does not write.
-    if (path === "/api/catalog/entities/by-query")
-      return json({
-        items: [
-          {
-            metadata: {
-              name: "recommendations",
-              description: "Suggests what each customer may want next",
-              annotations: { "github.com/project-slug": "example/recommendations" },
-              links: [{ url: "https://grafana.example.com/d/recommendations", title: "Dashboard" }],
-            },
-            spec: { type: "service", owner: "group:default/web", system: "Shop" },
-          },
-        ],
-      })
+    if (path === "/api/catalog/entities/by-query") return json(backstageCatalog)
     if (path === "/allocation/compute") return json(allocation(url))
     if (path === "/v1/organizations/cost_report") return json(costReport())
     if (path === "/api/chat.postMessage" || path === "/api/chat.getPermalink") return slack(path, request, url)
