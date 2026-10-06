@@ -20,7 +20,7 @@ investigating it are in Slack.
 **Estate puts that context together on one live page for each service, then takes you to the system that has the
 detail.**
 
-![The overview: what needs you now, each service's lane, and what changed today](docs/overview.png)
+![The overview: what needs you now, the estate's map, each service, store, job and agent in its area, and what changed today](docs/overview.png)
 
 ## Why does Estate exist?
 
@@ -96,7 +96,9 @@ Grafana's alerting, Argo CD and Elasticsearch, or an environment read wholly fro
 - see whether an alert has fired before, for how long, and what was written about it then
 - silence an alert for a while, with a reason everyone can see
 - turn on debug logging for a service for 15 minutes; it switches itself back off
-- watch a service's logs live, or see its errors grouped by message
+- watch a service's logs live, filter them by level or text and pause them, or see its errors grouped by message
+- read a service's load and stats over the last hour, six hours, day or week; point at a chart to read the same
+  moment on every chart, and drag across one to zoom them all
 - compare what's deployed in each environment
 - open an alert's own page to share: what's happening, what is around it, who owns it
 - ask AI about an alert, when a model is set in `estate.yaml`
@@ -106,10 +108,12 @@ Grafana's alerting, Argo CD and Elasticsearch, or an environment read wholly fro
 - see a service's version in every environment at once, and switch to one
 - see what each service, job and agent costs this month against its budget; an anomaly or a budget it will pass
   needs someone, and an agent's spend between its provider's reports is estimated from its tokens, and says so
+- follow an AI agent's runs, failures and tokens against its daily budget, and open its recent runs
+- see when a job last ran and when it runs next, and a store's stats over a day
 
 Viewers see everything and add notes. Operators can also silence, switch debug, and write what an alert means.
 
-![A service page: load, logs, pods, jobs, alerts today, debug and builds](docs/service.png)
+![A service page: its version in each environment, links and owners, load and stats, live logs, pods, debug, what changed and alerts today](docs/service.png)
 
 Services, stores and jobs can be grouped by **category**, such as Payments or Data, so a page of forty services
 reads as five areas. The map at the top draws a node per category once there are more than a dozen, and opens one
@@ -117,6 +121,8 @@ in place when you click it. Anything that needs someone is always drawn on its o
 lanes or, when the estate is long to scroll, as a grid of compact cards; the choice is kept in this browser.
 
 ### Around this alert, and Ask AI
+
+![An alert's own page: what's happening, what is around it, who owns it, and Ask AI](docs/alert.png)
 
 An alert's own page gathers what is around it, with no AI needed: the deploys and builds of its service and of what
 it calls or what calls it, from the hour before it fired; how those neighbours are, with their stats; its errors from
