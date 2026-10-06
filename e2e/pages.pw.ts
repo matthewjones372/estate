@@ -92,6 +92,21 @@ test("an alert's own page gathers what is around it, and Ask AI reads it and is 
   await accessible(page)
 })
 
+test("a store and an agent are a jump away, from the header's field or with the chord", async ({ page }) => {
+  await page.goto("/?env=production")
+  const field = page.getByRole("combobox", { name: "Jump to a service, store, job or agent" })
+  await field.click()
+  await field.fill("orders-db")
+  await page.keyboard.press("Enter")
+  await expect(page).toHaveURL(/\/stores\/orders-db/)
+  await page.keyboard.press("Control+k")
+  await expect(field).toBeFocused()
+  await field.fill("support")
+  await page.getByRole("option", { name: /support-triage/ }).click()
+  await expect(page).toHaveURL(/\/agents\/support-triage/)
+  await accessible(page)
+})
+
 test("a note added to an alert is there for everyone", async ({ page }) => {
   await page.goto("/?env=production")
   const card = page.getByRole("article").filter({ hasText: "Orders are slow to place" })

@@ -146,7 +146,7 @@ one process.
 - **An Effect `SqlClient` for Postgres.** Estate's notes use Bun's `SQL` through a small `Query`, not Effect's
   `SqlClient`, and 4.0.0 ships no Postgres client in `effect/sql`. `@effect/sql-pg` is published at 4.0.0; adding it
   is a `package.json` change in `cluster-opt-in`, not here. Until then nothing changes: no `cluster: true`, no client.
-- **Spec 0024's `/mcp`** — already on main (PR #7). Every runner serves the same MCP tools from its
+- **Spec 0024's `/mcp`** — `/mcp` exists. Every runner serves the same MCP tools from its
   `SubscriptionRef`; they follow for free.
 
 ## Stack

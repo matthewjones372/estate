@@ -59,9 +59,19 @@ builds:
   # How often builds are read; once a minute unless set:
   # every: 5m
 
-# Ask AI on an alert (optional): Anthropic, OpenAI, xAI (Grok), Gemini, or any OpenAI-compatible server.
-# ai: { provider: anthropic, apiKey: ${ANTHROPIC_API_KEY}, model: claude-sonnet-4-5 }
-# ai: { provider: openai, apiKey: ${OPENAI_API_KEY}, model: gpt-4.1 }
-# ai: { provider: xai, apiKey: ${XAI_API_KEY}, model: grok-4 }
-# ai: { provider: gemini, apiKey: ${GEMINI_API_KEY}, model: gemini-2.5-flash }  # or GOOGLE_API_KEY
-# ai: { provider: openai-compatible, url: http://vllm.example/v1, model: my-model }
+# Ask AI on an alert (optional): one model. The model is named, never chosen for you; Claude Opus 5.5 reads an
+# alert's brief best, Claude Sonnet 5.5 where cost matters. One answer an alert a minute, within a budget of tokens a
+# day (500,000 unless set).
+# ai: { provider: anthropic, apiKey: ${ANTHROPIC_API_KEY}, model: claude-opus-5-5, budget: { tokensPerDay: 500000 } }
+# Or OpenAI, xAI or Gemini with their keys (provider: openai, xai or gemini), or a model on your own hardware behind
+# an OpenAI-compatible server, such as vLLM, Ollama or LiteLLM:
+# ai: { provider: openai-compatible, url: http://vllm.internal:8000/v1, model: my-model }
+
+# Runbooks' text, read for an alert's brief where its runbook is a page: credentials by the host its link names.
+# runbooks:
+#   - { host: wiki.example.com, user: estate@example.com, token: ${WIKI_TOKEN} }
+
+# Agents that may ask Estate over /mcp, each with its own token of at least 32 characters.
+# mcp:
+#   tokens:
+#     - { name: claude-code, token: ${ESTATE_MCP_TOKEN}, role: viewer }

@@ -24,6 +24,9 @@ export const JobPage = (props: { readonly name: string }) => {
           <nav aria-label="Breadcrumb" class="muted crumbs">
             <A to="/">Overview</A> / {props.name}
           </nav>
+          <h1 class="headline" style={{ "font-size": "38px" }}>
+            {props.name}
+          </h1>
           <Show when={job()}>{(described) => <JobLane job={described()} state={state()} />}</Show>
         </section>
       </main>

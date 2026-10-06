@@ -78,7 +78,7 @@ together. This is useful on its own, with no AI set up, and it is where the mode
 The brief is built from the views the page already has, plus the log and runbook reads, so it costs nothing until
 someone opens it.
 
-### Ask AI, on an alert's card
+### Ask AI, on an alert's page
 
 ```yaml
 # estate.yaml: one of
@@ -103,15 +103,17 @@ ai: { provider: openai-compatible, url: http://vllm.ai:8000/v1, model: <the mode
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **"Ask AI"** is on the card of any alert, for anyone who may write notes, when `ai` is set. Estate gives the model
+- **"Ask AI"** is on the page of any alert, for anyone who may write notes, when `ai` is set. Estate gives the model
   the alert and its brief, *Around this alert*, and the same tools the MCP server offers for anything further.
 - **The answer has a shape**: the likely cause, the evidence for it with each piece linked to where it came from,
   what the runbook says to do, and what to check next. A claim with no evidence from Estate's tools is not made.
 - **Any model that calls tools**: Anthropic's Messages API, OpenAI's Chat Completions, xAI (Grok), Gemini, or any
   server that speaks the OpenAI-compatible API, so a team can keep everything on its own hardware. One port, several
   kinds, as for every other tool Estate reads.
-- **The answer streams onto the card**, with the tools it used listed under it, so whoever reads it can check the
-  working. "Keep as note" saves it to the alert under the model's name, "asked by ada", where everyone sees it.
+- **The answer arrives whole**, with the parts of the brief and the tools it read listed under it, so whoever reads it
+  can check the working; while the model works, the page says what it is reading. The answer is structured, so
+  streaming its text would show half an object. "Keep as note" saves it to the alert under the model's name and the
+  asker's, where everyone sees it.
 - **What is sent** is what the tools return: the page's own views and masked log lines. Nothing goes to the model
   that a viewer could not see on the page.
 - **One answer an alert a minute**, and a token budget a day in `ai.budget`, so a busy morning cannot run up a bill.
@@ -136,21 +138,24 @@ Nothing.
 
 ## Stack
 
-- [x] **`around-alert`** — *Around this alert* on the card: what changed near it, what it depends on, its errors,
-      its history and its runbook's text. No AI needed. **Lands with spec 0025** (UI part + `/api/alerts/:id/around`).
+- [x] **`around-alert`** — *Around this alert*: what changed near it, what it depends on, its errors, its history
+      and its runbook's text, gathered on the server for the alert's page, Ask AI and `/mcp`. No AI needed.
       Done when: the example estate's OrdersSlow shows orders' deploy before it fired, orders-db's stats, its errors
       and its runbook's text.
 - [x] **`mcp-server`** — `/mcp` over streamable HTTP with tokens and roles; `estate_now`, `services`, `service`.
       Done when: Claude Code, given the token, lists the tools and answers "what needs someone in production?".
-- [ ] **`mcp-alerts`** — `alerts`, `alert_history`, `changes`, `errors`, `agents`.
+- [x] **`ask-brief`** — "Ask AI" on an alert's page through Anthropic, OpenAI, xAI, Gemini or an OpenAI-compatible
+      server: the brief as the model's reading, the answer decoded, one an alert a minute within the day's tokens,
+      kept as a note.
+      Done when: against a fake model, the page shows the answer and what it read, and Keep as note saves it.
+- [ ] **`mcp-alerts`** — `alerts`, `alert_history`, `changes`, `errors`, `agents` and `around_alert`, with the
+      token's role in the call's context.
       Done when: a test asks for an alert's history and gets its earlier firings with their notes.
-- [x] **`ask-on-card`** — "Ask AI" on an alert's page (not bloating the card), through Anthropic, OpenAI, xAI, Gemini
-      or an OpenAI-compatible server: the tools, the answer streamed, kept as a note. **Lands with spec 0025** via HttpClient
-      (no MCP SDK until `/mcp`).
+- [ ] **`ask-with-tools`** — the model may call those read tools for anything the brief does not answer, a few calls
+      at most, and the page lists the tools it called.
       Done when: against fakes of both APIs that call `service` and `changes`, the page shows the answer and the tools
-      used, and Keep as note saves it under the model's name and the asker's.
-- [ ] **`mcp-docs`** — the README's section, `examples/estate.yaml`, and a Playwright-free end-to-end test that
-      drives `/mcp` with the MCP SDK's client against the e2e estate.
+      used.
+- [ ] **`mcp-docs`** — an end-to-end test that drives `/mcp` with the MCP SDK's client against the e2e estate.
       Done when: the e2e test lists the tools and calls each one.
 
 ## Acceptance

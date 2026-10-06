@@ -11,8 +11,8 @@ followed.
 ## Not doing
 
 - **Replacing Grafana, Datadog or any source tool.** Estate links into them; it does not chart everything.
-- **The full MCP server** (`/mcp`, tokens, `estate_now`, …). Spec 0024's `mcp-server` / `mcp-alerts` / `mcp-docs`
-  stay for later. This change lands the *around* brief and Ask AI that share the same tools once MCP exists.
+- **The MCP server** (`/mcp`, tokens, its tools). That is spec 0024's; this change lands the pages, the *around*
+  brief and Ask AI reading it.
 - **An agent that acts.** Ask AI reads; people silence, switch debug and post.
 - **Rewriting the overview's lanes, map layout or kiosk.** Kiosk and Performance stay; they are demoted in the README
   only.
@@ -39,7 +39,7 @@ Around this alert (no AI needed)
 
 Ask AI (when ai: is set)
   settings.ai → HttpClient model port (Anthropic | OpenAI-compatible | xai | gemini)
-  POST /api/alerts/:id/ask  streams a structured answer on the alert page
+  POST /api/alerts/:id/ask  a structured answer on the alert page, within a minute a turn and a day's tokens
 
 Raise incident (when catalog link configured)
   service.links.incident (or raise-incident): URL template with {service} {env} {alert} {summary}
@@ -76,38 +76,38 @@ remote, so Ask AI does not need the MCP SDK; the SDK waits for `/mcp`.
 
 ## Depends on
 
-Nothing new from outside. Spec 0024's Ask AI / around-alert path is the AI work this lands; MCP remains a later
-stack entry there.
+Nothing new from outside. Spec 0024 holds the brief's full shape and the MCP server.
 
 ## Stack
 
-- [x] **`spec-0025`** — this spec; mark 0024's around-alert / ask-on-card as the AI path for this change.
-      Done when: `specs/0025-from-alert-to-context.md` is committed and 0024's stack notes the landing here.
-- [ ] **`service-alert-first`** — service page: firing AlertCards at top, all health reasons, hide Debug when unset;
+- [x] **`spec-0025`** — this spec.
+      Done when: `specs/0025-from-alert-to-context.md` is committed.
+- [x] **`service-alert-first`** — service page: firing AlertCards at top, all health reasons, hide Debug when unset;
       order context → alerts → changes → investigation → Load → logs/pods; split parts under 300 lines.
       Done when: pages.suite shows "What's happening" / firing card on storefront before Load.
-- [ ] **`around-on-card`** — `parts/Around.tsx`: deploy/build timing near the alert; wired beside AlertCard without
-      growing it past 300 lines.
+- [x] **`around-on-card`** — a line on each alert's card: what was deployed in the hour before it fired, or that
+      nothing was; the whole brief on the alert's page.
       Done when: OrdersSlow on the fixture shows storefront deployed before it fired.
-- [ ] **`alert-permalink`** — `/alerts/:id`, `pages/Alert.tsx`, App Match, link from the alert name; layout for the
+- [x] **`alert-permalink`** — `/alerts/:id`, `pages/Alert.tsx`, App Match, link from the alert name; layout for the
       investigation sections and Ask AI entry.
       Done when: pages.suite opens `/alerts/a1` and shows What's happening for OrdersSlow.
-- [ ] **`overview-needs-first`** — Needs-you / alert cards above vitals+map (map demoted or collapsed); tests for copy.
+- [x] **`overview-needs-first`** — Needs-you / alert cards above vitals+map (map demoted or collapsed); tests for copy.
       Done when: overview suite still finds the firing card; vitals sit below Needs you.
-- [ ] **`readme-context-layer`** — README tagline as operational context layer; not a Grafana replacement; incident
-      example; demote Kiosk/Performance; image.yml description if appropriate.
-      Done when: README opens with ALERT → CONTEXT → INVESTIGATION and says it is not a Grafana replacement.
-- [ ] **`around-api`** — `views/around.ts` + `GET /api/alerts/:id/around`; feeds Ask AI.
+- [x] **`readme-context-layer`** — the README opens with the scattered context an alert needs and what Estate
+      brings together, says it replaces none of the tools, and shows a morning with an alert; the kiosk and
+      performance come after.
+      Done when: the README says so before any technical detail.
+- [x] **`around-api`** — `views/around.ts` + `GET /api/alerts/:id/around`; feeds Ask AI.
       Done when: a test asks for OrdersSlow's around and gets the deploy-before line.
-- [ ] **`ask-ai`** — `settings.ai`, model port via HttpClient, `POST /api/alerts/:id/ask` streaming, Ask panel on the
-      alert page; structured answer; graceful when unset; light rate limit; fake-model tests.
-      Done when: against a fake that calls tools, the panel shows likely cause, evidence, next steps and confidence.
+- [x] **`ask-ai`** — `settings.ai`, a model port through `Remote`, `POST /api/alerts/:id/ask`, the Ask panel on the
+      alert page; a structured answer, decoded; graceful when unset; one answer an alert a minute and a day's tokens.
+      Done when: against a fake model, the panel shows likely cause, evidence, next steps and confidence.
 - [x] **`services-layout`** — overview List/Grid toggle for services; `parts/ServiceGrid.tsx`; preference via `kept`.
       Done when: lanes suite switches to grid and shows storefront/orders cards.
-- [ ] **`raise-incident`** — catalog `incident` / `raise-incident` link template; Raise incident Out on alert
+- [x] **`raise-incident`** — catalog `incident` / `raise-incident` link template; Raise incident Out on alert
       context (and service Links) when configured; `{alert}` / `{summary}` filled at open time; no API create.
       Done when: tests show the control when configured, hide when not, and the URL fills placeholders.
-- [ ] **`tests-copy`** — unit/e2e assertions for new copy and pages.suite routes.
+- [x] **`tests-copy`** — unit/e2e assertions for new copy and pages.suite routes.
       Done when: `bun run gate` passes.
 
 ## Acceptance
@@ -123,5 +123,5 @@ bun run gate
   `/alerts`.
 - **Map collapsed by default on the overview?** Recommended: keep the map visible but *below* Needs-you, rather than
   collapsing it; collapsing can wait if the page still feels dashboard-heavy.
-- **MCP SDK for Ask AI?** Recommended: no. HttpClient to Anthropic / OpenAI-compatible is enough for Ask AI; add
-  `@modelcontextprotocol/sdk` only when `/mcp` lands.
+- **MCP SDK for Ask AI?** Recommended: no. Ask AI calls the model APIs through `Remote`, and `/mcp` is Effect's own
+  `McpServer`, so no SDK is needed for either.

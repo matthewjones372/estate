@@ -24,6 +24,9 @@ export const AgentPage = (props: { readonly name: string }) => {
           <nav aria-label="Breadcrumb" class="muted crumbs">
             <A to="/">Overview</A> / {props.name}
           </nav>
+          <h1 class="headline" style={{ "font-size": "38px" }}>
+            {props.name}
+          </h1>
           <Show when={agent()}>{(described) => <AgentLane agent={described()} state={state()} />}</Show>
         </section>
       </main>

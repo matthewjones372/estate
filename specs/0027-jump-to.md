@@ -40,8 +40,8 @@ Palette
 Paths (same env query the rest of Estate keeps)
   /services/:name     — already
   /stores/:name       — already
-  /jobs/:name         — thin page: what JobLane shows today
-  /agents/:name       — thin page: what AgentLane shows today (runs on demand)
+  /jobs/:name         — thin page: what its lane shows
+  /agents/:name       — thin page: what its lane shows (runs on demand)
 ```
 
 ```ts
@@ -60,7 +60,7 @@ jumpHits(catalog, query): ReadonlyArray<{
   typing filters; choosing navigates with `actions.navigate` (env kept), records the jump as recent, and closes.
 - **Health when known.** A hit shows the current environment's health from the services event when that kind has
   state; missing state is fine (unknown, no dot drama).
-- **Jobs and agents get addresses.** Today only services and stores have pages (`route.ts`). Jump needs a place to
+- **Jobs and agents get addresses.** Without them only services and stores would have pages. Jump needs a place to
   land, so `/jobs/:name` and `/agents/:name` are thin pages that render what the overview lanes already show — not a
   second product, the lane content at a URL. Missing name → the same "no such page" Estate already uses.
 
@@ -86,19 +86,19 @@ One entry per pull request, in build order.
 
 - [x] **`spec-0027`** — this spec, and its row in `specs/README.md` as proposed.
       Done when: `specs/0027-jump-to.md` is committed and the README lists 0027 as proposed.
-- [ ] **`jump-match`** — `jumpHits` (or equivalent) over catalog services, stores, jobs and agents; paths for all
+- [x] **`jump-match`** — `jumpHits` (or equivalent) over catalog services, stores, jobs and agents; paths for all
       four; unit tests for empty, prefix, mid-string, kind grouping and the cap.
       Done when: a fixture catalog's `nightly` hits the job and not a similarly named service first when kinds differ;
       twenty-one `svc-N` names return at most twenty.
-- [ ] **`job-agent-pages`** — `route` + `App` Match for `/jobs/:name` and `/agents/:name`; thin pages reusing
+- [x] **`job-agent-pages`** — `route` + `App` Match for `/jobs/:name` and `/agents/:name`; thin pages reusing
       `JobLane` / `AgentLane` (or the same parts); missing name → Missing.
       Done when: pages.suite opens `/jobs/nightly-settlement` and `/agents/support-triage` and sees their titles;
       unknown names show "There is no such page."
-- [ ] **`jump-palette`** — `parts/Jump.tsx` (palette + results); wired from Header (search field + ⌘K / Ctrl+K);
+- [x] **`jump-palette`** — `parts/Jump.tsx` (palette + results); wired from Header (search field + ⌘K / Ctrl+K);
       recent jumps in `kept`; navigate on choose; closed on Esc and after navigate; not mounted on kiosk.
       Done when: a suite opens ⌘K, types `storefront`, Enter, and the page is the service; Esc closes without
       navigating; kiosk has no listener.
-- [ ] **`jump-e2e`** — Playwright: header field and ⌘K reach a store and an agent; README mentions Jump / ⌘K once.
+- [x] **`jump-e2e`** — Playwright: header field and ⌘K reach a store and an agent; README mentions Jump / ⌘K once.
       Done when: `bunx playwright test` covers both entry points; `bun run gate` passes.
 
 ## Acceptance

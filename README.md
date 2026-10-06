@@ -8,43 +8,62 @@
 ![Solid](https://img.shields.io/badge/Solid-1.9-2c4f7c?logo=solid&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-3dd68c)](LICENSE)
 
-**An operational context layer for your engineering estate.**
+**A control room for your engineering estate.**
 
-Estate is not a Grafana replacement, and it is not trying to be another dashboard. When an alert fires, the problem
-is rarely a missing chart — it is that the context is scattered: the alert in one tool, the deploy in another, the
-runbook in a third, ownership in the catalogue, the people in Slack.
+When something breaks in production, the problem usually isn't a lack of telemetry. It's that the context you need
+is spread across several systems.
 
-**Estate's path is ALERT → CONTEXT → INVESTIGATION.** It puts what is firing first, correlates what changed near it,
-names who owns it, and links you into the system that has the detail.
+An alert might be in Grafana. The useful logs might be in Elasticsearch. The deployment is in GitHub or Jenkins. The
+workload is in Kubernetes. Ownership is in your service catalogue. The runbook is in Confluence. The people
+investigating it are in Slack.
+
+**Estate puts that context together on one live page for each service, then takes you to the system that has the
+detail.**
 
 ![The overview: what needs you now, each service's lane, and what changed today](docs/overview.png)
 
 ## Why does Estate exist?
 
-Estate is an **operational context layer**, not another observability platform. It does **not** replace Grafana,
-Datadog, Elasticsearch, Kubernetes, GitHub or your other engineering tools — and it is deliberately not a place to
-build boards.
+Estate is not another observability platform, and it isn't trying to replace Grafana, Datadog, Elasticsearch,
+Kubernetes, GitHub or your other engineering tools.
 
-If your entire engineering estate is already standardised around one platform, with metrics, logs, deployments,
-incidents, ownership and runbooks all integrated into it, you probably don't need Estate.
+If your entire engineering estate has already been standardised around one platform, with your metrics, logs,
+deployments, incidents, ownership and runbooks all integrated into it, you probably don't need Estate.
 
-Real estates accumulate tools. One service uses Prometheus and Grafana; another Datadog; logs sit in Elasticsearch or
-Loki; deploys run through GitHub Actions, Jenkins, Harness or Argo CD. Those tools are good at their jobs. The gaps
-between them are where incidents get expensive.
+Real engineering estates are often different. Teams accumulate tools over time. One service might use Prometheus and
+Grafana, another Datadog, another CloudWatch. Logs might live in Elasticsearch or Loki. Deployments might run through
+GitHub Actions, Jenkins, Harness or Argo CD. Kubernetes tells you what is running, while Slack, Confluence and your
+service catalogue contain the human context.
 
-### A concrete morning
+Those tools are good at their individual jobs. The problem is the gaps between them. When an alert fires, the
+investigation often looks like this:
 
-> **11:46** — `OrdersSlow` fires. Instead of opening five tabs, you open the alert in Estate.
+> Alert → metrics → logs → recent deployment → repository → ownership → Slack → runbook
+
+Estate turns that investigation into a single starting point. For each service, it brings together:
+
+- **What's wrong?** Alerts, thresholds, impact and history
+- **What changed?** Deployments, builds, alerts, silences and notes
+- **What's running?** Kubernetes and deployment state
+- **How is it behaving?** Request rate, errors, latency and supporting signals
+- **Who owns it?** Team, repository and contact information
+- **Where do I look next?** Logs, dashboards, traces, runbooks and source systems
+
+Estate doesn't ingest your entire estate into another platform. It reads the systems you already use and provides
+the missing context between them.
+
+That's the job of Estate: **something's wrong. What do I need to know, and where do I look next?**
+
+### A morning with Estate
+
+> **11:46**: `OrdersSlow` fires. You open the alert in Estate rather than five tabs.
 >
-> **What's happening** — warning, firing 14 minutes, customers wait to place orders.
-> **What changed** — `storefront` `main-88-04bc441` deployed 2 minutes before it fired (Flux); payments unchanged.
-> **Who owns it** — web · Orders on Slack.
-> **Where to look** — runbook, logs, traces, the service page.
-> **Ask AI** (optional) — reads the same brief, answers with likely cause, evidence links, runbook next steps and
-> confidence — and never invents what Estate did not see.
-
-That is ALERT → CONTEXT → INVESTIGATION. Estate reads your tools live and keeps only what it adds: notes, impact, and
-alert history.
+> **What's happening**: warning, firing for 14 minutes; customers wait to place orders.
+> **Around this alert**: `orders`' new version stalled 20 minutes before it fired, its image policy unable to list
+> tags; `orders-db` healthy at 32% of its connections; 128 "lock timeout on orders_items" errors since just before
+> it fired; the runbook says to roll back if p99 rose after a deploy.
+> **Who owns it**: Orders, with their Slack channel one click away.
+> **Ask AI** (when a model is set): the likely cause, the lines of the brief that show it, and what to do next.
 
 ## What it brings together
 
@@ -78,7 +97,11 @@ Grafana's alerting, Argo CD and Elasticsearch, or an environment read wholly fro
 - turn on debug logging for a service for 15 minutes; it switches itself back off
 - watch a service's logs live, or see its errors grouped by message
 - compare what's deployed in each environment
-- ask AI about an alert when `ai` is set in `estate.yaml` (Anthropic, OpenAI, xAI/Grok, Gemini, or any OpenAI-compatible server)
+- open an alert's own page to share: what's happening, what is around it, who owns it
+- ask AI about an alert, when a model is set in `estate.yaml`
+- raise an incident in PagerDuty, Opsgenie or your own tool from the alert, when the catalog names its link
+- jump to any service, store, job or agent by name from the header, or with ⌘K (Ctrl K)
+- see a service's version in every environment at once, and switch to one
 
 Viewers see everything and add notes. Operators can also silence, switch debug, and write what an alert means.
 
@@ -86,25 +109,41 @@ Viewers see everything and add notes. Operators can also silence, switch debug, 
 
 Services, stores and jobs can be grouped by **category**, such as Payments or Data, so a page of forty services
 reads as five areas. The map at the top draws a node per category once there are more than a dozen, and opens one
-in place when you click it. Anything that needs someone is always drawn on its own. On the overview, switch services between **List** (lanes) and **Grid** (compact cards) when the estate is long to scroll; the choice is kept in this browser.
+in place when you click it. Anything that needs someone is always drawn on its own. The overview shows services as
+lanes or, when the estate is long to scroll, as a grid of compact cards; the choice is kept in this browser.
 
-### Also: a screen on the wall
+### Around this alert, and Ask AI
 
-`/kiosk` is optional wall-display mode — headline and what's firing, large type, nothing to press. Useful on a NOC
-TV; not the main product. Open `/kiosk?token=…` once; it signs in for 30 days and never changes anything.
+An alert's own page gathers what is around it, with no AI needed: the deploys and builds of its service and of what
+it calls or what calls it, from the hour before it fired; how those neighbours are, with their stats; its errors from
+ten minutes before it fired, grouped by message; its earlier firings and what was written then; and its runbook's
+text, where the runbook is a page Estate can read.
 
-![The kiosk on a 1080p screen](docs/kiosk.png)
+With a model set, **Ask AI** gives that brief to the model, which answers with the likely cause, the lines of the
+brief that show it, and what to do next. Keep the answer as a note and everyone sees it. The model is sent only what
+the person asking could see on the page, one answer an alert a minute, within a budget of tokens a day.
 
-### Also: MCP for agents
+```yaml
+# estate.yaml: one model
+ai: { provider: anthropic, apiKey: "${ANTHROPIC_API_KEY}", model: claude-opus-5-5, budget: { tokensPerDay: 500000 } }
+# or provider: openai, xai or gemini with their key, or a self-hosted server that speaks OpenAI's API:
+# ai: { provider: openai-compatible, url: http://vllm.internal:8000/v1, model: my-model }
 
-Estate serves an [MCP](https://modelcontextprotocol.io) server at `/mcp`, so an AI agent reads the same estate a
-person sees on the page — read-only, through Estate's own access. Without tokens configured, `/mcp` answers 401.
+# Credentials for reading runbooks' text, by the host their links name
+runbooks:
+  - { host: wiki.example.com, user: estate@example.com, token: "${WIKI_TOKEN}" }
+```
+
+### MCP for agents
+
+Estate serves an [MCP](https://modelcontextprotocol.io) server at `/mcp`, so an AI agent such as Claude Code reads
+the same estate a person sees on the page, read-only, with Estate's access. Each agent has its own token.
 
 ```yaml
 # estate.yaml
 mcp:
   tokens:
-    - { name: claude-code, token: "${ESTATE_MCP_TOKEN}", role: viewer }
+    - { name: claude-code, token: "${ESTATE_MCP_TOKEN}", role: viewer }   # at least 32 characters
 ```
 
 ```bash
@@ -117,8 +156,13 @@ claude mcp add --transport http estate https://estate.example/mcp --header "Auth
 | `services` | every service, store, job and agent: health, reasons, version, owner, category |
 | `service` | one service: health, load, pods, deploy and builds, alerts, links, team |
 
-Still to come: `alerts`, `alert_history`, `changes`, `errors`, `agents`. Ask AI and *Around this alert* are already
-on the page (when `ai` is set) and do not need MCP.
+### A screen on the wall
+
+`/kiosk` is for the screen on the wall: the headline, what's firing and every service worst first, in type you can
+read across a room, with nothing to press. Open `/kiosk?token=…` once on the screen; it signs in for 30 days and can
+read but never change anything.
+
+![The kiosk on a 1080p screen](docs/kiosk.png)
 
 ## Try it
 
@@ -168,6 +212,8 @@ services:
     links:
       logs: "https://grafana.example.com/explore?var-env={env}&var-service={service}"
       traces: "https://grafana.example.com/explore?var-service={service}"
+      # Raise incident on its alerts' cards; Estate opens the tool, it does not create the incident
+      incident: "https://example.pagerduty.com/incidents/create?service={service}&title={alert}"
 
 alerts:
   PaymentsFailing: { impact: "Customers cannot pay; orders wait in their baskets." }
@@ -186,7 +232,9 @@ and vitals.
 Estate sits beside these tools, not instead of them, and links into each.
 
 - **Backstage, Port, Cortex** catalog what you own. Estate shows how it's doing right now.
-- **Grafana** is for charts and boards you build and maintain. Estate is not a Grafana replacement; it links into Grafana (and others) when you need the deep dive.
+- **Grafana** can chart anything, but someone has to build and maintain the boards, and a board does not know who
+  owns a service, what was deployed before an alert, or what was written the last time it fired. Estate links into
+  Grafana for the deep dive.
 - **k9s, Lens, Headlamp** go deep on one cluster. Estate covers several environments and links into them.
 - **Argo CD's UI, Weave GitOps** show the deploy tool. Estate puts that next to the build and what's running.
 - **Karma, Keep** handle alerts on their own. Estate shows each one next to the service it's about.
@@ -231,7 +279,7 @@ flowchart LR
 The server and the pages never import each other, and `shared` imports nothing of ours. Those boundaries are
 checked on every build.
 
-### Performance (secondary)
+### Performance
 
 Fifty is about the most a team puts on one page, and the build fails if Estate gets slower there. A thousand is a
 stress test. Both are measured by [`bench/`](bench) against fake tools that answer in 20 ms:
