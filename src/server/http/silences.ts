@@ -8,6 +8,7 @@ import { Configured } from "../settings"
 import { holdSilence, holdUnsilence } from "../sources/held"
 import { silencerOf } from "../sources/silencers"
 import { Estate, updateEnvironment } from "../state"
+import { lasting, replyInThread } from "../threads"
 import { after, iso } from "../time"
 import { EnvParam, json, Refusal, refused, searchParams, writer } from "./routes"
 
@@ -71,6 +72,11 @@ export const silenceRoute = HttpRouter.add(
     yield* updateEnvironment(asked.environment, (state) =>
       holdSilence(state, alert, { id, by: person.name, reason, startsAt, endsAt }, now),
     )
+    yield* replyInThread(
+      (yield* Configured).slack,
+      { environment: asked.environment, alert: alert.id, startsAt: alert.startsAt },
+      `${person.name} silenced it for ${lasting(asked.minutes)}: ${reason}`,
+    )
     return json({ id, endsAt }, 201)
   }).pipe(
     Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 502))),
@@ -80,13 +86,21 @@ export const silenceRoute = HttpRouter.add(
 
 export const unsilenceRoute = HttpRouter.add("DELETE", "/api/silences/:id", () =>
   Effect.gen(function* () {
-    yield* operator
+    const person = yield* operator
     const { id = "" } = yield* HttpRouter.params
     const { env: environment = "" } = yield* searchParams(EnvParam, "env names an environment")
     const silencer = yield* silencerIn(environment)
     yield* silencer.unsilence(id)
+    const { environments } = yield* SubscriptionRef.get(yield* Estate)
+    const silenced = environments[environment]?.alerts.value?.find((alert) => alert.silence?.id === id)
     const now = yield* Clock.currentTimeMillis
     yield* updateEnvironment(environment, (state) => holdUnsilence(state, id, now))
+    if (silenced !== undefined)
+      yield* replyInThread(
+        (yield* Configured).slack,
+        { environment, alert: silenced.id, startsAt: silenced.startsAt },
+        `${person.name} ended the silence`,
+      )
     return json({ id }, 200)
   }).pipe(
     Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 502))),

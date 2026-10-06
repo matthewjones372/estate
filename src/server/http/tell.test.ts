@@ -164,4 +164,41 @@ describe("telling the team on Slack", () => {
       )
     })
   })
+
+  test("follows the firing: a note written on a told alert is a reply in its thread, under the writer's name", () => {
+    const calls: Call[] = []
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(withSlack(), firing, slackAnswering(calls))
+        yield* ask(server, tell("a1"))
+        yield* ask(
+          server,
+          new Request("http://estate/api/notes", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ environment: "production", alert: "a1", text: "Vacuuming the orders table." }),
+          }),
+        )
+        // A note on an alert never told stays in Estate.
+        yield* ask(
+          server,
+          new Request("http://estate/api/notes", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ environment: "production", alert: "a2", text: "Looking." }),
+          }),
+        )
+      }),
+    ).then(() => {
+      const posts = calls
+        .filter((call) => call.url.endsWith("chat.postMessage"))
+        .map((call) => JSON.parse(call.body ?? "{}"))
+      expect(posts.length).toBe(2)
+      expect(posts[1]).toMatchObject({
+        channel: "C0ORDERS",
+        thread_ts: "1759491960.000100",
+        text: "ada: Vacuuming the orders table.",
+      })
+    })
+  })
 })

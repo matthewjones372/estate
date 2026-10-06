@@ -5,7 +5,9 @@
 import { Clock, Duration, Effect, Stream, SubscriptionRef } from "effect"
 import { Notes, type StoredFiring, sameFiring } from "./notes"
 import { forEver } from "./schedule"
+import type { SlackSettings } from "./sources/slack"
 import { Estate, type EstateState, updateEstate } from "./state"
+import { lasting, replyInThread } from "./threads"
 import { before, iso } from "./time"
 import { serviceOf } from "./views/health"
 
@@ -56,27 +58,38 @@ const withFirings = (estate: EstateState, kept: ReadonlyArray<StoredFiring>): Es
   firings: [...kept, ...(estate.firings ?? []).filter((each) => !kept.some((one) => sameFiring(one, each)))],
 })
 
-/** For as long as Estate runs: each firing kept as it begins, is silenced and ends. */
-export const recordFirings = Effect.gen(function* () {
-  const ref = yield* Estate
-  const notes = yield* Notes
-  const open = (yield* SubscriptionRef.get(ref)).firings?.filter((firing) => firing.endsAt === undefined) ?? []
-  let was: ReadonlyMap<string, StoredFiring> = new Map(open.map((firing) => [keyOf(firing), firing]))
-  yield* SubscriptionRef.changes(ref).pipe(
-    Stream.map(firingNow),
-    Stream.runForEach((now) =>
-      Effect.gen(function* () {
-        const kept = changed(was, now, iso(yield* Clock.currentTimeMillis))
-        was = new Map([...now.firing].concat([...was].filter(([, firing]) => !now.answered.has(firing.environment))))
-        if (kept.length === 0) return
-        yield* Effect.forEach(kept, (firing) => notes.keepFiring(firing), { discard: true }).pipe(
-          Effect.catch((failure) => Effect.logWarning(`a firing could not be kept: ${failure.message}`)),
-        )
-        yield* updateEstate((estate) => withFirings(estate, kept))
-      }),
-    ),
-  )
-})
+/** For as long as Estate runs: each firing kept as it begins, is silenced and ends; a told one's end said in Slack. */
+export const recordFirings = (slack?: SlackSettings) =>
+  Effect.gen(function* () {
+    const ref = yield* Estate
+    const notes = yield* Notes
+    const open = (yield* SubscriptionRef.get(ref)).firings?.filter((firing) => firing.endsAt === undefined) ?? []
+    let was: ReadonlyMap<string, StoredFiring> = new Map(open.map((firing) => [keyOf(firing), firing]))
+    yield* SubscriptionRef.changes(ref).pipe(
+      Stream.map(firingNow),
+      Stream.runForEach((now) =>
+        Effect.gen(function* () {
+          const kept = changed(was, now, iso(yield* Clock.currentTimeMillis))
+          was = new Map([...now.firing].concat([...was].filter(([, firing]) => !now.answered.has(firing.environment))))
+          if (kept.length === 0) return
+          yield* Effect.forEach(kept, (firing) => notes.keepFiring(firing), { discard: true }).pipe(
+            Effect.catch((failure) => Effect.logWarning(`a firing could not be kept: ${failure.message}`)),
+          )
+          yield* updateEstate((estate) => withFirings(estate, kept))
+          yield* Effect.forEach(
+            kept.filter((firing) => firing.endsAt !== undefined),
+            (firing) =>
+              replyInThread(
+                slack,
+                firing,
+                `✅ Resolved after ${lasting((Date.parse(firing.endsAt ?? "") - Date.parse(firing.startsAt)) / 60_000)}`,
+              ),
+            { discard: true },
+          )
+        }),
+      ),
+    )
+  })
 
 /** The firings of the last `days`, into the state as Estate starts; those that ended today are what resolved. */
 export const loadHistory = (days: number) =>

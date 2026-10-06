@@ -6,6 +6,7 @@
 import { modelAnswer, runbook } from "./ask-fakes"
 import { kube } from "./cluster"
 import { allocation, costReport } from "./cost-fakes"
+import { slack } from "./slack-fakes"
 
 const now = () => Math.floor(Date.now() / 1000)
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
@@ -176,6 +177,7 @@ const server = Bun.serve({
     if (path === "/api/v1/query_range") return json(queryRange(url))
     if (path === "/allocation/compute") return json(allocation(url))
     if (path === "/v1/organizations/cost_report") return json(costReport())
+    if (path === "/api/chat.postMessage" || path === "/api/chat.getPermalink") return slack(path, request, url)
     if (path === "/runbooks/orders-slow.md")
       return new Response(runbook, { headers: { "content-type": "text/markdown" } })
     if (path === "/v1/chat/completions") return modelAnswer(request)

@@ -121,6 +121,18 @@ test("what each entry costs is on its lane and its page, the estimate named as o
   await accessible(page)
 })
 
+test("an alert is told to its team on Slack once, and its card then links to the thread", async ({ page }) => {
+  await page.goto("/?env=production")
+  const card = page.getByRole("article").filter({ hasText: "Orders are slow to place" }).first()
+  await card.getByRole("button", { name: "Tell Orders on Slack" }).click()
+  const thread = card.getByRole("link", { name: "The thread in Slack" })
+  await expect(thread).toHaveAttribute("href", /^https:\/\/example\.slack\.com\/archives\/C0ORDERS\/p/, {
+    timeout: 20_000,
+  })
+  await expect(card.getByRole("button", { name: "Tell Orders on Slack" })).toHaveCount(0)
+  await accessible(page)
+})
+
 test("a note added to an alert is there for everyone", async ({ page }) => {
   await page.goto("/?env=production")
   const card = page.getByRole("article").filter({ hasText: "Orders are slow to place" })

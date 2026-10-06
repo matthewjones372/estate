@@ -122,7 +122,7 @@ export const background = (
         Effect.retry(backOff),
         Effect.orDie,
         Effect.andThen(backfillHistory(started.settings)),
-        Effect.andThen(recordFirings),
+        Effect.andThen(recordFirings(started.settings.slack)),
         Effect.andThen(Effect.never),
       ),
       sweepNotes(started.settings.notes?.keepDays ?? 30),

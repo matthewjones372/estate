@@ -13,6 +13,9 @@ kiosk: { token: e2e-screen, environments: [ production, staging ], every: 5s }
 # A self-hosted model, faked in e2e/tools.ts, for Ask AI.
 ai: { provider: openai-compatible, url: http://127.0.0.1:8282/v1, model: e2e-model }
 
+# A Slack bot, faked in e2e/slack-fakes.ts, so an alert's card can tell its team.
+slack: { token: xoxb-e2e, url: http://127.0.0.1:8282/api }
+
 # What the support agent's model's tokens cost, per million, for the estimate between Anthropic's reports.
 prices: { claude-sonnet: { input: 3, output: 15 } }
 

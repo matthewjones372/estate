@@ -65,7 +65,7 @@ Spec 0021's firings, to keep the thread by. Spec 0022's teams, for the channel.
 - [x] **`slack-post`** — the button, the first message, the thread kept with the firing and linked from the card.
       Done when: a test against Slack's `chat.postMessage` answers shows the message in the team's channel, and the
       card linking to it.
-- [ ] **`slack-thread`** — notes, silences and the resolution posted as replies in the thread.
+- [x] **`slack-thread`** — notes, silences and the resolution posted as replies in the thread.
       Done when: a note written in Estate on a told alert is posted as a reply under the writer's name.
 
 ## Acceptance

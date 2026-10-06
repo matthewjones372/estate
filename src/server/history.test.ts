@@ -4,6 +4,7 @@ import { TestClock } from "effect/testing"
 import { environment, estate } from "./fixture"
 import { changed, firingNow, loadHistory, recordFirings, sweepHistory } from "./history"
 import { memoryNotes, Notes, postgresNotes, type Query } from "./notes"
+import { stubRemote } from "./remote"
 import { Estate, type EstateState, estateLayer, type SourcedAlert, type StoredFiring, updateEstate } from "./state"
 import { alertsView } from "./views/alerts"
 
@@ -54,7 +55,7 @@ describe("an alert's firings", () => {
         yield* notes.keepFiring({ ...kept, alert: "old", startsAt: "1970-01-01T09:00:00.000Z" })
         yield* TestClock.setTime(Date.parse("1970-01-02T11:00:00Z"))
         yield* loadHistory(90)
-        const recording = yield* Effect.forkChild(recordFirings)
+        const recording = yield* Effect.forkChild(recordFirings())
         yield* TestClock.adjust("1 second")
         yield* updateEstate((state) => ({ ...state, environments: { ...state.environments, staging: firing([slow]) } }))
         yield* TestClock.adjust("1 second")
@@ -63,7 +64,16 @@ describe("an alert's firings", () => {
         yield* Fiber.interrupt(recording)
         const shown = (yield* SubscriptionRef.get(yield* Estate)).firings ?? []
         return { stored: yield* notes.firings("1970-01-01T00:00:00Z"), shown }
-      }).pipe(Effect.provide(Layer.mergeAll(memoryNotes, estateLayer(withAlerts([])), TestClock.layer()))),
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            memoryNotes,
+            estateLayer(withAlerts([])),
+            TestClock.layer(),
+            stubRemote(() => undefined),
+          ),
+        ),
+      ),
     ).then(({ stored, shown }) => {
       expect(stored.map((each) => [each.alert, each.endsAt])).toEqual([
         ["a1", "1970-01-02T11:00:02.000Z"],
