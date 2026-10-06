@@ -40,16 +40,29 @@ export const configuredKinds = (settings: Settings, sources: string): ReadonlySe
   ])
 }
 
+/** The catalog with only the environments the settings choose, in the catalog's order; all of them unless set. */
+export const shownBy = (settings: Settings, catalog: Catalog): Catalog => {
+  const chosen = settings.environments
+  return chosen === undefined
+    ? catalog
+    : { ...catalog, environments: catalog.environments.filter((each) => chosen.includes(each.name)) }
+}
+
 /**
- * Mistakes between the catalog and the settings: an environment whose sources are not configured, and a rule that
- * discovers from a Backstage the settings do not name.
+ * Mistakes between the catalog and the settings: an environment the settings choose that the catalog lacks, one shown
+ * whose sources are not configured, and a rule that discovers from a Backstage the settings do not name.
  */
 export const crossCheck = (settings: Settings, catalog: Catalog): ReadonlyArray<Mistake> => [
-  ...catalog.environments.flatMap((environment, index) =>
+  ...(settings.environments ?? []).flatMap((name, index) =>
+    catalog.environments.some((each) => each.name === name)
+      ? []
+      : [{ at: `environments[${index}]`, message: `"${name}" is not one of the catalog's` }],
+  ),
+  ...shownBy(settings, catalog).environments.flatMap((environment) =>
     settings.sources[environment.sources] === undefined
       ? [
           {
-            at: `environments[${index}] (${environment.name}).sources`,
+            at: `environments[${catalog.environments.indexOf(environment)}] (${environment.name}).sources`,
             message: `"${environment.sources}" is not in estate.yaml's sources`,
           },
         ]
@@ -97,7 +110,7 @@ export const reloadCatalog = (
       const parsed = parseCatalog(path, text)
       const mistakes = Result.isFailure(parsed) ? parsed.failure.mistakes : crossCheck(settings, parsed.success)
       if (Result.isSuccess(parsed) && mistakes.length === 0) {
-        yield* taken(parsed.success)
+        yield* taken(shownBy(settings, parsed.success))
         yield* Effect.logInfo(`catalog reloaded from ${path}`)
       } else {
         yield* Effect.logWarning(

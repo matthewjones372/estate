@@ -166,6 +166,8 @@ export const Settings = Schema.Struct({
   /** Write to no tool: no silences, no debug switched, notes kept in memory. For trying Estate on a team's tools. */
   readOnly: optional(Schema.Boolean),
   catalog: Schema.String,
+  /** The catalog's environments this Estate shows, where it cannot reach them all: every one unless set. */
+  environments: optional(Schema.Array(Schema.String)),
   auth: Auth,
   /** How many days each alert's firings are kept, with who silenced them and why: 90 unless set. */
   alerts: optional(Schema.Struct({ historyDays: optional(Schema.Number) })),

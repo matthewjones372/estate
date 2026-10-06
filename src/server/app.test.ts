@@ -77,6 +77,19 @@ describe("starting", () => {
       },
     ))
 
+  test("shows only the environments its settings choose, needing only their sources", () =>
+    start(
+      files(
+        (catalog) => `environments: [ staging ]\n${goodSettings(catalog)}`,
+        "environments: [ { name: staging, sources: staging }, { name: laptop, sources: laptop } ]\nservices: []\n",
+      ),
+    ).then((started) => {
+      expect(Result.isSuccess(started) && Object.keys(started.success.initial.environments)).toEqual(["staging"])
+      expect(
+        Result.isSuccess(started) && started.success.initial.catalog.environments.map((each) => each.name),
+      ).toEqual(["staging"])
+    }))
+
   test("broken settings stop it, naming the file", () =>
     start(files(() => "catalog: 1\n", "")).then((started) => {
       expect(Result.isFailure(started) && started.failure.file).toEndWith("estate.yaml")

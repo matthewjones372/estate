@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect, Fiber, Layer, Result, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
-import { configuredKinds, crossCheck, parseCatalog, reloadCatalog, withCatalog } from "./catalog-file"
+import { configuredKinds, crossCheck, parseCatalog, reloadCatalog, shownBy, withCatalog } from "./catalog-file"
 import { catalog, estate, settings } from "./fixture"
 import { platform } from "./platform"
 import { Estate, estateLayer } from "./state"
@@ -19,6 +19,20 @@ describe("the catalog file", () => {
     const configured = { ...settings(), sources: { staging: {} } }
     expect(crossCheck(configured, catalog)).toEqual([
       { at: "environments[1] (production).sources", message: '"production" is not in estate.yaml\'s sources' },
+    ])
+  })
+
+  test("shows only the environments the settings choose, and needs only their sources", () => {
+    const chosen = { ...settings(), environments: ["production"], sources: { production: {} } }
+    expect(crossCheck(chosen, catalog)).toEqual([])
+    expect(shownBy(chosen, catalog).environments.map((each) => each.name)).toEqual(["production"])
+    expect(shownBy(settings(), catalog)).toBe(catalog)
+  })
+
+  test("names an environment the settings choose that the catalog lacks", () => {
+    const chosen = { ...settings(), environments: ["prodution"] }
+    expect(crossCheck(chosen, catalog)).toEqual([
+      { at: "environments[0]", message: '"prodution" is not one of the catalog\'s' },
     ])
   })
 

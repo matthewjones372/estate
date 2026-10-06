@@ -5,6 +5,8 @@ port: 8080
 # A screen on the wall: open /kiosk?token=… once on it (and ?team=… for one team's services).
 # kiosk: { token: ${KIOSK_TOKEN}, environments: [ production, staging ], every: 30s }
 catalog: /etc/estate/catalog.yaml
+# Only some of the catalog's environments, where this Estate cannot reach them all (a developer's own cluster, say):
+# environments: [ staging ]
 
 auth:
   sessionSecret: an-example-secret-for-trying-estate-out-only

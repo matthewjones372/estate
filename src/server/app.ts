@@ -3,7 +3,15 @@ import { Data, Effect, type FileSystem, Layer, Result, Stream, SubscriptionRef }
 import type { Mistake } from "../shared/shape"
 import { liveAskLimits } from "./ask-limits"
 import { providerLayer } from "./auth/oidc"
-import { CatalogError, configuredKinds, crossCheck, parseCatalog, readCatalogText, reloadCatalog } from "./catalog-file"
+import {
+  CatalogError,
+  configuredKinds,
+  crossCheck,
+  parseCatalog,
+  readCatalogText,
+  reloadCatalog,
+  shownBy,
+} from "./catalog-file"
 import { discoverServices, makeCatalogs, written } from "./discover/run"
 import { keptHere, loadHistory, recordFirings, sweepHistory } from "./history"
 import { agentRunsRoute } from "./http/agents"
@@ -62,9 +70,9 @@ export const prepare = (settingsPath: string): Effect.Effect<Started, StartError
     const catalogText = yield* readCatalogText(settings.catalog)
     const parsed = parseCatalog(settings.catalog, catalogText)
     if (Result.isFailure(parsed)) return yield* parsed.failure
-    const catalog = parsed.success
-    const mistakes = crossCheck(settings, catalog)
+    const mistakes = crossCheck(settings, parsed.success)
     if (mistakes.length > 0) return yield* new CatalogError({ path: settings.catalog, mistakes })
+    const catalog = shownBy(settings, parsed.success)
     const initial: EstateState = {
       catalog,
       environments: Object.fromEntries(
