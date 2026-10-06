@@ -89,7 +89,7 @@ discounts, data transfer and support fees. Recommended: as above.
       Done when: a test against Cost Explorer's answers shows each service's month to date and an anomaly.
 - [x] **`opencost`** — Kubernetes' share by namespace and workload.
       Done when: a service with no tag shows its cost from OpenCost.
-- [ ] **`ai-costs`** — Anthropic's and OpenAI's cost reports by workspace or project.
+- [x] **`ai-costs`** — Anthropic's and OpenAI's cost reports by workspace or project.
       Done when: an agent shows yesterday's spend from the provider's report.
 - [ ] **`ai-estimate`** — the live estimate from tokens and the price table, labelled, and the budget at this rate.
       Done when: an agent spending fast shows that it will pass its budget today, before the provider reports it.

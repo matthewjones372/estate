@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { ConfigProvider, Effect, Layer, SubscriptionRef } from "effect"
+import { ConfigProvider, Effect, Layer, Redacted, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
 import type { Catalog } from "../../shared/catalog"
 import { catalog, environment, estate, settings } from "../fixture"
@@ -23,6 +23,7 @@ const billed: Catalog = {
     { name: "report", environments: ["staging"], run: { ecs: { cluster: "jobs", scheduledTask: "report" } } },
   ],
   agents: [
+    { name: "writer", environments: ["staging"], cost: { anthropic: { workspace: "wrk_writer" } } },
     {
       name: "triage",
       environments: ["staging"],
@@ -45,6 +46,7 @@ const configured: Settings = {
       costs: {
         aws: { region: "us-east-1", tag: "service", endpoint: "http://ce.test/" },
         opencost: { url: "http://opencost.test/" },
+        anthropic: { adminKey: Redacted.make("sk-ant-admin") },
       },
     },
     production: {},
@@ -86,6 +88,14 @@ const costExplorer = (call: Call) => {
   return reply({ Anomalies: [] })
 }
 
+/** Anthropic's cost report, in cents, by workspace. */
+const anthropicReport = (call: Call) =>
+  call.url.startsWith("https://api.anthropic.com/")
+    ? reply({
+        data: [{ starting_at: "1970-01-01T00:00:00Z", results: [{ amount: "500", workspace_id: "wrk_writer" }] }],
+      })
+    : undefined
+
 describe("an environment's costs", () => {
   test("are read from Cost Explorer, shown on its entries, and a forecast past budget needs someone", () =>
     Effect.runPromise(
@@ -100,7 +110,7 @@ describe("an environment's costs", () => {
               estate({ catalog: billed, environments: { staging: environment(), production: environment() } }),
             ),
             TestClock.layer(),
-            stubRemote((call) => costExplorer(call) ?? opencost(call)),
+            stubRemote((call) => costExplorer(call) ?? opencost(call) ?? anthropicReport(call)),
             platform,
           ),
         ),
@@ -119,6 +129,7 @@ describe("an environment's costs", () => {
       expect([costs["search"]?.monthToDate, costs["nightly"]?.monthToDate, costs["triage"]?.monthToDate]).toEqual([
         40, 6, 12,
       ])
+      expect(costs["writer"]?.from).toBe("Anthropic")
       // A job on ECS runs in no cluster OpenCost sees.
       expect(costs["report"]).toBeUndefined()
     }))

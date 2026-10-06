@@ -1,6 +1,6 @@
 /**
  * What each entry in an environment costs, from the cost tools its section of the settings names. Where more than one
- * knows an entry, the bill by tag is preferred to Kubernetes' share of it.
+ * knows an entry, the bill by tag is preferred to Kubernetes' share of it, and an AI provider's report to either.
  */
 import { Clock, Effect, type FileSystem, SubscriptionRef } from "effect"
 import { type Agent, kubernetesOf, type Service, type StandaloneJob } from "../../shared/catalog"
@@ -10,6 +10,7 @@ import type { Remote } from "../remote"
 import type { Sources } from "../settings"
 import { Estate } from "../state"
 import { agentsIn, inEnvironment, jobsIn } from "../views/catalog"
+import { readAiCosts } from "./ai-costs"
 import { costExplorerApi, readAwsCosts } from "./aws-costs"
 import { type Placed, readOpenCost } from "./opencost"
 import type { Failure } from "./run"
@@ -70,10 +71,10 @@ export const costsReader = (
   Effect.gen(function* () {
     const costs = section.costs
     if (costs === undefined) return undefined
-    const { aws, opencost } = costs
+    const { aws, opencost, anthropic, openai } = costs
     const currency = costs.currency ?? "USD"
     const ce = aws === undefined ? undefined : yield* makeAwsJson(costExplorerApi, aws.region, aws.endpoint)
-    if (ce === undefined && opencost === undefined) return undefined
+    if (ce === undefined && opencost === undefined && anthropic === undefined && openai === undefined) return undefined
     return Effect.gen(function* () {
       const entries = yield* entriesIn(environment)
       const billed =
@@ -93,6 +94,19 @@ export const costsReader = (
         return place === undefined ? [] : [{ name, ...(cost === undefined ? {} : { cost }), ...place }]
       })
       const shared = opencost === undefined ? {} : yield* readOpenCost(opencost.url, placed, currency)
-      return { ...shared, ...billed }
+      // What an agent spends on a model is its provider's to report, and outweighs its share of the cluster.
+      const spenders = entries.flatMap(({ entry: { name, cost } }) =>
+        cost?.anthropic !== undefined || cost?.openai !== undefined ? [{ name, cost }] : [],
+      )
+      const models =
+        spenders.length === 0
+          ? {}
+          : yield* readAiCosts(
+              { ...(anthropic === undefined ? {} : { anthropic }), ...(openai === undefined ? {} : { openai }) },
+              spenders,
+              yield* Clock.currentTimeMillis,
+              currency,
+            )
+      return { ...shared, ...billed, ...models }
     })
   })
