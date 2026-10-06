@@ -74,11 +74,17 @@ export interface Running {
   readonly stop: () => void
 }
 
-export const startEstate = async (services: number, tools: string): Promise<Running> => {
+/** The bench's two files in a directory of their own: its catalog, and settings that read the bench's tools. */
+export const writeEstate = async (services: number, tools: string, port = freePort()) => {
   const dir = mkdtempSync(join(tmpdir(), "estate-bench-"))
-  const port = freePort()
   await Bun.write(join(dir, "catalog.yaml"), catalogOf(services))
   await Bun.write(join(dir, "estate.yaml"), settingsOf(dir, port, freePort(), tools))
+  return dir
+}
+
+export const startEstate = async (services: number, tools: string): Promise<Running> => {
+  const port = freePort()
+  const dir = await writeEstate(services, tools, port)
   const log = join(dir, "estate.log")
   const output = Bun.file(log)
   const child = Bun.spawn(["bun", "src/server/main.ts"], {

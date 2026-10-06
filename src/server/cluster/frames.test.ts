@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
+import { Effect, Fiber, Stream, SubscriptionRef } from "effect"
 import { catalog, environment, estate } from "../fixture"
 import { followed, frameOf } from "./frames"
+import { framesOf } from "./owner"
 
 const before = estate({ environments: { production: environment(), staging: environment() } })
 
@@ -44,4 +46,19 @@ describe("the frames a follower is sent", () => {
   test("say nothing when nothing changed", () => {
     expect(frameOf(before, before, "a")).toEqual({ _tag: "Changed", environments: {} })
   })
+})
+
+describe("the owner's frames", () => {
+  test("are the whole estate, then each change as it is made", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const estate = yield* SubscriptionRef.make(before)
+        const frames = yield* Effect.forkChild(framesOf(estate, "a").pipe(Stream.take(2), Stream.runCollect))
+        yield* Effect.sleep("10 millis")
+        yield* SubscriptionRef.update(estate, (state) => ({ ...state, notes: [] }))
+        yield* SubscriptionRef.update(estate, (state) => ({ ...state, impacts: [] }))
+        const sent = yield* Fiber.join(frames)
+        expect(Array.from(sent).map((frame) => frame._tag)).toEqual(["Whole", "Changed"])
+      }),
+    ))
 })

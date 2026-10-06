@@ -24,7 +24,7 @@ export const ownerBeat = Duration.seconds(10)
 const empty: Frame = { _tag: "Changed", environments: {} }
 
 /** The owner's state as frames: the whole first, then what changed, and an empty change when nothing has. */
-const framesOf = (estate: Estate, owner: string): Stream.Stream<Frame> =>
+export const framesOf = (estate: Estate, owner: string): Stream.Stream<Frame> =>
   Stream.merge(
     SubscriptionRef.changes(estate).pipe(
       Stream.mapAccum(
