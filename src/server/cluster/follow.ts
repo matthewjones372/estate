@@ -33,7 +33,10 @@ const followOnce = Effect.gen(function* () {
         yield* Ref.update(frames, (count) => count + 1)
         if (frame._tag === "Whole")
           yield* becomes(frame.owner === self ? { _tag: "Reading" } : { _tag: "Following", owner: frame.owner })
-        yield* SubscriptionRef.update(estate, (state) => followed(state, frame))
+        // Only this fiber writes the follower's state, so reading it and setting it cannot interleave with another.
+        const next = followed(yield* SubscriptionRef.get(estate), frame)
+        if (next._tag === "Failure") return yield* new Unfollowed({ message: next.failure })
+        yield* SubscriptionRef.set(estate, next.success)
       }),
     ),
     Effect.catchCause(Effect.logWarning),

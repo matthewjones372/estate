@@ -3,17 +3,9 @@
 ## Problem
 
 A clustered Estate (spec 0026) sends every follower the whole estate as it starts, then each part that changed. How
-large that is was an open question of 0026. `bun bench/frames.ts [services]` now measures it: Estate's readers run
-in-process against the bench's tools, and their state is turned into frames by the owner's own `framesOf` and sized
-as the runners' NDJSON carries them, over a minute once the first reads are done.
-
-| Services | Whole, as a follower starts | Largest change | A minute, to each follower | Frames a minute |
-|---|---|---|---|---|
-| 50 | 186 KB | 58 KB | 374 KB | 28 |
-| 1000 | 3.65 MB | 1.16 MB | 5.0 MB | 26 |
-
-At fifty services this is nothing. At a thousand, each follower is sent 5 MB a minute, nearly all of it metrics that
-changed by a little, and the largest frame is a megabyte. Nothing checks that it does not grow.
+large that was had been an open question of 0026, and nothing held it to a size. Each read of the metrics rebuilds
+every service's hour of points, so sending a changed part whole sent every series again on every read: at a thousand
+services, 5 MB a minute to each follower, its largest frame over a megabyte.
 
 ## Not doing
 
@@ -23,19 +15,36 @@ changed by a little, and the largest frame is a megabyte. Nothing checks that it
 
 ## Shape
 
+A part that changed is sent as a patch: an object by the keys that changed and those it lost, a series of numbers by
+the points it gained when it only moved along (at most four off the front, four new or revised at the end, as the
+page's stream finds them), and anything else whole. The follower applies the patches, keeping keys in the owner's
+order so its pages render the same text, and checks each patched environment and part with its schema; a patch that
+does not apply to what it has, or patches to something that does not check, makes it follow again and be sent the
+whole.
+
 ```bash
-bun bench/frames.ts 50      # {"services":50,"wholeKB":…,"largestChangeKB":…,"perMinuteKB":…}
-bun run perf                # also fails when a frame budget at fifty services is broken
+bun bench/frames.ts 1000    # {"services":1000,"wholeKB":…,"largestChangeKB":…,"perMinuteKB":…}
+bun run perf                # also fails when a follower's frames break their budgets at fifty services
 ```
 
-A change to an environment's metrics sends only the services, agents and stores whose numbers changed, and the vitals,
-edges and charts that did, rather than the whole metrics part.
+`bench/frames.ts` runs Estate's readers in-process against the bench's tools, turns its state into frames with the
+owner's own `framesOf`, and sizes them as the runners' NDJSON carries them, over a minute once the first reads are
+done.
+
+| Measured | 50 services | Budget at 50 | 1,000 services |
+|---|---|---|---|
+| Whole estate, as a follower starts | 186 KB | 250 KB | 3.7 MB |
+| Largest change | 12 KB | 20 KB | 241 KB |
+| Changes a minute, to each follower | 27 KB | 40 KB | 485 KB |
+
+Sending each changed part whole, as before, is 374 KB a minute at fifty services and 5 MB at a thousand.
 
 ## Why this shape
 
-Measuring through the owner's own `framesOf`, rather than through two runners and Postgres, keeps the measurement in
-`bun run perf` without a database, and measures exactly what a follower is sent: the transport adds only its framing.
-Recommended: a budget at fifty services in the build, as spec 0011's are, and a thousand by hand.
+A patch on any part, rather than a format for metrics alone, keeps one rule for every part and lets a part that
+changed a little (a note added, an alert's state) be sent as little too; series are where the bytes were, and moving
+along is how they change. Measuring through the owner's own `framesOf`, rather than through two runners and Postgres,
+keeps the measurement in `bun run perf` without a database, and measures what a follower is sent but its framing.
 
 ## Depends on
 
@@ -45,19 +54,21 @@ Nothing.
 
 - [x] **`frames-bench`** — `bench/frames.ts`, measuring the frames a follower is sent.
       Done when: it prints the whole, the largest change and the bytes a minute for any number of services.
-- [ ] **`frames-budget`** — `bun run perf` runs the frame bench at fifty services against budgets.
-      Done when: a frame that sends the whole metrics part on every change breaks the budget.
-- [ ] **`metrics-changes`** — a metrics change sends only what changed within it.
-      Done when: at a thousand services, a minute to each follower is under 1 MB.
+- [x] **`metrics-changes`** — each changed part sent as a patch, series by the points they gained; the follower
+      checks what it patched and follows again when it cannot.
+      Done when: at a thousand services, a minute to each follower is under 1 MB (485 KB).
+- [x] **`frames-budget`** — `bun run perf` runs the frame bench at fifty services against budgets.
+      Done when: sending each changed part whole (374 KB a minute) breaks the 40 KB budget.
 
 ## Acceptance
 
 ```bash
 bun bench/frames.ts 1000
-bun run perf
+CHROMIUM=/opt/pw-browsers/chromium bun run perf
+bun run integration     # the two-runner case, its follower patched frame by frame
 ```
 
 ## Open questions
 
-- **Budgets at fifty services?** Recommended: the whole under 250 KB, the largest change under 80 KB, a minute under
-  500 KB, set once `metrics-changes` has landed and been measured.
+None. Decided: the whole a follower starts with stays whole; at a thousand services it is 3.7 MB once per follower
+start, which a patch cannot shrink.

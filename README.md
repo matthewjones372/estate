@@ -334,6 +334,8 @@ stress test. Both are measured by [`bench/`](bench) against fake tools that answ
 | Estate's CPU | 3% of a core | 52% |
 | Estate's memory | 136 MB | 174 MB |
 | Page drawn | 0.5 s | 2.2 s |
+| Clustered: whole estate to a follower | 186 KB | 3.7 MB |
+| Clustered: changes to a follower a minute | 27 KB | 485 KB |
 
 Every page watching an environment shares one stream, so more pages cost little. Each source is read on its own
 interval, which `every:` lengthens for tools that limit or bill each call.

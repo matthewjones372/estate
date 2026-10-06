@@ -5,6 +5,7 @@
  * four times the services: a page whose heap grows faster than its lanes has something reading every service per lane.
  */
 import { startEstate } from "./estate"
+import { measureFrames } from "./frames"
 import { measurePage } from "./page"
 import { startTools } from "./tools"
 
@@ -76,6 +77,8 @@ try {
   const page = await measurePage(estate.url, services)
   estate.stop()
   const larger = check ? await pageAt(services * 4) : undefined
+  // What a clustered Estate sends each follower, measured through the owner's own frames (spec 0030).
+  const frames = check ? await measureFrames(services) : undefined
   const measured = {
     callsPerSecond: Math.round(((after.calls - before.calls) / minute) * 1000 * 10) / 10,
     firstMB: Math.round((watchers[0]?.counted.first ?? 0) / 1e4) / 100,
@@ -85,6 +88,13 @@ try {
     drawnSeconds: Math.round(page.drawnMs / 100) / 10,
     pageHeapMB: page.heapMB,
     ...(larger === undefined ? {} : { heapGrowth: Math.round((larger.heapMB / page.heapMB) * 10) / 10 }),
+    ...(frames === undefined
+      ? {}
+      : {
+          followerWholeKB: frames.wholeKB,
+          followerLargestKB: frames.largestChangeKB,
+          followerPerMinuteKB: frames.perMinuteKB,
+        }),
   }
   const budgets: Readonly<Record<string, readonly [string, number]>> = {
     callsPerSecond: ["Calls to the tools a second", 15],
@@ -95,6 +105,9 @@ try {
     drawnSeconds: ["Page drawn, s", 3],
     pageHeapMB: ["Page's heap after a collection, MB", 15],
     heapGrowth: [`Page's heap at ${services * 4} services over at ${services}, times`, 4],
+    followerWholeKB: ["Whole estate to a cluster's follower, KB", 250],
+    followerLargestKB: ["Largest change to a follower, KB", 20],
+    followerPerMinuteKB: ["Changes to a follower a minute, KB", 40],
   }
   process.stdout.write(`\n${services} services, ${pages} pages\n\n`)
   process.stdout.write(`| Measured | Value |${check ? " Budget |" : ""}\n|---|---|${check ? "---|" : ""}\n`)

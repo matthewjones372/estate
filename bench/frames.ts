@@ -53,6 +53,8 @@ export const measureFrames = async (size: number) => {
       )
       yield* Effect.promise(() => firstReadsDone(tools.calls, size))
       const before = { ...counted }
+      // The largest change once read, not the first reads, when every part goes from waiting to read whole.
+      counted.largest = 0
       yield* Effect.sleep(minute)
       yield* Fiber.interrupt(sending)
       yield* Fiber.interrupt(reading)

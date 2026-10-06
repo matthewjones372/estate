@@ -10,6 +10,7 @@ import { Build } from "../../shared/deploys"
 import { Alert, Load, Note, SourceKind } from "../../shared/events"
 import { Debug, Job, Pod, Series } from "../../shared/workloads"
 import type { EstateState } from "../state"
+import { Patch } from "./patch"
 
 const optional = Schema.optionalKey
 const Strings = Schema.Record(Schema.String, Schema.String)
@@ -134,26 +135,33 @@ const estateFields = {
 const WireEstate = Schema.Struct(estateFields)
 
 const { catalog: _catalog, environments: _environments, ...changeable } = estateFields
-const { tools: _tools, ...environmentChangeable } = Environment.fields
+
+/** The estate's parts but its catalog and environments, each there only when it changed. */
+const EstateParts = Schema.Struct(
+  Object.fromEntries(Object.entries(changeable).map(([key, schema]) => [key, optional(schema)])) as {
+    [K in keyof typeof changeable]: Schema.optionalKey<(typeof changeable)[K]>
+  },
+)
+
+/** An environment's state as a follower has it once a frame's patches are applied, checked as the owner's was. */
+export const decodeEnvironment = Schema.decodeUnknownResult(Environment)
+/** The estate's patched parts, checked as the owner's were. */
+export const decodeParts = Schema.decodeUnknownResult(EstateParts)
+
+/** The parts a frame may patch: an environment's, and the estate's own. */
+export const environmentParts: ReadonlyArray<string> = Object.keys(Environment.fields).filter((key) => key !== "tools")
+export const estateParts: ReadonlyArray<string> = Object.keys(changeable)
 
 /**
  * One frame of `Follow`: the whole estate, with the runner that reads it, when a follower starts or the catalog's
- * environments change; else the parts that changed, by environment. An empty change is the owner saying it is there.
+ * environments change; else how each part that changed did, by environment. An empty change is the owner saying it
+ * is there.
  */
 export const Frame = Schema.Union([
   Schema.TaggedStruct("Whole", { owner: Schema.String, estate: WireEstate }),
   Schema.TaggedStruct("Changed", {
-    environments: Schema.Record(
-      Schema.String,
-      Schema.Struct(
-        Object.fromEntries(Object.entries(environmentChangeable).map(([key, schema]) => [key, optional(schema)])) as {
-          [K in keyof typeof environmentChangeable]: Schema.optionalKey<(typeof environmentChangeable)[K]>
-        },
-      ),
-    ),
-    ...(Object.fromEntries(Object.entries(changeable).map(([key, schema]) => [key, optional(schema)])) as {
-      [K in keyof typeof changeable]: Schema.optionalKey<(typeof changeable)[K]>
-    }),
+    environments: Schema.Record(Schema.String, Schema.Record(Schema.String, Patch)),
+    parts: Schema.Record(Schema.String, Patch),
   }),
 ])
 export type Frame = typeof Frame.Type

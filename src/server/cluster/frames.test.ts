@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Fiber, Stream, SubscriptionRef } from "effect"
+import { Effect, Fiber, Result, Stream, SubscriptionRef } from "effect"
 import { catalog, environment, estate } from "../fixture"
 import { followed, frameOf } from "./frames"
 import { framesOf } from "./owner"
@@ -30,21 +30,58 @@ describe("the frames a follower is sent", () => {
     const frame = frameOf(before, now, "a")
     expect(frame).toEqual({
       _tag: "Changed",
-      environments: { production: { alerts: { state: "ok", value: [] } } },
-      notes: now.notes,
+      environments: { production: { alerts: { keys: { state: { set: "ok" }, value: { set: [] } } } } },
+      parts: { notes: { set: now.notes } },
     })
-    expect(followed(before, frame)).toEqual(now)
+    expect(followed(before, frame)).toEqual(Result.succeed(now))
   })
 
   test("are whole again when the catalog or its environments change", () => {
     const fewer = { ...before, environments: { production: environment() } }
     expect(frameOf(before, fewer, "a")._tag).toBe("Whole")
     expect(frameOf(before, { ...before, catalog: { ...catalog } }, "a")._tag).toBe("Whole")
-    expect(followed(before, frameOf(before, fewer, "a"))).toEqual(fewer)
+    expect(followed(before, frameOf(before, fewer, "a"))).toEqual(Result.succeed(fewer))
   })
 
   test("say nothing when nothing changed", () => {
-    expect(frameOf(before, before, "a")).toEqual({ _tag: "Changed", environments: {} })
+    expect(frameOf(before, before, "a")).toEqual({ _tag: "Changed", environments: {}, parts: {} })
+  })
+
+  test("send a series that moved along as the points it gained, and the follower has it as the owner does", () => {
+    const series = (points: ReadonlyArray<number>) => ({ now: points.at(-1) ?? null, points })
+    const read = (points: ReadonlyArray<number>) =>
+      environment({
+        metrics: {
+          state: "ok",
+          value: { services: { orders: { requests: series(points) } }, vitals: [], edges: [], charts: {} },
+        },
+      })
+    const hour = Array.from({ length: 60 }, (_, index) => 100 + index * 1.234567)
+    const was = { ...before, environments: { ...before.environments, production: read(hour) } }
+    const now = { ...was, environments: { ...was.environments, production: read([...hour.slice(1), 60.5]) } }
+    const frame = frameOf(was, now, "a")
+    expect(JSON.stringify(frame)).toContain('"points":{"shift":1,"tail":[60.5]}')
+    expect(JSON.stringify(frame).length).toBeLessThan(JSON.stringify(hour).length / 3)
+    expect(followed(was, frame)).toEqual(Result.succeed(now))
+  })
+
+  test("that do not apply to what the follower has are refused, so it follows again", () => {
+    expect(Result.isFailure(followed(before, { _tag: "Changed", environments: { elsewhere: {} }, parts: {} }))).toBe(
+      true,
+    )
+    expect(
+      Result.isFailure(
+        followed(before, { _tag: "Changed", environments: { production: { tools: { set: 1 } } }, parts: {} }),
+      ),
+    ).toBe(true)
+    expect(
+      Result.isFailure(
+        followed(before, { _tag: "Changed", environments: { production: { alerts: { set: 1 } } }, parts: {} }),
+      ),
+    ).toBe(true)
+    expect(
+      Result.isFailure(followed(before, { _tag: "Changed", environments: {}, parts: { notes: { set: 1 } } })),
+    ).toBe(true)
   })
 })
 

@@ -43,6 +43,9 @@ measures, over a minute once the first reads are done:
 | Page drawn | 3 s |
 | Page's heap after a collection | 15 MB |
 | Page's heap at 200 services over its heap at 50 | 4 times |
+| Whole estate to a cluster's follower (spec 0030) | 250 KB |
+| Largest change to a follower | 20 KB |
+| Changes to a follower a minute | 40 KB |
 
 Calls and bytes are exact for a given Estate, so their budgets are close to what is measured. CPU, memory and time
 have room for a slow machine. A page that reads every service for each lane is barely heavier at fifty services

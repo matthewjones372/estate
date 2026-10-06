@@ -21,7 +21,7 @@ export const estateId = "estate"
 /** Under the time a follower waits before it asks again, so a quiet estate is not taken for a lost owner. */
 export const ownerBeat = Duration.seconds(10)
 
-const empty: Frame = { _tag: "Changed", environments: {} }
+const empty: Frame = { _tag: "Changed", environments: {}, parts: {} }
 
 /** The owner's state as frames: the whole first, then what changed, and an empty change when nothing has. */
 export const framesOf = (estate: Estate, owner: string): Stream.Stream<Frame> =>
