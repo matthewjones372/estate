@@ -7,7 +7,7 @@ interface Discovered {
   readonly yaml: string
 }
 
-const where = (from: string) => (from === "kubernetes" ? "Kubernetes" : from)
+const where = (from: string) => (from === "kubernetes" ? "Kubernetes" : from === "backstage" ? "Backstage" : from)
 
 export const FoundMark = (props: { readonly discovered: Discovered | undefined }) => (
   <Show when={props.discovered}>{(found) => <span class="muted found">found in {where(found().from)}</span>}</Show>

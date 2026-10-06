@@ -36,7 +36,7 @@ const plural = { Deployment: "deployments", StatefulSet: "statefulsets" } as con
 /** The workloads a rule's selector matches in one cluster, in its namespaces or in all. */
 export const workloadsIn = (
   cluster: Cluster,
-  rule: DiscoverRule["kubernetes"],
+  rule: NonNullable<DiscoverRule["kubernetes"]>,
 ): Effect.Effect<ReadonlyArray<Workload>, Failure, Remote> => {
   const where = rule.namespaces?.map((namespace) => `/namespaces/${encodeURIComponent(namespace)}`) ?? [""]
   const query = `?labelSelector=${encodeURIComponent(rule.selector)}`
@@ -61,14 +61,29 @@ export const workloadsIn = (
 /** A service's name: its app.kubernetes.io/name label, or else its workload's name. */
 const serviceName = (workload: Workload) => workload.labels["app.kubernetes.io/name"] ?? workload.name
 
-/** `text` with the workload's values in place; none when it names a label or annotation the workload lacks. */
-const fill = (text: string, workload: Workload): string | undefined => {
+/** What a template is filled from: a found thing's service name, namespace, labels and annotations. */
+export interface Values {
+  readonly service: string
+  readonly namespace?: string
+  readonly labels: Readonly<Record<string, string>>
+  readonly annotations: Readonly<Record<string, string>>
+}
+
+const valuesOf = (workload: Workload): Values => ({
+  service: serviceName(workload),
+  namespace: workload.namespace,
+  labels: workload.labels,
+  annotations: workload.annotations,
+})
+
+/** `text` with the found thing's values in place; none when it names a value the thing lacks. */
+const fill = (text: string, workload: Values): string | undefined => {
   let missing = false
   const filled = text.replace(placeholder, (whole, name: string) => {
     const [kind, key = ""] = name.split(/:(.*)/)
     const value =
       kind === "name" || kind === "service"
-        ? serviceName(workload)
+        ? workload.service
         : kind === "namespace"
           ? workload.namespace
           : kind === "label"
@@ -82,8 +97,8 @@ const fill = (text: string, workload: Workload): string | undefined => {
   return missing ? undefined : filled
 }
 
-/** A template's every string filled; a field whose value names what the workload lacks is left out. */
-const filled = (value: unknown, workload: Workload): unknown => {
+/** A template's every string filled; a field whose value names what the found thing lacks is left out. */
+export const filled = (value: unknown, workload: Values): unknown => {
   if (typeof value === "string") return fill(value, workload)
   if (Array.isArray(value)) return value.map((each) => filled(each, workload)).filter((each) => each !== undefined)
   if (typeof value === "object" && value !== null)
@@ -100,7 +115,7 @@ const annotated = ["description", "owner", "repository", "runbook"] as const
 
 /** The entry a workload in `environment` becomes, before it is checked as a written one is. */
 export const entryOf = (rule: DiscoverRule, environment: string, workload: Workload): unknown => ({
-  ...(filled(rule.service ?? {}, workload) as object),
+  ...(filled(rule.service ?? {}, valuesOf(workload)) as object),
   ...Object.fromEntries(
     annotated.flatMap((field) => {
       const value = workload.annotations[`estate.dev/${field}`]

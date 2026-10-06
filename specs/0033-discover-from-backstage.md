@@ -73,20 +73,20 @@ rule, since a Component names none and guessing from its lifecycle would be wron
 
 ## Stack
 
-- [ ] **`backstage-rule`** — `backstage:` in the settings, a Backstage rule in the catalog, `environments` in a
+- [x] **`backstage-rule`** — `backstage:` in the settings, a Backstage rule in the catalog, `environments` in a
       rule's template, and the cross-check.
       Done when: a Backstage rule without `backstage` in the settings is the mistake above, and a rule naming both
       `kubernetes` and `backstage` is a mistake.
-- [ ] **`backstage-reader`** — from a rule and the Components Backstage lists, page by page, the entries found.
+- [x] **`backstage-reader`** — from a rule and the Components Backstage lists, page by page, the entries found.
       Done when: against a stub Backstage of two pages, Components become entries with their owner, system,
       repository, runbook, links and namespace, in the rule's environments.
-- [ ] **`backstage-merge`** — Backstage rules run beside Kubernetes' every minute, marked `backstage`; two rules
+- [x] **`backstage-merge`** — Backstage rules run beside Kubernetes' every minute, marked `backstage`; two rules
       finding one name are one service.
       Done when: a service found by both kinds is one entry in both rules' environments, and a Backstage that fails
       keeps what it found.
-- [ ] **`backstage-page-doctor`** — "found in Backstage", and the doctor's Backstage line.
+- [x] **`backstage-page-doctor`** — "found in Backstage", and the doctor's Backstage line.
       Done when: the doctor names the services found, written over and left out.
-- [ ] **`backstage-e2e`** — the e2e tools answer as Backstage with a Component the catalog does not write.
+- [x] **`backstage-e2e`** — the e2e tools answer as Backstage with a Component the catalog does not write.
       Done when: Playwright sees it on the overview, found in Backstage, with its owner's links.
 
 ## Acceptance

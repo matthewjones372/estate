@@ -40,9 +40,12 @@ export const configuredKinds = (settings: Settings, sources: string): ReadonlySe
   ])
 }
 
-/** Mistakes between the catalog and the settings: an environment whose sources are not configured. */
-export const crossCheck = (settings: Settings, catalog: Catalog): ReadonlyArray<Mistake> =>
-  catalog.environments.flatMap((environment, index) =>
+/**
+ * Mistakes between the catalog and the settings: an environment whose sources are not configured, and a rule that
+ * discovers from a Backstage the settings do not name.
+ */
+export const crossCheck = (settings: Settings, catalog: Catalog): ReadonlyArray<Mistake> => [
+  ...catalog.environments.flatMap((environment, index) =>
     settings.sources[environment.sources] === undefined
       ? [
           {
@@ -51,7 +54,13 @@ export const crossCheck = (settings: Settings, catalog: Catalog): ReadonlyArray<
           },
         ]
       : [],
-  )
+  ),
+  ...(catalog.discover ?? []).flatMap((rule, index) =>
+    rule.backstage !== undefined && settings.backstage === undefined
+      ? [{ at: `discover[${index}].backstage`, message: "needs backstage in estate.yaml" }]
+      : [],
+  ),
+]
 
 /** The estate with a new catalog: environments it adds start waiting, environments it drops are forgotten. */
 export const withCatalog = (estate: EstateState, catalog: Catalog, settings: Settings): EstateState => ({

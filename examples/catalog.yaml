@@ -19,6 +19,14 @@ discover:
         requests: sum(rate(http_requests_total{app="{name}"}[1m]))
         errors: sum(rate(http_requests_total{app="{name}",code=~"5.."}[1m]))
         p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="{name}"}[5m])))
+  # And the services in Backstage's catalog, each with its owner, system, links and repository, in production only;
+  # where Backstage is, estate.yaml says.
+  - backstage: { filter: "kind=component,spec.type=service" }
+    service:
+      environments: [ production ]
+      load:
+        requests: sum(rate(http_requests_total{app="{name}"}[1m]))
+        errors: sum(rate(http_requests_total{app="{name}",code=~"5.."}[1m]))
 
 # AI agents run in production, their usage from OpenTelemetry's GenAI metrics in the environment's Prometheus.
 agents:

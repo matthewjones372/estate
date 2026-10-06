@@ -1,5 +1,7 @@
 /** The catalog: an estate's environments, services, vitals and map, as its owner writes it in `catalog.yaml`. */
 import { Schema } from "effect"
+import { Agent } from "./catalog-agent"
+import { Kubernetes } from "./catalog-parts"
 import { CostOf } from "./costs"
 import { CatalogMap } from "./map"
 
@@ -14,12 +16,6 @@ const Environment = Schema.Struct({
 })
 export type Environment = typeof Environment.Type
 
-const Workload = Schema.Struct({
-  kind: Schema.Literals(["Deployment", "StatefulSet", "DaemonSet"]),
-  name: Schema.String,
-})
-
-const Kubernetes = Schema.Struct({ namespace: Schema.String, workloads: Schema.Array(Workload) })
 const Workflow = Schema.Struct({ workflow: Schema.String, branch: optional(Schema.String) })
 const Pipelines = Schema.Struct({ project: Schema.String, ref: optional(Schema.String) })
 const JenkinsJob = Schema.Struct({ job: Schema.String, branch: optional(Schema.String) })
@@ -126,15 +122,30 @@ export const Service = Schema.Struct({
     }),
   ),
   /** Set by discovery, never written: where the entry was found. */
-  discovered: optional(Schema.Struct({ from: Schema.Literal("kubernetes") })),
+  discovered: optional(Schema.Struct({ from: Schema.Literals(["kubernetes", "backstage"]) })),
 })
 export type Service = typeof Service.Type
 
 const { description, owner, category, repository, runbook, load, links, logs, stats } = Service.fields
 /** Where to find services the catalog does not write, and what each found becomes (spec 0031). */
 const DiscoverRule = Schema.Struct({
-  kubernetes: Schema.Struct({ selector: Schema.String, namespaces: optional(Schema.Array(Schema.String)) }),
-  service: optional(Schema.Struct({ description, owner, category, repository, runbook, load, links, logs, stats })),
+  kubernetes: optional(Schema.Struct({ selector: Schema.String, namespaces: optional(Schema.Array(Schema.String)) })),
+  /** Backstage's Components, by a catalog filter (spec 0033); where Backstage is, estate.yaml says. */
+  backstage: optional(Schema.Struct({ filter: optional(Schema.String) })),
+  service: optional(
+    Schema.Struct({
+      description,
+      owner,
+      category,
+      repository,
+      runbook,
+      load,
+      links,
+      logs,
+      stats,
+      environments: optional(Schema.Array(Schema.String)),
+    }),
+  ),
 })
 export type DiscoverRule = typeof DiscoverRule.Type
 
@@ -193,44 +204,7 @@ export const Store = Schema.Struct({
 })
 export type Store = typeof Store.Type
 
-/**
- * An AI agent run in production: its usage as queries of the environment's metrics (the examples in the README use
- * OpenTelemetry's GenAI metrics), its token budget, and where it runs, if Estate should show its pods.
- */
-export const Agent = Schema.Struct({
-  name: Schema.String,
-  description: optional(Schema.String),
-  owner: optional(Schema.String),
-  category: optional(Schema.String),
-  /** Where its cost is found, where its name is not enough, and its budget. */
-  cost: optional(CostOf),
-  runbook: optional(Schema.String),
-  environments: Schema.Array(Schema.String),
-  runtime: optional(Schema.Struct({ kubernetes: optional(Kubernetes) })),
-  usage: optional(
-    Schema.Struct({
-      /** Runs a second, those that failed a second, and how long the slowest take. */
-      runs: optional(Schema.String),
-      errors: optional(Schema.String),
-      p99: optional(Schema.String),
-      /** Tokens an hour now, and tokens spent over the budget's period: the last day or month. */
-      tokens: optional(Schema.String),
-      /** Tokens an hour in and out, priced by the settings' `prices` for the estimate of what it spends. */
-      input: optional(Schema.String),
-      output: optional(Schema.String),
-      spent: optional(Schema.String),
-      /** A query grouped by the model's label, such as `group by (gen_ai_response_model) (…)`: the model in use. */
-      model: optional(Schema.String),
-    }),
-  ),
-  budget: optional(Schema.Struct({ tokens: Schema.Number, per: Schema.Literals(["day", "month"]) })),
-  /** Where its runs are traced: Langfuse's traces by their name. */
-  runs: optional(Schema.Struct({ langfuse: Schema.Struct({ name: Schema.String }) })),
-  /** The share of runs failing that needs someone: 0.1 unless set. */
-  failing: optional(Schema.Number),
-  links: optional(Schema.Record(Schema.String, Schema.String)),
-})
-export type Agent = typeof Agent.Type
+export { Agent } from "./catalog-agent"
 
 /** A team, by the name an owner gives: where to reach it, its chat, its pages and its on-call. */
 const Team = Schema.Struct({

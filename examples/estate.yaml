@@ -19,6 +19,10 @@ auth:
 # database: { dynamodb: { table: estate-notes, region: eu-west-2 } }
 # notes: { keepDays: 30 }
 
+# Backstage, for the catalog's rule that discovers services from it, with a static token that may read its catalog.
+backstage: { url: https://backstage.invalid }
+# backstage: { url: https://backstage.example.com, token: ${BACKSTAGE_TOKEN} }
+
 sources:
   staging:
     prometheus: { url: http://prometheus.staging.invalid:9090 }

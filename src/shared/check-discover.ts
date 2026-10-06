@@ -28,10 +28,17 @@ export const discoverMistakes = (catalog: Catalog): ReadonlyArray<Mistake> => [
   ),
   ...(catalog.discover ?? []).flatMap((rule, index) => {
     const at = `discover[${index}]`
+    const kinds = [rule.kubernetes, rule.backstage].filter((kind) => kind !== undefined).length
     const selector =
-      rule.kubernetes.selector.trim() === ""
-        ? [{ at: `${at}.kubernetes.selector`, message: "is empty; discovery finds only workloads labelled so" }]
-        : []
+      kinds !== 1
+        ? [{ at, message: "names where to discover: kubernetes or backstage, one" }]
+        : rule.kubernetes !== undefined && rule.kubernetes.selector.trim() === ""
+          ? [{ at: `${at}.kubernetes.selector`, message: "is empty; discovery finds only workloads labelled so" }]
+          : []
+    const environments = new Set(catalog.environments.map((each) => each.name))
+    const unknown = (rule.service?.environments ?? [])
+      .filter((name) => !environments.has(name))
+      .map((name) => ({ at: `${at}.service.environments`, message: `"${name}" is not an environment` }))
     const named = strings(`${at}.service`, rule.service).flatMap(([where, text]) =>
       [...text.matchAll(placeholder)].flatMap(([, name = ""]) =>
         filled.includes(name) || /^(label|annotation):/.test(name) || where.includes(".links.")
@@ -44,6 +51,6 @@ export const discoverMistakes = (catalog: Catalog): ReadonlyArray<Mistake> => [
             ],
       ),
     )
-    return [...selector, ...named]
+    return [...selector, ...unknown, ...named]
   }),
 ]

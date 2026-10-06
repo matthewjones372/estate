@@ -64,4 +64,22 @@ describe("a discover rule", () => {
       ),
     ).toEqual([{ at: "services[0] (orders).discovered", message: "is set by discovery, never written" }])
   })
+
+  test("names one place to discover from, and only environments the catalog has", () => {
+    expect(
+      mistakes(
+        catalog({
+          discover: [
+            { kubernetes: { selector: "a=b" }, backstage: {} },
+            {},
+            { backstage: { filter: "kind=component" }, service: { environments: ["production", "moon"] } },
+          ],
+        }),
+      ),
+    ).toEqual([
+      { at: "discover[0]", message: "names where to discover: kubernetes or backstage, one" },
+      { at: "discover[1]", message: "names where to discover: kubernetes or backstage, one" },
+      { at: "discover[2].service.environments", message: '"moon" is not an environment' },
+    ])
+  })
 })

@@ -6,6 +6,7 @@ import { Config, Context, Data, Effect, Option, Redacted, Result, Schema } from 
 import { checkShape, type Mistake } from "../shared/shape"
 import { Secret } from "./secret"
 import { Ai, Mcp } from "./settings-ai"
+import { Backstage } from "./settings-backstage"
 import { ClusterSettings, clusterMistakes } from "./settings-cluster"
 import { Costs, Prices } from "./settings-costs"
 import { Database, databaseMistakes, misplacedDatabase } from "./settings-database"
@@ -205,6 +206,8 @@ export const Settings = Schema.Struct({
   slack: optional(Schema.Struct({ token: Secret, url: optional(Schema.String) })),
   /** What models' tokens cost, per million, for the estimate of an agent's spend between the providers' reports. */
   prices: optional(Prices),
+  /** Backstage, for a catalog's rules that discover services from it. */
+  backstage: optional(Backstage),
   /** Several replicas reading each source once: `true`, or the runners' port and health check to override. */
   cluster: optional(ClusterSettings),
 })

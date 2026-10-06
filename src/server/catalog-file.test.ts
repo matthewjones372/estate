@@ -22,6 +22,18 @@ describe("the catalog file", () => {
     ])
   })
 
+  test("names a rule that discovers from a Backstage the settings do not name", () => {
+    expect(crossCheck(settings(), { ...catalog, discover: [{ backstage: {} }] })).toEqual([
+      { at: "discover[0].backstage", message: "needs backstage in estate.yaml" },
+    ])
+    expect(
+      crossCheck(
+        { ...settings(), backstage: { url: "https://backstage" } },
+        { ...catalog, discover: [{ backstage: {} }] },
+      ),
+    ).toEqual([])
+  })
+
   test("knows which sources an environment has from its section", () => {
     const configured = {
       ...settings(),

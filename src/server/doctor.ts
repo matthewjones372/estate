@@ -8,7 +8,7 @@ import { type Catalog, ecsOf, kubernetesOf, type Service } from "../shared/catal
 import { costLine } from "../shared/costs"
 import { makeAwsJson } from "./aws/json"
 import { agentsFindings } from "./doctor-agents"
-import { discoverFinding } from "./doctor-discover"
+import { backstageFinding, discoverFinding } from "./doctor-discover"
 import { amount, type Finding, finding, type Needs } from "./doctor-finding"
 import type { Remote } from "./remote"
 import type { Settings, Sources } from "./settings"
@@ -219,8 +219,11 @@ export const doctor = (settings: Settings, catalog: Catalog): Effect.Effect<Read
     const reports = yield* Effect.forEach(catalog.environments, (each) =>
       examine(settings, catalog, each.name, each.sources),
     )
+    const backstage = yield* backstageFinding(settings.backstage, catalog)
+    const wide = backstage === undefined ? [] : [backstage]
     const { builds } = settings
-    if (builds === undefined) return reports
+    if (builds === undefined)
+      return wide.length === 0 ? reports : [...reports, { environment: "every environment", findings: wide }]
     const read = yield* finding(
       "builds",
       readBuilds(builds, catalog.services),
@@ -233,7 +236,7 @@ export const doctor = (settings: Settings, catalog: Catalog): Effect.Effect<Read
           )
           .join("; ") || "no service's builds were found",
     )
-    return [...reports, { environment: "every environment", findings: [read] }]
+    return [...reports, { environment: "every environment", findings: [read, ...wide] }]
   })
 
 /** The reports as text, a part a line, and whether every part answered. */

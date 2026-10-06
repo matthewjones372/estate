@@ -246,7 +246,9 @@ Where most entries would be written the same way, a `discover:` rule in the cata
 Deployments and StatefulSets a label selector matches, each made the entry the rule describes, its owner and category
 from labels, its description, repository and runbook from `estate.dev/` annotations. Each is checked as a written entry
 is and marked "found in Kubernetes" on the page, which offers its YAML to copy into the catalog; a written entry of the
-same name wins.
+same name wins. A `backstage:` rule does the same from Backstage's catalog: each Component a service, with its owner,
+system as category, description, links, and repository and namespace from the annotations Backstage's plugins use;
+where Backstage is, and its token, are in `estate.yaml`.
 
 ```yaml
 discover:

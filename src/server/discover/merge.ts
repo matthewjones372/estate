@@ -16,7 +16,11 @@ const nameOf = (entry: unknown) =>
   typeof entry === "object" && entry !== null && "name" in entry ? String(entry.name) : "?"
 
 /** Each found entry checked against the written catalog's environments and teams, as if it were written there. */
-export const checked = (written: Catalog, entries: ReadonlyArray<unknown>): Checked => {
+export const checked = (
+  written: Catalog,
+  entries: ReadonlyArray<unknown>,
+  from: "kubernetes" | "backstage" = "kubernetes",
+): Checked => {
   const kept: Array<Service> = []
   const leftOut: Array<Checked["leftOut"][number]> = []
   for (const entry of entries) {
@@ -28,7 +32,7 @@ export const checked = (written: Catalog, entries: ReadonlyArray<unknown>): Chec
       services: [unmarked],
     })
     if (Result.isFailure(result)) leftOut.push({ name: nameOf(entry), mistakes: result.failure })
-    else for (const service of result.success.services) kept.push({ ...service, discovered: { from: "kubernetes" } })
+    else for (const service of result.success.services) kept.push({ ...service, discovered: { from } })
   }
   return { kept, leftOut }
 }
