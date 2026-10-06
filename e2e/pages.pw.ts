@@ -140,6 +140,8 @@ test("pointing at a chart reads a point on every chart, and dragging zooms them"
   await page.goto("/services/storefront?env=production")
   const p99 = page.getByRole("img", { name: /^p99 over 1h/ })
   await expect(p99).toBeVisible({ timeout: 20_000 })
+  // The page leads with what is firing, so the charts sit below the fold until scrolled to.
+  await p99.scrollIntoViewIfNeeded()
   const box = await p99.boundingBox()
   if (box === null) throw new Error("p99 is not drawn")
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
