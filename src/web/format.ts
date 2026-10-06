@@ -1,4 +1,5 @@
 /** Numbers, times and durations in the page's words. */
+import type { Health } from "../shared/events"
 
 const pad = (value: number) => String(value).padStart(2, "0")
 
@@ -71,4 +72,12 @@ export const initials = (name: string): string => {
   const words = name.split(/[\s._@-]+/).filter((word) => word !== "")
   const letters = words.length > 1 ? `${words[0]?.[0] ?? ""}${words[1]?.[0] ?? ""}` : name.slice(0, 2)
   return letters.toUpperCase()
+}
+
+/** A health in the words a lane, a card or a search result shows. */
+export const healthWords: Readonly<Record<Health, string>> = {
+  healthy: "Healthy",
+  attention: "Degraded",
+  critical: "Down",
+  unknown: "Unknown",
 }

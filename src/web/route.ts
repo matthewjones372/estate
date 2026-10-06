@@ -11,6 +11,24 @@ export type Page =
   | { readonly page: "kiosk"; readonly team?: string; readonly category?: string }
   | { readonly page: "missing" }
 
+/** The pages a path names by its first part, each given the part after it. */
+const pagesNamed: ReadonlyMap<string, (name: string) => Page> = new Map<string, (name: string) => Page>([
+  ["alerts", (id) => ({ page: "alert", id })],
+  ["services", (name) => ({ page: "service", name })],
+  ["stores", (name) => ({ page: "store", name })],
+  ["jobs", (name) => ({ page: "job", name })],
+  ["agents", (name) => ({ page: "agent", name })],
+])
+
+/** A path's part as it was before it was escaped; one that was never validly escaped names no page. */
+const decodedOf = (part: string): string | undefined => {
+  try {
+    return decodeURIComponent(part)
+  } catch {
+    return undefined
+  }
+}
+
 export const pageOf = (pathname: string, search = ""): Page => {
   if (pathname === "/" || pathname === "") return { page: "overview" }
   if (pathname === "/deploys") return { page: "deploys" }
@@ -21,16 +39,10 @@ export const pageOf = (pathname: string, search = ""): Page => {
     const category = params.get("category")
     return { page: "kiosk", ...(team === null ? {} : { team }), ...(category === null ? {} : { category }) }
   }
-  const alert = /^\/alerts\/([^/]+)$/.exec(pathname)?.[1]
-  if (alert !== undefined) return { page: "alert", id: decodeURIComponent(alert) }
-  const service = /^\/services\/([^/]+)$/.exec(pathname)?.[1]
-  if (service !== undefined) return { page: "service", name: decodeURIComponent(service) }
-  const store = /^\/stores\/([^/]+)$/.exec(pathname)?.[1]
-  if (store !== undefined) return { page: "store", name: decodeURIComponent(store) }
-  const job = /^\/jobs\/([^/]+)$/.exec(pathname)?.[1]
-  if (job !== undefined) return { page: "job", name: decodeURIComponent(job) }
-  const agent = /^\/agents\/([^/]+)$/.exec(pathname)?.[1]
-  return agent === undefined ? { page: "missing" } : { page: "agent", name: decodeURIComponent(agent) }
+  const [, kind = "", name] = /^\/(\w+)\/([^/]+)$/.exec(pathname) ?? []
+  const named = pagesNamed.get(kind)
+  const decoded = name === undefined ? undefined : decodedOf(name)
+  return named === undefined || decoded === undefined ? { page: "missing" } : named(decoded)
 }
 
 export const pathOf = (page: Page): string => {

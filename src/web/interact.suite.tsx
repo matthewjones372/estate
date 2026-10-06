@@ -8,16 +8,6 @@ import { Overview } from "./pages/Overview"
 import { ServicePage } from "./pages/Service"
 import { A } from "./parts/A"
 import { Header } from "./parts/Header"
-import { Jump } from "./parts/Jump"
-
-const jumpCatalog = {
-  ...events,
-  catalog: {
-    ...events.catalog,
-    stores: [{ name: "orders-db", engine: "cnpg", links: [] }],
-    agents: [{ name: "support-triage", links: [], runs: true }],
-  },
-}
 
 describe("acting on an alert", () => {
   test("adds a note", async () => {
@@ -232,6 +222,8 @@ describe("getting about", () => {
     expect(page.container.textContent).toContain("needs attention")
     page.click(page.button(/^staging/))
     expect(page.calls).toContainEqual(["choose", "staging"])
+    // Its header listens for ⌘K on the window, so it goes before the tests of the palette.
+    page.dispose()
   })
 
   test("a link within Estate is followed without a reload, unless asked for a new tab", () => {
@@ -241,38 +233,5 @@ describe("getting about", () => {
     page.click(link)
     page.click(link, { ctrlKey: true })
     expect(page.calls.filter((call) => call[0] === "navigate")).toEqual([["navigate", "/deploys"]])
-  })
-})
-
-describe("jump", () => {
-  test("⌘K opens the palette, typing storefront and Enter opens the service", async () => {
-    const page = mount(() => <Header />, { sent: jumpCatalog })
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true, cancelable: true }))
-    await page.settle()
-    const input = page.container.querySelector<HTMLInputElement>("input.jump-input")
-    if (input === null) throw new Error("no jump input")
-    page.type(input, "storefront")
-    await page.settle()
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }))
-    await page.settle()
-    expect(page.calls).toContainEqual(["navigate", "/services/storefront"])
-    page.dispose()
-  })
-
-  test("Esc closes without navigating", async () => {
-    const page = mount(() => <Jump />, { sent: jumpCatalog })
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true, cancelable: true }))
-    await page.settle()
-    const input = page.container.querySelector<HTMLInputElement>("input.jump-input")
-    if (input === null) throw new Error("no jump input")
-    page.type(input, "orders")
-    await page.settle()
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }))
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }))
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }))
-    await page.settle()
-    expect(page.container.querySelector('[aria-label="Jump to"]')).toBeNull()
-    expect(page.calls.filter((call) => call[0] === "navigate")).toEqual([])
-    page.dispose()
   })
 })

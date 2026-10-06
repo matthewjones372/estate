@@ -1,21 +1,14 @@
 /** @jsxImportSource solid-js */
 /** A service's lane on the overview: health, pipeline, the last hour, and its links. */
 import { For, Show } from "solid-js"
-import type { CatalogEvent, DeploysEvent, Health, ServiceState } from "../../shared/events"
+import type { CatalogEvent, DeploysEvent, ServiceState } from "../../shared/events"
 import { useEstate } from "../context"
-import { clock } from "../format"
+import { clock, healthWords } from "../format"
 import { fillIncident } from "../incident"
 import { A, Out } from "./A"
 import { Icon } from "./icons"
 import { pipelineOf, Rail } from "./Rail"
 import { Spark } from "./Sparkline"
-
-const healthWords: Readonly<Record<Health, string>> = {
-  healthy: "Healthy",
-  attention: "Degraded",
-  critical: "Down",
-  unknown: "Unknown",
-}
 
 type Described = CatalogEvent["services"][number]
 

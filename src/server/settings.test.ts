@@ -84,6 +84,20 @@ describe("the settings", () => {
       }),
     ))
 
+  test("name the server a self-hosted model is asked on, and give each agent a token too long to guess", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const result = yield* read(
+          `${good}ai: { provider: openai-compatible, model: local }\nmcp: { tokens: [ { name: claude-code, token: short, role: viewer } ] }\n`,
+          { SECRET: "s".repeat(32), CLIENT_SECRET: "c" },
+        )
+        expect(Result.isFailure(result) && result.failure.mistakes).toEqual([
+          { at: "ai.url", message: "names the server an openai-compatible model is asked on" },
+          { at: "mcp.tokens.0.token", message: "claude-code's token needs at least 32 characters" },
+        ])
+      }),
+    ))
+
   test("read a part no more often than every five seconds, and say so for an interval that is not one", () =>
     Effect.runPromise(
       Effect.gen(function* () {
@@ -111,14 +125,14 @@ describe("the settings", () => {
       Effect.gen(function* () {
         const result = yield* read(
           `${good}mcp:\n  tokens:\n    - { name: claude-code, token: ${secretOf("ESTATE_MCP_TOKEN")}, role: viewer }\n`,
-          { SECRET: "s".repeat(32), CLIENT_SECRET: "c", ESTATE_MCP_TOKEN: "agent-secret" },
+          { SECRET: "s".repeat(32), CLIENT_SECRET: "c", ESTATE_MCP_TOKEN: "agent-secret-".padEnd(32, "x") },
         )
         expect(Result.isSuccess(result)).toBe(true)
         if (!Result.isSuccess(result)) return
         const token = result.success.mcp?.tokens[0]
         expect(token?.name).toBe("claude-code")
         expect(token?.role).toBe("viewer")
-        expect(token === undefined ? undefined : Redacted.value(token.token)).toBe("agent-secret")
+        expect(token === undefined ? undefined : Redacted.value(token.token)).toBe("agent-secret-".padEnd(32, "x"))
       }),
     ))
 })

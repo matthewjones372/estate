@@ -1,17 +1,11 @@
 /** @jsxImportSource solid-js */
 /** Compact service cards for the overview's grid layout: denser than lanes, still through to the service page. */
 import { For, Show } from "solid-js"
-import type { Alert, CatalogEvent, DeploysEvent, Health, ServiceState } from "../../shared/events"
+import type { Alert, CatalogEvent, DeploysEvent, ServiceState } from "../../shared/events"
+import { healthWords } from "../format"
 import { A } from "./A"
 
 type Described = CatalogEvent["services"][number]
-
-const healthWords: Readonly<Record<Health, string>> = {
-  healthy: "Healthy",
-  attention: "Degraded",
-  critical: "Down",
-  unknown: "Unknown",
-}
 
 const versionOf = (
   state: ServiceState | undefined,

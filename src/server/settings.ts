@@ -69,6 +69,18 @@ const everyMistakes = (settings: Settings): ReadonlyArray<Mistake> => {
   })
 }
 
+/** A model with nowhere to be asked, and agents' tokens short enough to guess. */
+const askMistakes = (settings: Settings): ReadonlyArray<Mistake> => [
+  ...(settings.ai?.provider === "openai-compatible" && settings.ai.url === undefined
+    ? [{ at: "ai.url", message: "names the server an openai-compatible model is asked on" }]
+    : []),
+  ...(settings.mcp?.tokens ?? []).flatMap((each, index) =>
+    Redacted.value(each.token).length < 32
+      ? [{ at: `mcp.tokens.${index}.token`, message: `${each.name}'s token needs at least 32 characters` }]
+      : [],
+  ),
+]
+
 export const Kubernetes = Schema.Struct({
   url: optional(Schema.String),
   token: optional(Secret),
@@ -274,7 +286,7 @@ export const readSettings = (text: string): Effect.Effect<Settings, SettingsErro
     if (Redacted.value(settings.auth.sessionSecret).length < 32) {
       sense.push({ at: "auth.sessionSecret", message: "needs at least 32 characters" })
     }
-    sense.push(...everyMistakes(settings))
+    sense.push(...everyMistakes(settings), ...askMistakes(settings))
     return sense.length === 0 ? settings : yield* new SettingsError({ mistakes: sense })
   })
 

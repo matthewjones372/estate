@@ -99,11 +99,14 @@ const ServiceDetail = Schema.Struct({
   alerts: Schema.Array(Schema.Unknown),
 })
 
+/** What a tool answers when what it was asked about is not in the estate. */
+class NotFound extends Schema.TaggedError<NotFound>()("NotFound", { message: Schema.String }) {}
+
 const Service = Tool.make("service", {
   description: "One service: health, load over the last hour, pods, deploy and builds, alerts, debug, links, team.",
   parameters: ServiceArg,
   success: ServiceDetail,
-  failure: Schema.String,
+  failure: NotFound,
   failureMode: "return",
 })
   .annotate(Tool.Readonly, true)
@@ -240,7 +243,7 @@ export const mcpHandlers = mcpToolkit.toLayer({
       const estate = yield* estateOf
       const environment = resolveEnv(estate, asked)
       const detail = serviceDetail(estate, environment, name)
-      if (detail === undefined) return yield* Effect.fail(`there is no service ${name} in ${environment}`)
+      if (detail === undefined) return yield* new NotFound({ message: `there is no service ${name} in ${environment}` })
       return detail
     }),
 })

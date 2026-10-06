@@ -109,6 +109,9 @@ describe("where the page is", () => {
     expect(pageOf("/alerts/a1")).toEqual({ page: "alert", id: "a1" })
     expect(pageOf("/services/orders%20api")).toEqual({ page: "service", name: "orders api" })
     expect(pageOf("/nowhere")).toEqual({ page: "missing" })
+    // A path that was never validly escaped, or names no kind of page, is missing, not an error.
+    expect(pageOf("/alerts/%E0")).toEqual({ page: "missing" })
+    expect(pageOf("/constructor/x")).toEqual({ page: "missing" })
     expect(pathOf({ page: "missing" })).toBe("/")
     expect(pageOf("/kiosk", "?team=payments&env=production")).toEqual({ page: "kiosk", team: "payments" })
     expect(pageOf("/kiosk", "?category=Data")).toEqual({ page: "kiosk", category: "Data" })
