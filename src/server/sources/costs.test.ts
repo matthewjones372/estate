@@ -120,7 +120,7 @@ describe("an environment's costs", () => {
       expect(read.environments["staging"]?.costs.state).toBe("ok")
       const orders = servicesView(read, "staging").services.find((service) => service.name === "orders")
       expect(orders?.cost).toMatchObject({ from: "AWS Cost Explorer", monthToDate: 640, forecast: 1100 })
-      expect(orders?.reasons).toContain("forecast $1100 passes its $900 a month")
+      expect(orders?.reasons).toContain("forecast $1,100 passes its $900 a month")
       expect(read.environments["production"]?.costs.state).toBe("off")
       // storefront has no tag in the bill, so its share comes from OpenCost; orders' bill by tag is preferred.
       const storefront = servicesView(read, "staging").services.find((service) => service.name === "storefront")

@@ -11,6 +11,7 @@ import { useEstate, useSnapshot } from "../context"
 import { clock, duration } from "../format"
 import { teamOf } from "../teams"
 import { Out } from "./A"
+import { CostLine } from "./CostLine"
 import { HealthLine, Links } from "./Lane"
 import { Spark } from "./Sparkline"
 import { Owner } from "./Team"
@@ -112,6 +113,7 @@ export const AgentLane = (props: { readonly agent: DescribedAgent; readonly stat
       <div class="lane-name">
         <span class="lane-title">{props.agent.name}</span>
         <HealthLine state={props.state && { ...props.state, pods: [] }} />
+        <CostLine cost={props.state?.cost} />
         <span class="muted mono" style={{ "font-size": "12px" }}>
           {usage()?.model ?? "model not read"}
           <Show when={usage()?.modelSince}>{(since) => ` · since ${clock(since())}`}</Show>

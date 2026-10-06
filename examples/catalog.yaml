@@ -19,9 +19,14 @@ agents:
       errors: sum(rate(gen_ai_client_operation_duration_seconds_count{gen_ai_agent_name="support-triage",error_type!=""}[5m]))
       p99: histogram_quantile(0.99, sum by (le) (rate(gen_ai_client_operation_duration_seconds_bucket{gen_ai_agent_name="support-triage"}[5m])))
       tokens: sum(rate(gen_ai_client_token_usage_sum{gen_ai_agent_name="support-triage"}[5m])) * 3600
+      # Tokens an hour in and out, priced by estate.yaml's prices for the estimate of what it spends between bills
+      input: sum(rate(gen_ai_client_token_usage_sum{gen_ai_agent_name="support-triage",gen_ai_token_type="input"}[5m])) * 3600
+      output: sum(rate(gen_ai_client_token_usage_sum{gen_ai_agent_name="support-triage",gen_ai_token_type="output"}[5m])) * 3600
       spent: sum(increase(gen_ai_client_token_usage_sum{gen_ai_agent_name="support-triage"}[1d]))
       model: group by (gen_ai_response_model) (gen_ai_client_token_usage_count{gen_ai_agent_name="support-triage"})
     budget: { tokens: 20000000, per: day }
+    # What it spends, from Anthropic's cost report for its workspace, against a budget in money
+    cost: { anthropic: { workspace: wrk_support }, budget: { amount: 150, per: day } }
     runs: { langfuse: { name: support-triage } }
     links: { traces: 'https://grafana.example.com/explore?var-env={env}&agent={agent}' }
 

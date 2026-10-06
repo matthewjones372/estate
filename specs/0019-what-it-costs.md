@@ -93,7 +93,7 @@ discounts, data transfer and support fees. Recommended: as above.
       Done when: an agent shows yesterday's spend from the provider's report.
 - [x] **`ai-estimate`** — the live estimate from tokens and the price table, labelled, and the budget at this rate.
       Done when: an agent spending fast shows that it will pass its budget today, before the provider reports it.
-- [ ] **`costs-e2e`** — cost on lanes and the service page, against fakes; the doctor reads each cost source.
+- [x] **`costs-e2e`** — cost on lanes and the service page, against fakes; the doctor reads each cost source.
       Done when: `bunx playwright test` passes with them.
 
 ## Acceptance

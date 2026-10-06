@@ -6,6 +6,7 @@ import { useEstate } from "../context"
 import { clock, healthWords } from "../format"
 import { fillIncident } from "../incident"
 import { A, Out } from "./A"
+import { CostLine } from "./CostLine"
 import { Icon } from "./icons"
 import { pipelineOf, Rail } from "./Rail"
 import { Spark } from "./Sparkline"
@@ -102,6 +103,7 @@ export const Lane = (props: {
           {props.service.name}
         </A>
         <HealthLine state={props.state} />
+        <CostLine cost={props.state?.cost} />
         <Show when={props.state?.debug?.on === true ? props.state.debug : undefined}>
           {(debug) => (
             <span class="badge-debug">

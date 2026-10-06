@@ -45,8 +45,29 @@ export const Cost = Schema.Struct({
 })
 export type Cost = typeof Cost.Type
 
-const money = (amount: number, currency: string) =>
-  `${currency === "USD" ? "$" : `${currency} `}${amount >= 100 ? Math.round(amount) : amount.toFixed(2)}`
+/** "$612", "$4.20", "€31": whole above a hundred, to the cent below. */
+const money = (amount: number, currency: string): string => {
+  const symbol = currency === "USD" ? "$" : currency === "EUR" ? "€" : currency === "GBP" ? "£" : `${currency} `
+  return `${symbol}${amount >= 100 ? Math.round(amount).toLocaleString("en-GB") : amount.toFixed(2)}`
+}
+
+/** "$612 this month (forecast $880 of $900) · est. $4.20 in the last hour", or nothing for no cost. */
+export const costLine = (cost: Cost | undefined): string => {
+  if (cost === undefined) return ""
+  const { currency, budget, monthToDate, yesterday, forecast, estimate } = cost
+  const bill =
+    budget?.per === "day" && yesterday !== undefined
+      ? `${money(yesterday, currency)} yesterday of ${money(budget.amount, currency)} a day`
+      : monthToDate === undefined
+        ? undefined
+        : `${money(monthToDate, currency)} this month${
+            forecast === undefined
+              ? ""
+              : ` (forecast ${money(forecast, currency)}${budget?.per === "month" ? ` of ${money(budget.amount, currency)}` : ""})`
+          }`
+  const estimated = estimate === undefined ? undefined : `est. ${money(estimate.lastHour, currency)} in the last hour`
+  return [bill, estimated].filter((part) => part !== undefined).join(" · ")
+}
 
 /** Why an entry's cost needs someone: an anomaly, or a budget its forecast or its rate will pass. */
 export const costReasons = (cost: Cost | undefined): ReadonlyArray<string> => {

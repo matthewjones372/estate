@@ -7,6 +7,7 @@ import { For, Show } from "solid-js"
 import { useEstate, useSnapshot } from "../context"
 import { A } from "../parts/A"
 import { Load, Timeline } from "../parts/Charts"
+import { CostLine } from "../parts/CostLine"
 import { DebugPanel } from "../parts/Debug"
 import { Jobs } from "../parts/Jobs"
 import { HealthLine, Links } from "../parts/Lane"
@@ -60,6 +61,7 @@ export const ServicePage = (props: { readonly name: string }) => {
               .filter(Boolean)
               .join(" · ")}
           </p>
+          <CostLine cost={state()?.cost} />
           <Versions name={props.name} />
           <Show when={service()}>{(described) => <Links service={described()} />}</Show>
           <Owner owner={service()?.owner} team={teamOf(events().catalog, service()?.owner)} />

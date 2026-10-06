@@ -5,6 +5,7 @@
  */
 import { Clock, Effect } from "effect"
 import { type Catalog, ecsOf, kubernetesOf, type Service } from "../shared/catalog"
+import { costLine } from "../shared/costs"
 import { makeAwsJson } from "./aws/json"
 import { agentsFindings } from "./doctor-agents"
 import { amount, type Finding, finding, type Needs } from "./doctor-finding"
@@ -15,6 +16,7 @@ import { readArgo } from "./sources/argo"
 import { readBuilds } from "./sources/builds"
 import { cloudwatchApi, readAlarms } from "./sources/cloudwatch"
 import { readCluster } from "./sources/cluster"
+import { costsIn } from "./sources/costs"
 import { alertsBeside } from "./sources/datadog"
 import { datadogQueryOf } from "./sources/datadog-logs"
 import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./sources/ecs"
@@ -192,6 +194,16 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
     if (deploys === "ecs" && ecs !== undefined)
       findings.push(
         yield* finding("deploys", readEcsDeploys(ecs, services, new Map()), (found) => deploysSaid("ecs", found)),
+      )
+    const costs = yield* costsIn(section)
+    if (costs !== undefined)
+      findings.push(
+        yield* finding("costs", costs(catalog, environment), (found) => {
+          const entries = Object.entries(found)
+          return entries.length === 0
+            ? "nothing in this environment is in the bill: check each entry's cost tag, or its namespace for OpenCost"
+            : entries.map(([name, cost]) => `${name} ${costLine(cost) || "no spend"} (${cost.from})`).join("; ")
+        }),
       )
     findings.push(...(yield* logsFinding(section, services, now)))
     findings.push(...(yield* agentsFindings(section, ranges, agentsIn(catalog, environment), now)))

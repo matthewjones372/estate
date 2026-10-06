@@ -3,7 +3,9 @@
  * Prometheus (with the stores' exporters' series), Alertmanager (silences kept), a Kubernetes API with Flux (ConfigMaps patched, pods logging), and GitHub
  * Actions.
  */
+import { modelAnswer, runbook } from "./ask-fakes"
 import { kube } from "./cluster"
+import { allocation, costReport } from "./cost-fakes"
 
 const now = () => Math.floor(Date.now() / 1000)
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
@@ -13,6 +15,8 @@ const wave = (base: number, swing: number, phase: number) => (at: number) => bas
 const series: Array<[RegExp, (at: number) => number]> = [
   // The support agent, in OpenTelemetry's GenAI metrics: a run every few seconds, a few failing, within its budget.
   [/increase\(gen_ai_client_token_usage_sum/, () => 6_100_000],
+  [/gen_ai_token_type="input"/, () => 1_200_000],
+  [/gen_ai_token_type="output"/, () => 90_000],
   [/gen_ai_client_token_usage_sum/, wave(420_000, 60_000, 3)],
   [/^histogram_quantile.*gen_ai_client_operation_duration/, wave(14, 3, 4)],
   [/gen_ai_client_operation_duration_seconds_count.*error_type/, wave(0.004, 0.002, 5)],
@@ -120,27 +124,6 @@ const silences = new Map<
 const port = Number(process.env["TOOLS_PORT"] ?? 8282)
 const here = `http://127.0.0.1:${port}`
 
-/** OrdersSlow's runbook, kept as Markdown in the repository it names. */
-const runbook = `# Orders are slow
-
-If p99 is high after a deploy, roll back. If the database is the cause, check for long-running vacuums.
-`
-
-/** A self-hosted model behind the OpenAI-compatible API, answering from the brief it was sent. */
-const modelAnswer = async (request: Request) => {
-  const body = await request.json()
-  const brief: string = body.messages?.at(-1)?.content ?? ""
-  const answer = {
-    likelyCause: brief.includes("stalled")
-      ? "orders' new version never rolled out: its image policy cannot list tags."
-      : "Nothing in the brief explains it.",
-    evidence: [{ text: brief.split("\n").find((line) => line.includes("stalled")) ?? "no change near it" }],
-    nextSteps: ["Fix the registry credentials Flux uses for orders"],
-    confidence: "medium",
-  }
-  return json({ choices: [{ message: { content: JSON.stringify(answer) } }], usage: { total_tokens: 1200 } })
-}
-
 const firing = [
   {
     labels: { alertname: "OrdersSlow", severity: "warning", app: "orders" },
@@ -191,6 +174,8 @@ const server = Bun.serve({
     const url = new URL(request.url)
     const path = url.pathname
     if (path === "/api/v1/query_range") return json(queryRange(url))
+    if (path === "/allocation/compute") return json(allocation(url))
+    if (path === "/v1/organizations/cost_report") return json(costReport())
     if (path === "/runbooks/orders-slow.md")
       return new Response(runbook, { headers: { "content-type": "text/markdown" } })
     if (path === "/v1/chat/completions") return modelAnswer(request)

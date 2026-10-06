@@ -107,6 +107,20 @@ test("a store and an agent are a jump away, from the header's field or with the 
   await accessible(page)
 })
 
+test("what each entry costs is on its lane and its page, the estimate named as one", async ({ page }) => {
+  await page.goto("/?env=production")
+  // orders' share of the shared cluster, from OpenCost.
+  await expect(page.locator(".lane", { hasText: "orders" }).first()).toContainText("$212 this month", {
+    timeout: 20_000,
+  })
+  // The support agent: yesterday from Anthropic's report, and Estate's estimate of the last hour from its tokens.
+  const agent = page.locator(".lane", { hasText: "support-triage" })
+  await expect(agent).toContainText("$28.50 yesterday of $150 a day · est. $4.95 in the last hour")
+  await page.goto("/services/orders?env=production")
+  await expect(page.getByText("$212 this month")).toBeVisible({ timeout: 20_000 })
+  await accessible(page)
+})
+
 test("a note added to an alert is there for everyone", async ({ page }) => {
   await page.goto("/?env=production")
   const card = page.getByRole("article").filter({ hasText: "Orders are slow to place" })

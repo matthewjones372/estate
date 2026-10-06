@@ -115,3 +115,9 @@
   box-shadow: 0 0 0 2px var(--ground);
   pointer-events: none;
 }
+/* An entry's cost under its health: quiet, and never the first thing read. */
+.cost-line {
+  display: block;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}

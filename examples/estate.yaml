@@ -59,6 +59,16 @@ builds:
   # How often builds are read; once a minute unless set:
   # every: 5m
 
+# What each entry costs (optional), read with each environment's other tools: in its section of sources, say
+#   costs:
+#     aws: { region: us-east-1, tag: service }               # Cost Explorer, by the tag that names each entry
+#     opencost: { url: http://opencost.opencost:9003 }        # Kubernetes' share, by namespace and workload
+#     anthropic: { adminKey: ${ANTHROPIC_ADMIN_KEY} }         # an agent's spend, by the workspace its entry names
+#     openai: { adminKey: ${OPENAI_ADMIN_KEY} }               # or by its OpenAI project
+#   every: { costs: 6h }                                      # Cost Explorer charges a call; 6h unless set
+# and what models' tokens cost, per million, for the estimate of an agent's spend between its provider's reports:
+# prices: { claude-sonnet-5-5: { input: 3, output: 15 } }
+
 # Ask AI on an alert (optional): one model. The model is named, never chosen for you; Claude Opus 5.5 reads an
 # alert's brief best, Claude Sonnet 5.5 where cost matters. One answer an alert a minute, within a budget of tokens a
 # day (500,000 unless set).

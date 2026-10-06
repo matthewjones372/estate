@@ -76,6 +76,7 @@ That's the job of Estate: **something's wrong. What do I need to know, and where
 | Builds | GitHub Actions, GitLab CI, Jenkins, TeamCity, Harness CI |
 | Logs | Loki, Datadog, Elasticsearch/OpenSearch, or pod logs straight from the cluster |
 | AI agents | Runs, failures, tokens against a budget and the model in use, from the GenAI metrics they already send; recent runs from Langfuse |
+| Costs | AWS Cost Explorer by tag, with forecasts and anomalies; OpenCost or Kubecost for what shares a cluster; Anthropic's and OpenAI's cost reports for agents |
 | Notes, impact and alert history | Postgres, DynamoDB, or memory |
 
 Where Grafana sits in front of Prometheus and Loki, Estate reaches them through Grafana with one service account
@@ -102,6 +103,8 @@ Grafana's alerting, Argo CD and Elasticsearch, or an environment read wholly fro
 - raise an incident in PagerDuty, Opsgenie or your own tool from the alert, when the catalog names its link
 - jump to any service, store, job or agent by name from the header, or with ⌘K (Ctrl K)
 - see a service's version in every environment at once, and switch to one
+- see what each service, job and agent costs this month against its budget; an anomaly or a budget it will pass
+  needs someone, and an agent's spend between its provider's reports is estimated from its tokens, and says so
 
 Viewers see everything and add notes. Operators can also silence, switch debug, and write what an alert means.
 

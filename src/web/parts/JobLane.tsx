@@ -5,6 +5,7 @@ import type { CatalogEvent, ServicesEvent } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock } from "../format"
 import { teamOf } from "../teams"
+import { CostLine } from "./CostLine"
 import { Run } from "./Jobs"
 import { HealthLine, Links } from "./Lane"
 import { Owner } from "./Team"
@@ -23,6 +24,7 @@ export const JobLane = (props: { readonly job: DescribedJob; readonly state: Job
       <div class="lane-name">
         <span class="lane-title">{props.job.name}</span>
         <HealthLine state={props.state} />
+        <CostLine cost={props.state?.cost} />
         <span class="muted mono" style={{ "font-size": "12px" }}>
           {read()?.schedule ?? kindWords[props.job.kind]}
           <Show when={read()?.next}>{(next) => ` · next at ${clock(next())}`}</Show>

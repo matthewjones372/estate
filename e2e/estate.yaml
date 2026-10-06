@@ -13,6 +13,9 @@ kiosk: { token: e2e-screen, environments: [ production, staging ], every: 5s }
 # A self-hosted model, faked in e2e/tools.ts, for Ask AI.
 ai: { provider: openai-compatible, url: http://127.0.0.1:8282/v1, model: e2e-model }
 
+# What the support agent's model's tokens cost, per million, for the estimate between Anthropic's reports.
+prices: { claude-sonnet: { input: 3, output: 15 } }
+
 # An agent's token for /mcp, which e2e/mcp.pw.ts drives with the MCP SDK's client.
 mcp: { tokens: [ { name: e2e-agent, token: e2e-agent-token-of-at-least-32-chars, role: operator } ] }
 
@@ -25,6 +28,8 @@ sources:
     kubernetes: { url: http://127.0.0.1:8282, token: fake }
     flux: {}
     langfuse: { url: http://127.0.0.1:8282, publicKey: pk-lf-e2e, secretKey: sk-lf-e2e }
+    # Kubernetes' share of the bill from OpenCost, and the support agent's spend from Anthropic's report, both faked
+    costs: { opencost: { url: http://127.0.0.1:8282 }, anthropic: { adminKey: e2e-admin-key, url: http://127.0.0.1:8282 } }
 
 builds:
   github: { url: http://127.0.0.1:8282 }
