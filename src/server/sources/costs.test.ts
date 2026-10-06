@@ -14,19 +14,59 @@ const keys = ConfigProvider.fromUnknown({ AWS_ACCESS_KEY_ID: "test", AWS_SECRET_
 
 const billed: Catalog = {
   ...catalog,
+  jobs: [
+    {
+      name: "nightly",
+      environments: ["staging"],
+      run: { kubernetes: { namespace: "batch", cronJob: "nightly-export" } },
+    },
+    { name: "report", environments: ["staging"], run: { ecs: { cluster: "jobs", scheduledTask: "report" } } },
+  ],
+  agents: [
+    {
+      name: "triage",
+      environments: ["staging"],
+      runtime: { kubernetes: { namespace: "ai", workloads: [{ kind: "Deployment", name: "triage" }] } },
+    },
+  ],
   services: catalog.services.map((service) =>
     service.name === "orders"
       ? { ...service, cost: { tag: "orders-api", budget: { amount: 900, per: "month" as const } } }
-      : service,
+      : service.name === "search"
+        ? { ...service, cost: { opencost: { namespace: "shop", workload: "search" } } }
+        : service,
   ),
 }
 
 const configured: Settings = {
   ...settings({ anonymous: { name: "gil", role: "viewer" } }),
   sources: {
-    staging: { costs: { aws: { region: "us-east-1", tag: "service", endpoint: "http://ce.test/" } } },
+    staging: {
+      costs: {
+        aws: { region: "us-east-1", tag: "service", endpoint: "http://ce.test/" },
+        opencost: { url: "http://opencost.test/" },
+      },
+    },
     production: {},
   },
+}
+
+/** OpenCost's allocation by namespace and controller, a month's and a day's. */
+const opencost = (call: Call) => {
+  if (!call.url.startsWith("http://opencost.test/allocation/compute?")) return undefined
+  const month = call.url.includes("window=month")
+  return reply({
+    code: 200,
+    data: [
+      {
+        "shop/storefront": { properties: { namespace: "shop", controller: "storefront" }, totalCost: month ? 81.5 : 3 },
+        "shop/search": { properties: { namespace: "shop", controller: "search" }, totalCost: 40 },
+        "orders/orders": { properties: { namespace: "orders", controller: "orders" }, totalCost: 999 },
+        "batch/nightly-export": { properties: { namespace: "batch", controller: "nightly-export" }, totalCost: 6 },
+        "ai/triage": { properties: { namespace: "ai", controller: "triage" }, totalCost: 12 },
+      },
+    ],
+  })
 }
 
 /** Cost Explorer at its endpoint, by the operation each signed call names. */
@@ -60,7 +100,7 @@ describe("an environment's costs", () => {
               estate({ catalog: billed, environments: { staging: environment(), production: environment() } }),
             ),
             TestClock.layer(),
-            stubRemote(costExplorer),
+            stubRemote((call) => costExplorer(call) ?? opencost(call)),
             platform,
           ),
         ),
@@ -72,5 +112,14 @@ describe("an environment's costs", () => {
       expect(orders?.cost).toMatchObject({ from: "AWS Cost Explorer", monthToDate: 640, forecast: 1100 })
       expect(orders?.reasons).toContain("forecast $1100 passes its $900 a month")
       expect(read.environments["production"]?.costs.state).toBe("off")
+      // storefront has no tag in the bill, so its share comes from OpenCost; orders' bill by tag is preferred.
+      const storefront = servicesView(read, "staging").services.find((service) => service.name === "storefront")
+      expect(storefront?.cost).toEqual({ from: "OpenCost", currency: "USD", monthToDate: 81.5, yesterday: 3 })
+      const costs = read.environments["staging"]?.costs.value ?? {}
+      expect([costs["search"]?.monthToDate, costs["nightly"]?.monthToDate, costs["triage"]?.monthToDate]).toEqual([
+        40, 6, 12,
+      ])
+      // A job on ECS runs in no cluster OpenCost sees.
+      expect(costs["report"]).toBeUndefined()
     }))
 })
