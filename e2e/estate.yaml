@@ -13,6 +13,9 @@ kiosk: { token: e2e-screen, environments: [ production, staging ], every: 5s }
 # A self-hosted model, faked in e2e/tools.ts, for Ask AI.
 ai: { provider: openai-compatible, url: http://127.0.0.1:8282/v1, model: e2e-model }
 
+# An agent's token for /mcp, which e2e/mcp.pw.ts drives with the MCP SDK's client.
+mcp: { tokens: [ { name: e2e-agent, token: e2e-agent-token-of-at-least-32-chars, role: operator } ] }
+
 sources:
   staging:
     prometheus: { url: http://127.0.0.1:8282 }

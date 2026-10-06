@@ -6,6 +6,7 @@
     "@babel/preset-typescript": "^7",
     "@biomejs/biome": "^2.5.15",
     "@happy-dom/global-registrator": "^20.14.5",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@playwright/test": "^1.63.0",
     "@swc/core": "^1.16.13",
     "@types/babel__core": "^7",

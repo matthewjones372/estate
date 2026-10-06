@@ -155,7 +155,7 @@ Nothing.
       at most, and the page lists the tools it called.
       Done when: against fakes of both APIs that call `service` and `changes`, the page shows the answer and the tools
       used.
-- [ ] **`mcp-docs`** — an end-to-end test that drives `/mcp` with the MCP SDK's client against the e2e estate.
+- [x] **`mcp-docs`** — an end-to-end test that drives `/mcp` with the MCP SDK's client against the e2e estate.
       Done when: the e2e test lists the tools and calls each one.
 
 ## Acceptance
