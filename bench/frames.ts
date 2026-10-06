@@ -23,14 +23,22 @@ const minute = 60_000
 const encode = Schema.encodeSync(Frame)
 const bytesOf = (frame: Frame) => new TextEncoder().encode(JSON.stringify(encode(frame))).byteLength
 
-/** Waits until the tools have been asked for every range at least once and then nothing for two seconds. */
-const firstReadsDone = async (calls: () => number, size: number) => {
-  let last = -1
-  while (calls() !== last || calls() < size * 6) {
-    last = calls()
-    await Bun.sleep(2000)
-  }
-}
+const parts = ["metrics", "alerts", "cluster", "deploys", "costs"] as const
+
+/**
+ * Done once Estate has no part still waiting for its first read. The tools' calls cannot say so: a read with one
+ * slow answer leaves them quiet while it waits, and its first read, the whole part, then lands in the minute.
+ */
+const firstReadsDone = (estate: Estate) =>
+  SubscriptionRef.changes(estate).pipe(
+    Stream.filter((state) =>
+      Object.values(state.environments).every((environment) =>
+        parts.every((part) => environment[part].state !== "waiting"),
+      ),
+    ),
+    Stream.take(1),
+    Stream.runDrain,
+  )
 
 export const measureFrames = async (size: number) => {
   const tools = startTools(size, 20)
@@ -51,7 +59,9 @@ export const measureFrames = async (size: number) => {
           }),
         ),
       )
-      yield* Effect.promise(() => firstReadsDone(tools.calls, size))
+      yield* firstReadsDone(estate)
+      // Time for the frames of those reads to be counted before the minute starts.
+      yield* Effect.sleep("2 seconds")
       const before = { ...counted }
       // The largest change once read, not the first reads, when every part goes from waiting to read whole.
       counted.largest = 0
