@@ -8,12 +8,12 @@ import { Configured } from "../settings"
 import { Estate, updateEstate } from "../state"
 import { replyInThread } from "../threads"
 import { before, iso, isoNow } from "../time"
+import { written } from "../writes"
 import { json, Refusal, refused, writer } from "./routes"
 
 const Asked = Schema.Struct({ environment: Schema.String, alert: Schema.String, text: Schema.String })
 
 const longest = 2000
-const kept = 500
 
 export const notesRoute = HttpRouter.add(
   "POST",
@@ -42,7 +42,7 @@ export const notesRoute = HttpRouter.add(
     const added = yield* Effect.result(notes.add(note))
     if (added._tag === "Failure") return json({ message: added.failure.message }, 503)
     yield* noteWritten
-    yield* updateEstate((estate) => ({ ...estate, notes: [note, ...estate.notes].slice(0, kept) }))
+    yield* written({ _tag: "NoteAdded", note })
     yield* replyInThread((yield* Configured).slack, asked, `${person.name}: ${text}`)
     return json(note, 201)
   }).pipe(Effect.catchTag("Refusal", refused)),
@@ -63,7 +63,7 @@ export const removeNoteRoute = HttpRouter.add(
     const notes = yield* Notes
     const removed = yield* Effect.result(notes.remove(id))
     if (removed._tag === "Failure") return json({ message: removed.failure.message }, 503)
-    yield* updateEstate((estate) => ({ ...estate, notes: estate.notes.filter((each) => each.id !== id) }))
+    yield* written({ _tag: "NoteRemoved", id })
     return json({ id })
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

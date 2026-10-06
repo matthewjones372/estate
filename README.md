@@ -262,6 +262,17 @@ Kubernetes base to overlay with your two files, an ingress and your secrets. It 
 - **Health**: `/healthz` says the process is up, and `/readyz` says every source has been read at least once.
 - **Its own telemetry**: metrics on `:9464/metrics`, JSON logs, and traces over OTLP if you set a collector.
 
+#### More than one replica
+
+One replica is right for most estates: it restarts in about the time a failover takes. Run more when the tools'
+rate limits are being met, a node's loss must not blank the page, or a wall of kiosks outgrows one process. Set
+`cluster: true` beside `notes: { postgres: … }` and add the [`deploy/cluster`](deploy/cluster) component to your
+overlay. Every replica serves the pages, and one of them reads the tools, so two replicas make the calls one does.
+A note or silence made on any replica shows on all of them. When the reading replica goes, another reads within a
+minute, and the pages keep the last state meanwhile. `/readyz` says `ready, reading` or `ready, following <runner>`,
+and `estate doctor` names the runners and the one reading. [`examples/cluster`](examples/cluster) runs two on one
+machine.
+
 ### Architecture
 
 ```mermaid

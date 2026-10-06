@@ -8,8 +8,9 @@ import type { Alert } from "../../shared/events"
 import { Notes } from "../notes"
 import { Configured } from "../settings"
 import { channelOf, permalink, post } from "../sources/slack"
-import { Estate, updateEstate } from "../state"
+import { Estate } from "../state"
 import { alertsView } from "../views/alerts"
+import { written } from "../writes"
 import { EnvParam, json, refused, searchParams, writer } from "./routes"
 
 const times = (count: number) => (count === 1 ? "once" : count === 2 ? "twice" : `${count} times`)
@@ -63,7 +64,7 @@ export const tellRoute = HttpRouter.add(
     yield* (yield* Notes)
       .keepThread(thread)
       .pipe(Effect.catch((failure) => Effect.logWarning(`a thread could not be kept: ${failure.message}`)))
-    yield* updateEstate((now) => ({ ...now, threads: [...(now.threads ?? []), thread] }))
+    yield* written({ _tag: "ThreadKept", thread })
     return json({ url: thread.url })
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

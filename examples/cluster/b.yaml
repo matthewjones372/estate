@@ -1,0 +1,13 @@
+# Runner b of two on one machine, sharing one Postgres; the other differs only in its ports.
+port: 8081
+metrics: { port: 9465 }
+cluster: { port: 34432 }
+notes: { postgres: ${NOTES_DATABASE_URL} }
+catalog: examples/catalog.yaml
+auth:
+  sessionSecret: an-example-secret-for-trying-estate-out-only
+  roles: { viewer: [ developers ], operator: [ ops ] }
+  anonymous: { name: visitor, role: operator }
+sources:
+  staging: { prometheus: { url: http://prometheus.staging.invalid:9090 } }
+  production: { prometheus: { url: http://prometheus.production.invalid:9090 } }

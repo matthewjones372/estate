@@ -6,6 +6,7 @@ import { Config, Context, Data, Effect, Option, Redacted, Result, Schema } from 
 import { checkShape, type Mistake } from "../shared/shape"
 import { Secret } from "./secret"
 import { Ai, Mcp } from "./settings-ai"
+import { ClusterSettings, clusterMistakes } from "./settings-cluster"
 import { Costs, Prices } from "./settings-costs"
 
 const optional = Schema.optionalKey
@@ -209,6 +210,8 @@ export const Settings = Schema.Struct({
   slack: optional(Schema.Struct({ token: Secret, url: optional(Schema.String) })),
   /** What models' tokens cost, per million, for the estimate of an agent's spend between the providers' reports. */
   prices: optional(Prices),
+  /** Several replicas reading each source once: `true`, or the runners' port and health check to override. */
+  cluster: optional(ClusterSettings),
 })
 export type Settings = typeof Settings.Type
 export type { Ai, Mcp } from "./settings-ai"
@@ -276,7 +279,7 @@ export const readSettings = (text: string): Effect.Effect<Settings, SettingsErro
     if (Redacted.value(settings.auth.sessionSecret).length < 32) {
       sense.push({ at: "auth.sessionSecret", message: "needs at least 32 characters" })
     }
-    sense.push(...everyMistakes(settings), ...askMistakes(settings))
+    sense.push(...everyMistakes(settings), ...askMistakes(settings), ...clusterMistakes(settings))
     return sense.length === 0 ? settings : yield* new SettingsError({ mistakes: sense })
   })
 

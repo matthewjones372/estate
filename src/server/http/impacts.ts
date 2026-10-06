@@ -5,8 +5,8 @@
 import { Effect, Schema } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Notes } from "../notes"
-import { updateEstate } from "../state"
 import { isoNow } from "../time"
+import { written } from "../writes"
 import { json, Refusal, refused, writer } from "./routes"
 
 const Asked = Schema.Struct({ text: Schema.String })
@@ -29,10 +29,7 @@ export const impactRoute = HttpRouter.add(
     const notes = yield* Notes
     const kept = yield* Effect.result(notes.setImpact(impact))
     if (kept._tag === "Failure") return json({ message: kept.failure.message }, 503)
-    yield* updateEstate((estate) => ({
-      ...estate,
-      impacts: [...(estate.impacts ?? []).filter((each) => each.alert !== alert), ...(text === "" ? [] : [impact])],
-    }))
+    yield* written(text === "" ? { _tag: "ImpactCleared", alert } : { _tag: "ImpactSet", impact })
     return json(impact, 200)
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

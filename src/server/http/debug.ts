@@ -2,9 +2,10 @@
 import { Clock, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Configured } from "../settings"
-import { showDebug, switchOff, switchOn } from "../sources/debug"
+import { switchOff, switchOn } from "../sources/debug"
 import { clusterOf } from "../sources/kubernetes"
 import { Estate } from "../state"
+import { written } from "../writes"
 import { EnvParam, json, Refusal, refused, searchParams, writer } from "./routes"
 
 const Asked = Schema.Struct({ environment: Schema.String, service: Schema.String, minutes: Schema.Number })
@@ -55,7 +56,12 @@ export const debugOnRoute = HttpRouter.add(
     const now = yield* Clock.currentTimeMillis
     const switched = yield* Effect.result(switchOn(cluster, service, body.minutes, person.name, now, acting))
     if (switched._tag === "Failure") return failed(switched.failure)
-    yield* showDebug(body.environment, service.name, switched.success)
+    yield* written({
+      _tag: "DebugShown",
+      environment: body.environment,
+      service: service.name,
+      debug: switched.success,
+    })
     return json(switched.success, 201)
   }).pipe(Effect.catchTag("Refusal", refused)),
 )
@@ -67,7 +73,7 @@ export const debugOffRoute = HttpRouter.add("DELETE", "/api/debug/:service", () 
     const { service, cluster, acting } = yield* asked(environment, name)
     const switched = yield* Effect.result(switchOff(cluster, service, acting))
     if (switched._tag === "Failure") return failed(switched.failure)
-    yield* showDebug(environment, service.name, switched.success)
+    yield* written({ _tag: "DebugShown", environment, service: service.name, debug: switched.success })
     return json(switched.success, 200)
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

@@ -44,7 +44,8 @@ notes:
 ```
 
 Defaults when `cluster: true`: runner address from `POD_IP` (Kubernetes downward API) or the hostname, port
-**34431**; listen `0.0.0.0:34431`; health `ping`; `BunClusterSocket` and SQL storage on the same Postgres as notes.
+**34431**; listen `0.0.0.0:34431`; health `ping`; `BunClusterSocket` with NDJSON frames (Effect's binary layout cannot
+tell apart the unions the state holds), and SQL storage on the same Postgres as notes through `@effect/sql-pg`.
 Absent or false means one process, exactly as today. Cluster requires `notes.postgres` — that is the only notes
 store that holds the shard locks. `cluster: true` with Dynamo notes is a settings mistake (`cluster needs
 notes.postgres`).
@@ -56,8 +57,9 @@ cluster:
   true                          # or { port: 34431, health: k8s } if you must override
 ```
 
-Prefer the boolean. A struct is only for overrides. The `deploy/cluster` kustomize patch just flips `cluster: true`,
-sets `POD_IP`, and opens 34431 between Estate pods — no mini-mesh to invent.
+Prefer the boolean. A struct is only for overrides. `deploy/cluster` is a kustomize component an overlay adds beside
+the base: two replicas, `POD_IP`, port 34431 open between Estate's pods only, and a disruption budget. The overlay's
+own `estate.yaml` says `cluster: true` — no mini-mesh to invent.
 
 ```mermaid
 flowchart LR
@@ -71,7 +73,7 @@ flowchart LR
   end
   stateA -- "Follow: whole state, then changed parts" --> stateB
   follower -- "Apply: note, impact, held silence" --> owner
-  pg[("Postgres: estate_notes …<br/>estate_cluster_runners, _locks, _messages")]
+  pg[("Postgres: estate_notes …<br/>estate_cluster_runners, _messages, _replies, _owner")]
   owner --- pg
   follower --- pg
   pagesA["pages · /events · /mcp"] --> stateA
@@ -81,19 +83,23 @@ flowchart LR
 ```text
 Estate entity (effect/cluster Entity, one fixed id "estate" for now)
   on start   runs what `background` runs today: startSources, builds, recordFirings + backfill,
-             sweepNotes, sweepHistory, debug reverts; Entity.keepAlive(true) so it never passivates
-  Follow     streaming, volatile: the whole EstateState once, then each changed part
-             (an environment's metrics | alerts | cluster | deploys | held; builds; notes; firings; impacts;
-             catalog) as JSON, compared by reference as stream.ts already compares
+             sweepNotes, sweepHistory, debug reverts, against a state of its own; writes its address to
+             estate_cluster_owner every 5 s; Entity.keepAlive(true) so it never passivates
+  Follow     streaming, volatile: the whole EstateState once, with the owner's address, then each changed part
+             (an environment's metrics | alerts | cluster | deploys | costs | resolved | held; builds; notes;
+             firings; threads; impacts), compared by reference as stream.ts already compares; the whole again
+             when the catalog changes; an empty change every 10 s, and a follower that hears nothing for 30 s
+             follows again
   Apply      volatile: a write another runner has made to its tool or database
-             (NoteAdded | NoteRemoved | ImpactSet | ImpactCleared | Held | Unheld), applied to the owner's state
+             (NoteAdded | NoteRemoved | ImpactSet | ImpactCleared | Held | Unheld | ThreadKept | DebugShown),
+             applied to the owner's state as one process applies it to its own
 
 Every runner, owner included
   settings read from its own file (sign-in and on-demand reads need them); the catalog comes with the state,
   so every runner shows the owner's, even while a ConfigMap change reaches the pods one by one
   Follow("estate") into its own Estate SubscriptionRef, retried with backOff when the owner moves
   shared views, /events, /readyz, kiosk, /mcp read that SubscriptionRef, unchanged
-  /readyz: ready once the first whole state has arrived; its body names the role
+  /readyz: 503 until the first whole state has arrived; then `ready, reading` or `ready, following <address>`
 
 Without `cluster: true`:
   background runs in-process, as today; no effect/cluster module is loaded
@@ -101,7 +107,8 @@ Without `cluster: true`:
 
 ```bash
 estate doctor
-#   cluster      2 runners (10.0.4.12:34431, 10.0.7.3:34431); estate read by 10.0.4.12:34431, lock renewed 4 s ago
+# the cluster
+#   cluster  ok    2 runners (10.0.4.12:34431, 10.0.7.3:34431); estate read by 10.0.4.12:34431, beat 4 s ago
 ```
 
 ## Why this shape
@@ -124,7 +131,8 @@ reached. What changes is that the runner then tells the owner (`Apply`) rather t
 sees it on the next `Follow` frame, which fixes the notes that one replica never shows another today.
 
 Storage is the Postgres already holding notes, with `SqlRunnerStorage` and `SqlMessageStorage` under the prefix
-`estate_cluster`; its advisory locks are what make the owner single. Runners talk over `BunClusterSocket` on their own
+`estate_cluster`; its advisory locks are what make the owner single. An advisory lock has no row to read, so the
+owner writes its address and the time to `estate_cluster_owner`, and the doctor reads that beside the runners. Runners talk over `BunClusterSocket` on their own
 port, which keeps runner RPCs off the ingress that serves the pages; `BunClusterHttp` would share the port and is not
 needed. Bun over Node because Estate is Bun throughout.
 
@@ -143,9 +151,8 @@ one process.
 
 - **`effect/cluster` and `BunClusterSocket`** at 4.0.0: in the tree now, marked `@stability unstable` (see Open
   questions).
-- **An Effect `SqlClient` for Postgres.** Estate's notes use Bun's `SQL` through a small `Query`, not Effect's
-  `SqlClient`, and 4.0.0 ships no Postgres client in `effect/sql`. `@effect/sql-pg` is published at 4.0.0; adding it
-  is a `package.json` change in `cluster-opt-in`, not here. Until then nothing changes: no `cluster: true`, no client.
+- **`@effect/sql-pg` 4.0.0**, pinned beside `effect`: the `SqlClient` the cluster's storage runs on, speaking
+  Postgres's protocol itself. Notes stay on Bun's `SQL`; the two share a database, not a client.
 - **Spec 0024's `/mcp`** — `/mcp` exists. Every runner serves the same MCP tools from its
   `SubscriptionRef`; they follow for free.
 
@@ -155,37 +162,37 @@ One entry per pull request, in build order.
 
 - [x] **`spec-0026`** — this spec, and its row in `specs/README.md` as proposed.
       Done when: `specs/0026-one-read-many-pages.md` is committed and the README lists 0026 as proposed.
-- [ ] **`cluster-opt-in`** — `cluster: true` (boolean) or a small override struct in the settings;
+- [x] **`cluster-opt-in`** — `cluster: true` (boolean) or a small override struct in the settings;
       `@effect/sql-pg` on `notes.postgres`; defaults for runner/`POD_IP`, listen `0.0.0.0:34431`, health `ping`;
       `BunClusterSocket.layer` with SQL storage under `estate_cluster`; the cluster modules loaded only when
       `cluster` is true.
       Done when: settings tests accept `cluster: true` with `notes.postgres`; reject `cluster: true` without
       `notes.postgres` and reject `cluster: true` with Dynamo notes as the mistake `cluster needs notes.postgres`;
       a test serves with no `cluster` and no database and builds no `Sharding`; `bun run gate` passes unchanged.
-- [ ] **`scrape-singleton`** — the `Estate` entity, id `"estate"`, running what `background` runs today and kept
+- [x] **`scrape-singleton`** — the `Estate` entity, id `"estate"`, running what `background` runs today and kept
       alive; a runner that does not own it runs no readers, sweeps or firing records.
       Done when: under `TestRunner`, the readers start once however many runners follow, and stop when the owning
       shard is released.
-- [ ] **`view-fanout`** — `Follow`: the whole state, then changed parts; every runner's `Estate` fed from it, retried
+- [x] **`view-fanout`** — `Follow`: the whole state, then changed parts; every runner's `Estate` fed from it, retried
       with `backOff`; `/readyz` ready on the first whole state.
-      Done when: under `TestRunner`, a follower's `/events` for an environment sends the same frame ids as the
-      owner's, and a follower is not ready before its first frame.
-- [ ] **`writes-to-owner`** — `Apply` for notes, impacts and held silences; the routes tell the owner, not their own
+      Done when: under `TestRunner`, every follower's state is the owner's, and a follower is not ready before its
+      first frame.
+- [x] **`writes-to-owner`** — `Apply` for notes, impacts and held silences; the routes tell the owner, not their own
       state, when clustered.
       Done when: a note posted to one runner and a silence held on it are on the other runner's page within one
       frame, without a restart.
-- [ ] **`doctor-ha`** — `estate doctor` prints a `cluster` line from the runner and lock tables; `/readyz` names the
+- [x] **`doctor-ha`** — `estate doctor` prints a `cluster` line from the runner table and the owner's beat; `/readyz` names the
       role (`reading` or `following <address>`); `estate_cluster_owner` gauge; a log line when the role changes.
       Done when: against two runners, doctor names both and exactly one owner.
-- [ ] **`cluster-e2e`** — `bun run integration`: Postgres in a container, two Estate processes as runners against
-      stub sources that count their calls; the owner killed.
-      Done when: two runners make as many calls a read interval as one; after the owner is killed the other reads
-      within 60 s, and its pages keep their frames meanwhile.
-- [ ] **`deploy-ha`** — `deploy/cluster/`: a patch that flips `cluster: true`, sets `POD_IP`, opens port 34431
-      between Estate pods, two replicas and a disruption budget; `examples/cluster/` as two lines of yaml each
-      (`cluster: true` + the shared `notes.postgres`); the README's short "when to bother".
-      Done when: examples are two lines of yaml + the patch; `kubectl kustomize deploy/cluster` renders; the base
-      `deploy/` still says `replicas: 1`; README "when to bother" stays short.
+- [x] **`cluster-e2e`** — `bun run integration`: Postgres in a container, two Estate processes as runners against
+      a Prometheus stub that counts its calls; the owner killed.
+      Done when: two runners make no more than half again the calls one makes over the same window; after the owner
+      is killed the other reads within 60 s, and its `/readyz` stays ready meanwhile.
+- [x] **`deploy-ha`** — `deploy/cluster/`: a component that sets two replicas and `POD_IP`, opens port 34431
+      between Estate pods only, and adds a disruption budget; `examples/cluster/` as two runners on one machine that
+      differ only in their ports; the README's short "when to bother".
+      Done when: an overlay of the base and the component renders with `kubectl kustomize`; the base `deploy/` still
+      says `replicas: 1`; the examples read; README "when to bother" stays short.
 
 Later, not in this stack: **`shard-by-environment`**, the entity keyed by environment so each runner reads some.
 
@@ -198,9 +205,10 @@ bun run integration     # includes the two-runner case against Postgres
 
 ```bash
 # two runners on one machine, the same database
+export NOTES_DATABASE_URL=postgres://estate@localhost/estate
 ESTATE_SETTINGS=examples/cluster/a.yaml bun src/server/main.ts &
 ESTATE_SETTINGS=examples/cluster/b.yaml bun src/server/main.ts &
-bun src/server/main.ts doctor     # cluster: 2 runners, estate read by one
+ESTATE_SETTINGS=examples/cluster/a.yaml bun src/server/main.ts doctor     # cluster: 2 runners, estate read by one
 ```
 
 ## Open questions
@@ -209,9 +217,6 @@ bun src/server/main.ts doctor     # cluster: 2 runners, estate read by one
   `@stability unstable`. Recommended: adopt now, behind `cluster: true` only. The default path never loads the cluster
   modules, Effect is pinned exactly, and a breaking 4.x change then costs the opt-in path one PR, not every deploy.
   If the opt-in has no user by the time it is built, park `scrape-singleton` onward rather than carry it.
-- **`@effect/sql-pg` or a `SqlClient` over Bun's `SQL`?** Recommended: `@effect/sql-pg`. It is maintained beside
-  cluster, and the advisory locks need its Postgres dialect; a hand-written client over Bun's `SQL` is less to
-  install but more to keep. Notes stay on Bun's `SQL` either way; the two share a database, not a client.
 - **A `Singleton.make` as well as the entity?** Recommended: no. Every serving runner follows, so the entity is always
   woken; a singleton would only matter for a runner that serves nothing, which Estate does not have.
 - **How large is a `Follow` frame at a thousand services?** The metrics part changes every read and is most of the

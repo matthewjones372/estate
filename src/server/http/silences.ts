@@ -5,11 +5,11 @@
 import { Clock, Duration, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { Configured } from "../settings"
-import { holdSilence, holdUnsilence } from "../sources/held"
 import { silencerOf } from "../sources/silencers"
-import { Estate, updateEnvironment } from "../state"
+import { Estate } from "../state"
 import { lasting, replyInThread } from "../threads"
 import { after, iso } from "../time"
+import { written } from "../writes"
 import { EnvParam, json, Refusal, refused, searchParams, writer } from "./routes"
 
 const Asked = Schema.Struct({
@@ -69,9 +69,13 @@ export const silenceRoute = HttpRouter.add(
     const startsAt = iso(now)
     const endsAt = iso(after(now, Duration.minutes(asked.minutes)))
     const id = yield* silencer.silence(alert, { startsAt, endsAt, by: person.name, reason })
-    yield* updateEnvironment(asked.environment, (state) =>
-      holdSilence(state, alert, { id, by: person.name, reason, startsAt, endsAt }, now),
-    )
+    yield* written({
+      _tag: "Held",
+      environment: asked.environment,
+      alert: alert.id,
+      silence: { id, by: person.name, reason, startsAt, endsAt },
+      at: now,
+    })
     yield* replyInThread(
       (yield* Configured).slack,
       { environment: asked.environment, alert: alert.id, startsAt: alert.startsAt },
@@ -94,7 +98,7 @@ export const unsilenceRoute = HttpRouter.add("DELETE", "/api/silences/:id", () =
     const { environments } = yield* SubscriptionRef.get(yield* Estate)
     const silenced = environments[environment]?.alerts.value?.find((alert) => alert.silence?.id === id)
     const now = yield* Clock.currentTimeMillis
-    yield* updateEnvironment(environment, (state) => holdUnsilence(state, id, now))
+    yield* written({ _tag: "Unheld", environment, id, at: now })
     if (silenced !== undefined)
       yield* replyInThread(
         (yield* Configured).slack,

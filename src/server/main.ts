@@ -11,10 +11,12 @@ import type { Mistake } from "../shared/shape"
 import { application, background, prepare, services } from "./app"
 import { parseCatalog, readCatalogText } from "./catalog-file"
 import { doctor, printed } from "./doctor"
+import { clusterFinding } from "./doctor-cluster"
 import { memoryNotes, postgresNotes, type Query } from "./notes"
 import { dynamodbNotes } from "./notes-dynamodb"
 import { platform } from "./platform"
 import { liveRemote } from "./remote"
+import { clusteredBy } from "./settings-cluster"
 import { builtWeb } from "./web"
 
 /** Bun's Postgres client, as the little the notes need of one. */
@@ -59,7 +61,6 @@ const serve = Effect.gen(function* () {
         : dynamodb !== undefined
           ? dynamodbNotes(dynamodb).pipe(Layer.provide([liveRemote, platform]))
           : memoryNotes
-  const provided = services(started, builtWeb, liveRemote, notes)
   const hostname = started.settings.host ?? "0.0.0.0"
   const server = HttpRouter.serve(application).pipe(
     Layer.provide(BunHttpServer.layer({ port: started.settings.port ?? 8080, hostname })),
@@ -74,9 +75,20 @@ const serve = Effect.gen(function* () {
       : Otlp.layer({ baseUrl: otlp, resource: { serviceName: "estate" } }).pipe(
           Layer.provide([FetchHttpClient.layer, OtlpSerialization.layerJson]),
         )
-  return yield* Effect.all([Layer.launch(server), Layer.launch(metrics), background(started)], {
-    concurrency: "unbounded",
-  }).pipe(Effect.provide(provided), Effect.provide(telemetry))
+  const serving = [Layer.launch(server), Layer.launch(metrics)] as const
+  const clustered = clusteredBy(started.settings.cluster)
+  if (clustered === undefined || postgres === undefined)
+    return yield* Effect.all([...serving, background(started)], { concurrency: "unbounded" }).pipe(
+      Effect.provide(services(started, builtWeb, liveRemote, notes)),
+      Effect.provide(telemetry),
+    )
+  // The cluster's modules are loaded only for a cluster; one process never loads them.
+  const runner = (yield* Effect.promise(() => import("./cluster/serve"))).asRunner(started, clustered, postgres)
+  return yield* Effect.all([...serving, runner.alongside], { concurrency: "unbounded" }).pipe(
+    Effect.provide(services(started, builtWeb, liveRemote, notes, runner.holding)),
+    Effect.provide(runner.sharding),
+    Effect.provide(telemetry),
+  )
 }).pipe(
   Effect.catchTags({
     StartError: (error) => listMistakes(error.file, error.mistakes),
@@ -103,7 +115,13 @@ const diagnose = Effect.gen(function* () {
     Effect.orElseSucceed(() => "/etc/estate/estate.yaml"),
   )
   const started = yield* prepare(settingsPath)
-  const { text, ok } = printed(yield* doctor(started.settings, started.initial.catalog))
+  const reports = yield* doctor(started.settings, started.initial.catalog)
+  const postgres = started.settings.notes?.postgres
+  const clustered = clusteredBy(started.settings.cluster) !== undefined && postgres !== undefined
+  const cluster = clustered
+    ? [{ environment: "the cluster", findings: [yield* clusterFinding(sqlOf(Redacted.value(postgres)))] }]
+    : []
+  const { text, ok } = printed([...reports, ...cluster])
   yield* Console.log(text)
   if (!ok) process.exitCode = 1
 }).pipe(

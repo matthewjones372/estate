@@ -3,6 +3,7 @@ import { Data, Effect, Layer, Option, Schema, Stream, SubscriptionRef } from "ef
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 import type { Me } from "../../shared/events"
 import { streamClosed, streamOpened } from "../observed"
+import { Roles, spoken } from "../role"
 import { Configured, secondsIn } from "../settings"
 import { silencerOf } from "../sources/silencers"
 import { Estate, type EstateState } from "../state"
@@ -95,9 +96,12 @@ const ready = HttpRouter.add(
   "GET",
   "/readyz",
   Effect.gen(function* () {
+    const role = yield* SubscriptionRef.get(yield* Roles)
+    if (role._tag === "Joining") return HttpServerResponse.text("waiting for the estate's owner", { status: 503 })
     const waiting = unread(yield* SubscriptionRef.get(yield* Estate))
+    const as = spoken(role)
     return waiting.length === 0
-      ? HttpServerResponse.text("ready")
+      ? HttpServerResponse.text(as === "" ? "ready" : `ready, ${as}`)
       : HttpServerResponse.text(`waiting for ${waiting.join(", ")}`, { status: 503 })
   }),
 )

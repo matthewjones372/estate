@@ -24,6 +24,7 @@ import { liveModel } from "./model"
 import { memoryNotes, type Notes } from "./notes"
 import { platform, readText } from "./platform"
 import type { Remote } from "./remote"
+import { type Role, roleLayer } from "./role"
 import { backOff } from "./schedule"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
 import { backfillHistory } from "./sources/backfill"
@@ -32,6 +33,7 @@ import { startSources } from "./sources/start"
 import { type Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
 import { sharedViewsLayer } from "./stream"
 import type { Web } from "./web"
+import { localWrites, type Writes } from "./writes"
 
 export const StartError = Data.TaggedError("StartError")<{
   readonly file: string
@@ -133,13 +135,22 @@ export const background = (
     { concurrency: "unbounded" },
   ).pipe(Effect.andThen(Effect.never))
 
-export const services = <E, F, R>(
+/** How this process holds the estate: alone, or as a runner whose writes go to the owner and which joins first. */
+interface Holding<W> {
+  readonly writes: Layer.Layer<Writes, never, W>
+  readonly role: Role
+}
+
+const alone: Holding<Estate> = { writes: localWrites, role: { _tag: "Alone" } }
+
+export const services = <E, F, R, W = Estate>(
   started: Started,
   web: Layer.Layer<Web, E, R>,
   remote: Layer.Layer<Remote>,
   notes: Layer.Layer<Notes, F> = memoryNotes,
+  holding: Holding<W | Estate> = alone,
 ) =>
-  Layer.merge(logHubLayer, sharedViewsLayer).pipe(
+  Layer.mergeAll(logHubLayer, sharedViewsLayer, holding.writes, roleLayer(holding.role)).pipe(
     Layer.provideMerge(
       Layer.mergeAll(
         estateLayer(started.initial),

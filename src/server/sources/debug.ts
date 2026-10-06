@@ -9,7 +9,7 @@ import { compact } from "../../shared/compact"
 import type { Debug } from "../../shared/events"
 import { Remote } from "../remote"
 import { forEver } from "../schedule"
-import { Estate, updateEnvironment } from "../state"
+import { type EnvironmentState, Estate, updateEnvironment } from "../state"
 import { after, iso, isoNow } from "../time"
 import { inEnvironment } from "../views/catalog"
 import type { Cluster } from "./kubernetes"
@@ -100,19 +100,21 @@ export const switchOff = (
   ).pipe(Effect.as(compact({ level, on: false })))
 }
 
-/** Shows a service's new debug on the page at once, before the cluster is next read. */
-export const showDebug = (environment: string, service: string, debug: Debug) =>
-  updateEnvironment(environment, (state) =>
-    state.cluster.value === undefined
-      ? state
-      : {
-          ...state,
-          cluster: {
-            ...state.cluster,
-            value: { ...state.cluster.value, debug: { ...state.cluster.value.debug, [service]: debug } },
-          },
+/** The environment with a service's new debug shown, before the cluster is next read. */
+export const debugShown = (state: EnvironmentState, service: string, debug: Debug): EnvironmentState =>
+  state.cluster.value === undefined
+    ? state
+    : {
+        ...state,
+        cluster: {
+          ...state.cluster,
+          value: { ...state.cluster.value, debug: { ...state.cluster.value.debug, [service]: debug } },
         },
-  )
+      }
+
+/** Shows a service's new debug on the page at once, before the cluster is next read. */
+const showDebug = (environment: string, service: string, debug: Debug) =>
+  updateEnvironment(environment, (state) => debugShown(state, service, debug))
 
 /** Every minute, puts back the usual level wherever debug's time has passed. */
 export const revertExpired = (
