@@ -12,6 +12,7 @@ const decodeRuns = Schema.decodeUnknownOption(Schema.Array(AgentRun))
 const decodeAround = Schema.decodeUnknownOption(AroundAlert)
 const decodeAsk = Schema.decodeUnknownOption(AskAnswer)
 const decodeMessage = Schema.decodeUnknownOption(Schema.Struct({ message: Schema.String }))
+const decodeThread = Schema.decodeUnknownOption(Schema.Struct({ url: Schema.String }))
 
 const names: ReadonlyArray<EventName> = ["catalog", "services", "alerts", "deploys", "feed"]
 
@@ -115,6 +116,23 @@ export const serverActions = (
       )
       .catch(() => undefined),
   askAlert: (alert, signal) => askAlert(environment(), alert, signal),
+  tell: (alert) =>
+    fetch(`/api/alerts/${encodeURIComponent(alert)}/tell?env=${encodeURIComponent(environment())}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    })
+      .then((response) =>
+        response
+          .json()
+          .then((body) =>
+            response.ok
+              ? (Option.getOrUndefined(decodeThread(body)) ?? "Slack's link could not be read.")
+              : (Option.getOrUndefined(decodeMessage(body))?.message ??
+                `Slack could not be told (${response.status}).`),
+          ),
+      )
+      .catch(() => "Estate could not be reached."),
 })
 
 /** Why an ask got no answer, in the server's words where it gave them. */

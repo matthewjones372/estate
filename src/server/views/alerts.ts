@@ -10,6 +10,18 @@ const order = { firing: 0, pending: 1, silenced: 2 } as const
 const kept = 20
 const severities: Readonly<Record<string, number>> = { critical: 0, warning: 1 }
 
+/** The Slack thread this firing of an alert was told in, if it was. */
+const threadOf = (
+  estate: EstateState,
+  environment: string,
+  alert: { readonly id: string; readonly startsAt: string },
+) => {
+  const told = estate.threads?.find(
+    (each) => each.environment === environment && each.alert === alert.id && each.startsAt === alert.startsAt,
+  )
+  return told === undefined ? undefined : { url: told.url }
+}
+
 export const alertsView = (estate: EstateState, environment: string, silences: boolean): AlertsEvent => {
   const state = estate.environments[environment]
   if (state === undefined) return { alerts: [], resolved: [], silences }
@@ -58,6 +70,7 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
       notes,
       history: history.length === 0 ? undefined : history,
       chart: state.metrics.value?.charts[alert.id],
+      thread: threadOf(estate, environment, alert),
     })
   })
   alerts.sort(

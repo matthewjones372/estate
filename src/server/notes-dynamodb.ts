@@ -4,7 +4,7 @@
  */
 import { Effect, Layer, Option, Schedule, Schema, Stream } from "effect"
 import { type AwsCallError, type AwsJson, makeAwsJson } from "./aws/json"
-import { Notes, NotesError, type StoredFiring, type StoredImpact, type StoredNote } from "./notes"
+import { Notes, NotesError, type StoredFiring, type StoredImpact, type StoredNote, type StoredThread } from "./notes"
 import { SourceFailure } from "./sources/run"
 
 export interface DynamoNotes {
@@ -249,6 +249,39 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
             Effect.flatMap((items) => remove(dynamo, table, items)),
             Effect.mapError(failure),
           ),
+        // A thread's channel and URL ride in the item's `by` and `text`, its timestamp in `id`.
+        threads: (since: string) =>
+          scan(dynamo, table, {
+            FilterExpression: "begins_with(pk, :thread) AND #time >= :since",
+            ExpressionAttributeNames: { "#time": "time" },
+            ExpressionAttributeValues: { ":thread": { S: `${other}thread#` }, ":since": { S: since } },
+          }).pipe(
+            Effect.map((items) =>
+              items.map((item) => ({
+                environment: item.environment.S,
+                alert: item.alert.S,
+                startsAt: item.time.S,
+                channel: item.by.S,
+                ts: item.id.S,
+                url: item.text.S,
+              })),
+            ),
+            Effect.mapError(failure),
+          ),
+        keepThread: (thread: StoredThread) =>
+          dynamo("PutItem", {
+            TableName: table,
+            Item: {
+              pk: { S: `${other}thread#${thread.environment}#${thread.alert}` },
+              sk: { S: thread.startsAt },
+              id: { S: thread.ts },
+              environment: { S: thread.environment },
+              alert: { S: thread.alert },
+              time: { S: thread.startsAt },
+              by: { S: thread.channel },
+              text: { S: thread.url },
+            },
+          }).pipe(Effect.asVoid, Effect.mapError(failure)),
       }
     }),
   )

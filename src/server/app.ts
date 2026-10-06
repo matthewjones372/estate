@@ -18,6 +18,7 @@ import { loadNotes, notesRoute, removeNoteRoute, sweepNotes } from "./http/notes
 import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
 import { silenceRoute, unsilenceRoute } from "./http/silences"
+import { tellRoute } from "./http/tell"
 import { logHubLayer } from "./log-hub"
 import { liveModel } from "./model"
 import { memoryNotes, type Notes } from "./notes"
@@ -102,6 +103,7 @@ export const application = Layer.mergeAll(
   agentRunsRoute,
   aroundRoute,
   askRoute,
+  tellRoute,
   mcpRoute,
 )
 

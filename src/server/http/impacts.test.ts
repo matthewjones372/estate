@@ -111,8 +111,8 @@ describe("impacts kept", () => {
       ])
       expect(statements[1]?.[0]).toStartWith("create table if not exists estate_impacts")
       expect(statements[2]?.[0]).toStartWith("create table if not exists estate_firings")
-      expect(statements[3]?.[0]).toContain("on conflict (alert) do update")
-      expect(statements[4]).toEqual(["delete from estate_impacts where alert = $1", ["OrdersSlow"]])
+      expect(statements[4]?.[0]).toContain("on conflict (alert) do update")
+      expect(statements[5]).toEqual(["delete from estate_impacts where alert = $1", ["OrdersSlow"]])
     })
   })
 

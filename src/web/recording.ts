@@ -132,6 +132,14 @@ export const recording = (): Recorded => {
             : "this alert was asked about less than a minute ago",
         )
       },
+      tell: (alert) => {
+        calls.push(["tell", alert])
+        return Promise.resolve(
+          alert === "a1"
+            ? { url: "https://example.slack.com/archives/C0ORDERS/p1" }
+            : "Slack refused the message: not_in_channel",
+        )
+      },
       around: (alert) => {
         calls.push(["around", alert])
         return Promise.resolve(alert === "a1" ? brief : undefined)

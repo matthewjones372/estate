@@ -35,6 +35,8 @@ export interface Actions {
    */
   /** An alert's brief, *Around this alert*: undefined where it could not be gathered. */
   readonly around: (alert: string) => Promise<AroundAlert | undefined>
+  /** Tells an alert's team on Slack: the thread's link, or why it could not. */
+  readonly tell: (alert: string) => Promise<{ readonly url: string } | string>
   /** Ask AI about an alert: its answer, or why there is none; `signal` stops the ask when the page is left. */
   readonly askAlert: (alert: string, signal: AbortSignal) => Promise<AskAnswer | string>
 }

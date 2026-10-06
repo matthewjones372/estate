@@ -6,7 +6,7 @@ import type { Alert, CatalogEvent } from "../../shared/events"
 import { reading } from "../chart"
 import { useEstate } from "../context"
 import { amount, clock, initials, since } from "../format"
-import { chatOf, teamOf } from "../teams"
+import { chatOf, onSlack, teamOf } from "../teams"
 import { A, Out } from "./A"
 import { AroundLine } from "./Around"
 import { History } from "./History"
@@ -15,6 +15,7 @@ import { Icon } from "./icons"
 import { ErrorList } from "./Logs"
 import { Plot } from "./Plot"
 import { RaiseIncident } from "./RaiseIncident"
+import { TellTeam } from "./TellTeam"
 
 const minutesUntilNine = (now: number): number => {
   const nine = new Date(now)
@@ -208,6 +209,7 @@ export const AlertCard = (props: {
   const service = () => props.catalog?.services.find((each) => each.name === props.alert.service)
   const link = (name: string) => service()?.links.find((each) => each.name === name)
   const chat = () => chatOf(teamOf(props.catalog, service()?.owner))
+  const slackTeam = () => onSlack(teamOf(props.catalog, service()?.owner))
   return (
     <article class={`alert-card ${props.alert.severity === "critical" ? "critical" : ""}`}>
       <div class="alert-head">
@@ -248,6 +250,7 @@ export const AlertCard = (props: {
           )}
         </Show>
         <RaiseIncident alert={props.alert} links={service()?.links} class="primary-button" />
+        <TellTeam alert={props.alert} team={slackTeam()} />
         <Show when={chat()}>
           {(team) => (
             <Out href={team().url} class="amber-button ghost">

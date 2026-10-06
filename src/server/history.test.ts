@@ -133,8 +133,8 @@ describe("an alert's firings", () => {
           silence: { by: "ada", reason: "vacuum" },
         },
       ])
-      expect(statements[3]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
-      expect(statements[3]?.[1]).toEqual([
+      expect(statements[4]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
+      expect(statements[4]?.[1]).toEqual([
         "staging",
         "a1",
         "OrdersSlow",
@@ -144,7 +144,7 @@ describe("an alert's firings", () => {
         null,
         "orders",
       ])
-      expect(statements[4]).toEqual(["delete from estate_firings where starts_at < $1", ["1970-01-01T00:00:00.000Z"]])
+      expect(statements[5]).toEqual(["delete from estate_firings where starts_at < $1", ["1970-01-01T00:00:00.000Z"]])
     })
   })
 

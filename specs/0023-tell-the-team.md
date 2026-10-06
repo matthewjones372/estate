@@ -44,7 +44,8 @@ In #payments:
   may write notes. It posts once per firing. After that the card links to the thread instead.
 - **The thread follows the firing.** Notes written in Estate, silences and their ending, and the alert resolving
   are posted as replies, each under the name of whoever did it.
-- **The thread is kept with the firing** (spec 0021's record), so a restart keeps posting into the same thread.
+- **The thread is kept beside the firing** (spec 0021's record), by its environment, alert and start, in the same
+  store, so a restart keeps posting into the same thread.
 - **Read-only Estate posts nothing**, and without a `slack` token the button is not there.
 
 ## Why this shape
@@ -61,7 +62,7 @@ Spec 0021's firings, to keep the thread by. Spec 0022's teams, for the channel.
 
 ## Stack
 
-- [ ] **`slack-post`** — the button, the first message, the thread kept with the firing and linked from the card.
+- [x] **`slack-post`** — the button, the first message, the thread kept with the firing and linked from the card.
       Done when: a test against Slack's `chat.postMessage` answers shows the message in the team's channel, and the
       card linking to it.
 - [ ] **`slack-thread`** — notes, silences and the resolution posted as replies in the thread.

@@ -77,6 +77,9 @@ builds:
 # an OpenAI-compatible server, such as vLLM, Ollama or LiteLLM:
 # ai: { provider: openai-compatible, url: http://vllm.internal:8000/v1, model: my-model }
 
+# A Slack bot with chat:write, invited to the teams' channels, so an alert's card can tell its team (optional).
+# slack: { token: ${SLACK_BOT_TOKEN} }
+
 # Runbooks' text, read for an alert's brief where its runbook is a page: credentials by the host its link names.
 # runbooks:
 #   - { host: wiki.example.com, user: estate@example.com, token: ${WIKI_TOKEN} }

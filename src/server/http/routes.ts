@@ -116,6 +116,7 @@ const me = HttpRouter.add(
       ...(settings.readOnly === true ? { readOnly: true } : {}),
       ...(person.kiosk === true ? { kiosk: true } : {}),
       ...(settings.ai === undefined ? {} : { ai: true }),
+      ...(settings.slack === undefined || settings.readOnly === true ? {} : { slack: true }),
       ...(settings.kiosk === undefined
         ? {}
         : {

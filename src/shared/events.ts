@@ -5,6 +5,10 @@
 import { Schema } from "effect"
 import { AgentState, DescribedAgent } from "./agents"
 import { Cost } from "./costs"
+import { DeploysEvent } from "./deploys"
+
+export { type Build, DeploysEvent } from "./deploys"
+
 import { Debug, Job, Pod, Series } from "./workloads"
 
 const optional = Schema.optionalKey
@@ -212,6 +216,8 @@ export const Alert = Schema.Struct({
     }),
   ),
   chart: optional(Schema.Struct({ points: Schema.Array(Schema.NullOr(Schema.Number)), threshold: Schema.Number })),
+  /** The thread in its team's Slack channel, once this firing was told there. */
+  thread: optional(Schema.Struct({ url: Schema.String })),
 })
 export type Alert = typeof Alert.Type
 
@@ -229,37 +235,6 @@ export const AlertsEvent = Schema.Struct({
   silences: Schema.Boolean,
 })
 export type AlertsEvent = typeof AlertsEvent.Type
-
-const Build = Schema.Struct({
-  sha: Schema.String,
-  title: Schema.String,
-  status: Schema.Literals(["success", "failure", "running", "queued", "cancelled"]),
-  at: Instant,
-  url: Schema.String,
-  /** The job that failed, where the tool names it. */
-  job: optional(Schema.String),
-})
-export type Build = typeof Build.Type
-
-export const DeploysEvent = Schema.Struct({
-  environments: Schema.Array(Schema.String),
-  services: Schema.Array(
-    Schema.Struct({
-      name: Schema.String,
-      builds: Schema.Array(Build),
-      environments: Schema.Array(
-        Schema.Struct({
-          environment: Schema.String,
-          seen: Schema.Boolean,
-          running: optional(Schema.String),
-          chosen: optional(Schema.Struct({ version: Schema.String, ready: Schema.Boolean, at: optional(Instant) })),
-          stalled: optional(Schema.String),
-        }),
-      ),
-    }),
-  ),
-})
-export type DeploysEvent = typeof DeploysEvent.Type
 
 export const FeedItem = Schema.Struct({
   at: Instant,
@@ -294,6 +269,8 @@ export const Me = Schema.Struct({
   kiosk: optional(Schema.Boolean),
   /** Ask AI is configured: the alert page may ask a model. */
   ai: optional(Schema.Boolean),
+  /** Estate may post to Slack: an alert's card may tell its team. */
+  slack: optional(Schema.Boolean),
   /** What a screen shows, where the settings say: its environments in turn, each for `every` seconds. */
   screen: optional(Schema.Struct({ environments: Schema.Array(Schema.String), every: Schema.Number })),
 })

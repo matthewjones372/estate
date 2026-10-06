@@ -44,7 +44,9 @@ const fakeDynamo = (calls: Call[], refuse?: string) => {
                 ? (item["pk"]?.S ?? "").startsWith(values[":firing"].S) && (item["time"]?.S ?? "") >= values[":since"].S
                 : body.FilterExpression === "begins_with(pk, :firing) AND #time < :at"
                   ? (item["pk"]?.S ?? "").startsWith(values[":firing"].S) && (item["time"]?.S ?? "") < values[":at"].S
-                  : true,
+                  : String(body.FilterExpression).startsWith("begins_with(pk, :thread)")
+                    ? (item["pk"]?.S ?? "").startsWith(values[":thread"].S)
+                    : true,
       )
       const from = Number(body.ExclusiveStartKey?.index ?? 0)
       const next = from + 2 < kept.length ? { LastEvaluatedKey: { index: from + 2 } } : {}
@@ -143,9 +145,11 @@ describe("firings in DynamoDB", () => {
             silence: { by: "gil", reason: "deploy" },
           })
           yield* notes.keepFiring({ ...firing, startsAt: "2026-09-01T10:00:00Z" })
+          yield* notes.keepThread({ ...firing, channel: "C0ORDERS", ts: "1.2", url: "https://slack/p1" })
+          const threads = yield* notes.threads("2026-09-15T00:00:00Z")
           const read = yield* notes.firings("2026-09-15T00:00:00Z")
           yield* notes.removeFiringsBefore("2026-09-15T00:00:00Z")
-          return { read, left: yield* notes.firings("2026-01-01T00:00:00Z"), notes: yield* notes.all }
+          return { read, threads, left: yield* notes.firings("2026-01-01T00:00:00Z"), notes: yield* notes.all }
         }),
       stubRemote(fakeDynamo(calls)),
     ).then((result) => {
@@ -154,6 +158,9 @@ describe("firings in DynamoDB", () => {
         { ...firing, endsAt: "2026-10-02T10:20:00Z", silence: { by: "gil", reason: "deploy" } },
       ])
       expect(done?.left.map((each) => each.startsAt)).toEqual(["2026-10-02T10:00:00Z"])
+      expect(done?.threads.map((each) => `${each.alert} ${each.channel} ${each.ts} ${each.url}`)).toEqual([
+        "a1 C0ORDERS 1.2 https://slack/p1",
+      ])
       expect(done?.notes.map((each) => each.id)).toEqual(["n1"])
     })
   })

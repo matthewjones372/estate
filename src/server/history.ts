@@ -82,11 +82,15 @@ export const recordFirings = Effect.gen(function* () {
 export const loadHistory = (days: number) =>
   Effect.gen(function* () {
     const now = yield* Clock.currentTimeMillis
-    const firings = yield* (yield* Notes).firings(iso(before(now, Duration.days(days))))
+    const notes = yield* Notes
+    const since = iso(before(now, Duration.days(days)))
+    const firings = yield* notes.firings(since)
+    const threads = yield* notes.threads(since)
     const today = iso(before(now, Duration.days(1)))
     yield* updateEstate((estate) => ({
       ...estate,
       firings,
+      threads,
       environments: Object.fromEntries(
         Object.entries(estate.environments).map(([name, state]) => [
           name,

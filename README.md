@@ -101,6 +101,7 @@ Grafana's alerting, Argo CD and Elasticsearch, or an environment read wholly fro
 - open an alert's own page to share: what's happening, what is around it, who owns it
 - ask AI about an alert, when a model is set in `estate.yaml`
 - raise an incident in PagerDuty, Opsgenie or your own tool from the alert, when the catalog names its link
+- tell the team that owns an alert in its Slack channel, once a firing; the card then links to the thread
 - jump to any service, store, job or agent by name from the header, or with ⌘K (Ctrl K)
 - see a service's version in every environment at once, and switch to one
 - see what each service, job and agent costs this month against its budget; an anomaly or a budget it will pass

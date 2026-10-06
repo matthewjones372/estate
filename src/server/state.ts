@@ -84,6 +84,16 @@ export interface StoredFiring {
   readonly silence?: { readonly by: string; readonly reason: string }
 }
 
+/** A firing told to its team on Slack: the channel, and the thread its notes, silences and end are replied in. */
+export interface StoredThread {
+  readonly environment: string
+  readonly alert: string
+  readonly startsAt: string
+  readonly channel: string
+  readonly ts: string
+  readonly url: string
+}
+
 export interface EnvironmentState {
   readonly metrics: Part<Metrics>
   readonly alerts: Part<ReadonlyArray<SourcedAlert>>
@@ -110,6 +120,8 @@ export interface EstateState {
   readonly notes: ReadonlyArray<Note & { readonly environment: string; readonly alert: string }>
   /** Each alert's firings, as far back as they are kept, newest first. */
   readonly firings?: ReadonlyArray<StoredFiring>
+  /** The firings told to their team on Slack, by their threads. */
+  readonly threads?: ReadonlyArray<StoredThread>
   /** What alerts mean for users, by alert name, as operators wrote it on the page. */
   readonly impacts?: ReadonlyArray<{
     readonly alert: string

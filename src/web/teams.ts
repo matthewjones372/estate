@@ -13,3 +13,7 @@ export const chatOf = (team: Team | undefined) => {
     ? undefined
     : { url: chat.url, text: `${team.title} on ${chat.name === "slack" ? "Slack" : "Teams"}` }
 }
+
+/** A team's name, where it has a Slack channel Estate can tell. */
+export const onSlack = (team: Team | undefined): string | undefined =>
+  team?.links.some((link) => link.name === "slack") === true ? team.title : undefined

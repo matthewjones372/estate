@@ -205,6 +205,8 @@ export const Settings = Schema.Struct({
   ai: optional(Ai),
   /** Agents that may ask Estate over `/mcp`: each token and the role it reads as. Without it, `/mcp` answers 401. */
   mcp: optional(Mcp),
+  /** A Slack bot with `chat:write`, invited to the teams' channels, so an alert's card can tell its team. */
+  slack: optional(Schema.Struct({ token: Secret, url: optional(Schema.String) })),
   /** What models' tokens cost, per million, for the estimate of an agent's spend between the providers' reports. */
   prices: optional(Prices),
 })
