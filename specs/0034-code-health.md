@@ -61,16 +61,16 @@ Nothing new; the tokens are the estate owner's.
 
 ## Stack
 
-- [ ] **`code-settings`** — `code:` in the settings and a service's `code:` in the catalog.
+- [x] **`code-settings`** — `code:` in the settings and a service's `code:` in the catalog.
       Done when: the settings and catalog read with them, and the example estate names them.
-- [ ] **`code-readers`** — SonarQube's gate and measures, Dependabot's and code scanning's open alerts by severity,
+- [x] **`code-readers`** — SonarQube's gate and measures, Dependabot's and code scanning's open alerts by severity,
       into the estate's `code` part every 15 minutes.
       Done when: against stub tools, a service's health has its gate, coverage, counts and alerts, a repository
       without code scanning has none, and a tool that fails keeps the others' readings.
-- [ ] **`code-page`** — the line on a lane and a service's page, amber when it needs a look, linking to each tool;
+- [x] **`code-page`** — the line on a lane and a service's page, amber when it needs a look, linking to each tool;
       the `service` MCP tool's `code`.
       Done when: the page suite shows the line and its amber, and Playwright sees it for a service in the e2e estate.
-- [ ] **`code-doctor`** — the doctor's `code` line.
+- [x] **`code-doctor`** — the doctor's `code` line.
       Done when: it names each service's gate, coverage and alerts, and a failing tool in its own words.
 
 ## Acceptance

@@ -23,6 +23,10 @@ auth:
 backstage: { url: https://backstage.invalid }
 # backstage: { url: https://backstage.example.com, token: ${BACKSTAGE_TOKEN} }
 
+# Code health (optional): SonarQube's gate and coverage for services that name a project, and GitHub's Dependabot and
+# code scanning alerts for their repositories, every 15 minutes unless set.
+# code: { sonarqube: { url: https://sonar.example.com, token: ${SONAR_TOKEN} }, github: { token: ${GITHUB_SECURITY_TOKEN} } }
+
 sources:
   staging:
     prometheus: { url: http://prometheus.staging.invalid:9090 }

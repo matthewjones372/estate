@@ -76,6 +76,8 @@ services:
     description: The pages customers browse and buy from
     owner: web
     repository: github:example/storefront
+    # Its code's health: SonarQube's analysis of this project, and GitHub's alerts for the repository above
+    code: { sonarqube: { project: storefront } }
     build: { workflow: build.yml }
     runbook: https://example.com/runbooks/storefront
     environments: [ staging, production ]

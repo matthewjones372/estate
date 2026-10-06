@@ -6,6 +6,7 @@
 import { Context, Effect, Layer, SubscriptionRef } from "effect"
 import type { AgentUsage } from "../shared/agents"
 import type { Catalog } from "../shared/catalog"
+import type { CodeHealth } from "../shared/code"
 import type { Cost } from "../shared/costs"
 import type { Alert, Build, Debug, Job, Load, Note, Pod, Series, SourceKind } from "../shared/events"
 
@@ -120,6 +121,8 @@ export interface EstateState {
   readonly notes: ReadonlyArray<Note & { readonly environment: string; readonly alert: string }>
   /** Each alert's firings, as far back as they are kept, newest first. */
   readonly firings?: ReadonlyArray<StoredFiring>
+  /** Each service's code health, by its name, read for the whole estate (spec 0034). */
+  readonly code?: Part<Readonly<Record<string, CodeHealth>>>
   /** The firings told to their team on Slack, by their threads. */
   readonly threads?: ReadonlyArray<StoredThread>
   /** What alerts mean for users, by alert name, as operators wrote it on the page. */

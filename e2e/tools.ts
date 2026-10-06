@@ -6,6 +6,7 @@
 import { modelAnswer, runbook } from "./ask-fakes"
 import { backstageCatalog } from "./backstage-fakes"
 import { kube } from "./cluster"
+import { codeAnswer } from "./code-fakes"
 import { allocation, costReport } from "./cost-fakes"
 import { slack } from "./slack-fakes"
 
@@ -179,6 +180,8 @@ const server = Bun.serve({
     const path = url.pathname
     if (path === "/api/v1/query_range") return json(queryRange(url))
     if (path === "/api/catalog/entities/by-query") return json(backstageCatalog)
+    const code = codeAnswer(path)
+    if (code !== undefined) return json(code)
     if (path === "/allocation/compute") return json(allocation(url))
     if (path === "/v1/organizations/cost_report") return json(costReport())
     if (path === "/api/chat.postMessage" || path === "/api/chat.getPermalink") return slack(path, request, url)

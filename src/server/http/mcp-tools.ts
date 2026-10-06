@@ -1,8 +1,10 @@
 /**
  * MCP tools `estate_now`, `services`, and `service`: each answers from the views the page uses, with a short summary.
  */
+
 import { Effect, Schema } from "effect"
 import { Tool, Toolkit } from "effect/ai"
+import { CodeHealth } from "../../shared/code"
 import { compact } from "../../shared/compact"
 import type { EstateState } from "../state"
 import { alertsView } from "../views/alerts"
@@ -86,11 +88,14 @@ const ServiceDetail = Schema.Struct({
   ),
   deploy: Schema.optionalKey(Schema.Unknown),
   builds: Schema.Unknown,
+  /** Its code's health: SonarQube's gate and coverage, and open security alerts (spec 0034). */
+  code: Schema.optionalKey(CodeHealth),
   alerts: Schema.Array(Schema.Unknown),
 })
 
 const Service = Tool.make("service", {
-  description: "One service: health, load over the last hour, pods, deploy and builds, alerts, debug, links, team.",
+  description:
+    "One service: health, load over the last hour, pods, deploy and builds, code health, alerts, debug, links, team.",
   parameters: ServiceArg,
   success: ServiceDetail,
   failure: NotFound,
@@ -180,6 +185,7 @@ const serviceDetail = (estate: EstateState, environment: string, name: string) =
     team: team === undefined ? undefined : { name: team.name, title: team.title, links: team.links },
     deploy: here,
     builds: deploy?.builds ?? [],
+    code: live.code,
     alerts: alerts.map((alert) =>
       compact({
         id: alert.id,

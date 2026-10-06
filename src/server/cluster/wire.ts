@@ -5,6 +5,7 @@
 import { Schema } from "effect"
 import { AgentUsage } from "../../shared/agents"
 import { Catalog } from "../../shared/catalog"
+import { CodeHealth } from "../../shared/code"
 import { Cost } from "../../shared/costs"
 import { Build } from "../../shared/deploys"
 import { Alert, Load, Note, SourceKind } from "../../shared/events"
@@ -128,6 +129,7 @@ const estateFields = {
   builds: PartOf(Schema.Record(Schema.String, Schema.Array(Build))),
   notes: Schema.Array(AlertNote),
   firings: optional(Schema.Array(Firing)),
+  code: optional(PartOf(Schema.Record(Schema.String, CodeHealth))),
   threads: optional(Schema.Array(Thread)),
   impacts: optional(Schema.Array(Impact)),
 }

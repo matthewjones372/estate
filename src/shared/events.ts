@@ -4,6 +4,7 @@
  */
 import { Schema } from "effect"
 import { AgentState, DescribedAgent } from "./agents"
+import { CodeHealth } from "./code"
 import { Cost } from "./costs"
 import { DeploysEvent } from "./deploys"
 
@@ -141,6 +142,7 @@ export const ServicesEvent = Schema.Struct({
       load: Load,
       debug: optional(Debug),
       cost: optional(Cost),
+      code: optional(CodeHealth),
     }),
   ),
   vitals: Schema.Array(Schema.Struct({ title: Schema.String, unit: optional(Schema.String), series: Series })),

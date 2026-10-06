@@ -8,6 +8,7 @@ import { Secret } from "./secret"
 import { Ai, Mcp } from "./settings-ai"
 import { Backstage } from "./settings-backstage"
 import { ClusterSettings, clusterMistakes } from "./settings-cluster"
+import { Code } from "./settings-code"
 import { Costs, Prices } from "./settings-costs"
 import { Database, databaseMistakes, misplacedDatabase } from "./settings-database"
 
@@ -64,6 +65,7 @@ const everyMistakes = (settings: Settings): ReadonlyArray<Mistake> => {
     ),
     ...(settings.builds?.every === undefined ? [] : [["builds.every", settings.builds.every] as const]),
     ...(settings.kiosk?.every === undefined ? [] : [["kiosk.every", settings.kiosk.every] as const]),
+    ...(settings.code?.every === undefined ? [] : [["code.every", settings.code.every] as const]),
   ]
   return set.flatMap(([at, text]) => {
     const seconds = secondsIn(text ?? "")
@@ -206,6 +208,8 @@ export const Settings = Schema.Struct({
   slack: optional(Schema.Struct({ token: Secret, url: optional(Schema.String) })),
   /** What models' tokens cost, per million, for the estimate of an agent's spend between the providers' reports. */
   prices: optional(Prices),
+  /** Code health: SonarQube's gates and GitHub's security alerts, for services that name a project or repository. */
+  code: optional(Code),
   /** Backstage, for a catalog's rules that discover services from it. */
   backstage: optional(Backstage),
   /** Several replicas reading each source once: `true`, or the runners' port and health check to override. */

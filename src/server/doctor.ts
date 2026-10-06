@@ -8,6 +8,7 @@ import { type Catalog, ecsOf, kubernetesOf, type Service } from "../shared/catal
 import { costLine } from "../shared/costs"
 import { makeAwsJson } from "./aws/json"
 import { agentsFindings } from "./doctor-agents"
+import { codeFinding } from "./doctor-code"
 import { backstageFinding, discoverFinding } from "./doctor-discover"
 import { amount, type Finding, finding, type Needs } from "./doctor-finding"
 import type { Remote } from "./remote"
@@ -220,7 +221,8 @@ export const doctor = (settings: Settings, catalog: Catalog): Effect.Effect<Read
       examine(settings, catalog, each.name, each.sources),
     )
     const backstage = yield* backstageFinding(settings.backstage, catalog)
-    const wide = backstage === undefined ? [] : [backstage]
+    const code = yield* codeFinding(settings.code, catalog)
+    const wide = [backstage, code].filter((each) => each !== undefined)
     const { builds } = settings
     if (builds === undefined)
       return wide.length === 0 ? reports : [...reports, { environment: "every environment", findings: wide }]

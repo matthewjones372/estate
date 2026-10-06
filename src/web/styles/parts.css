@@ -126,3 +126,14 @@
   display: block;
   font-size: 12px;
 }
+/* A service's code health under its cost: quiet, in amber when its owner should look. */
+.code-line {
+  display: block;
+  font-size: 12px;
+}
+.code-line a {
+  color: inherit;
+}
+.code-line.needs-look {
+  color: var(--amber);
+}

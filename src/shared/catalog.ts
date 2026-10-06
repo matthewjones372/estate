@@ -39,6 +39,8 @@ export const Service = Schema.Struct({
   /** Where its cost is found, where its name is not enough, and its budget. */
   cost: optional(CostOf),
   repository: optional(Schema.String),
+  /** Where its code is analysed: its SonarQube project's key. GitHub's alerts are its repository's. */
+  code: optional(Schema.Struct({ sonarqube: optional(Schema.Struct({ project: Schema.String })) })),
   /**
    * Its builds: `{ github: { workflow, branch } }` or the workflow alone, meaning GitHub Actions; or
    * `{ gitlab: { project, ref } }`; `{ jenkins: { job, branch } }`, the job by its folders and a multibranch job's

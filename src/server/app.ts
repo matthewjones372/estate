@@ -29,6 +29,8 @@ import { type Role, roleLayer } from "./role"
 import { backOff } from "./schedule"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
 import { backfillHistory } from "./sources/backfill"
+import { runCode } from "./sources/code"
+import { codeEvery } from "./sources/every"
 import { toolsOf } from "./sources/ports"
 import { startSources } from "./sources/start"
 import { Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
@@ -142,6 +144,9 @@ export const estateWork = (
         ),
       ),
       startSources(started.settings, { environments: () => false, builds: true }),
+      ...(started.settings.code === undefined
+        ? []
+        : [runCode(started.settings.code, codeEvery(started.settings.code))]),
     ],
     { concurrency: "unbounded" },
   ).pipe(Effect.andThen(Effect.never))

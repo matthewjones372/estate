@@ -14,6 +14,9 @@ export const everyOf = (section: Sources, part: Part): Duration.Duration =>
 export const buildsEvery = (builds: NonNullable<Settings["builds"]>): Duration.Duration =>
   durationOf(builds.every, "60s")
 
+/** Code health changes with each analysis, not each minute: 15 minutes unless set. */
+export const codeEvery = (code: NonNullable<Settings["code"]>): Duration.Duration => durationOf(code.every, "15m")
+
 /** Each part's interval, as `estate doctor` prints it; costs only where the section reads them. */
 export const intervalsOf = (section: Sources): string =>
   (Object.keys(usual) as ReadonlyArray<Part>)

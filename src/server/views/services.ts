@@ -65,6 +65,7 @@ export const servicesView = (estate: EstateState, environment: string): Services
         load: metrics?.services[service.name] ?? {},
         debug: state.cluster.value?.debug[service.name],
         cost: state.costs.value?.[service.name],
+        code: estate.code?.value?.[service.name],
       })
     }),
     ...(estate.catalog.stores === undefined

@@ -6,6 +6,7 @@ import { useEstate } from "../context"
 import { clock, healthWords } from "../format"
 import { fillIncident } from "../incident"
 import { A, Out } from "./A"
+import { CodeLine } from "./CodeLine"
 import { CostLine } from "./CostLine"
 import { FoundMark } from "./Found"
 import { Icon } from "./icons"
@@ -105,6 +106,7 @@ export const Lane = (props: {
         </A>
         <HealthLine state={props.state} />
         <CostLine cost={props.state?.cost} />
+        <CodeLine code={props.state?.code} />
         <FoundMark discovered={props.service.discovered} />
         <Show when={props.state?.debug?.on === true ? props.state.debug : undefined}>
           {(debug) => (
