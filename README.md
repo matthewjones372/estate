@@ -155,6 +155,12 @@ claude mcp add --transport http estate https://estate.example/mcp --header "Auth
 | `estate_now` | what needs someone in an environment, worst first |
 | `services` | every service, store, job and agent: health, reasons, version, owner, category |
 | `service` | one service: health, load, pods, deploy and builds, alerts, links, team |
+| `alerts` | what is firing, pending and silenced, each with its impact, notes, silence and runbook |
+| `alert_history` | an alert's earlier firings, with who silenced each and why, and the notes written then |
+| `changes` | what changed today: deploys, builds, alerts, silences, notes and jobs, newest first |
+| `errors` | a service's errors over an hour, six hours or a day, grouped by message, for a token whose role may read logs |
+| `agents` | each AI agent's runs, failures, tokens against its budget and its model |
+| `around_alert` | an alert's brief: what changed near it, what it depends on, its errors, history and runbook |
 
 ### A screen on the wall
 

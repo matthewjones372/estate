@@ -1,30 +1,20 @@
 /**
  * MCP tools `estate_now`, `services`, and `service`: each answers from the views the page uses, with a short summary.
  */
-import { Effect, Option, Schema, SubscriptionRef } from "effect"
+import { Effect, Schema } from "effect"
 import { Tool, Toolkit } from "effect/ai"
 import { compact } from "../../shared/compact"
-import { Estate, type EstateState } from "../state"
+import type { EstateState } from "../state"
 import { alertsView } from "../views/alerts"
 import { catalogView } from "../views/catalog"
 import { deploysView } from "../views/deploys"
 import { nowView } from "../views/now"
 import { servicesView } from "../views/services"
+import { EnvironmentArg, estateOf, NotFound, resolveEnv } from "./mcp-shared"
 
-const EnvironmentArg = Schema.Struct({ environment: Schema.optionalKey(Schema.String) })
 const ServiceArg = Schema.Struct({
   name: Schema.String,
   environment: Schema.optionalKey(Schema.String),
-})
-
-const resolveEnv = (estate: EstateState, asked: string | undefined): string =>
-  asked ?? estate.catalog.environments[0]?.name ?? ""
-
-/** The estate in the request's context: set while `/mcp` handles a call. */
-const estateOf = Effect.gen(function* () {
-  const ref = yield* Effect.serviceOption(Estate)
-  if (Option.isNone(ref)) return yield* Effect.die("Estate is not available to this MCP tool")
-  return yield* SubscriptionRef.get(ref.value)
 })
 
 const EstateNow = Tool.make("estate_now", {
@@ -98,9 +88,6 @@ const ServiceDetail = Schema.Struct({
   builds: Schema.Unknown,
   alerts: Schema.Array(Schema.Unknown),
 })
-
-/** What a tool answers when what it was asked about is not in the estate. */
-class NotFound extends Schema.TaggedError<NotFound>()("NotFound", { message: Schema.String }) {}
 
 const Service = Tool.make("service", {
   description: "One service: health, load over the last hour, pods, deploy and builds, alerts, debug, links, team.",

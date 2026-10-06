@@ -148,7 +148,7 @@ Nothing.
       server: the brief as the model's reading, the answer decoded, one an alert a minute within the day's tokens,
       kept as a note.
       Done when: against a fake model, the page shows the answer and what it read, and Keep as note saves it.
-- [ ] **`mcp-alerts`** — `alerts`, `alert_history`, `changes`, `errors`, `agents` and `around_alert`, with the
+- [x] **`mcp-alerts`** — `alerts`, `alert_history`, `changes`, `errors`, `agents` and `around_alert`, with the
       token's role in the call's context.
       Done when: a test asks for an alert's history and gets its earlier firings with their notes.
 - [ ] **`ask-with-tools`** — the model may call those read tools for anything the brief does not answer, a few calls

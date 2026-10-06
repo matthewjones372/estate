@@ -3,11 +3,7 @@ import { createHash, timingSafeEqual } from "node:crypto"
 import { Effect, Option, Redacted } from "effect"
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 import { Configured, type Mcp } from "../settings"
-
-interface McpCaller {
-  readonly name: string
-  readonly role: "viewer" | "operator"
-}
+import { McpCaller } from "./mcp-shared"
 
 const digest = (text: string) => createHash("sha256").update(text).digest()
 
@@ -38,6 +34,7 @@ export const mcpAuth = HttpRouter.middleware((httpEffect) =>
       Option.fromNullishOr(findCaller(settings.mcp, bearerOf(request.headers["authorization"]))),
     )
     if (Option.isNone(caller)) return HttpServerResponse.empty({ status: 401 })
-    return yield* httpEffect
+    // The tools read as the agent the token names, with its role.
+    return yield* Effect.provideService(httpEffect, McpCaller, caller.value)
   }),
 )

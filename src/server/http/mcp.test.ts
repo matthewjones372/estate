@@ -123,7 +123,17 @@ describe("/mcp", () => {
         expect(listed.status).toBe(200)
         const listBody = mcpResult(listed.text, listed.headers.get("content-type"))
         const tools = (listBody.result as { tools: ReadonlyArray<{ name: string }> }).tools
-        expect(tools.map((each) => each.name).sort()).toEqual(["estate_now", "service", "services"])
+        expect(tools.map((each) => each.name).sort()).toEqual([
+          "agents",
+          "alert_history",
+          "alerts",
+          "around_alert",
+          "changes",
+          "errors",
+          "estate_now",
+          "service",
+          "services",
+        ])
         const called = yield* ask(
           server,
           post(rpc("tools/call", { name: "estate_now", arguments: { environment: "production" } }, 3), headers),
