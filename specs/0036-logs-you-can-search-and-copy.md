@@ -57,12 +57,12 @@ level is always written in the badge, never shown by colour alone.
 **Copy and save**:
 
 ```text
-click a line                 selects it; shift-click selects the lines between; Esc clears
-selecting                    pauses the Live view, as scrolling up does
-[Copy 12 lines]              the selected lines, or every shown line when none is selected
+click a line's time          picks it; shift-click picks the lines between; Esc clears
+picking                      pauses the Live view, as scrolling up does
+[Copy 12 lines]              the picked lines, or every shown line when none is picked
 [Save]                       the same lines as orders-production-2026-10-07T1031.log
 a line's copy icon, on hover that line alone
-an error group, opened       [Copy] its examples
+an error group, opened       [Copy these lines], its examples
 ```
 
 A copied or saved line is its time in full, pod, level and text, separated by tabs:
@@ -97,7 +97,7 @@ Nothing.
 - [x] **`logs-search`** — `log-search.ts`, the box reading it, the marks and the count.
       Done when: tests show `conn*refused` and `/status=5\d\d/` match, case aside, a bad pattern hides nothing and says
       so, and a suite shows the matched text marked.
-- [ ] **`logs-copy`** — `log-copy.ts`, selecting lines, Copy, Save, a line's copy icon, and Copy on an error group.
+- [ ] **`logs-copy`** — `log-copy.ts`, picking lines, Copy, Save, a line's copy icon, and Copy on an error group.
       Done when: a suite copies a shift-clicked range to a stubbed clipboard as tab-separated lines, and Save makes a
       file of the shown lines; Playwright searches, selects a range and copies it.
 
@@ -112,5 +112,5 @@ bunx playwright test   # e2e/tools.ts answers as Loki
 
 1. **Exclude terms with `-word`?** Recommended not yet; add it when someone misses it.
 2. **Search the Errors view's groups too?** Recommended not yet; the groups are few and their examples can be copied.
-3. **Does clicking a line to select it fight selecting text with the mouse?** Recommended: a click without dragging
-   selects the line; a drag selects text as the browser does.
+3. **Does picking a line fight selecting text with the mouse?** Settled: a line is picked by its time, a button
+   that a keyboard reaches too, so dragging across the text selects it as the browser does.

@@ -52,6 +52,39 @@ describe("a service's live lines", () => {
     expect(page.container.textContent).toContain("Not a valid pattern")
   })
 
+  test("are copied as text, one, a shift-clicked range or every shown line, and saved to a file", async () => {
+    const copied: Array<string> = []
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => void copied.push(text) },
+    })
+    const saved: Array<string> = []
+    const click = HTMLAnchorElement.prototype.click
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+      saved.push(this.download)
+    }
+    const page = mount(() => <LogsPanel service="storefront" />)
+    page.click(page.button("Copy 3 lines"))
+    await page.settle()
+    expect(copied[0]?.split("\n")).toHaveLength(3)
+    expect(copied[0]).toContain("\tstorefront-1\tERROR\tERROR order 41 lost")
+    const picks = [...page.container.querySelectorAll<HTMLButtonElement>(".log-pick")]
+    page.click(picks[1] as HTMLButtonElement)
+    expect(page.button("Resume")).toBeDefined()
+    page.click(picks[2] as HTMLButtonElement, { shiftKey: true })
+    page.click(page.button("Copy 2 lines"))
+    await page.settle()
+    expect(copied[1]?.split("\n").map((each) => each.split("\t")[3])).toEqual(["ERROR order 41 lost", "WARN slow"])
+    page.click(page.button("Save"))
+    expect(saved).toEqual([expect.stringMatching(/^storefront-production-\d{4}-\d\d-\d\dT\d{4}\.log$/)])
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
+    expect(page.button("Copy 3 lines")).toBeDefined()
+    page.click(page.button(/Copy this line/))
+    await page.settle()
+    expect(copied[2]).toEndWith("\tINFO\tINFO started")
+    HTMLAnchorElement.prototype.click = click
+  })
+
   test("wear their level, and each level's toggle counts its lines", () => {
     const page = mount(() => <LogsPanel service="storefront" />)
     page.sendLines({
@@ -111,6 +144,14 @@ describe("a service's errors", () => {
     expect(page.container.textContent).toContain("ERROR order ‹n› lost")
     page.click(page.button(/^2×/))
     expect(texts(page.container)).toEqual(["ERROR order 41 lost", "ERROR order 7 lost"])
+    const copied: Array<string> = []
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => void copied.push(text) },
+    })
+    page.click(page.button("Copy these lines"))
+    await page.settle()
+    expect(copied[0]?.split("\n")).toHaveLength(2)
     page.click(page.button("6h"))
     await page.settle()
     expect(page.calls).toContainEqual(["errors", "storefront", { range: "6h" }])

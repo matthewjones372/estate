@@ -235,6 +235,23 @@ test("a service's lines arrive live, pause, filter to errors, and its errors gro
   await accessible(page)
 })
 
+test("a service's lines are searched, a range of them picked, and copied", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"])
+  await page.goto("/services/storefront?env=production")
+  const logs = page.getByRole("region", { name: "Logs" })
+  await logs.getByRole("searchbox").fill("served*ms")
+  const picks = logs.locator(".log-pick")
+  await expect.poll(() => picks.count(), { timeout: 20_000 }).toBeGreaterThanOrEqual(3)
+  await expect(logs.locator(".log-lines mark").first()).toHaveText(/^served .* ms$/)
+  await picks.nth(0).click()
+  await picks.nth(2).click({ modifiers: ["Shift"] })
+  await logs.getByRole("button", { name: "Copy 3 lines" }).click()
+  await expect(logs.getByText("Copied 3 lines")).toBeVisible()
+  const copied = await page.evaluate(() => navigator.clipboard.readText())
+  expect(copied.split("\n").every((line) => /\tserved .* ms/.test(line))).toBe(true)
+  await accessible(page)
+})
+
 test("a store opened from the overview shows its stats over a day", async ({ page }) => {
   await page.goto("/?env=production")
   // A store sits under its category, beside the services that use it.
