@@ -31,7 +31,9 @@ jobs:
             echo "code=false" >> "$GITHUB_OUTPUT"
             echo "Only Markdown and docs/ changed, so the benchmark is skipped."
           fi
+      # It takes seconds, but now and then hangs on the runner's package mirror; failing fast lets it be run again.
       - if: steps.changed.outputs.code == 'true'
+        timeout-minutes: 5
         run: bunx playwright install --with-deps chromium
       - if: steps.changed.outputs.code == 'true'
         run: bun run perf
