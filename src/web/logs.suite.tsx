@@ -38,6 +38,20 @@ describe("a service's live lines", () => {
     expect(texts(page.container)).toEqual(["ERROR disk full"])
   })
 
+  test("are searched with a star or a pattern, the matches marked and counted", () => {
+    const page = mount(() => <LogsPanel service="storefront" />)
+    const search = page.container.querySelector<HTMLInputElement>(".log-search input")
+    if (search === null) throw new Error("no search")
+    page.type(search, "order*lost")
+    expect(texts(page.container)).toEqual(["ERROR order 41 lost"])
+    const marks = [...page.container.querySelectorAll(".log-lines mark")].map((each) => each.textContent)
+    expect(marks).toEqual(["order 41 lost"])
+    expect(page.container.textContent).toContain("1 of the last 3 lines match")
+    page.type(search, "/(order/")
+    expect(texts(page.container)).toHaveLength(3)
+    expect(page.container.textContent).toContain("Not a valid pattern")
+  })
+
   test("wear their level, and each level's toggle counts its lines", () => {
     const page = mount(() => <LogsPanel service="storefront" />)
     page.sendLines({

@@ -130,3 +130,12 @@
 .error-when {
   font-size: 12px;
 }
+.log-lines mark {
+  background: var(--link);
+  color: var(--ground);
+  border-radius: 2px;
+}
+.log-invalid {
+  font-size: 12px;
+  color: var(--critical);
+}

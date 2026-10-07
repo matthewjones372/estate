@@ -4,6 +4,7 @@ import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
 import type { ErrorGroups, LogLine } from "../../shared/log-events"
 import { type ErrorWindow, useEstate } from "../context"
 import { clock, since } from "../format"
+import { marked, type Search, searchOf, shows } from "../log-search"
 
 const kept = 500
 const kinds = [
@@ -30,12 +31,18 @@ const joined = (before: ReadonlyArray<LogLine>, arrived: ReadonlyArray<LogLine>)
   return [...before, ...arrived.filter((line) => !seen.has(keyOf(line)))].slice(-kept)
 }
 
-const LineRow = (props: { readonly line: LogLine }) => (
+const empty: Search = { _tag: "Empty" }
+
+const LineRow = (props: { readonly line: LogLine; readonly search?: Search }) => (
   <li class={`log-line ${kindOf(props.line)}`}>
     <span class="log-at">{clock(props.line.at)}</span>
     <span class="log-pod">{props.line.pod ?? ""}</span>
     <span class="log-level">{levelOf(props.line)}</span>
-    <span class="log-text">{props.line.text}</span>
+    <span class="log-text">
+      <For each={marked(props.line.text, props.search ?? empty)}>
+        {(part) => (part.mark ? <mark>{part.text}</mark> : part.text)}
+      </For>
+    </span>
   </li>
 )
 
@@ -83,11 +90,8 @@ const Live = (props: { readonly service: string }) => {
       return after
     })
   const count = (kind: Kind) => lines().filter((line) => kindOf(line) === kind).length
-  const shown = () =>
-    lines().filter(
-      (line) =>
-        !hidden().has(kindOf(line)) && (text() === "" || line.text.toLowerCase().includes(text().toLowerCase())),
-    )
+  const search = () => searchOf(text())
+  const shown = () => lines().filter((line) => !hidden().has(kindOf(line)) && shows(search(), line.text))
   const resume = () => {
     setLines((before) => joined(before, waiting()))
     setWaiting([])
@@ -128,11 +132,16 @@ const Live = (props: { readonly service: string }) => {
           <input
             type="search"
             class="select"
-            placeholder="Lines containing…"
+            placeholder="Lines containing… a * b, or /regex/"
             value={text()}
             onInput={(event) => setText(event.currentTarget.value)}
           />
         </label>
+        <Show when={search()._tag === "Invalid"}>
+          <span class="log-invalid" role="status">
+            Not a valid pattern
+          </span>
+        </Show>
         <Show
           when={paused()}
           fallback={
@@ -148,10 +157,14 @@ const Live = (props: { readonly service: string }) => {
       </div>
       <Show when={failed()}>{(message) => <div class="notice">The logs did not answer: {message()}</div>}</Show>
       <ol class="log-lines" ref={setBox} onScroll={scrolled} aria-live={paused() ? "off" : "polite"}>
-        <For each={shown()}>{(line) => <LineRow line={line} />}</For>
+        <For each={shown()}>{(line) => <LineRow line={line} search={search()} />}</For>
       </ol>
       <p class="muted log-foot">
-        {shown().length === 0 ? "No lines yet." : `${shown().length} of the last ${lines().length} lines`}
+        {search()._tag === "Pattern"
+          ? `${shown().length} of the last ${lines().length} lines match`
+          : shown().length === 0
+            ? "No lines yet."
+            : `${shown().length} of the last ${lines().length} lines`}
         {from() === undefined ? "" : ` · from ${from()}`}
         {skipped() ? " · busy: older lines were skipped" : ""}
       </p>
