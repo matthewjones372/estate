@@ -2,6 +2,7 @@ name: image
 
 # Once the gate has passed on main, the image is built for amd64 and arm64 and pushed to GitHub's registry as
 # ghcr.io/<owner>/estate, tagged main, main-<run>-<sha> and the commit's sha, so a deploy can pin one or follow main.
+# Its revision label is the commit built, so an image says where it came from.
 on:
   workflow_run:
     workflows: [ gate ]
@@ -37,6 +38,7 @@ jobs:
         run: |
           sha="${{ github.event.workflow_run.head_sha || github.sha }}"
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/estate"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
           {
             echo "tags<<EOF"
             echo "$image:main"
@@ -52,6 +54,7 @@ jobs:
           tags: ${{ steps.names.outputs.tags }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.names.outputs.sha }}
             org.opencontainers.image.description=Operational context layer: alert to context to investigation — not a Grafana replacement.
             org.opencontainers.image.licenses=MIT
           cache-from: type=gha
