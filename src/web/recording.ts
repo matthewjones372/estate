@@ -1,5 +1,6 @@
 /** Actions that record what they were asked, answering as the server would, for the pages' tests. */
 import type { AroundAlert } from "../shared/around"
+import type { PastFiring } from "../shared/firing"
 import type { LogBatch } from "../shared/log-events"
 import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
@@ -53,6 +54,34 @@ export const brief: AroundAlert = {
   before: [],
   runbook: { url: "https://runbooks.example/orders-slow", text: "If p99 is high after a deploy, roll back." },
 }
+
+/** The fixture's OrdersSlow as it last fired, and once before Estate kept what an alert said. */
+const firings: ReadonlyArray<PastFiring> = [
+  {
+    environment: "production",
+    alert: "a1",
+    name: "OrdersSlow",
+    service: "storefront",
+    severity: "critical",
+    summary: "Orders are slow",
+    runbook: "https://runbooks.example/orders-slow",
+    startsAt: "2026-10-02T09:00:00Z",
+    endsAt: "2026-10-02T09:22:00Z",
+    silence: { by: "gil", reason: "vacuum" },
+    notes: [{ id: "n7", at: "2026-10-02T09:10:00Z", by: "ada", text: "Restarted the pool." }],
+    impact: { text: "Orders take seconds to place.", from: "catalog" },
+    others: ["2026-09-20T14:02:00Z"],
+  },
+  {
+    environment: "production",
+    alert: "a1",
+    name: "OrdersSlow",
+    startsAt: "2026-09-20T14:02:00Z",
+    endsAt: "2026-09-20T14:05:00Z",
+    notes: [],
+    others: ["2026-10-02T09:00:00Z"],
+  },
+]
 
 export interface Recorded {
   readonly calls: Array<readonly [string, ...ReadonlyArray<unknown>]>
@@ -139,6 +168,11 @@ export const recording = (): Recorded => {
             ? { url: "https://example.slack.com/archives/C0ORDERS/p1" }
             : "Slack refused the message: not_in_channel",
         )
+      },
+      firing: (alert, at) => {
+        calls.push(at === undefined ? ["firing", alert] : ["firing", alert, at])
+        const found = firings.find((each) => each.alert === alert && (at === undefined || each.startsAt === at))
+        return Promise.resolve(found ?? "none")
       },
       around: (alert) => {
         calls.push(["around", alert])

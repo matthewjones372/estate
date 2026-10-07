@@ -114,6 +114,7 @@ describe("where the page is", () => {
       "/deploys",
       "/alerts",
       "/alerts/a1",
+      "/alerts/a1/2026-10-06T09:00:00Z",
       "/services/orders%20api",
       "/stores/orders-db",
       "/jobs/nightly-settlement",
@@ -124,6 +125,11 @@ describe("where the page is", () => {
     expect(pageOf("/jobs/nightly-settlement")).toEqual({ page: "job", name: "nightly-settlement" })
     expect(pageOf("/agents/support-triage")).toEqual({ page: "agent", name: "support-triage" })
     expect(pageOf("/alerts/a1")).toEqual({ page: "alert", id: "a1" })
+    expect(pageOf("/alerts/a1/2026-10-06T09%3A00%3A00Z")).toEqual({
+      page: "firing",
+      id: "a1",
+      at: "2026-10-06T09:00:00Z",
+    })
     expect(pageOf("/services/orders%20api")).toEqual({ page: "service", name: "orders api" })
     expect(pageOf("/nowhere")).toEqual({ page: "missing" })
     // A path that was never validly escaped, or names no kind of page, is missing, not an error.

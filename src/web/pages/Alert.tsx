@@ -3,15 +3,44 @@
  * One alert's own page, to share: what's happening, what is around it, who owns it, and Ask AI. The card carries the
  * links to the runbook, the logs and the team, so the page does not repeat them.
  */
-import { Show } from "solid-js"
+import { createEffect, createSignal, on, onCleanup, Show } from "solid-js"
+import type { PastFiring } from "../../shared/firing"
 import { useEstate, useSnapshot } from "../context"
-import { since } from "../format"
+import { day, since } from "../format"
 import { A } from "../parts/A"
 import { AlertCard } from "../parts/AlertCard"
 import { Around } from "../parts/Around"
 import { AskAi } from "../parts/AskAi"
 import { Owner } from "../parts/Team"
+import { firingPath } from "../route"
 import { teamOf } from "../teams"
+
+/** Where an alert that no longer fires last fired here, if a firing of it is kept. */
+const LastFiring = (props: { readonly id: string }) => {
+  const { actions } = useEstate()
+  const snapshot = useSnapshot()
+  const [last, setLast] = createSignal<PastFiring | undefined>(undefined)
+  createEffect(
+    on([() => props.id, () => snapshot.environment], ([id]) => {
+      let current = true
+      void actions.firing(id).then((found) => {
+        if (current) setLast(typeof found === "object" ? found : undefined)
+      })
+      onCleanup(() => {
+        current = false
+      })
+    }),
+  )
+  return (
+    <Show when={last()}>
+      {(firing) => (
+        <A to={firingPath(firing().alert, firing().startsAt)}>
+          Its last firing, {firing().name} at {day(firing().startsAt)} ›
+        </A>
+      )}
+    </Show>
+  )
+}
 
 export const AlertPage = (props: { readonly id: string }) => {
   const { me, now } = useEstate()
@@ -30,6 +59,7 @@ export const AlertPage = (props: { readonly id: string }) => {
             <h1>
               {props.id} is not firing in {snapshot.environment} now.
             </h1>
+            <LastFiring id={props.id} />
             <A to="/alerts">All alerts, and what resolved today</A>
           </Show>
         </main>

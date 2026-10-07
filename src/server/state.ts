@@ -110,6 +110,8 @@ export interface EnvironmentState {
   /** The tool each part is read from, by its own name, for the page to say: Prometheus, Datadog, Harness… */
   readonly tools: Tools
   readonly resolved: ReadonlyArray<{
+    /** The alert's id, which with its start names the firing. */
+    readonly alert: string
     readonly name: string
     readonly labels: Readonly<Record<string, string>>
     readonly startsAt: string

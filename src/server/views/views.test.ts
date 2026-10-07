@@ -151,6 +151,15 @@ describe("the catalog event", () => {
   })
 })
 
+/** An alert that resolved, its id its name in lower case. */
+const ended = (name: string, startsAt: string, endsAt: string, labels: Readonly<Record<string, string>> = {}) => ({
+  alert: name.toLowerCase(),
+  name,
+  labels,
+  startsAt,
+  endsAt,
+})
+
 describe("the alerts event", () => {
   test("puts firing first, critical before warning, with notes newest first and the runbook from the catalog", () => {
     const state = estate({
@@ -162,13 +171,8 @@ describe("the alerts event", () => {
             alert("Crit", { app: "storefront" }, { severity: "critical" }),
           ]),
           resolved: [
-            {
-              name: "Old",
-              labels: { app: "orders" },
-              startsAt: "2026-10-03T08:00:00Z",
-              endsAt: "2026-10-03T09:00:00Z",
-            },
-            { name: "Later", labels: {}, startsAt: "2026-10-03T09:30:00Z", endsAt: "2026-10-03T10:00:00Z" },
+            ended("Old", "2026-10-03T08:00:00Z", "2026-10-03T09:00:00Z", { app: "orders" }),
+            ended("Later", "2026-10-03T09:30:00Z", "2026-10-03T10:00:00Z"),
           ],
         }),
         production: environment(),
@@ -190,9 +194,9 @@ describe("the alerts event", () => {
     expect(view.alerts.map((each) => each.name)).toEqual(["Crit", "Warn", "Pending"])
     expect(view.alerts[0]?.notes.map((note) => note.text)).toEqual(["second", "first"])
     expect(view.alerts[0]?.runbook).toBe("https://runbooks.example/storefront")
-    expect(view.resolved).toEqual([
-      { name: "Later", startsAt: "2026-10-03T09:30:00Z", endsAt: "2026-10-03T10:00:00Z" },
-      { name: "Old", service: "orders", startsAt: "2026-10-03T08:00:00Z", endsAt: "2026-10-03T09:00:00Z" },
+    expect(view.resolved.map(({ alert, ...each }) => [alert, each])).toEqual([
+      ["later", { name: "Later", startsAt: "2026-10-03T09:30:00Z", endsAt: "2026-10-03T10:00:00Z" }],
+      ["old", { name: "Old", service: "orders", startsAt: "2026-10-03T08:00:00Z", endsAt: "2026-10-03T09:00:00Z" }],
     ])
     expect(alertsView(state, "qa", false)).toEqual({ alerts: [], resolved: [], silences: false })
   })
@@ -242,7 +246,7 @@ describe("the feed", () => {
             ),
             alert("Ancient", { app: "orders" }, { startsAt: "2026-09-01T00:00:00Z" }),
           ]),
-          resolved: [{ name: "Gone", labels: {}, startsAt: "2026-10-03T09:00:00Z", endsAt: "2026-10-03T09:10:00Z" }],
+          resolved: [ended("Gone", "2026-10-03T09:00:00Z", "2026-10-03T09:10:00Z")],
           cluster: ok({
             pods: {},
             debug: {

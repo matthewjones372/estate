@@ -88,7 +88,10 @@ export const ServicePage = (props: { readonly name: string }) => {
               </h2>
               <Timeline
                 now={now()}
-                alerts={[...alerts().map((alert) => ({ name: alert.name, startsAt: alert.startsAt })), ...resolved()]}
+                alerts={[
+                  ...alerts().map((alert) => ({ id: alert.id, name: alert.name, startsAt: alert.startsAt })),
+                  ...resolved().map(({ alert, ...each }) => ({ id: alert, ...each })),
+                ]}
               />
             </section>
           </div>

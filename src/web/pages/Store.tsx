@@ -76,8 +76,10 @@ export const StorePage = (props: { readonly name: string }) => {
           <Timeline
             now={now()}
             alerts={[
-              ...alerts().map((alert) => ({ name: alert.name, startsAt: alert.startsAt })),
-              ...(events().alerts?.resolved ?? []).filter((each) => each.store === props.name),
+              ...alerts().map((alert) => ({ id: alert.id, name: alert.name, startsAt: alert.startsAt })),
+              ...(events().alerts?.resolved ?? [])
+                .filter((each) => each.store === props.name)
+                .map(({ alert, ...each }) => ({ id: alert, ...each })),
             ]}
           />
         </section>

@@ -3,6 +3,7 @@
 import { For, Show } from "solid-js"
 import type { FeedEvent, FeedItem } from "../../shared/events"
 import { clock } from "../format"
+import { firingPath } from "../route"
 import { A } from "./A"
 
 const dots: Readonly<Record<FeedItem["kind"], string>> = {
@@ -15,6 +16,14 @@ const dots: Readonly<Record<FeedItem["kind"], string>> = {
   build: "var(--link)",
   job: "var(--ink-3)",
 }
+
+const FeedText = (props: { readonly item: FeedItem }) => (
+  <span style={{ "font-size": "13px", color: "#D5DAE3" }}>
+    {props.item.who === undefined ? "" : `${props.item.who}: `}
+    {props.item.service === undefined ? "" : `${props.item.service} `}
+    {props.item.text}
+  </span>
+)
 
 export const Feed = (props: { readonly feed: FeedEvent | undefined }) => {
   const items = () => props.feed?.items ?? []
@@ -42,11 +51,13 @@ export const Feed = (props: { readonly feed: FeedEvent | undefined }) => {
                   {clock(item.at)}
                 </span>
                 <span class="dot" style={{ background: dots[item.kind] }} />
-                <span style={{ "font-size": "13px", color: "#D5DAE3" }}>
-                  {item.who === undefined ? "" : `${item.who}: `}
-                  {item.service === undefined ? "" : `${item.service} `}
-                  {item.text}
-                </span>
+                <Show when={item.firing} fallback={<FeedText item={item} />}>
+                  {(firing) => (
+                    <A to={firingPath(firing().alert, firing().startsAt)}>
+                      <FeedText item={item} />
+                    </A>
+                  )}
+                </Show>
               </li>
             )}
           </For>

@@ -6,6 +6,7 @@ import { useEstate, useSnapshot } from "../context"
 import { clock, counted, duration, since } from "../format"
 import { A, Out } from "../parts/A"
 import { AlertCard } from "../parts/AlertCard"
+import { firingPath } from "../route"
 
 type Filter = "all" | Alert["state"]
 
@@ -200,9 +201,18 @@ export const Alerts = () => {
         <For each={resolved()}>
           {(each) => (
             <div class="silenced-row">
-              <span class="mono" style={{ color: "var(--ink-soft)" }}>
-                {each.name}
-              </span>
+              <Show
+                when={each.alert !== ""}
+                fallback={
+                  <span class="mono" style={{ color: "var(--ink-soft)" }}>
+                    {each.name}
+                  </span>
+                }
+              >
+                <A to={firingPath(each.alert, each.startsAt)} class="mono">
+                  {each.name}
+                </A>
+              </Show>
               <span>{each.service ?? ""}</span>
               <span>
                 resolved at {clock(each.endsAt)} after {duration(Date.parse(each.endsAt) - Date.parse(each.startsAt))}

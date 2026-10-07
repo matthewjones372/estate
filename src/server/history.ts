@@ -134,6 +134,7 @@ export const loadHistory = (days: number) =>
                   (firing) => firing.environment === name && firing.endsAt !== undefined && firing.endsAt >= today,
                 )
                 .map((firing) => ({
+                  alert: firing.alert,
                   name: firing.name,
                   labels: firing.service === undefined ? {} : { service: firing.service },
                   startsAt: firing.startsAt,

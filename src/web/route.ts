@@ -8,6 +8,8 @@ export type Page =
   | { readonly page: "deploys" }
   | { readonly page: "alerts" }
   | { readonly page: "alert"; readonly id: string }
+  /** One past firing of an alert: its id, and when the firing started. */
+  | { readonly page: "firing"; readonly id: string; readonly at: string }
   | { readonly page: "kiosk"; readonly team?: string; readonly category?: string }
   | { readonly page: "missing" }
 
@@ -39,6 +41,13 @@ export const pageOf = (pathname: string, search = ""): Page => {
     const category = params.get("category")
     return { page: "kiosk", ...(team === null ? {} : { team }), ...(category === null ? {} : { category }) }
   }
+  const [, id = "", at = ""] = /^\/alerts\/([^/]+)\/([^/]+)$/.exec(pathname) ?? []
+  if (id !== "") {
+    const [decodedId, decodedAt] = [decodedOf(id), decodedOf(at)]
+    return decodedId === undefined || decodedAt === undefined
+      ? { page: "missing" }
+      : { page: "firing", id: decodedId, at: decodedAt }
+  }
   const [, kind = "", name] = /^\/(\w+)\/([^/]+)$/.exec(pathname) ?? []
   const named = pagesNamed.get(kind)
   const decoded = name === undefined ? undefined : decodedOf(name)
@@ -63,6 +72,9 @@ export const pathOf = (page: Page): string => {
       return "/alerts"
     case "alert":
       return `/alerts/${encodeURIComponent(page.id)}`
+    case "firing":
+      // A time's colons are left as they are, so a link pasted into a review reads as the time it is.
+      return `/alerts/${encodeURIComponent(page.id)}/${encodeURIComponent(page.at).replaceAll("%3A", ":")}`
     case "kiosk":
       return "/kiosk"
     case "missing":
@@ -81,3 +93,6 @@ export const chooseEnvironment = (
   }
   return known[0]
 }
+
+/** Where a past firing's page is: its alert's id and when it started. */
+export const firingPath = (id: string, at: string) => pathOf({ page: "firing", id, at })

@@ -5,6 +5,7 @@ import type { AgentRun } from "../shared/agents"
 import type { AroundAlert } from "../shared/around"
 import type { AskAnswer } from "../shared/ask"
 import type { Me, ServiceState } from "../shared/events"
+import type { PastFiring } from "../shared/firing"
 import type { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { Live, Snapshot } from "./live"
 import type { Page } from "./route"
@@ -33,6 +34,8 @@ export interface Actions {
    * Ask AI about an alert: streams text chunks, then returns the structured answer, an error message, or undefined
    * when Ask AI is not configured or the request failed.
    */
+  /** One past firing of an alert, or its latest without `at`: "none" where it is not kept, undefined on failure. */
+  readonly firing: (alert: string, at?: string) => Promise<PastFiring | "none" | undefined>
   /** An alert's brief, *Around this alert*: undefined where it could not be gathered. */
   readonly around: (alert: string) => Promise<AroundAlert | undefined>
   /** Tells an alert's team on Slack: the thread's link, or why it could not. */

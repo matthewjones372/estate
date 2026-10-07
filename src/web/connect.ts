@@ -4,12 +4,14 @@ import { AgentRun } from "../shared/agents"
 import { AroundAlert } from "../shared/around"
 import { AskAnswer } from "../shared/ask"
 import { type EventName, Load } from "../shared/events"
+import { PastFiring } from "../shared/firing"
 import { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { Actions, ErrorWindow, LogHandlers, Range } from "./context"
 import type { Open } from "./live"
 
 const decodeRuns = Schema.decodeUnknownOption(Schema.Array(AgentRun))
 const decodeAround = Schema.decodeUnknownOption(AroundAlert)
+const decodeFiring = Schema.decodeUnknownOption(PastFiring)
 const decodeAsk = Schema.decodeUnknownOption(AskAnswer)
 const decodeMessage = Schema.decodeUnknownOption(Schema.Struct({ message: Schema.String }))
 const decodeThread = Schema.decodeUnknownOption(Schema.Struct({ url: Schema.String }))
@@ -109,6 +111,16 @@ export const serverActions = (
     loadFrom(
       `/api/store-load?env=${encodeURIComponent(environment())}&store=${encodeURIComponent(store)}&range=${range}`,
     ),
+  firing: (alert, at) =>
+    fetch(
+      `/api/firings/${encodeURIComponent(alert)}?env=${encodeURIComponent(environment())}${at === undefined ? "" : `&at=${encodeURIComponent(at)}`}`,
+    )
+      .then((response): Promise<PastFiring | "none" | undefined> => {
+        if (response.status === 404) return Promise.resolve("none")
+        if (!response.ok) return Promise.resolve(undefined)
+        return response.json().then((body) => Option.getOrUndefined(decodeFiring(body)))
+      })
+      .catch(() => undefined),
   around: (alert) =>
     fetch(`/api/alerts/${encodeURIComponent(alert)}/around?env=${encodeURIComponent(environment())}`)
       .then((response) =>

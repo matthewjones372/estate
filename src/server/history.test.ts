@@ -109,6 +109,7 @@ describe("an alert's firings", () => {
     ).then(({ resolved, left }) => {
       expect(resolved).toEqual([
         {
+          alert: "a1",
           name: "OrdersSlow",
           labels: { service: "orders" },
           startsAt: "1970-03-31T08:00:00.000Z",

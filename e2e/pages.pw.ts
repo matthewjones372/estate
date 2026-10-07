@@ -252,6 +252,17 @@ test("a service's lines are searched, a range of them picked, and copied", async
   await accessible(page)
 })
 
+test("an alert's earlier firing opens from its History, and says what happened then", async ({ page }) => {
+  await page.goto("/?env=production")
+  const search = page.getByRole("article").filter({ hasText: "Search has not indexed" })
+  await search.getByRole("button", { name: "History" }).click({ timeout: 20_000 })
+  await search.getByRole("list", { name: "Earlier firings of SearchIndexStale" }).getByRole("link").click()
+  await expect(page).toHaveURL(/\/alerts\/[^/]+\/\d{4}-\d\d-\d\dT[\d:.]+Z\?env=production$/)
+  await expect(page.getByRole("heading", { name: "What happened" })).toBeVisible()
+  await expect(page.getByText(/fired .* for 20 min, ended .* · search · production/)).toBeVisible()
+  await accessible(page)
+})
+
 test("a store opened from the overview shows its stats over a day", async ({ page }) => {
   await page.goto("/?env=production")
   // A store sits under its category, beside the services that use it.

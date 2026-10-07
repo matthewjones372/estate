@@ -5,6 +5,8 @@ import type { Alert, Load as Read, Series } from "../../shared/events"
 import { reading, whole, type Zoom } from "../chart"
 import { type Range, useEstate } from "../context"
 import { clock, measured } from "../format"
+import { firingPath, pathOf } from "../route"
+import { A } from "./A"
 import { Plot } from "./Plot"
 
 const ranges: ReadonlyArray<Range> = ["1h", "6h", "24h", "7d"]
@@ -179,7 +181,12 @@ export const Load = (props: {
 const day = 24 * 3_600_000
 
 export const Timeline = (props: {
-  readonly alerts: ReadonlyArray<{ readonly name: string; readonly startsAt: string; readonly endsAt?: string }>
+  readonly alerts: ReadonlyArray<{
+    readonly id: string
+    readonly name: string
+    readonly startsAt: string
+    readonly endsAt?: string
+  }>
   readonly now: number
 }) => {
   const place = (iso: string) => Math.max(0, Math.min(100, ((Date.parse(iso) - (props.now - day)) / day) * 100))
@@ -193,9 +200,17 @@ export const Timeline = (props: {
       <For each={props.alerts}>
         {(alert) => (
           <div class="timeline-row">
-            <span class="mono" style={{ "font-size": "12px" }}>
+            <A
+              to={
+                alert.endsAt === undefined
+                  ? pathOf({ page: "alert", id: alert.id })
+                  : firingPath(alert.id, alert.startsAt)
+              }
+              class="mono"
+              style={{ "font-size": "12px" }}
+            >
               {alert.name}
-            </span>
+            </A>
             <div class="timeline-track">
               <span
                 class={`timeline-bar ${alert.endsAt === undefined ? "live" : ""}`}

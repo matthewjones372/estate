@@ -88,6 +88,7 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
     resolved: state.resolved
       .map((each) =>
         compact({
+          alert: each.alert,
           name: each.name,
           service: serviceOf(each.labels, services),
           store: storeOf(each.labels, stores),

@@ -42,6 +42,7 @@ export const feedView = (estate: EstateState, environment: string, now: number):
         kind: "resolved",
         service: serviceOf(resolved.labels, services),
         text: `${resolved.name} resolved`,
+        firing: { alert: resolved.alert, startsAt: resolved.startsAt },
       }),
     )
   }

@@ -7,6 +7,8 @@ import { createSignal, For, Show } from "solid-js"
 import type { Alert } from "../../shared/events"
 import { useEstate } from "../context"
 import { day, duration, since } from "../format"
+import { firingPath } from "../route"
+import { A } from "./A"
 
 type Firing = NonNullable<Alert["history"]>[number]
 
@@ -44,7 +46,9 @@ export const History = (props: { readonly alert: Alert }) => {
               <For each={history()}>
                 {(firing) => (
                   <li>
-                    <span class="mono">{day(firing.startsAt)}</span>
+                    <A to={firingPath(props.alert.id, firing.startsAt)} class="mono">
+                      {day(firing.startsAt)}
+                    </A>
                     <span>{lasted(firing)}</span>
                     <Show when={firing.silence}>
                       {(silence) => (

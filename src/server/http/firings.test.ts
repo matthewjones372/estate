@@ -75,7 +75,7 @@ describe("GET /api/firings/:id", () => {
       expect(answer.status).toBe(200),
     ))
 
-  test("is not found once swept, or for a time or environment it never fired in, and needs its start", () =>
+  test("is not found once swept, or for a time or environment it never fired in; without a start, the latest", () =>
     Promise.all([
       asked("http://estate/api/firings/a1?env=production&at=2026-09-01T00:00:00Z"),
       asked("http://estate/api/firings/a1?env=nowhere&at=2026-10-06T09:00:00Z"),
@@ -83,6 +83,6 @@ describe("GET /api/firings/:id", () => {
     ]).then(([swept, nowhere, unsaid]) => {
       expect(swept.status).toBe(404)
       expect(nowhere.status).toBe(404)
-      expect(unsaid.status).toBe(400)
+      expect(unsaid.json()).toMatchObject({ startsAt: "2026-10-07T08:00:00Z" })
     }))
 })

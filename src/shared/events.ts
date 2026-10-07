@@ -229,6 +229,7 @@ export const AlertsEvent = Schema.Struct({
   alerts: Schema.Array(Alert),
   resolved: Schema.Array(
     Schema.Struct({
+      alert: Schema.String,
       name: Schema.String,
       service: optional(Schema.String),
       store: optional(Schema.String),
@@ -247,6 +248,8 @@ export const FeedItem = Schema.Struct({
   text: Schema.String,
   who: optional(Schema.String),
   url: optional(Schema.String),
+  /** The firing a resolved item is about, so it opens that firing's page. */
+  firing: optional(Schema.Struct({ alert: Schema.String, startsAt: Instant })),
 })
 export type FeedItem = typeof FeedItem.Type
 

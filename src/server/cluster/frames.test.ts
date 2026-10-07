@@ -3,6 +3,7 @@ import { Effect, Fiber, Result, Stream, SubscriptionRef } from "effect"
 import { catalog, environment, estate } from "../fixture"
 import { followed, frameOf } from "./frames"
 import { framesOf } from "./owner"
+import { decodeEnvironment, decodeParts } from "./wire"
 
 const before = estate({ environments: { production: environment(), staging: environment() } })
 
@@ -98,4 +99,16 @@ describe("the owner's frames", () => {
         expect(Array.from(sent).map((frame) => frame._tag)).toEqual(["Whole", "Changed"])
       }),
     ))
+})
+
+describe("what runners decode of each other", () => {
+  test("keeps what a firing's alert said, and takes what resolved from an owner that sends no alert id", () => {
+    const said = { severity: "critical", summary: "p99 over 2s", runbook: "https://wiki.example/orders", store: "db" }
+    const firing = { environment: "production", alert: "a1", name: "OrdersSlow", startsAt: "2026-10-06T09:00:00Z" }
+    const parts = decodeParts({ firings: [{ ...firing, ...said }] })
+    expect(Result.isSuccess(parts) ? parts.success.firings : undefined).toEqual([{ ...firing, ...said }])
+    const resolved = { name: "Gone", labels: {}, startsAt: "2026-10-06T09:00:00Z", endsAt: "2026-10-06T09:10:00Z" }
+    const older = decodeEnvironment({ ...environment(), resolved: [resolved] })
+    expect(Result.isSuccess(older) ? older.success.resolved : undefined).toEqual([{ alert: "", ...resolved }])
+  })
 })

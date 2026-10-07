@@ -4,17 +4,20 @@ import type { PastFiring } from "../../shared/firing"
 import type { EstateState } from "../state"
 import { impactOf } from "./alerts"
 
-/** The firing of alert `id` in `environment` that started at `at`, however the time is written; none once swept. */
+/**
+ * The firing of alert `id` in `environment` that started at `at`, however the time is written, or its latest when `at`
+ * is not said; none once swept.
+ */
 export const pastFiring = (
   estate: EstateState,
   environment: string,
   id: string,
-  at: string,
+  at?: string,
 ): PastFiring | undefined => {
   const all = (estate.firings ?? [])
     .filter((firing) => firing.environment === environment && firing.alert === id)
     .toSorted((a, b) => b.startsAt.localeCompare(a.startsAt))
-  const index = all.findIndex((firing) => Date.parse(firing.startsAt) === Date.parse(at))
+  const index = at === undefined ? 0 : all.findIndex((firing) => Date.parse(firing.startsAt) === Date.parse(at))
   const firing = all[index]
   if (firing === undefined) return undefined
   // A firing kept without its end owns the notes until the next one began.

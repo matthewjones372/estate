@@ -103,10 +103,10 @@ running now; Load then needs a metrics source, as the service page does.
       memory; `GET /api/firings/:id`.
       Done when: against each store, a firing kept with its summary is read back with it, one kept before reads back
       without, and the endpoint answers a firing, and 404 for one swept.
-- [ ] **`firing-page`** — `/alerts/:id/:startedAt`, What happened, and the links in from History, Resolved today,
+- [x] **`firing-page`** — `/alerts/:id/:startedAt`, What happened, and the links in from History, Resolved today,
       Alerts today, the feed and the not-firing page.
       Done when: a suite opens a firing from each link and shows its summary, silence, notes and the others; Playwright
-      resolves an alert, opens it from Resolved today, and is accessible.
+      opens an alert's earlier firing from its History, and is accessible.
 - [ ] **`firing-logs`** — `until=` on the errors endpoint, and Errors then.
       Done when: against the Loki stub, the errors of a firing's window are read and lines after its end are not.
 - [ ] **`firing-charts`** — `from=`/`to=` on the load endpoint, and Load then with the firing shaded.
