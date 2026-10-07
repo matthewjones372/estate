@@ -52,7 +52,7 @@ export interface LogHandlers {
   readonly missing: () => void
 }
 
-export type ErrorWindow = { readonly range: "1h" | "6h" | "24h" } | { readonly since: string }
+export type ErrorWindow = { readonly range: "1h" | "6h" | "24h" } | { readonly since: string; readonly until?: string }
 
 export type Range = "1h" | "6h" | "24h" | "7d"
 

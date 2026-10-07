@@ -48,47 +48,54 @@ export const ErrorList = (props: {
       }
     >
       {(found) => (
-        <Show
-          when={found().groups.length > 0}
-          fallback={
+        <>
+          <Show when={"until" in props.window && found().from === "the cluster"}>
             <p class="muted" style={{ margin: 0 }}>
-              No errors.
+              Read from the pods running now, so lines from before they started are not here.
             </p>
-          }
-        >
-          <ol class="error-groups">
-            <For each={found().groups.slice(0, props.most ?? 50)}>
-              {(group) => (
-                <li class="error-group">
-                  <button
-                    type="button"
-                    class="error-head"
-                    aria-expanded={open() === group.shape}
-                    onClick={() => setOpen(open() === group.shape ? undefined : group.shape)}
-                  >
-                    <span class="error-count">{group.count}×</span>
-                    <span class="mono error-shape">{group.shape}</span>
-                    <span class="muted error-when">
-                      last {since(group.lastSeen, now())} ago · {group.pods.join(", ")}
-                    </span>
-                  </button>
-                  <Show when={open() === group.shape}>
-                    <ol class="log-lines examples">
-                      <For each={group.examples}>{(line) => <LineRow line={line} />}</For>
-                    </ol>
+          </Show>
+          <Show
+            when={found().groups.length > 0}
+            fallback={
+              <p class="muted" style={{ margin: 0 }}>
+                No errors.
+              </p>
+            }
+          >
+            <ol class="error-groups">
+              <For each={found().groups.slice(0, props.most ?? 50)}>
+                {(group) => (
+                  <li class="error-group">
                     <button
                       type="button"
-                      class="plain-button log-copy-examples"
-                      onClick={() => void copy(asText(group.examples))}
+                      class="error-head"
+                      aria-expanded={open() === group.shape}
+                      onClick={() => setOpen(open() === group.shape ? undefined : group.shape)}
                     >
-                      Copy these lines
+                      <span class="error-count">{group.count}×</span>
+                      <span class="mono error-shape">{group.shape}</span>
+                      <span class="muted error-when">
+                        last {since(group.lastSeen, now())} ago · {group.pods.join(", ")}
+                      </span>
                     </button>
-                  </Show>
-                </li>
-              )}
-            </For>
-          </ol>
-        </Show>
+                    <Show when={open() === group.shape}>
+                      <ol class="log-lines examples">
+                        <For each={group.examples}>{(line) => <LineRow line={line} />}</For>
+                      </ol>
+                      <button
+                        type="button"
+                        class="plain-button log-copy-examples"
+                        onClick={() => void copy(asText(group.examples))}
+                      >
+                        Copy these lines
+                      </button>
+                    </Show>
+                  </li>
+                )}
+              </For>
+            </ol>
+          </Show>
+        </>
       )}
     </Show>
   )

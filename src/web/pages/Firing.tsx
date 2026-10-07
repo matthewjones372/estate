@@ -8,6 +8,7 @@ import type { PastFiring } from "../../shared/firing"
 import { useEstate, useSnapshot } from "../context"
 import { clock, day, duration } from "../format"
 import { A, Out } from "../parts/A"
+import { ErrorList } from "../parts/LogErrors"
 import { firingPath } from "../route"
 
 const lede = (firing: PastFiring) =>
@@ -22,6 +23,12 @@ const lede = (firing: PastFiring) =>
   ]
     .filter((part) => part !== undefined)
     .join(" · ")
+
+/** From ten minutes before it fired, to see what led up to it, until it ended. */
+const windowOf = (firing: PastFiring) => ({
+  since: new Date(Date.parse(firing.startsAt) - 10 * 60_000).toISOString(),
+  ...(firing.endsAt === undefined ? {} : { until: firing.endsAt }),
+})
 
 const WhatHappened = (props: { readonly firing: PastFiring }) => (
   <section aria-labelledby="firing-happened" class="stack">
@@ -126,6 +133,16 @@ export const FiringPage = (props: { readonly id: string; readonly at: string }) 
             <A to="/">Overview</A> / <A to="/alerts">Alerts</A> / {firing().name} · {day(firing().startsAt)}
           </nav>
           <WhatHappened firing={firing()} />
+          <Show when={firing().service}>
+            {(service) => (
+              <section aria-labelledby="firing-errors" class="panel section-box stack">
+                <h2 id="firing-errors" class="section-title">
+                  Errors then
+                </h2>
+                <ErrorList service={service()} window={windowOf(firing())} />
+              </section>
+            )}
+          </Show>
         </main>
       )}
     </Show>

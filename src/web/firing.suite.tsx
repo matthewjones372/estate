@@ -11,6 +11,7 @@ import { FiringPage } from "./pages/Firing"
 import { Timeline } from "./parts/Charts"
 import { Feed } from "./parts/Feed"
 import { History } from "./parts/History"
+import { ErrorList } from "./parts/LogErrors"
 import { recording } from "./recording"
 
 const links = (container: HTMLElement) =>
@@ -47,6 +48,30 @@ describe("a past firing's page", () => {
     const page = mount(() => <App estate={estate} />)
     await page.settle()
     expect(page.container.textContent).toContain("What happened")
+  })
+
+  test("shows its service's errors from ten minutes before it fired until it ended", async () => {
+    const page = mount(() => <FiringPage id="a1" at="2026-10-02T09:00:00Z" />)
+    await page.settle()
+    await page.settle()
+    expect(page.container.textContent).toContain("Errors then")
+    expect(page.container.textContent).toContain("ERROR order ‹n› lost")
+    expect(page.calls).toContainEqual([
+      "errors",
+      "storefront",
+      { since: "2026-10-02T08:50:00.000Z", until: "2026-10-02T09:22:00Z" },
+    ])
+  })
+
+  test("says when its errors come from pods that may have started since", async () => {
+    const actions = {
+      ...recording().actions,
+      errors: () => Promise.resolve({ from: "the cluster", groups: [] }),
+    }
+    const window = { since: "2026-10-02T08:50:00Z", until: "2026-10-02T09:22:00Z" }
+    const page = mount(() => <ErrorList service="storefront" window={window} />, { actions })
+    await page.settle()
+    expect(page.container.textContent).toContain("Read from the pods running now")
   })
 
   test("says when a firing is not kept, or was kept before Estate kept what its alert said", async () => {

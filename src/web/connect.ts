@@ -67,7 +67,9 @@ const loadFrom = (url: string) =>
     .catch(() => undefined)
 
 const windowQuery = (window: ErrorWindow) =>
-  "range" in window ? `range=${window.range}` : `since=${encodeURIComponent(window.since)}`
+  "range" in window
+    ? `range=${window.range}`
+    : `since=${encodeURIComponent(window.since)}${window.until === undefined ? "" : `&until=${encodeURIComponent(window.until)}`}`
 
 export const serverActions = (
   environment: () => string,
