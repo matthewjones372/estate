@@ -109,7 +109,7 @@ running now; Load then needs a metrics source, as the service page does.
       opens an alert's earlier firing from its History, and is accessible.
 - [x] **`firing-logs`** — `until=` on the errors endpoint, and Errors then.
       Done when: against the Loki stub, the errors of a firing's window are read and lines after its end are not.
-- [ ] **`firing-charts`** — `from=`/`to=` on the load endpoint, and Load then with the firing shaded.
+- [x] **`firing-charts`** — `from=`/`to=` on the load endpoint, and Load then with the firing shaded.
       Done when: against the Prometheus stub, `query_range` is asked for the firing's window, and a suite shows the
       shading over it.
 - [ ] **`firing-around`** — `at=` on the brief, Around it then, and "not kept here".

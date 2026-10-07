@@ -28,6 +28,8 @@ export interface PlotProps {
   readonly keys?: boolean
   readonly zoom?: Zoom
   readonly onZoom?: (zoom: Zoom) => void
+  /** A span of time to shade, such as when an alert fired, as times like `end`. */
+  readonly shade?: { readonly from: number; readonly to: number } | undefined
   readonly style?: JSX.CSSProperties
 }
 
@@ -61,6 +63,11 @@ export const Plot = (props: PlotProps) => {
     return at === undefined ? undefined : (view().shown[at] ?? undefined)
   }
   const x = () => (inView() ?? 0) * step()
+  /** Where a time falls across the chart as zoomed, from 0 to 1, held to its edges. */
+  const placed = (time: number) => {
+    const share = (time - (props.end - props.span)) / props.span
+    return Math.max(0, Math.min(1, (share - zoom().from) / (zoom().to - zoom().from)))
+  }
 
   const move = (event: Pointer) => {
     const fraction = across(event)
@@ -119,6 +126,17 @@ export const Plot = (props: PlotProps) => {
             stroke="#232836"
             vector-effect="non-scaling-stroke"
           />
+        </Show>
+        <Show when={props.shade}>
+          {(shade) => (
+            <rect
+              class="plot-firing"
+              x={placed(shade().from) * props.width}
+              y="0"
+              width={(placed(shade().to) - placed(shade().from)) * props.width}
+              height={props.height}
+            />
+          )}
         </Show>
         <Show when={drawn().area !== ""}>
           <polygon points={drawn().area} fill={props.ink} fill-opacity={props.fill ?? 0.14} />

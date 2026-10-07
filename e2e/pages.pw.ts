@@ -260,6 +260,10 @@ test("an alert's earlier firing opens from its History, and says what happened t
   await expect(page).toHaveURL(/\/alerts\/[^/]+\/\d{4}-\d\d-\d\dT[\d:.]+Z\?env=production$/)
   await expect(page.getByRole("heading", { name: "What happened" })).toBeVisible()
   await expect(page.getByText(/fired .* for 20 min, ended .* · search · production/)).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Errors then" })).toBeVisible()
+  await expect(page.getByRole("img", { name: /^Requests over the firing/ })).toBeVisible()
+  await expect(page.locator(".plot-firing")).toHaveCount(3)
+  await shot(page, "firing")
   await accessible(page)
 })
 

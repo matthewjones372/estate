@@ -22,6 +22,8 @@ export interface Actions {
   readonly debug: (service: string, minutes: number) => Promise<boolean>
   readonly undebug: (service: string) => Promise<boolean>
   readonly load: (service: string, range: Range) => Promise<ServiceState["load"] | undefined>
+  /** A service's load over a window in the past, `from` and `to` times. */
+  readonly loadBetween: (service: string, from: string, to: string) => Promise<ServiceState["load"] | undefined>
   /** A store's stats over a range, as a load with only stats. */
   readonly storeLoad: (store: string, range: Range) => Promise<ServiceState["load"] | undefined>
   /** A service's live lines; the returned function stops watching. */

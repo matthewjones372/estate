@@ -8,6 +8,7 @@ import type { PastFiring } from "../../shared/firing"
 import { useEstate, useSnapshot } from "../context"
 import { clock, day, duration } from "../format"
 import { A, Out } from "../parts/A"
+import { LoadThen } from "../parts/LoadThen"
 import { ErrorList } from "../parts/LogErrors"
 import { firingPath } from "../route"
 
@@ -135,12 +136,15 @@ export const FiringPage = (props: { readonly id: string; readonly at: string }) 
           <WhatHappened firing={firing()} />
           <Show when={firing().service}>
             {(service) => (
-              <section aria-labelledby="firing-errors" class="panel section-box stack">
-                <h2 id="firing-errors" class="section-title">
-                  Errors then
-                </h2>
-                <ErrorList service={service()} window={windowOf(firing())} />
-              </section>
+              <>
+                <section aria-labelledby="firing-errors" class="panel section-box stack">
+                  <h2 id="firing-errors" class="section-title">
+                    Errors then
+                  </h2>
+                  <ErrorList service={service()} window={windowOf(firing())} />
+                </section>
+                <LoadThen service={service()} firing={firing()} />
+              </>
             )}
           </Show>
         </main>

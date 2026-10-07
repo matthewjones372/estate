@@ -63,6 +63,20 @@ describe("a past firing's page", () => {
     ])
   })
 
+  test("charts its service's load from an hour before it fired to an hour after it ended, the firing shaded", async () => {
+    const page = mount(() => <FiringPage id="a1" at="2026-10-02T09:00:00Z" />)
+    await page.settle()
+    await page.settle()
+    expect(page.container.textContent).toContain("Load then")
+    expect(page.calls).toContainEqual([
+      "loadBetween",
+      "storefront",
+      "2026-10-02T08:00:00.000Z",
+      "2026-10-02T10:22:00.000Z",
+    ])
+    expect(page.container.querySelectorAll(".plot-firing")).toHaveLength(3)
+  })
+
   test("says when its errors come from pods that may have started since", async () => {
     const actions = {
       ...recording().actions,

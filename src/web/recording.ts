@@ -119,6 +119,10 @@ export const recording = (): Recorded => {
         calls.push(["load", service, range])
         return Promise.resolve({ requests: series([1, 2]) })
       },
+      loadBetween: (service, from, to) => {
+        calls.push(["loadBetween", service, from, to])
+        return Promise.resolve({ requests: series([1, 2]), errors: series([0, 0]), p99: series([0.1, 0.2]) })
+      },
       storeLoad: (store, range) => {
         calls.push(["storeLoad", store, range])
         return Promise.resolve({ stats: [{ title: "Connections used", unit: "%", series: series([40, 45]) }] })

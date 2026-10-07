@@ -109,6 +109,10 @@ export const serverActions = (
     loadFrom(
       `/api/load?env=${encodeURIComponent(environment())}&service=${encodeURIComponent(service)}&range=${range}`,
     ),
+  loadBetween: (service, from, to) =>
+    loadFrom(
+      `/api/load?env=${encodeURIComponent(environment())}&service=${encodeURIComponent(service)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    ),
   storeLoad: (store, range: Range) =>
     loadFrom(
       `/api/store-load?env=${encodeURIComponent(environment())}&store=${encodeURIComponent(store)}&range=${range}`,

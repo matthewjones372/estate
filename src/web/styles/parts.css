@@ -106,6 +106,11 @@
   fill: var(--quiet);
   fill-opacity: 0.12;
 }
+/* When the alert fired, behind the line: amber, as what needed someone is elsewhere on the page. */
+.plot-firing {
+  fill: var(--amber);
+  fill-opacity: 0.12;
+}
 .plot-dot {
   position: absolute;
   width: 7px;
