@@ -186,6 +186,12 @@ in Docker Compose against a real Prometheus and Alertmanager watching a small Ko
 chip registry fires an alert, which appears at the top of the page and resolves once the registry is back. Its
 `estate/` folder is a working `estate.yaml` and `catalog.yaml` to start from.
 
+For a bigger example on Kubernetes, [tweet-street](https://github.com/matthewjones372/tweet-street) runs Estate on a
+local kind cluster beside four services and their databases, reading Prometheus, Alertmanager and the cluster itself,
+with Estate running as a cluster of its own. `scripts/up.sh` in its `lark-bank/` folder brings it all up, and its
+[`deploy/k8s/estate/`](https://github.com/matthewjones372/tweet-street/tree/main/lark-bank/deploy/k8s/estate) folder
+has the settings and catalog.
+
 To try it against your team's real tools, set `readOnly: true` in `estate.yaml` so Estate writes nothing (no
 silences, no debug switching, notes only in memory), then run the `doctor` command:
 
