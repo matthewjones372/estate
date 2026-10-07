@@ -1,8 +1,38 @@
 /** One past firing of an alert, from the firings Estate keeps, with the notes written while it fired. */
+
+import { Duration } from "effect"
 import { compact } from "../../shared/compact"
 import type { PastFiring } from "../../shared/firing"
-import type { EstateState } from "../state"
+import type { EstateState, StoredFiring } from "../state"
+import { before, iso } from "../time"
 import { impactOf } from "./alerts"
+import { changesOf, neighboursOf } from "./around"
+
+/** What changed in the hour before it fired, which deploys it may have followed are no longer held, and its neighbours. */
+const aroundThen = (estate: EstateState, firing: StoredFiring) => {
+  const subject = firing.service ?? firing.store
+  if (subject === undefined) return undefined
+  const neighbours = neighboursOf(estate, subject)
+  const services = [
+    ...(firing.service === undefined ? [] : [firing.service]),
+    ...neighbours.filter((each) => each.kind === "service").map((each) => each.name),
+  ]
+  const deploys = estate.environments[firing.environment]?.deploys.value ?? {}
+  return {
+    changed: changesOf(
+      estate,
+      firing.environment,
+      services,
+      iso(before(Date.parse(firing.startsAt), Duration.hours(1))),
+      firing.startsAt,
+    ),
+    unseen: services.flatMap((service) => {
+      const held = deploys[service]
+      return held?.at !== undefined && held.at > firing.startsAt ? [{ service, version: held.version }] : []
+    }),
+    neighbours,
+  }
+}
 
 /**
  * The firing of alert `id` in `environment` that started at `at`, however the time is written, or its latest when `at`
@@ -36,6 +66,7 @@ export const pastFiring = (
     ...firing,
     notes,
     impact: impactOf(estate, firing.name),
+    around: aroundThen(estate, firing),
     others: all.filter((each) => each !== firing).map((each) => each.startsAt),
   })
 }

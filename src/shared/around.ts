@@ -10,7 +10,7 @@ const Instant = Schema.String
 const Health = Schema.Literals(["healthy", "attention", "critical", "unknown"])
 
 /** A deploy or build of the alert's service, or of what it calls or what calls it, near when it fired. */
-const Change = Schema.Struct({
+export const Change = Schema.Struct({
   at: Instant,
   service: Schema.String,
   kind: Schema.Literals(["deploy", "build"]),

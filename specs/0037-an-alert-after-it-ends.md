@@ -71,10 +71,10 @@ kept before this shows without them, and its page says so.
 **Server**:
 
 ```text
-GET /api/firings/:id?env=&at=                       the firing, its notes and impact, its others' starts;
-                                                    404 once swept, or for an id or time never seen
-GET /api/alerts/:id/around?env=&at=                 at= anchors the brief to that firing: changes up to its
-                                                    start, errors to its end
+GET /api/firings/:id?env=&at=                       the firing, its notes and impact, its others' starts, and
+                                                    what was around it: changes in the hour before it fired,
+                                                    deploys no longer held, its neighbours; without at=, the
+                                                    latest; 404 once swept, or for an id or time never seen
 GET /api/logs/errors?env=&service=&since=&until=    until= ends the window; now when absent
 GET /api/load?env=&service=&from=&to=               from=/to= in place of range=; about 120 points
 ```
@@ -90,7 +90,9 @@ A firing is what people look back at, and Estate already keeps it keyed by envir
 its address: the same alert's other firings are a click away, and a link shared in a review opens the same page for
 everyone. Showing only what Estate holds keeps "read, don't store": the page says plainly what it cannot see rather
 than looking complete. The alternative, a page per alert name with every firing on one long page, mixes firings
-with different labels and makes a review's link drift as new firings arrive; recommended against.
+with different labels and makes a review's link drift as new firings arrive; recommended against. Around it then is part of the firing's own answer rather than
+the live brief given a time: the brief reads its neighbours' health and the errors as they are now, which a page about
+the past would present as then.
 
 ## Depends on
 
@@ -112,7 +114,7 @@ running now; Load then needs a metrics source, as the service page does.
 - [x] **`firing-charts`** — `from=`/`to=` on the load endpoint, and Load then with the firing shaded.
       Done when: against the Prometheus stub, `query_range` is asked for the firing's window, and a suite shows the
       shading over it.
-- [ ] **`firing-around`** — `at=` on the brief, Around it then, and "not kept here".
+- [x] **`firing-around`** — what was around it in the firing's own answer, Around it then, and "not kept here".
       Done when: a firing after a deploy Estate holds shows it, and one before the latest held deploy says deploys
       before it are not kept.
 

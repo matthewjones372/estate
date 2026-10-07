@@ -8,6 +8,7 @@ import type { PastFiring } from "../../shared/firing"
 import { useEstate, useSnapshot } from "../context"
 import { clock, day, duration } from "../format"
 import { A, Out } from "../parts/A"
+import { AroundThen } from "../parts/AroundThen"
 import { LoadThen } from "../parts/LoadThen"
 import { ErrorList } from "../parts/LogErrors"
 import { firingPath } from "../route"
@@ -134,6 +135,7 @@ export const FiringPage = (props: { readonly id: string; readonly at: string }) 
             <A to="/">Overview</A> / <A to="/alerts">Alerts</A> / {firing().name} · {day(firing().startsAt)}
           </nav>
           <WhatHappened firing={firing()} />
+          <Show when={firing().around}>{(around) => <AroundThen around={around()} />}</Show>
           <Show when={firing().service}>
             {(service) => (
               <>

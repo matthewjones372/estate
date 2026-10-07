@@ -71,6 +71,11 @@ const firings: ReadonlyArray<PastFiring> = [
     notes: [{ id: "n7", at: "2026-10-02T09:10:00Z", by: "ada", text: "Restarted the pool." }],
     impact: { text: "Orders take seconds to place.", from: "catalog" },
     others: ["2026-09-20T14:02:00Z"],
+    around: {
+      changed: [{ at: "2026-10-02T08:40:00Z", service: "orders", kind: "deploy", text: "main-88 deployed" }],
+      unseen: [{ service: "storefront", version: "main-212" }],
+      neighbours: [{ name: "orders", kind: "service", side: "calls" }],
+    },
   },
   {
     environment: "production",

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
-import { ask, catalog, estate, serverFor, settings } from "../fixture"
+import { ask, catalog, environment, estate, serverFor, settings } from "../fixture"
 import type { EstateState, StoredFiring } from "../state"
 
 const firing = (startsAt: string, endsAt?: string): StoredFiring => ({
@@ -23,9 +23,24 @@ const note = (id: string, at: string, alert = "a1") => ({
   text: id,
 })
 
+const ok = <A>(value: A) => ({ state: "ok" as const, value, answeredAt: "2026-10-07T12:00:00Z" })
+
 const state = (): EstateState =>
   estate({
     catalog: { ...catalog, alerts: { OrdersSlow: { impact: "Orders take seconds to place." } } },
+    environments: {
+      staging: environment(),
+      production: environment({
+        deploys: ok({ orders: { version: "main-88", ready: true, at: "2026-10-06T08:40:00Z" } }),
+      }),
+    },
+    builds: ok({
+      storefront: [
+        { sha: "a", title: "After it", status: "success", at: "2026-10-06T09:30:00Z", url: "https://ci/2" },
+        { sha: "b", title: "Faster basket", status: "success", at: "2026-10-06T08:30:00Z", url: "https://ci/1" },
+        { sha: "c", title: "Long before", status: "success", at: "2026-10-06T07:00:00Z", url: "https://ci/0" },
+      ],
+    }),
     firings: [
       { ...firing("2026-10-06T09:00:00Z", "2026-10-06T09:22:00Z"), silence: { by: "gil", reason: "vacuum" } },
       firing("2026-10-01T14:02:00Z", "2026-10-01T14:05:00Z"),
@@ -67,6 +82,32 @@ describe("GET /api/firings/:id", () => {
         ],
         impact: { text: "Orders take seconds to place.", from: "catalog" },
         others: ["2026-10-07T08:00:00Z", "2026-10-01T14:02:00Z"],
+        around: expect.any(Object),
+      })
+    }))
+
+  test("says what changed in the hour before it fired, which deploys are no longer held, and what is around it", () =>
+    Promise.all([
+      asked("http://estate/api/firings/a1?env=production&at=2026-10-06T09:00:00Z"),
+      asked("http://estate/api/firings/a1?env=production&at=2026-10-01T14:02:00Z"),
+    ]).then(([recent, older]) => {
+      expect((recent.json() as { around: unknown }).around).toEqual({
+        changed: [
+          { at: "2026-10-06T08:40:00Z", service: "orders", kind: "deploy", text: "main-88 deployed" },
+          {
+            at: "2026-10-06T08:30:00Z",
+            service: "storefront",
+            kind: "build",
+            text: "build passed: Faster basket",
+            url: "https://ci/1",
+          },
+        ],
+        unseen: [],
+        neighbours: expect.arrayContaining([{ name: "storefront", kind: "service", side: "called by" }]),
+      })
+      expect((older.json() as { around: unknown }).around).toMatchObject({
+        changed: [],
+        unseen: [{ service: "orders", version: "main-88" }],
       })
     }))
 

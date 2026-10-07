@@ -8,6 +8,7 @@ import { mount } from "./harness"
 import { AlertPage } from "./pages/Alert"
 import { Alerts } from "./pages/Alerts"
 import { FiringPage } from "./pages/Firing"
+import { AroundThen } from "./parts/AroundThen"
 import { Timeline } from "./parts/Charts"
 import { Feed } from "./parts/Feed"
 import { History } from "./parts/History"
@@ -48,6 +49,30 @@ describe("a past firing's page", () => {
     const page = mount(() => <App estate={estate} />)
     await page.settle()
     expect(page.container.textContent).toContain("What happened")
+  })
+
+  test("says what changed in the hour before it fired, what is not known, and what sits around it", async () => {
+    const page = mount(() => <FiringPage id="a1" at="2026-10-02T09:00:00Z" />)
+    await page.settle()
+    const text = page.container.textContent ?? ""
+    expect(text).toContain("Around it then")
+    expect(text).toContain("orders main-88 deployed")
+    expect(text).toContain("Deploys of storefront before main-212 are not kept here.")
+    expect(links(page.container)).toContainEqual(["orders", "/services/orders"])
+  })
+
+  test("says when nothing it holds changed before it, and names each neighbour", () => {
+    const neighbours = [
+      { name: "orders", kind: "service" as const, side: "calls" as const },
+      { name: "orders-db", kind: "store" as const, side: "calls" as const },
+    ]
+    const page = mount(() => <AroundThen around={{ changed: [], unseen: [], neighbours }} />)
+    expect(page.container.textContent).toContain("Nothing Estate holds changed in the hour before it fired.")
+    expect(page.container.textContent).toContain("Aroundorders, orders-db")
+    expect(links(page.container)).toEqual([
+      ["orders", "/services/orders"],
+      ["orders-db", "/stores/orders-db"],
+    ])
   })
 
   test("shows its service's errors from ten minutes before it fired until it ended", async () => {
