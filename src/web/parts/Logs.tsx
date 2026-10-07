@@ -6,21 +6,21 @@ import { type ErrorWindow, useEstate } from "../context"
 import { clock, since } from "../format"
 
 const kept = 500
-const severity: Readonly<Record<string, number>> = {
-  TRACE: 0,
-  DEBUG: 1,
-  INFO: 2,
-  WARN: 3,
-  ERROR: 4,
-  FATAL: 5,
-  PANIC: 5,
-}
-const levels = [
-  { value: "all", label: "All", least: 0 },
-  { value: "warn", label: "Warnings", least: 3 },
-  { value: "error", label: "Errors", least: 4 },
+const kinds = [
+  { value: "error", label: "Error", levels: ["ERROR", "FATAL", "PANIC"] },
+  { value: "warn", label: "Warn", levels: ["WARN", "WARNING"] },
+  { value: "info", label: "Info", levels: ["INFO"] },
+  { value: "debug", label: "Debug", levels: ["DEBUG", "TRACE"] },
+  { value: "other", label: "Other", levels: [] },
 ] as const
-type Level = (typeof levels)[number]["value"]
+type Kind = (typeof kinds)[number]["value"]
+
+/** A line's level, as its badge reads it. */
+const levelOf = (line: LogLine) => (line.level ?? "").toUpperCase()
+
+/** The kind a line's level is; a line with no level, or one not known here, is `other`. */
+const kindOf = (line: LogLine): Kind =>
+  kinds.find((kind) => (kind.levels as ReadonlyArray<string>).includes(levelOf(line)))?.value ?? "other"
 
 const keyOf = (line: LogLine) => `${line.at}|${line.pod ?? ""}|${line.text}`
 
@@ -31,9 +31,10 @@ const joined = (before: ReadonlyArray<LogLine>, arrived: ReadonlyArray<LogLine>)
 }
 
 const LineRow = (props: { readonly line: LogLine }) => (
-  <li class={`log-line ${(props.line.level ?? "").toLowerCase()}`}>
+  <li class={`log-line ${kindOf(props.line)}`}>
     <span class="log-at">{clock(props.line.at)}</span>
     <span class="log-pod">{props.line.pod ?? ""}</span>
+    <span class="log-level">{levelOf(props.line)}</span>
     <span class="log-text">{props.line.text}</span>
   </li>
 )
@@ -47,7 +48,7 @@ const Live = (props: { readonly service: string }) => {
   const [paused, setPaused] = createSignal(false)
   const [skipped, setSkipped] = createSignal(false)
   const [failed, setFailed] = createSignal<string | undefined>(undefined)
-  const [level, setLevel] = createSignal<Level>("all")
+  const [hidden, setHidden] = createSignal<ReadonlySet<Kind>>(new Set())
   const [text, setText] = createSignal("")
   const [box, setBox] = createSignal<HTMLOListElement | undefined>(undefined)
   const toEnd = () => queueMicrotask(() => box()?.scrollTo({ top: box()?.scrollHeight ?? 0 }))
@@ -75,12 +76,17 @@ const Live = (props: { readonly service: string }) => {
       },
     ),
   )
-  const least = () => levels.find((each) => each.value === level())?.least ?? 0
+  const toggle = (kind: Kind) =>
+    setHidden((before) => {
+      const after = new Set(before)
+      if (!after.delete(kind)) after.add(kind)
+      return after
+    })
+  const count = (kind: Kind) => lines().filter((line) => kindOf(line) === kind).length
   const shown = () =>
     lines().filter(
       (line) =>
-        (least() === 0 || (severity[line.level ?? ""] ?? 0) >= least()) &&
-        (text() === "" || line.text.toLowerCase().includes(text().toLowerCase())),
+        !hidden().has(kindOf(line)) && (text() === "" || line.text.toLowerCase().includes(text().toLowerCase())),
     )
   const resume = () => {
     setLines((before) => joined(before, waiting()))
@@ -103,16 +109,16 @@ const Live = (props: { readonly service: string }) => {
     >
       <div class="log-controls">
         <fieldset class="choices bare">
-          <legend class="visually-hidden">Level</legend>
-          <For each={levels}>
-            {(each) => (
+          <legend class="visually-hidden">Levels shown</legend>
+          <For each={kinds}>
+            {(kind) => (
               <button
                 type="button"
-                class="filter"
-                aria-pressed={level() === each.value}
-                onClick={() => setLevel(each.value)}
+                class={`filter level-${kind.value}`}
+                aria-pressed={!hidden().has(kind.value)}
+                onClick={() => toggle(kind.value)}
               >
-                {each.label}
+                {kind.label} {count(kind.value)}
               </button>
             )}
           </For>

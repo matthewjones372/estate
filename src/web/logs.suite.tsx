@@ -26,15 +26,38 @@ describe("a service's live lines", () => {
     })
     expect(texts(page.container)).toHaveLength(4)
     expect(page.container.textContent).toContain("older lines were skipped")
-    page.click(page.button("Errors", 1))
+    page.click(page.button(/^Warn/))
+    page.click(page.button(/^Info/))
     expect(texts(page.container)).toEqual(["ERROR order 41 lost", "ERROR disk full"])
-    page.click(page.button("Warnings"))
-    expect(texts(page.container)).toHaveLength(3)
-    page.click(page.button("All"))
+    page.click(page.button(/^Info/))
+    expect(texts(page.container)).toEqual(["INFO started", "ERROR order 41 lost", "ERROR disk full"])
+    page.click(page.button(/^Warn/))
     const search = page.container.querySelector<HTMLInputElement>(".log-search input")
     if (search === null) throw new Error("no search")
     page.type(search, "DISK")
     expect(texts(page.container)).toEqual(["ERROR disk full"])
+  })
+
+  test("wear their level, and each level's toggle counts its lines", () => {
+    const page = mount(() => <LogsPanel service="storefront" />)
+    page.sendLines({
+      lines: [line(57, "fatal", "FATAL gone"), line(58, "TRACE", "TRACE step"), line(59, "", "plain")],
+      skipped: false,
+    })
+    const badges = [...page.container.querySelectorAll(".log-lines .log-level")].map((each) => each.textContent)
+    expect(badges).toEqual(["INFO", "ERROR", "WARN", "FATAL", "TRACE", ""])
+    const kinds = [...page.container.querySelectorAll(".log-lines .log-line")].map((each) => each.className)
+    expect(kinds).toEqual([
+      "log-line info",
+      "log-line error",
+      "log-line warn",
+      "log-line error",
+      "log-line debug",
+      "log-line other",
+    ])
+    expect(["Error 2", "Warn 1", "Info 1", "Debug 1", "Other 1"].map((name) => page.button(name))).toHaveLength(5)
+    page.click(page.button("Other 1"))
+    expect(texts(page.container)).not.toContain("plain")
   })
 
   test("pause, holding what arrives until resumed, and pause by themselves when scrolled up", () => {

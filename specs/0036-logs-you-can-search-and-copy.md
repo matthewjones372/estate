@@ -92,7 +92,7 @@ Nothing.
 
 ## Stack
 
-- [ ] **`logs-levels`** — the level badge and colours, and the level toggles in place of the threshold.
+- [x] **`logs-levels`** — the level badge and colours, and the level toggles in place of the threshold.
       Done when: a suite shows Error and Info together with Warn hidden, each toggle's count, and each line's badge.
 - [ ] **`logs-search`** — `log-search.ts`, the box reading it, the marks and the count.
       Done when: tests show `conn*refused` and `/status=5\d\d/` match, case aside, a bad pattern hides nothing and says
