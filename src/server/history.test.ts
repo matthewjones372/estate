@@ -26,6 +26,7 @@ const kept: StoredFiring = {
   alert: "a1",
   name: "OrdersSlow",
   service: "orders",
+  severity: "warning",
   startsAt: slow.startsAt,
 }
 
@@ -46,6 +47,15 @@ describe("an alert's firings", () => {
       { ...kept, endsAt: "1970-01-02T10:30:00.000Z" },
     ])
     expect(firingNow(withAlerts([{ ...slow, state: "pending" }])).firing.size).toBe(0)
+  })
+
+  test("keep what the alert said as it fired: its severity, summary, runbook and store", () => {
+    const said = firingNow(
+      withAlerts([{ ...slow, severity: "critical", summary: "p99 over 2s", runbook: "https://wiki.example/orders" }]),
+    )
+    expect([...said.firing.values()]).toEqual([
+      { ...kept, severity: "critical", summary: "p99 over 2s", runbook: "https://wiki.example/orders" },
+    ])
   })
 
   test("are recorded in the store and the state while Estate runs, from what it already kept", () =>
@@ -120,6 +130,10 @@ describe("an alert's firings", () => {
         ends_at: null,
         silenced_by: "ada",
         silence_reason: "vacuum",
+        severity: "critical",
+        summary: "p99 over 2s",
+        runbook: null,
+        store: "orders-db",
       },
     ]
     const query: Query = (statement, parameters) => {
@@ -141,10 +155,14 @@ describe("an alert's firings", () => {
           name: "OrdersSlow",
           startsAt: slow.startsAt,
           silence: { by: "ada", reason: "vacuum" },
+          severity: "critical",
+          summary: "p99 over 2s",
+          store: "orders-db",
         },
       ])
-      expect(statements[4]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
-      expect(statements[4]?.[1]).toEqual([
+      expect(statements[3]?.[0]).toContain("add column if not exists summary text")
+      expect(statements[5]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
+      expect(statements[5]?.[1]).toEqual([
         "staging",
         "a1",
         "OrdersSlow",
@@ -153,8 +171,12 @@ describe("an alert's firings", () => {
         null,
         null,
         "orders",
+        "warning",
+        null,
+        null,
+        null,
       ])
-      expect(statements[5]).toEqual(["delete from estate_firings where starts_at < $1", ["1970-01-01T00:00:00.000Z"]])
+      expect(statements[6]).toEqual(["delete from estate_firings where starts_at < $1", ["1970-01-01T00:00:00.000Z"]])
     })
   })
 

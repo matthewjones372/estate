@@ -79,6 +79,13 @@ const createFirings = `create table if not exists estate_firings (
   primary key (environment, alert, starts_at)
 )`
 
+// Added after the table was first made, so a store made before keeps its rows and gains the columns.
+const addFiringSaid = `alter table estate_firings
+  add column if not exists severity text,
+  add column if not exists summary text,
+  add column if not exists runbook text,
+  add column if not exists store text`
+
 const createThreads = `create table if not exists estate_threads (
   environment text not null,
   alert text not null,
@@ -101,6 +108,11 @@ const firingOf = (row: Record<string, unknown>): StoredFiring => ({
   ...(row["silenced_by"] === null || row["silenced_by"] === undefined
     ? {}
     : { silence: { by: String(row["silenced_by"]), reason: String(row["silence_reason"] ?? "") } }),
+  ...Object.fromEntries(
+    (["severity", "summary", "runbook", "store"] as const).flatMap((key) =>
+      row[key] === null || row[key] === undefined ? [] : [[key, String(row[key])]],
+    ),
+  ),
 })
 
 /** The statement, run each time the effect is, not once as it is made. */
@@ -122,6 +134,7 @@ export const postgresNotes = (query: Query) =>
     run(query, create).pipe(
       Effect.andThen(run(query, createImpacts)),
       Effect.andThen(run(query, createFirings)),
+      Effect.andThen(run(query, addFiringSaid)),
       Effect.andThen(run(query, createThreads)),
       Effect.mapError((failure) => new NotesError(failure)),
       Effect.as({
@@ -159,13 +172,13 @@ export const postgresNotes = (query: Query) =>
         firings: (since: string) =>
           run(
             query,
-            "select environment, alert, name, service, starts_at, ends_at, silenced_by, silence_reason from estate_firings where starts_at >= $1 order by starts_at desc",
+            "select environment, alert, name, service, starts_at, ends_at, silenced_by, silence_reason, severity, summary, runbook, store from estate_firings where starts_at >= $1 order by starts_at desc",
             [since],
           ).pipe(Effect.map((rows) => rows.map(firingOf))),
         keepFiring: (firing: StoredFiring) =>
           run(
             query,
-            "insert into estate_firings (environment, alert, name, starts_at, ends_at, silenced_by, silence_reason, service) values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict (environment, alert, starts_at) do update set ends_at = $5, silenced_by = $6, silence_reason = $7",
+            "insert into estate_firings (environment, alert, name, starts_at, ends_at, silenced_by, silence_reason, service, severity, summary, runbook, store) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) on conflict (environment, alert, starts_at) do update set ends_at = $5, silenced_by = $6, silence_reason = $7, severity = coalesce($9, estate_firings.severity), summary = coalesce($10, estate_firings.summary), runbook = coalesce($11, estate_firings.runbook), store = coalesce($12, estate_firings.store)",
             [
               firing.environment,
               firing.alert,
@@ -175,6 +188,10 @@ export const postgresNotes = (query: Query) =>
               firing.silence?.by ?? null,
               firing.silence?.reason ?? null,
               firing.service ?? null,
+              firing.severity ?? null,
+              firing.summary ?? null,
+              firing.runbook ?? null,
+              firing.store ?? null,
             ],
           ).pipe(Effect.asVoid),
         removeFiringsBefore: (at: string) =>

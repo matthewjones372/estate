@@ -83,6 +83,11 @@ export interface StoredFiring {
   readonly startsAt: string
   readonly endsAt?: string
   readonly silence?: { readonly by: string; readonly reason: string }
+  /** What the alert said as it fired, so its page can say it after the source has forgotten it. */
+  readonly severity?: string
+  readonly summary?: string
+  readonly runbook?: string
+  readonly store?: string
 }
 
 /** A firing told to its team on Slack: the channel, and the thread its notes, silences and end are replied in. */

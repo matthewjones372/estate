@@ -99,7 +99,7 @@ running now; Load then needs a metrics source, as the service page does.
 
 ## Stack
 
-- [ ] **`firing-kept`** — severity, summary, runbook and store kept with each firing, in Postgres, DynamoDB and
+- [x] **`firing-kept`** — severity, summary, runbook and store kept with each firing, in Postgres, DynamoDB and
       memory; `GET /api/firings/:id`.
       Done when: against each store, a firing kept with its summary is read back with it, one kept before reads back
       without, and the endpoint answers a firing, and 404 for one swept.

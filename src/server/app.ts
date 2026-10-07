@@ -18,6 +18,7 @@ import { agentRunsRoute } from "./http/agents"
 import { aroundRoute } from "./http/around"
 import { askRoute } from "./http/ask"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
+import { firingRoute } from "./http/firings"
 import { impactRoute } from "./http/impacts"
 import { kioskRoute } from "./http/kiosk"
 import { loadRoute, storeLoadRoute } from "./http/load"
@@ -115,6 +116,7 @@ export const application = Layer.mergeAll(
   errorsRoute,
   agentRunsRoute,
   aroundRoute,
+  firingRoute,
   askRoute,
   tellRoute,
   mcpRoute,

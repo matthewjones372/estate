@@ -10,6 +10,7 @@ import { Estate, type EstateState, updateEstate } from "./state"
 import { lasting, replyInThread } from "./threads"
 import { before, iso } from "./time"
 import { serviceOf } from "./views/health"
+import { storeOf, storesIn } from "./views/stores"
 
 const keyOf = (firing: Pick<StoredFiring, "environment" | "alert" | "startsAt">) =>
   `${firing.environment}\u0000${firing.alert}\u0000${firing.startsAt}`
@@ -21,9 +22,12 @@ export const firingNow = (estate: EstateState) => {
   for (const [environment, state] of Object.entries(estate.environments)) {
     if (state.alerts.state !== "ok") continue
     answered.add(environment)
+    const stores = storesIn(estate.catalog, environment)
     for (const alert of state.alerts.value ?? []) {
       if (alert.state === "pending") continue
       const service = serviceOf(alert.labels, estate.catalog.services)
+      const store = storeOf(alert.labels, stores)
+      const runbook = alert.runbook ?? estate.catalog.services.find((each) => each.name === service)?.runbook
       const kept: StoredFiring = {
         environment,
         alert: alert.id,
@@ -31,6 +35,10 @@ export const firingNow = (estate: EstateState) => {
         startsAt: alert.startsAt,
         ...(service === undefined ? {} : { service }),
         ...(alert.silence === undefined ? {} : { silence: { by: alert.silence.by, reason: alert.silence.reason } }),
+        severity: alert.severity,
+        ...(alert.summary === undefined ? {} : { summary: alert.summary }),
+        ...(runbook === undefined ? {} : { runbook }),
+        ...(store === undefined ? {} : { store }),
       }
       firing.set(keyOf(kept), kept)
     }

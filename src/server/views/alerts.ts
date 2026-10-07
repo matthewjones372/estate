@@ -22,6 +22,19 @@ const threadOf = (
   return told === undefined ? undefined : { url: told.url }
 }
 
+/** What an alert means for the people using the product: written on the page, in the catalog, or on its rule. */
+export const impactOf = (estate: EstateState, name: string, said?: string) => {
+  const onPage = estate.impacts?.find((each) => each.alert === name)
+  const written = estate.catalog.alerts?.[name]?.impact
+  return onPage !== undefined
+    ? { text: onPage.text, from: "page" as const, by: onPage.by, at: onPage.at }
+    : written !== undefined
+      ? { text: written, from: "catalog" as const }
+      : said === undefined
+        ? undefined
+        : { text: said, from: "rule" as const }
+}
+
 export const alertsView = (estate: EstateState, environment: string, silences: boolean): AlertsEvent => {
   const state = estate.environments[environment]
   if (state === undefined) return { alerts: [], resolved: [], silences }
@@ -52,18 +65,9 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
       })
     })
     const { expression: _, impact: said, ...shown } = alert
-    const onPage = estate.impacts?.find((each) => each.alert === alert.name)
-    const written = estate.catalog.alerts?.[alert.name]?.impact
     return compact({
       ...shown,
-      impact:
-        onPage !== undefined
-          ? { text: onPage.text, from: "page" as const, by: onPage.by, at: onPage.at }
-          : written !== undefined
-            ? { text: written, from: "catalog" as const }
-            : said === undefined
-              ? undefined
-              : { text: said, from: "rule" as const },
+      impact: impactOf(estate, alert.name, said),
       service,
       store: storeOf(alert.labels, stores),
       runbook,

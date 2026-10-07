@@ -55,29 +55,29 @@ const firingKey = (firing: StoredFiring) => ({
   sk: { S: firing.startsAt },
 })
 
-/** A firing's end and silence reason, which the item has no field for, are kept as JSON in its text. */
-const Rest = Schema.fromJsonString(
-  Schema.Struct({
-    endsAt: Schema.optionalKey(Schema.String),
-    reason: Schema.optionalKey(Schema.String),
-    service: Schema.optionalKey(Schema.String),
-  }),
-)
+/** What of a firing the item has no field for, its end, silence reason and what it said, kept as JSON in its text. */
+const Said = Schema.Struct({
+  endsAt: Schema.optionalKey(Schema.String),
+  reason: Schema.optionalKey(Schema.String),
+  service: Schema.optionalKey(Schema.String),
+  severity: Schema.optionalKey(Schema.String),
+  summary: Schema.optionalKey(Schema.String),
+  runbook: Schema.optionalKey(Schema.String),
+  store: Schema.optionalKey(Schema.String),
+})
+const Rest = Schema.fromJsonString(Said)
 const decodeRest = Schema.decodeUnknownOption(Rest)
 
 const firingOf = (item: typeof Item.Type): StoredFiring => {
-  const rest = Option.getOrElse(
-    decodeRest(item.text.S),
-    () => ({}) as { endsAt?: string; reason?: string; service?: string },
-  )
+  const { endsAt, reason, ...said } = Option.getOrElse(decodeRest(item.text.S), (): typeof Said.Type => ({}))
   return {
     environment: item.environment.S,
     alert: item.alert.S,
     name: item.id.S,
-    ...(rest.service === undefined ? {} : { service: rest.service }),
+    ...said,
     startsAt: item.time.S,
-    ...(rest.endsAt === undefined ? {} : { endsAt: rest.endsAt }),
-    ...(item.by.S === "" ? {} : { silence: { by: item.by.S, reason: rest.reason ?? "" } }),
+    ...(endsAt === undefined ? {} : { endsAt }),
+    ...(item.by.S === "" ? {} : { silence: { by: item.by.S, reason: reason ?? "" } }),
   }
 }
 
@@ -236,7 +236,15 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
               time: { S: firing.startsAt },
               by: { S: firing.silence?.by ?? "" },
               text: {
-                S: JSON.stringify({ endsAt: firing.endsAt, reason: firing.silence?.reason, service: firing.service }),
+                S: JSON.stringify({
+                  endsAt: firing.endsAt,
+                  reason: firing.silence?.reason,
+                  service: firing.service,
+                  severity: firing.severity,
+                  summary: firing.summary,
+                  runbook: firing.runbook,
+                  store: firing.store,
+                }),
               },
             },
           }).pipe(Effect.asVoid, Effect.mapError(failure)),
