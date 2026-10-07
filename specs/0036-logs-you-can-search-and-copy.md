@@ -97,7 +97,7 @@ Nothing.
 - [x] **`logs-search`** — `log-search.ts`, the box reading it, the marks and the count.
       Done when: tests show `conn*refused` and `/status=5\d\d/` match, case aside, a bad pattern hides nothing and says
       so, and a suite shows the matched text marked.
-- [ ] **`logs-copy`** — `log-copy.ts`, picking lines, Copy, Save, a line's copy icon, and Copy on an error group.
+- [x] **`logs-copy`** — `log-copy.ts`, picking lines, Copy, Save, a line's copy icon, and Copy on an error group.
       Done when: a suite copies a shift-clicked range to a stubbed clipboard as tab-separated lines, and Save makes a
       file of the shown lines; Playwright searches, selects a range and copies it.
 

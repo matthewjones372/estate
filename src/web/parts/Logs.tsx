@@ -144,7 +144,7 @@ const Live = (props: { readonly service: string }) => {
           <input
             type="search"
             class="select"
-            placeholder="Lines containing… a * b, or /regex/"
+            placeholder="Search, a*b or /regex/"
             value={text()}
             onInput={(event) => setText(event.currentTarget.value)}
           />

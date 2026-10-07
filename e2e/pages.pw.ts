@@ -248,7 +248,7 @@ test("a service's lines are searched, a range of them picked, and copied", async
   await logs.getByRole("button", { name: "Copy 3 lines" }).click()
   await expect(logs.getByText("Copied 3 lines")).toBeVisible()
   const copied = await page.evaluate(() => navigator.clipboard.readText())
-  expect(copied.split("\n").every((line) => /\tserved .* ms/.test(line))).toBe(true)
+  expect(copied.split("\n").every((line) => /^\S+\tstorefront-\S+\tINFO\t.*served .* ms$/.test(line))).toBe(true)
   await accessible(page)
 })
 
