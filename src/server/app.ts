@@ -30,6 +30,7 @@ import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
 import { silenceRoute, unsilenceRoute } from "./http/silences"
 import { tellRoute } from "./http/tell"
+import { timelineExportRoutes } from "./http/timeline-export"
 import { logHubLayer } from "./log-hub"
 import { liveModel } from "./model"
 import { memoryNotes, type Notes, type StoredFiring } from "./notes"
@@ -122,6 +123,7 @@ export const application = Layer.mergeAll(
   askRoute,
   tellRoute,
   incidentRoutes,
+  timelineExportRoutes,
   mcpRoute,
 )
 

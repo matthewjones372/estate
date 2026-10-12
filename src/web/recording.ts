@@ -263,6 +263,11 @@ export const recording = (): Recorded => {
             : { ...found, closedBy: "ada lovelace", closedAt: "2026-10-03T12:00:00Z", ended: how },
         )
       },
+      timelineMarkdown: (of) => {
+        calls.push(["timelineMarkdown", of])
+        const broken = "incident" in of && of.incident === "broken"
+        return Promise.resolve(broken ? "The timeline could not be read (503)." : { text: "# OrdersSlow\n" })
+      },
     },
     sendLines: (batch) => {
       for (const handlers of watching) handlers.batch(batch)

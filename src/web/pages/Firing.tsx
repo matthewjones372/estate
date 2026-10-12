@@ -12,6 +12,7 @@ import { AroundThen } from "../parts/AroundThen"
 import { FiringTimeline } from "../parts/FiringTimeline"
 import { LoadThen } from "../parts/LoadThen"
 import { ErrorList } from "../parts/LogErrors"
+import { TimelineExport } from "../parts/TimelineExport"
 import { firingPath } from "../route"
 
 const lede = (firing: PastFiring) =>
@@ -137,9 +138,12 @@ export const FiringPage = (props: { readonly id: string; readonly at: string }) 
           </nav>
           <WhatHappened firing={firing()} />
           <section aria-labelledby="firing-timeline" class="panel section-box stack">
-            <h2 id="firing-timeline" class="section-title">
-              Timeline
-            </h2>
+            <div class="section-head">
+              <h2 id="firing-timeline" class="section-title">
+                Timeline
+              </h2>
+              <TimelineExport of={{ alert: firing().alert, startsAt: firing().startsAt }} />
+            </div>
             <FiringTimeline alert={firing().alert} startsAt={firing().startsAt} />
           </section>
           <Show when={firing().around}>{(around) => <AroundThen around={around()} />}</Show>

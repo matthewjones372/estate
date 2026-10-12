@@ -12,6 +12,7 @@ import { AlertCard } from "../parts/AlertCard"
 import { Around } from "../parts/Around"
 import { FiringTimeline } from "../parts/FiringTimeline"
 import { Owner } from "../parts/Team"
+import { TimelineExport } from "../parts/TimelineExport"
 import { firingPath } from "../route"
 import { teamOf } from "../teams"
 
@@ -95,9 +96,12 @@ export const AlertPage = (props: { readonly id: string }) => {
               <Owner owner={service()?.owner} team={teamOf(catalog(), service()?.owner)} />
             </section>
             <section aria-labelledby="alert-timeline" class="stack">
-              <h2 id="alert-timeline" class="section-title">
-                Timeline
-              </h2>
+              <div class="section-head">
+                <h2 id="alert-timeline" class="section-title">
+                  Timeline
+                </h2>
+                <TimelineExport of={{ alert: found().id, startsAt: found().startsAt }} />
+              </div>
               <FiringTimeline
                 alert={found().id}
                 startsAt={found().startsAt}

@@ -33,3 +33,41 @@ export const FiringEvent = Schema.Struct({
   link: Schema.optionalKey(Schema.String),
 })
 export type FiringEvent = typeof FiringEvent.Type
+
+/** What an event says in a line, on the page and in an export: what was done, then what it said. */
+export const said = (event: FiringEvent): string => {
+  switch (event.kind) {
+    case "fired":
+      return `fired: ${event.text}`
+    case "resolved":
+      return `resolved ${event.text}`
+    case "noted":
+      return `noted: ${event.text}`
+    case "note-removed":
+      return `removed ${event.text}`
+    case "silenced":
+      return `silenced ${event.text}`
+    case "unsilenced":
+      return event.text
+    case "impact-written":
+      return `wrote the impact: ${event.text}`
+    case "team-told":
+      return event.text
+    case "ai-asked":
+      return `asked AI (${event.text})`
+    case "ai-answered":
+      return `AI answered: ${event.text}`
+    case "ai-failed":
+      return `AI could not answer: ${event.text}`
+    case "ai-kept":
+      return `kept the AI's answer as a note: ${event.text}`
+    case "incident-opened":
+      return `opened incident "${event.text}" with this firing`
+    case "incident-linked":
+      return `linked to incident "${event.text}"`
+    case "incident-unlinked":
+      return `unlinked from incident "${event.text}"`
+    case "incident-closed":
+      return `closed the incident: ${event.text}`
+  }
+}

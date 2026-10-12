@@ -56,3 +56,18 @@
   font-size: 12px;
   cursor: pointer;
 }
+/* A timeline's heading, with Copy as Markdown and Download beside it. */
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.timeline-export {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 13px;
+}

@@ -11,6 +11,7 @@ import type { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { FiringEvent } from "../shared/timeline"
 import type { Live, Snapshot } from "./live"
 import type { Page } from "./route"
+import type { Exported } from "./timeline-path"
 
 export interface Actions {
   readonly navigate: (path: string) => void
@@ -58,6 +59,8 @@ export interface Actions {
   readonly linkIncident: (id: string, alert: string) => Promise<Incident | string>
   readonly unlinkIncident: (id: string, environment: string, alert: string) => Promise<Incident | string>
   readonly closeIncident: (id: string, how: string) => Promise<Incident | string>
+  /** A firing's or an incident's timeline as Markdown, to copy: its text, or why it could not be read. */
+  readonly timelineMarkdown: (of: Exported) => Promise<{ readonly text: string } | string>
 }
 
 export interface LogHandlers {
