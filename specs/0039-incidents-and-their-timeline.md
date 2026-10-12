@@ -130,7 +130,7 @@ Nothing. The notes database gains events and incidents (a table each in Postgres
       leave each record and each firing's events in order with their people; `GET /api/incidents/:id` merges its
       firings' events in order; the alert says which incident it is part of; a viewer cannot open, link, unlink or
       close.
-- [ ] **`spec-0039-incidents-page`** — *Link to incident…* and *New incident* on a card; `/incidents/:id` with its
+- [x] **`spec-0039-incidents-page`** — *Link to incident…* and *New incident* on a card; `/incidents/:id` with its
       firings, notes and merged timeline.
       Done when: linking two firings from their cards shows both on the incident's page with their events merged in
       order; each card says "Part of" its incident and links to it; a viewer sees neither *Link to incident…* nor
