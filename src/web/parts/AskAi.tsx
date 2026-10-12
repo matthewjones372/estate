@@ -147,7 +147,9 @@ export const AskAiAnswer = (props: { readonly alert: Alert }) => {
     const found = state.answer.get()
     if (found === undefined || state.kept.get() === "keeping" || state.kept.get() === "kept") return
     state.kept.set("keeping")
-    void actions.addNote(props.alert.id, noteOf(found)).then((saved) => state.kept.set(saved ? "kept" : "failed"))
+    void actions
+      .addNote(props.alert.id, noteOf(found), "ask-ai")
+      .then((saved) => state.kept.set(saved ? "kept" : "failed"))
   }
   return (
     <Show when={me.ai === true}>
