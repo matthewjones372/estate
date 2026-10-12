@@ -134,6 +134,8 @@ describe("running", () => {
                   removeFiringsBefore: () => Effect.void,
                   threads: () => Effect.succeed([]),
                   keepThread: () => Effect.void,
+                  events: () => Effect.succeed([]),
+                  addEvent: () => Effect.void,
                 }),
               ),
             ),

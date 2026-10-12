@@ -58,7 +58,7 @@ describe("an alert's firings", () => {
     ])
   })
 
-  test("are recorded in the store and the state while Estate runs, from what it already kept", () =>
+  test("are recorded in the store and the state while Estate runs, from what it already kept, with their events", () =>
     Effect.runPromise(
       Effect.gen(function* () {
         const notes = yield* Notes
@@ -73,7 +73,11 @@ describe("an alert's firings", () => {
         yield* TestClock.adjust("1 second")
         yield* Fiber.interrupt(recording)
         const shown = (yield* SubscriptionRef.get(yield* Estate)).firings ?? []
-        return { stored: yield* notes.firings("1970-01-01T00:00:00Z"), shown }
+        const events = [
+          ...(yield* notes.events({ environment: "staging", alert: "a1", startsAt: slow.startsAt })),
+          ...(yield* notes.events({ environment: "staging", alert: "old", startsAt: "1970-01-01T09:00:00.000Z" })),
+        ]
+        return { stored: yield* notes.firings("1970-01-01T00:00:00Z"), shown, events }
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
@@ -84,7 +88,13 @@ describe("an alert's firings", () => {
           ),
         ),
       ),
-    ).then(({ stored, shown }) => {
+    ).then(({ stored, shown, events }) => {
+      // The one it saw begin fired; both it saw end resolved. Estate is who saw them.
+      expect(events.map((each) => [each.alert, each.by, each.kind, each.at, each.text])).toEqual([
+        ["a1", "Estate", "fired", slow.startsAt, "OrdersSlow, warning, orders"],
+        ["a1", "Estate", "resolved", "1970-01-02T11:00:02.000Z", "after 1 hour"],
+        ["old", "Estate", "resolved", "1970-01-02T11:00:00.000Z", "after 1 day"],
+      ])
       expect(stored.map((each) => [each.alert, each.endsAt])).toEqual([
         ["a1", "1970-01-02T11:00:02.000Z"],
         ["old", "1970-01-02T11:00:00.000Z"],
@@ -162,8 +172,8 @@ describe("an alert's firings", () => {
         },
       ])
       expect(statements[3]?.[0]).toContain("add column if not exists summary text")
-      expect(statements[5]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
-      expect(statements[5]?.[1]).toEqual([
+      expect(statements[7]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
+      expect(statements[7]?.[1]).toEqual([
         "staging",
         "a1",
         "OrdersSlow",
@@ -177,7 +187,10 @@ describe("an alert's firings", () => {
         null,
         null,
       ])
-      expect(statements[6]).toEqual(["delete from estate_firings where starts_at < $1", ["1970-01-01T00:00:00.000Z"]])
+      expect(statements.slice(8, 10)).toEqual([
+        ["delete from estate_firings where starts_at < $1", ["1970-01-01T00:00:00.000Z"]],
+        ["delete from estate_events where starts_at < $1", ["1970-01-01T00:00:00.000Z"]],
+      ])
     })
   })
 
