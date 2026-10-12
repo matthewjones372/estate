@@ -222,6 +222,19 @@ describe("the model Ask AI asks", () => {
     })
   })
 
+  test("asks Anthropic for its answer in the answer's shape, with room to think first", () => {
+    const calls: Call[] = []
+    const claude: Ai = { provider: "anthropic", model: "claude-opus-5-5", apiKey: Redacted.make("ak") }
+    return asking(claude, () => anthropic(JSON.stringify(answer)), calls).then(() => {
+      const body = JSON.parse(calls[0]?.body ?? "{}")
+      expect(body.max_tokens).toBe(8192)
+      expect(body.output_config.format.type).toBe("json_schema")
+      expect(body.output_config.format.schema.required).toEqual(["likelyCause", "evidence", "nextSteps", "confidence"])
+      expect(body.output_config.format.schema.additionalProperties).toBe(false)
+      expect(body.output_config.format.schema.properties.evidence.items.additionalProperties).toBe(false)
+    })
+  })
+
   test("a refused call says what the provider said, cut short", () => {
     const claude: Ai = { provider: "anthropic", model: "claude-opus-5-5", apiKey: Redacted.make("ak") }
     const local: Ai = { provider: "openai-compatible", url: "http://vllm.test/v1", model: "local" }

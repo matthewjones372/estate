@@ -11,6 +11,10 @@ thinking block goes back as `{"type": "thinking"}`, and Anthropic refuses the se
 400 invalid_request_error: messages.1.content.0.thinking.thinking: Field required
 ```
 
+Past that, two more things stop an answer. Estate allows a reply 1,024 tokens, and the thinking counts against
+them, so the answer is cut off mid-sentence. And only the prompt asks Anthropic for the answer's JSON; the chat APIs
+get `response_format`, but Anthropic's model writes its findings as prose, which Estate cannot read.
+
 The page shows "Anthropic answered 400" and nothing else, so the person asking reads it as a wrong key. The petshop's
 demo found this, with a working key and the alert firing.
 
@@ -37,6 +41,10 @@ content blocks whole, every field, for the next turn:
 // model-apis.ts, Anthropic
 read: (text) => … ({ text, calls, tokens, kept: { role: "assistant", content: raw.content } })
 ```
+
+**The answer held to its shape.** Anthropic is asked for the answer through structured output
+(`output_config.format`, the answer's JSON Schema with every object closed), as the chat APIs are through
+`response_format`, and allowed 8,192 tokens so it can think and still answer.
 
 A failed call says what the provider said, not only its status:
 
@@ -79,11 +87,12 @@ Nothing.
 
 ## Stack
 
-- [ ] **`spec-0038-keep-the-reply`** — Anthropic's reply kept whole between turns; a failed call names the
-      provider's message.
+- [ ] **`spec-0038-keep-the-reply`** — Anthropic's reply kept whole between turns; its answer held to the answer's
+      shape with room to think; a failed call names the provider's message.
       Done when: in `model.test.ts`, an Anthropic fake that answers first with a `thinking` block (with `thinking` and
       `signature`) and a tool call receives that block back unchanged on the second call, and the ask answers; a fake
-      that answers 400 with an error body gives "Anthropic answered 400: ‹its message›".
+      that answers 400 with an error body gives "Anthropic answered 400: ‹its message›"; Anthropic's call carries
+      `max_tokens` 8192 and `output_config.format` with the answer's required fields and closed objects.
 - [ ] **`spec-0038-ask-from-the-card`** — *Ask AI* on every alert card, answered on the card, with a bar and the
       seconds while it asks; the alert's page's separate section folded into its card.
       Done when: in `alert.suite.tsx`, a card with `ai:` set has *Ask AI* and one without has not; pressing it shows

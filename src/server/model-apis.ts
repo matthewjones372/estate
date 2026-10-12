@@ -4,6 +4,7 @@
  * Completions API of OpenAI, xAI, Gemini and self-hosted servers.
  */
 import { Duration, Effect, Option, Redacted, Schema } from "effect"
+import { ModelAnswer } from "../shared/ask"
 import type { Call } from "./remote"
 import type { Ai } from "./settings"
 
@@ -55,6 +56,20 @@ export const started = (system: string, user: string): Conversation => ({
 /** A model reads before it answers, so it is given longer than a tool's API. */
 const thinking = Duration.seconds(60)
 const longest = 1024
+/** Anthropic's models think before they answer, and the thinking counts against `max_tokens`. */
+const longestThinking = 8192
+
+/** Every object in a JSON Schema closed to properties it does not name, as structured output requires. */
+const closed = (schema: unknown): unknown => {
+  if (Array.isArray(schema)) return schema.map(closed)
+  if (typeof schema !== "object" || schema === null) return schema
+  return Object.fromEntries(
+    Object.entries(schema).map(([key, value]) => [key, key === "additionalProperties" ? false : closed(value)]),
+  )
+}
+
+/** The answer's shape, which Anthropic holds the final reply to, as `response_format` does for the chat APIs. */
+const answerFormat = { type: "json_schema", schema: closed(Schema.toJsonSchemaDocument(ModelAnswer).schema) }
 
 const AnthropicReply = Schema.fromJsonString(
   Schema.Struct({
@@ -126,7 +141,8 @@ const anthropic = (ai: Ai): Api => {
       },
       body: JSON.stringify({
         model: ai.model,
-        max_tokens: longest,
+        max_tokens: longestThinking,
+        output_config: { format: answerFormat },
         system,
         messages,
         ...(offers.length === 0
