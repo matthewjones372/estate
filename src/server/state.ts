@@ -8,8 +8,9 @@ import type { AgentUsage } from "../shared/agents"
 import type { Catalog } from "../shared/catalog"
 import type { CodeHealth } from "../shared/code"
 import type { Cost } from "../shared/costs"
-import type { Alert, Build, Debug, Job, Load, Note, Pod, Series, SourceKind } from "../shared/events"
+import type { Alert, Build, Debug, Job, Load, Pod, Series, SourceKind } from "../shared/events"
 import type { Incident } from "../shared/incidents"
+import type { Note } from "../shared/note"
 
 export interface Part<A> {
   readonly state: "off" | "waiting" | "ok" | "failing"

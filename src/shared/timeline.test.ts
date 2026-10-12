@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { type EventKind, said } from "./timeline"
+import { type EventKind, mergedOnce, said } from "./timeline"
 
 const line = (kind: EventKind, text: string) => said({ id: "e", at: "2026-10-02T09:00:00Z", by: "gil", kind, text })
 
@@ -22,6 +22,8 @@ describe("what an event says in a line", () => {
       line("incident-linked", "Orders slow"),
       line("incident-unlinked", "Orders slow"),
       line("incident-closed", "the pool was resized"),
+      line("incident-noted", "registry restarted"),
+      line("incident-note-removed", "a note by ada: registry restarted"),
     ]).toEqual([
       "fired: warning, orders",
       "resolved after 22 min",
@@ -39,6 +41,24 @@ describe("what an event says in a line", () => {
       'linked to incident "Orders slow"',
       'unlinked from incident "Orders slow"',
       "closed the incident: the pool was resized",
+      "noted on the incident: registry restarted",
+      "removed from the incident a note by ada: registry restarted",
     ])
+  })
+})
+
+describe("an incident's merged events", () => {
+  const event = (id: string, at: string, kind: EventKind, text: string) => ({ id, at, by: "gil", kind, text })
+
+  test("are in time order, with an event on the incident shown once however many firings kept it", () => {
+    const merged = mergedOnce([
+      event("b", "2026-10-02T09:05:00.000Z", "incident-noted", "restarted"),
+      event("a", "2026-10-02T09:00:00Z", "fired", "warning, orders"),
+      event("c", "2026-10-02T09:05:00Z", "incident-noted", "restarted"),
+      event("d", "2026-10-02T09:05:00Z", "incident-noted", "and again"),
+      event("e", "2026-10-02T09:06:00Z", "noted", "same"),
+      event("f", "2026-10-02T09:06:00Z", "noted", "same"),
+    ])
+    expect(merged.map((each) => each.id)).toEqual(["a", "b", "d", "e", "f"])
   })
 })

@@ -1,5 +1,6 @@
 /** An incident: firings a person linked as one problem, who opened it and when, and how it ended once closed. */
 import { Schema } from "effect"
+import { Note } from "./note"
 import { FiringEvent } from "./timeline"
 
 const optional = Schema.optionalKey
@@ -28,6 +29,8 @@ export const Incident = Schema.Struct({
       linkedAt: Instant,
     }),
   ),
+  /** Notes written on the incident, oldest first; none on a record kept before it held notes. */
+  notes: optional(Schema.Array(Note)),
 })
 export type Incident = typeof Incident.Type
 

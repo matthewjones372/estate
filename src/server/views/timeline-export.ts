@@ -37,7 +37,8 @@ export const exportedFiring = (
     endsAt: past?.endsAt,
     firing: live !== undefined,
     impact: firing.impact?.text,
-    notes: oldestFirst(firing.notes),
+    // Its own notes; those on its incident are the incident's, so an incident's export has each once.
+    notes: oldestFirst(firing.notes.flatMap((note) => ("incident" in note ? [] : [note]))),
   })
 }
 

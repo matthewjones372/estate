@@ -17,6 +17,19 @@ export const firingNow = (environment: string, alert: string) =>
     return found === undefined ? undefined : { environment, alert, startsAt: found.startsAt }
   })
 
+const kept = (firing: FiringKey, at: string, by: string, kind: EventKind, text: string, link?: string) =>
+  Effect.gen(function* () {
+    yield* (yield* Notes).addEvent({
+      ...firing,
+      id: crypto.randomUUID(),
+      at,
+      by,
+      kind,
+      text,
+      ...(link === undefined ? {} : { link }),
+    })
+  }).pipe(Effect.catch((failure) => Effect.logWarning(`a firing's event could not be kept: ${failure.message}`)))
+
 export const happened = (
   firing: FiringKey | undefined,
   by: string,
@@ -24,16 +37,15 @@ export const happened = (
   text: string,
   link?: string,
 ): Effect.Effect<void, never, Notes> =>
-  firing === undefined
-    ? Effect.void
-    : Effect.gen(function* () {
-        yield* (yield* Notes).addEvent({
-          ...firing,
-          id: crypto.randomUUID(),
-          at: yield* isoNow,
-          by,
-          kind,
-          text,
-          ...(link === undefined ? {} : { link }),
-        })
-      }).pipe(Effect.catch((failure) => Effect.logWarning(`a firing's event could not be kept: ${failure.message}`)))
+  firing === undefined ? Effect.void : Effect.flatMap(isoNow, (at) => kept(firing, at, by, kind, text, link))
+
+/** What was done to an incident, on each of its firings at one time, so its page can show it once. */
+export const happenedOnEach = (
+  firings: ReadonlyArray<FiringKey>,
+  by: string,
+  kind: EventKind,
+  text: string,
+): Effect.Effect<void, never, Notes> =>
+  Effect.flatMap(isoNow, (at) =>
+    Effect.forEach(firings, (firing) => kept(firing, at, by, kind, text), { discard: true }),
+  )

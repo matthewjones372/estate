@@ -17,6 +17,9 @@ const rows = (container: HTMLElement) =>
 const firings = (container: HTMLElement) =>
   [...container.querySelectorAll(".incident-firings li")].map((row) => row.textContent?.replace(/\s+/g, " ").trim())
 
+const notes = (container: HTMLElement) =>
+  [...container.querySelectorAll(".incident-notes .note-body")].map((each) => each.textContent)
+
 const opened = async (id: string, me: Me = operator) => {
   const page = mount(() => <IncidentPage id={id} />, { me })
   await page.settle()
@@ -48,15 +51,16 @@ describe("an incident's page", () => {
     expect(page.calls).toContainEqual(["navigate", "/alerts/a1"])
   })
 
-  test("merges its firings' events in order, each saying which alert it was on", async () => {
+  test("merges its firings' events in order, each saying which alert it was on, or that it was on the incident", async () => {
     const page = await opened("i1")
     const shown = rows(page.container)
-    expect(shown).toHaveLength(5)
+    expect(shown).toHaveLength(6)
     expect(shown[0]).toMatch(/^3 Oct \d\d:40:00 Estate PaymentsDown fired: PaymentsDown, critical, payments$/)
     expect(shown[1]).toMatch(/:46:00 Estate OrdersSlow fired: OrdersSlow, critical, storefront$/)
     expect(shown[2]).toMatch(/:50:00 gil OrdersSlow opened incident "Orders slow" with this firing$/)
     expect(shown[3]).toMatch(/:52:00 ada PaymentsDown linked to incident "Orders slow"$/)
-    expect(shown[4]).toMatch(/:55:00 Estate PaymentsDown resolved after 15 min$/)
+    expect(shown[4]).toMatch(/:53:00 gil \(incident\) noted on the incident: payments retried$/)
+    expect(shown[5]).toMatch(/:55:00 Estate PaymentsDown resolved after 15 min$/)
   })
 
   test("an operator unlinks a firing, and the page reads the incident again", async () => {
@@ -106,9 +110,44 @@ describe("an incident's page", () => {
     expect(page.container.querySelector(".incident-close")).toBeNull()
   })
 
+  test("shows its notes, and a note added is kept and read back with the incident", async () => {
+    const page = await opened("i1")
+    expect(notes(page.container)).toEqual(["payments retried\nwatching"])
+    expect(page.container.querySelector(".incident-notes .alert-quiet")?.textContent).toMatch(/^gil · \d\d:53 · Remove/)
+    page.type(page.container.querySelector(".incident-notes input") as HTMLInputElement, " pool resized ")
+    page.click(page.button("Add note"))
+    expect(page.button(/Adding…/).getAttribute("aria-busy")).toBe("true")
+    await page.settle()
+    expect(page.calls).toContainEqual(["addIncidentNote", "i1", "pool resized"])
+    expect(page.calls.filter(([name]) => name === "incident")).toHaveLength(2)
+    expect(notes(page.container)).toEqual(["pool resized", "payments retried\nwatching"])
+    expect((page.container.querySelector(".incident-notes input") as HTMLInputElement).value).toBe("")
+    page.click(page.button(/Remove the note by gil/))
+    await page.settle()
+    expect(page.calls).toContainEqual(["removeIncidentNote", "i1", "n1"])
+    expect(notes(page.container)).toEqual(["pool resized"])
+  })
+
+  test("a note refused says why, and keeps what was written", async () => {
+    const { actions } = recording()
+    const page = mount(() => <IncidentPage id="i1" />, {
+      actions: { ...actions, addIncidentNote: () => Promise.resolve("Estate could not be reached.") },
+    })
+    await page.settle()
+    page.click(page.button("Add note"))
+    expect(page.calls).toEqual([])
+    page.type(page.container.querySelector(".incident-notes input") as HTMLInputElement, "fixed")
+    page.click(page.button("Add note"))
+    await page.settle()
+    expect(page.container.querySelector('.incident-notes [role="alert"]')?.textContent).toBe(
+      "Estate could not be reached.",
+    )
+    expect((page.container.querySelector(".incident-notes input") as HTMLInputElement).value).toBe("fixed")
+  })
+
   test("a viewer reads it all, but may neither unlink a firing nor close it", async () => {
     const page = await opened("i1", viewer)
-    expect(rows(page.container)).toHaveLength(5)
+    expect(rows(page.container)).toHaveLength(6)
     expect(page.container.textContent).not.toContain("Unlink")
     expect(page.container.textContent).not.toContain("Close incident")
   })
@@ -121,6 +160,8 @@ describe("an incident's page", () => {
     // Kept before an incident kept its firings' names, so the alert's id stands in.
     expect(firings(page.container)).toEqual([expect.stringMatching(/^a7 · production · resolved, fired \d\d:55$/)])
     expect(page.container.textContent).toContain("Nothing is kept for its firings yet.")
+    expect(page.container.querySelector(".incident-notes")?.textContent).toContain("No notes were written on it.")
+    expect(page.container.querySelector(".incident-notes input")).toBeNull()
     expect(page.container.textContent).not.toContain("Unlink")
     expect(page.container.textContent).not.toContain("Close incident")
   })

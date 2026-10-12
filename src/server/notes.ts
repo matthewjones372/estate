@@ -3,8 +3,8 @@
  * by `notes-dynamodb.ts`); in memory when no database is set, for trying Estate out.
  */
 import { Context, Data, Effect, Layer, Ref } from "effect"
-import type { Note } from "../shared/events"
 import type { Incident } from "../shared/incidents"
+import type { Note } from "../shared/note"
 import {
   createEvents,
   type FiringEvents,

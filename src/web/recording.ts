@@ -5,7 +5,7 @@ import type { LogBatch } from "../shared/log-events"
 import type { FiringEvent } from "../shared/timeline"
 import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
-import { incidentRecords, openIncidents } from "./fixture-incidents"
+import { incidentActions } from "./fixture-incidents"
 import { groups, lines } from "./fixture-logs"
 
 /** Two runs of the triage agent, as Langfuse would give them: one failed, one through. */
@@ -221,48 +221,7 @@ export const recording = (): Recorded => {
         calls.push(["around", alert])
         return Promise.resolve(alert === "a1" ? brief : undefined)
       },
-      incidents: () => {
-        calls.push(["incidents"])
-        return Promise.resolve(openIncidents)
-      },
-      incident: (id) => {
-        calls.push(["incident", id])
-        return Promise.resolve(id === "broken" ? undefined : (incidentRecords.get(id) ?? "none"))
-      },
-      openIncident: (title, alert) => {
-        calls.push(["openIncident", title, alert])
-        return Promise.resolve({
-          id: "i9",
-          title,
-          openedBy: "ada lovelace",
-          openedAt: "2026-10-03T12:00:00Z",
-          firings: [],
-        })
-      },
-      // Checkout down closed in the meantime, so linking to it is refused.
-      linkIncident: (id, alert) => {
-        calls.push(["linkIncident", id, alert])
-        const found = openIncidents.find((each) => each.id === id)
-        return Promise.resolve(found === undefined || id === "i2" ? `"Checkout down" is closed` : found)
-      },
-      unlinkIncident: (id, environment, alert) => {
-        calls.push(["unlinkIncident", id, environment, alert])
-        const found = incidentRecords.get(id)?.incident
-        return Promise.resolve(
-          found === undefined
-            ? "there is no such incident"
-            : { ...found, firings: found.firings.filter((each) => each.alert !== alert) },
-        )
-      },
-      closeIncident: (id, how) => {
-        calls.push(["closeIncident", id, how])
-        const found = incidentRecords.get(id)?.incident
-        return Promise.resolve(
-          found === undefined
-            ? "there is no such incident"
-            : { ...found, closedBy: "ada lovelace", closedAt: "2026-10-03T12:00:00Z", ended: how },
-        )
-      },
+      ...incidentActions(calls),
       timelineMarkdown: (of) => {
         calls.push(["timelineMarkdown", of])
         const broken = "incident" in of && of.incident === "broken"

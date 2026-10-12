@@ -6,6 +6,7 @@
  */
 import { Effect, Layer, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerResponse } from "effect/http"
+import { mergedOnce } from "../../shared/timeline"
 import type { ExportedFiring, TimelineExport } from "../../shared/timeline-export"
 import { Notes } from "../notes"
 import { Estate } from "../state"
@@ -74,9 +75,7 @@ const incidentRoute = HttpRouter.add(
     const incident = (estate.incidents ?? []).find((each) => each.id === id)
     if (incident === undefined) return yield* missing("there is no such incident")
     const firings = incidentFirings(estate, incident)
-    const events = (yield* Effect.forEach(firings, (firing) => eventsOf(firing, true)))
-      .flat()
-      .toSorted((a, b) => Date.parse(a.at) - Date.parse(b.at))
+    const events = mergedOnce((yield* Effect.forEach(firings, (firing) => eventsOf(firing, true))).flat())
     const { title, firings: _, ...kept } = incident
     return exported({ title, incident: kept, firings, events }, incident.openedAt, format)
   }).pipe(

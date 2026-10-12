@@ -1,7 +1,8 @@
 /** @jsxImportSource solid-js */
 /** Notes that fold: run by `notes-fold.test.ts` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
-import type { Alert, FeedEvent, Note } from "../shared/events"
+import type { Alert, FeedEvent } from "../shared/events"
+import type { Note } from "../shared/note"
 import { events } from "./fixture"
 import { mount } from "./harness"
 import { AlertCard } from "./parts/AlertCard"

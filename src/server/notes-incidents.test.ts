@@ -26,6 +26,7 @@ const closed: Incident = {
   ended: "registry restarted",
   link: "https://incidents.example/42",
   firings: [...opened.firings, linked("a2", "2026-10-12T16:51:40.000Z")],
+  notes: [{ id: "n1", at: "2026-10-12T16:52:04.000Z", by: "gil", text: "registry container restarted" }],
 }
 const old: Incident = {
   id: "i0",

@@ -1,17 +1,19 @@
 /** @jsxImportSource solid-js */
 /**
- * An incident's own page: who opened it and when, how long it has been open or how it ended, its firings, and every
- * event of its firings merged in order, each saying which alert it was on. Incidents span environments, so it is read
- * whole, whichever environment the page is in.
+ * An incident's own page: who opened it and when, how long it has been open or how it ended, its firings, its notes,
+ * and every event of its firings merged in order, each saying which alert it was on, or that it was on the incident.
+ * Incidents span environments, so it is read whole, whichever environment the page is in.
  */
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
-import { longestNote } from "../../shared/events"
 import type { Incident, IncidentEvent, IncidentRecord } from "../../shared/incidents"
+import { longestNote } from "../../shared/note"
+import { onIncident } from "../../shared/timeline"
 import { useEstate } from "../context"
 import { day, duration, since } from "../format"
 import { A } from "../parts/A"
 import { IncidentFirings } from "../parts/IncidentFirings"
 import { canKeepIncidents } from "../parts/IncidentLink"
+import { IncidentNotes } from "../parts/IncidentNotes"
 import { TimelineExport } from "../parts/TimelineExport"
 import { TimelineRow } from "../parts/TimelineRow"
 
@@ -119,6 +121,7 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
         </Show>
       </section>
       <IncidentFirings record={props.record} changed={props.changed} />
+      <IncidentNotes incident={incident()} changed={props.changed} />
       <section aria-labelledby="incident-timeline" class="panel section-box stack">
         <div class="section-head">
           <h2 id="incident-timeline" class="section-title">
@@ -136,7 +139,9 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
         >
           <ol class="timeline">
             <For each={props.record.events}>
-              {(event) => <TimelineRow event={event} on={alertOf(incident(), event)} />}
+              {(event) => (
+                <TimelineRow event={event} on={onIncident(event) ? "(incident)" : alertOf(incident(), event)} />
+              )}
             </For>
           </ol>
         </Show>

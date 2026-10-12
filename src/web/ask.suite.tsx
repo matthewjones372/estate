@@ -1,7 +1,8 @@
 /** @jsxImportSource solid-js */
 /** Ask AI on an alert's card: run by `ask.test.ts` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
-import { type Alert, longestNote } from "../shared/events"
+import type { Alert } from "../shared/events"
+import { longestNote } from "../shared/note"
 import { events, operator } from "./fixture"
 import { mount } from "./harness"
 import { AlertPage } from "./pages/Alert"

@@ -1,13 +1,23 @@
 /** @jsxImportSource solid-js */
-/** An alert's notes on its card: the newest few, *Show all*, each with who and when, and a box to add one. */
+/**
+ * An alert's notes on its card, with its incident's among them: the newest few, *Show all*, each with who and when,
+ * and a box to add one to the alert.
+ */
 import { createSignal, For, Show } from "solid-js"
-import type { Alert } from "../../shared/events"
+import type { Alert, Me } from "../../shared/events"
 import { useEstate } from "../context"
 import { initials, stamp } from "../format"
 import { allNotesShown, NoteText } from "./NoteText"
 
 /** A card shows its newest notes; the rest wait for *Show all*. */
 const newest = 3
+
+type CardNote = Alert["notes"][number]
+
+/** Whether this person may take a note back: its author or an operator; an incident's only while it is open. */
+const removable = (note: CardNote, alert: Alert, me: Me) =>
+  (note.by === me.name || me.role === "operator") &&
+  (note.incident === undefined || (alert.incident?.closed !== true && me.readOnly !== true && me.kiosk !== true))
 
 export const Notes = (props: { readonly alert: Alert }) => {
   const { actions, me, now } = useEstate()
@@ -21,6 +31,10 @@ export const Notes = (props: { readonly alert: Alert }) => {
     void actions.addNote(props.alert.id, text).then((added) => {
       if (added) setDraft("")
     })
+  }
+  const remove = (note: CardNote) => {
+    if (note.incident === undefined) void actions.removeNote(note.id)
+    else void actions.removeIncidentNote(note.incident.id, note.id)
   }
   return (
     <div class="alert-notes">
@@ -39,9 +53,17 @@ export const Notes = (props: { readonly alert: Alert }) => {
             <div style={{ "min-width": 0 }}>
               <div class="alert-quiet">
                 <strong class="note-who">{note.by}</strong> · {stamp(note.at, now())}
-                <Show when={note.by === me.name || me.role === "operator"}>
+                <Show when={note.incident}>
+                  {(incident) => (
+                    <>
+                      {" · on "}
+                      <em>{incident().title}</em>
+                    </>
+                  )}
+                </Show>
+                <Show when={removable(note, props.alert, me)}>
                   {" · "}
-                  <button type="button" class="note-remove" onClick={() => void actions.removeNote(note.id)}>
+                  <button type="button" class="note-remove" onClick={() => remove(note)}>
                     Remove<span class="visually-hidden"> the note by {note.by}</span>
                   </button>
                 </Show>

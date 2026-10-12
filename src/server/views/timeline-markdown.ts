@@ -2,7 +2,7 @@
  * A timeline as Markdown, a review's starting point: the title, each firing, the events as a table, then the notes in
  * full. Every time is UTC to the second, so a review read across zones agrees on the order.
  */
-import { said } from "../../shared/timeline"
+import { onIncident, said } from "../../shared/timeline"
 import type { ExportedFiring, TimelineExport } from "../../shared/timeline-export"
 
 /** "2026-10-02T09:00:00Z"; a time that does not parse is left as written rather than lost. */
@@ -46,7 +46,8 @@ const table = (record: TimelineExport) => {
   const head = many ? ["At (UTC)", "Who", "Alert", "What"] : ["At (UTC)", "Who", "What"]
   const rows = record.events.map((event) => {
     const what = event.link === undefined ? said(event) : `${said(event)} (<${event.link}>)`
-    const cells = many ? [utc(event.at), event.by, event.alert ?? "", what] : [utc(event.at), event.by, what]
+    const on = onIncident(event) ? "(incident)" : (event.alert ?? "")
+    const cells = many ? [utc(event.at), event.by, on, what] : [utc(event.at), event.by, what]
     return `| ${cells.map(cell).join(" | ")} |`
   })
   return rows.length === 0
@@ -55,8 +56,8 @@ const table = (record: TimelineExport) => {
 }
 
 /** Each note as a quote, its lines kept as written. */
-const notesOf = (firing: ExportedFiring) =>
-  firing.notes.flatMap((note) => [
+const quoted = (notes: ExportedFiring["notes"]) =>
+  notes.flatMap((note) => [
     `**${note.by}**, ${utc(note.at)}`,
     "",
     ...note.text.split(/\r?\n/).map((each) => (each === "" ? ">" : `> ${each}`)),
@@ -65,10 +66,14 @@ const notesOf = (firing: ExportedFiring) =>
 
 const notes = (record: TimelineExport) => {
   const written = record.firings.filter((firing) => firing.notes.length > 0)
-  if (written.length === 0) return ["No notes were kept.", ""]
-  return record.incident === undefined
-    ? written.flatMap(notesOf)
-    : written.flatMap((firing) => [`### ${firing.name}, ${firing.environment}`, "", ...notesOf(firing)])
+  if (record.incident === undefined)
+    return written.length === 0 ? ["No notes were kept.", ""] : written.flatMap((firing) => quoted(firing.notes))
+  const own = record.incident.notes ?? []
+  const sections = [
+    ...(own.length === 0 ? [] : ["### On the incident", "", ...quoted(own)]),
+    ...written.flatMap((firing) => [`### ${firing.name}, ${firing.environment}`, "", ...quoted(firing.notes)]),
+  ]
+  return sections.length === 0 ? ["No notes were kept.", ""] : sections
 }
 
 export const markdownOf = (record: TimelineExport): string => {

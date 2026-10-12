@@ -1,7 +1,7 @@
 /** `POST /api/notes`: anyone who may see the estate adds a note to an alert, under their own name. */
 import { Clock, Duration, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
-import { longestNote } from "../../shared/events"
+import { longestNote } from "../../shared/note"
 import { firingNow, happened } from "../happened"
 import { Notes } from "../notes"
 import { noteWritten } from "../observed"

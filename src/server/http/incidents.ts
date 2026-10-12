@@ -4,18 +4,19 @@
  * on the firings it touches, and a firing is in one incident at most, so linking it elsewhere moves it.
  */
 import { Effect, Layer, Schema, SubscriptionRef } from "effect"
-import { HttpRouter, HttpServerRequest, type HttpServerResponse } from "effect/http"
-import { longestNote } from "../../shared/events"
+import { HttpRouter, HttpServerRequest } from "effect/http"
 import type { Incident } from "../../shared/incidents"
+import { longestNote } from "../../shared/note"
+import { mergedOnce } from "../../shared/timeline"
 import { firingNow, happened } from "../happened"
 import { Notes, sameFiring } from "../notes"
 import type { FiringKey } from "../notes-events"
 import { Configured } from "../settings"
-import type { SourceFailure } from "../sources/run"
 import { Estate } from "../state"
 import { isoNow } from "../time"
-import { written } from "../writes"
-import { json, Refusal, refused, searchParams, withRole, writer } from "./routes"
+import { incidentNoteRoutes } from "./incident-notes"
+import { answered, keep, kept, keyOf, malformed, named, open, refuse } from "./incident-record"
+import { json, refused, searchParams, withRole, writer } from "./routes"
 
 const longestTitle = 200
 
@@ -24,31 +25,12 @@ const Linked = Schema.Struct({ environment: Schema.String, alert: Schema.String 
 const Unlinked = Schema.Struct({ env: Schema.String, alert: Schema.String })
 const Closed = Schema.Struct({ how: Schema.String })
 
-const refuse = (status: Refusal["status"], message: string): Effect.Effect<never, Refusal> =>
-  Effect.fail(new Refusal({ status, body: { message } }))
-
-const malformed = (message: string) => () => new Refusal({ status: 400, body: { message } })
-
 const operator = Effect.gen(function* () {
   const person = yield* writer
   if ((yield* Configured).readOnly === true)
     return yield* refuse(403, "Estate is read-only here: it keeps no incidents")
   return person.role === "operator" ? person : yield* refuse(403, "incidents are kept by operators")
 })
-
-const kept = Effect.map(Effect.flatMap(Estate, SubscriptionRef.get), (estate) => estate.incidents ?? [])
-
-const named = (id: string) =>
-  Effect.flatMap(kept, (incidents) => {
-    const found = incidents.find((each) => each.id === id)
-    return found === undefined ? refuse(404, "there is no such incident") : Effect.succeed(found)
-  })
-
-/** The incident, while it is open: a closed one is the record of how it went, and changes no more. */
-const open = (id: string) =>
-  Effect.flatMap(named(id), (incident) =>
-    incident.closedAt === undefined ? Effect.succeed(incident) : refuse(400, `"${incident.title}" is closed`),
-  )
 
 const live = (environment: string, alert: string) =>
   Effect.flatMap(firingNow(environment, alert), (firing) =>
@@ -61,15 +43,6 @@ const nameOf = (firing: FiringKey) =>
     Effect.flatMap(Estate, SubscriptionRef.get),
     (estate) => estate.environments[firing.environment]?.alerts.value?.find((each) => each.id === firing.alert)?.name,
   )
-
-const keyOf = ({ environment, alert, startsAt }: FiringKey): FiringKey => ({ environment, alert, startsAt })
-
-/** The incident kept, and shown wherever the estate is read. */
-const keep = (incident: Incident) =>
-  Effect.gen(function* () {
-    yield* (yield* Notes).keepIncident(incident)
-    yield* written({ _tag: "IncidentKept", incident })
-  })
 
 /** The firing in `incident`, taken first out of any other open one it was in; a closed one keeps its record. */
 const linked = (incident: Incident, firing: FiringKey, by: string) =>
@@ -88,13 +61,6 @@ const linked = (incident: Incident, firing: FiringKey, by: string) =>
     yield* keep(now)
     return now
   })
-
-/** A store that cannot be read or written is a 503, saying why; a refusal is its own answer. */
-const answered = <R>(route: Effect.Effect<HttpServerResponse.HttpServerResponse, SourceFailure | Refusal, R>) =>
-  route.pipe(
-    Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 503))),
-    Effect.catchTag("Refusal", refused),
-  )
 
 const openRoute = HttpRouter.add(
   "POST",
@@ -190,7 +156,7 @@ const readRoute = HttpRouter.add(
     const events = yield* Effect.forEach(incident.firings, (firing) =>
       Effect.map(notes.events(keyOf(firing)), (all) => all.map(({ startsAt: _, ...event }) => event)),
     )
-    return json({ incident, events: events.flat().toSorted((a, b) => a.at.localeCompare(b.at)) })
+    return json({ incident, events: mergedOnce(events.flat()) })
   }).pipe(answered),
 )
 
@@ -207,4 +173,12 @@ const listRoute = HttpRouter.add(
   }).pipe(Effect.catchTag("Refusal", refused)),
 )
 
-export const incidentRoutes = Layer.mergeAll(openRoute, linkRoute, unlinkRoute, closeRoute, readRoute, listRoute)
+export const incidentRoutes = Layer.mergeAll(
+  openRoute,
+  linkRoute,
+  unlinkRoute,
+  closeRoute,
+  readRoute,
+  listRoute,
+  incidentNoteRoutes,
+)

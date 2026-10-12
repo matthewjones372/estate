@@ -18,6 +18,8 @@ export const EventKind = Schema.Literals([
   "incident-linked",
   "incident-unlinked",
   "incident-closed",
+  "incident-noted",
+  "incident-note-removed",
 ])
 export type EventKind = typeof EventKind.Type
 
@@ -69,5 +71,30 @@ export const said = (event: FiringEvent): string => {
       return `unlinked from incident "${event.text}"`
     case "incident-closed":
       return `closed the incident: ${event.text}`
+    case "incident-noted":
+      return `noted on the incident: ${event.text}`
+    case "incident-note-removed":
+      return `removed from the incident ${event.text}`
   }
+}
+
+/** Whether an event was on the incident rather than one firing: kept on each of its firings, the same each time. */
+export const onIncident = (event: Pick<FiringEvent, "kind">) =>
+  event.kind === "incident-noted" || event.kind === "incident-note-removed"
+
+/**
+ * An incident's events from all its firings, in time order, with an event on the incident shown once: its copies
+ * share their kind, time, person and text, though each firing's copy has its own id.
+ */
+export const mergedOnce = <A extends FiringEvent>(events: ReadonlyArray<A>): ReadonlyArray<A> => {
+  const seen = new Set<string>()
+  return events
+    .toSorted((a, b) => Date.parse(a.at) - Date.parse(b.at))
+    .filter((event) => {
+      if (!onIncident(event)) return true
+      const key = JSON.stringify([event.kind, Date.parse(event.at), event.by, event.text])
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
 }
