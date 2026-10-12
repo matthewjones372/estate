@@ -71,6 +71,9 @@ not as a page that did nothing. Once answered it reads *Ask again*, resting for 
 that minute, with the same role, gets that answer, waiting for it if it is still being asked, rather than "this alert
 was asked about less than a minute ago" and nothing. An answer already on a card stays when a later ask fails.
 
+**An alert's row opens it.** On Alerts, an alert's title links to its page and a click anywhere on its row (outside
+its own links and buttons) opens it, rather than only *Notes and silence* opening its card above the table.
+
 **Keeping it as a note says so.** *Keep as note* reads *Keeping…* while it saves, then "Kept as a note, under Notes
 above", or says the note could not be kept. A note has a longest (2,000 characters) and a full answer can pass it, so
 the note drops evidence from the end, saying how many lines are left on the card.
@@ -108,6 +111,7 @@ Nothing.
       a progress bar and "Reading Estate…" until the answer, then the answer on the card; the alert's page has one
       *Ask AI*; an answer asked on one page is still shown on the same alert's card on another; the button reads *Asking…* and takes
       no second press, then *Ask again*; *Keep as note* says it is keeping, then kept or not; a long answer's note fits;
+      on Alerts, an alert's title links to its page and a click on its row opens it;
       in `http/ask.test.ts`, two asks within the minute call the model once and both get its answer.
 
 ## Acceptance
