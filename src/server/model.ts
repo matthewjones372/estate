@@ -3,7 +3,7 @@
  * what the brief does not answer, then answers in the shape it was asked for. Every call goes through `Remote`, and
  * every reply is decoded, so a provider answering in an unexpected shape is a `ModelError`, never a crash.
  */
-import { Context, Data, Effect, Layer, Schema } from "effect"
+import { Context, Data, Effect, Layer, Ref, Schema } from "effect"
 import { ModelAnswer } from "../shared/ask"
 import { anthropic } from "./model-anthropic"
 import {
@@ -92,15 +92,39 @@ interface Talk {
 
 const apiOf = (ai: Ai): Api => (ai.provider === "anthropic" ? anthropic(ai) : chat(ai))
 
-const askWith = (remote: Remote, ai: Ai, brief: string, question: string, tools: Tools | undefined) => {
+/** The model refused `effort`: not every model takes it (Claude Haiku does not), and an ask should still be answered. */
+const refusesEffort = (status: number, text: string) =>
+  status === 400 && (refusalOf(text) ?? "").toLowerCase().includes("effort")
+
+const withoutEffort = ({ effort: _, ...ai }: Ai): Ai => ai
+
+const askWith = (
+  remote: Remote,
+  ai: Ai,
+  effortRefused: Ref.Ref<boolean>,
+  brief: string,
+  question: string,
+  tools: Tools | undefined,
+) => {
   const api = apiOf(ai)
   const lastRound = ai.toolRounds ?? rounds
   const most = ai.toolResultChars ?? resultChars
   const turnOf = (conversation: Conversation, offers: ReadonlyArray<ToolOffer>, answerNow = false) =>
     Effect.gen(function* () {
-      const reply = yield* remote
-        .call(api.call(conversation, offers, answerNow))
-        .pipe(Effect.mapError((error) => new ModelError({ message: error.message })))
+      const sending = (asked: Ai) =>
+        remote
+          .call(apiOf(asked).call(conversation, offers, answerNow))
+          .pipe(Effect.mapError((error) => new ModelError({ message: error.message })))
+      const refused = yield* Ref.get(effortRefused)
+      const first = yield* sending(refused ? withoutEffort(ai) : ai)
+      // Asked once more without it, and never again by this Estate: the model will not take it next time either.
+      const reply =
+        ai.effort !== undefined && !refused && refusesEffort(first.status, first.text)
+          ? yield* Effect.logWarning(`${ai.model} does not take ai.effort, so Estate asks it without`).pipe(
+              Effect.andThen(Ref.set(effortRefused, true)),
+              Effect.andThen(sending(withoutEffort(ai))),
+            )
+          : first
       if (reply.status < 200 || reply.status > 299)
         return yield* new ModelError({
           message: [`${api.name} answered ${reply.status}`, refusalOf(reply.text)].filter(Boolean).join(": "),
@@ -153,11 +177,12 @@ export const liveModel = (ai: Ai | undefined): Layer.Layer<Model, never, Remote>
   Layer.effect(Model)(
     Effect.gen(function* () {
       const remote = yield* Remote
+      const effortRefused = yield* Ref.make(false)
       return {
         ask: (brief: string, question: string, tools?: Tools) =>
           ai === undefined
             ? Effect.fail(new ModelError({ message: "Ask AI is not configured" }))
-            : askWith(remote, ai, brief, question, tools),
+            : askWith(remote, ai, effortRefused, brief, question, tools),
       }
     }),
   )

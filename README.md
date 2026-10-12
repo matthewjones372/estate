@@ -135,8 +135,8 @@ per alert per minute, within a daily token budget.
 ai: { provider: anthropic, apiKey: "${ANTHROPIC_API_KEY}", model: claude-opus-5-5, budget: { tokensPerDay: 500000 } }
 # or provider: openai, xai or gemini with their key, or a self-hosted server that speaks OpenAI's API:
 # ai: { provider: openai-compatible, url: http://vllm.internal:8000/v1, model: my-model }
-# What an ask may spend: how hard the model thinks (unset unless given; low is cheapest where the model takes it,
-# and Claude Haiku does not), rounds of read tools (2), and how much of one tool's result it reads (4000).
+# What an ask may spend: how hard the model thinks (unset unless given; low is cheapest, and a model that does not
+# take it is asked without), rounds of read tools (2), and how much of one tool's result it reads (4000).
 #   effort: low, toolRounds: 2, toolResultChars: 4000
 
 # Credentials for reading runbooks' text, by the host their links name

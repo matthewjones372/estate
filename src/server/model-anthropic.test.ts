@@ -148,4 +148,33 @@ describe("Anthropic, as Ask AI asks it", () => {
       expect(calls.map((call) => JSON.parse(call.body ?? "{}").output_config.effort)).toEqual([undefined, "high"]),
     )
   })
+
+  test("asks again without effort when the model refuses it, and does not offer it that model again", () => {
+    const sent: Array<string | undefined> = []
+    const refusing = (call: Call) => {
+      const effort = JSON.parse(call.body ?? "{}").output_config?.effort
+      sent.push(effort)
+      return effort === undefined
+        ? anthropic(JSON.stringify(answer))
+        : reply(
+            {
+              type: "error",
+              error: { type: "invalid_request_error", message: "This model does not support the effort parameter." },
+            },
+            400,
+          )
+    }
+    const haiku: Ai = { provider: "anthropic", model: "claude-haiku-4-5", apiKey: Redacted.make("ak"), effort: "low" }
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const model = yield* Model
+        const first = yield* model.ask("the brief", "why?")
+        const second = yield* model.ask("the brief", "why?")
+        return [first.answer.likelyCause, second.answer.likelyCause]
+      }).pipe(Effect.provide(liveModel(haiku).pipe(Layer.provide(stubRemote(refusing))))),
+    ).then((causes) => {
+      expect(causes).toEqual([answer.likelyCause, answer.likelyCause])
+      expect(sent).toEqual(["low", undefined, undefined])
+    })
+  })
 })
