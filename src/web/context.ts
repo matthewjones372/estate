@@ -13,7 +13,8 @@ import type { Page } from "./route"
 export interface Actions {
   readonly navigate: (path: string) => void
   readonly choose: (environment: string) => void
-  readonly addNote: (alert: string, text: string) => Promise<boolean>
+  /** Writes a note on an alert; `from` says it is an Ask AI answer kept, for the firing's timeline. */
+  readonly addNote: (alert: string, text: string, from?: "ask-ai") => Promise<boolean>
   /** Writes what an alert, by its name, means for users; empty text forgets it. */
   readonly setImpact: (alert: string, text: string) => Promise<boolean>
   readonly removeNote: (note: string) => Promise<boolean>

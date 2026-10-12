@@ -5,6 +5,7 @@
 import { Effect, SubscriptionRef } from "effect"
 import { HttpRouter } from "effect/http"
 import type { Alert } from "../../shared/events"
+import { happened } from "../happened"
 import { Notes } from "../notes"
 import { Configured } from "../settings"
 import { channelOf, permalink, post } from "../sources/slack"
@@ -65,6 +66,13 @@ export const tellRoute = HttpRouter.add(
       .keepThread(thread)
       .pipe(Effect.catch((failure) => Effect.logWarning(`a thread could not be kept: ${failure.message}`)))
     yield* written({ _tag: "ThreadKept", thread })
+    yield* happened(
+      thread,
+      person.name,
+      "team-told",
+      `told ${team?.title ?? team?.name ?? "the team"} on Slack`,
+      thread.url,
+    )
     return json({ url: thread.url })
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

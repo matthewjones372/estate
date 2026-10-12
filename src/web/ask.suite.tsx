@@ -56,6 +56,7 @@ describe("Ask AI on an alert's card", () => {
       "addNote",
       "a1",
       "Ask AI (fake-model): A recent deploy raised latency.\n· storefront v2 deployed 26 min before it fired\nNext: Check the runbook\nNext: Compare p99 before and after the deploy\nConfidence: medium",
+      "ask-ai",
     ])
     expect(page.container.querySelector('[role="status"]')?.textContent).toContain("Kept as a note, under Notes above")
     expect(page.calls.filter(([action]) => action === "addNote")).toHaveLength(1)

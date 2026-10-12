@@ -2,9 +2,11 @@
  * `PUT /api/impacts/:alert`: an operator writes what an alert, by its name, means for the people using the product.
  * It is kept for every later firing, in every environment, until someone changes it; empty text forgets it.
  */
-import { Effect, Schema } from "effect"
+import { Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
+import { happened } from "../happened"
 import { Notes } from "../notes"
+import { Estate } from "../state"
 import { isoNow } from "../time"
 import { written } from "../writes"
 import { json, Refusal, refused, writer } from "./routes"
@@ -30,6 +32,18 @@ export const impactRoute = HttpRouter.add(
     const kept = yield* Effect.result(notes.setImpact(impact))
     if (kept._tag === "Failure") return json({ message: kept.failure.message }, 503)
     yield* written(text === "" ? { _tag: "ImpactCleared", alert } : { _tag: "ImpactSet", impact })
+    // An impact is the alert's, by name, so each of its firings now has it as an event.
+    const { environments } = yield* SubscriptionRef.get(yield* Estate)
+    const firings = Object.entries(environments).flatMap(([environment, state]) =>
+      (state.alerts.value ?? [])
+        .filter((each) => each.name === alert)
+        .map((each) => ({ environment, alert: each.id, startsAt: each.startsAt })),
+    )
+    yield* Effect.forEach(
+      firings,
+      (firing) => happened(firing, person.name, "impact-written", text === "" ? "cleared the impact" : text),
+      { discard: true },
+    )
     return json(impact, 200)
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

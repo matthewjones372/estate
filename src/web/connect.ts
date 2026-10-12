@@ -76,7 +76,8 @@ export const serverActions = (
   navigation: Pick<Actions, "navigate" | "choose">,
 ): Actions => ({
   ...navigation,
-  addNote: (alert, text) => send("POST", "/api/notes", { environment: environment(), alert, text }),
+  addNote: (alert, text, from) =>
+    send("POST", "/api/notes", { environment: environment(), alert, text, ...(from === undefined ? {} : { from }) }),
   setImpact: (alert, text) => send("PUT", `/api/impacts/${encodeURIComponent(alert)}`, { text }),
   removeNote: (note) => send("DELETE", `/api/notes/${encodeURIComponent(note)}`),
   silence: (alert, minutes, reason) =>

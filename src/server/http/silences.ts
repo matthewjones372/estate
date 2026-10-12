@@ -4,6 +4,7 @@
  */
 import { Clock, Duration, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
+import { happened } from "../happened"
 import { Configured } from "../settings"
 import { silencerOf } from "../sources/silencers"
 import { Estate } from "../state"
@@ -76,11 +77,13 @@ export const silenceRoute = HttpRouter.add(
       silence: { id, by: person.name, reason, startsAt, endsAt },
       at: now,
     })
+    const silencedNow = { environment: asked.environment, alert: alert.id, startsAt: alert.startsAt }
     yield* replyInThread(
       (yield* Configured).slack,
-      { environment: asked.environment, alert: alert.id, startsAt: alert.startsAt },
+      silencedNow,
       `${person.name} silenced it for ${lasting(asked.minutes)}: ${reason}`,
     )
+    yield* happened(silencedNow, person.name, "silenced", `for ${lasting(asked.minutes)}: ${reason}`)
     return json({ id, endsAt }, 201)
   }).pipe(
     Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 502))),
@@ -99,12 +102,11 @@ export const unsilenceRoute = HttpRouter.add("DELETE", "/api/silences/:id", () =
     const silenced = environments[environment]?.alerts.value?.find((alert) => alert.silence?.id === id)
     const now = yield* Clock.currentTimeMillis
     yield* written({ _tag: "Unheld", environment, id, at: now })
-    if (silenced !== undefined)
-      yield* replyInThread(
-        (yield* Configured).slack,
-        { environment, alert: silenced.id, startsAt: silenced.startsAt },
-        `${person.name} ended the silence`,
-      )
+    if (silenced !== undefined) {
+      const firing = { environment, alert: silenced.id, startsAt: silenced.startsAt }
+      yield* replyInThread((yield* Configured).slack, firing, `${person.name} ended the silence`)
+      yield* happened(firing, person.name, "unsilenced", "ended the silence")
+    }
     return json({ id }, 200)
   }).pipe(
     Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 502))),

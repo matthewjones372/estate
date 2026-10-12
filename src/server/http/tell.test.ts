@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, Redacted, SubscriptionRef } from "effect"
+import { Context, Effect, Layer, Redacted, SubscriptionRef } from "effect"
 import type { Catalog } from "../../shared/catalog"
 import { ask, catalog, environment, estate, serverFor, settings } from "../fixture"
 import { memoryNotes, Notes } from "../notes"
@@ -103,9 +103,14 @@ describe("telling the team on Slack", () => {
         const first = yield* ask(server, tell("a1"))
         const again = yield* ask(server, tell("a1"))
         const state = yield* SubscriptionRef.get(yield* Effect.provide(Estate, server.context))
-        return { first: first.json(), again: again.json(), state }
+        const events = yield* Context.get(server.context, Notes).events({
+          environment: "production",
+          alert: "a1",
+          startsAt: "2026-10-03T11:46:00Z",
+        })
+        return { first: first.json(), again: again.json(), state, events }
       }),
-    ).then(({ first, again, state }) => {
+    ).then(({ first, again, state, events }) => {
       const thread = { url: "https://example.slack.com/archives/C0ORDERS/p1759491960000100" }
       expect([first, again]).toEqual([thread, thread])
       const posts = calls.filter((call) => call.url.endsWith("chat.postMessage"))
@@ -116,6 +121,10 @@ describe("telling the team on Slack", () => {
         text: "🔶 *OrdersSlow* is firing in production: Orders are slow to place\nImpact: Customers wait to place orders.\nPosted by ada from Estate",
       })
       expect(alertsView(state, "production", false).alerts.find((alert) => alert.id === "a1")?.thread).toEqual(thread)
+      // Told once: the second ask answers with the thread, and is not an event of its own.
+      expect(events.map((each) => [each.by, each.kind, each.text, each.link])).toEqual([
+        ["ada", "team-told", "told Orders on Slack", thread.url],
+      ])
     })
   })
 

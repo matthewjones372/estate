@@ -10,6 +10,7 @@ import type { AskAnswer } from "../../shared/ask"
 import { briefText, gatherAround, sectionsOf } from "../around"
 import { budgeted, costOf } from "../ask-cost"
 import { AskLimits } from "../ask-limits"
+import { firingNow, happened } from "../happened"
 import { Model } from "../model"
 import { Configured } from "../settings"
 import { Estate } from "../state"
@@ -42,14 +43,23 @@ export const askRoute = HttpRouter.add(
       return json({ message: `there is no alert ${id} in ${environment}` }, 404)
     }
     const model = yield* Model
+    const firing = yield* firingNow(environment, id)
+    yield* happened(firing, person.name, "ai-asked", settings.ai.model)
     const tools = yield* askTools({ name: person.name, role: person.role }, environment)
     const result = yield* Effect.result(
       model.ask(briefText(brief), `What is the likely cause of ${brief.name}, and what should we do next?`, tools),
     )
     if (result._tag === "Failure") {
       yield* limits.giveBack(turn)
+      yield* happened(firing, "Estate", "ai-failed", result.failure.message)
       return json({ message: result.failure.message }, 502)
     }
+    yield* happened(
+      firing,
+      "Estate",
+      "ai-answered",
+      `${result.success.answer.likelyCause} (${result.success.answer.confidence})`,
+    )
     const { answer, model: name, called, usage } = result.success
     const price = settings.prices?.[name]
     yield* limits.spend(budgeted(usage, price))
