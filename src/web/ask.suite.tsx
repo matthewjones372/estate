@@ -1,11 +1,12 @@
 /** @jsxImportSource solid-js */
 /** Ask AI on an alert's card: run by `ask.test.ts` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
-import type { Alert } from "../shared/events"
+import { type Alert, longestNote } from "../shared/events"
 import { events, operator } from "./fixture"
 import { mount } from "./harness"
 import { AlertPage } from "./pages/Alert"
 import { AlertCard } from "./parts/AlertCard"
+import { noteOf } from "./parts/AskAi"
 import { recording } from "./recording"
 
 const alert = events.alerts.alerts[0] as Alert
@@ -28,14 +29,19 @@ describe("Ask AI on an alert's card", () => {
       "Asking AI about OrdersSlow",
     )
     expect(page.container.textContent).toContain("Reading Estate… 0 s")
-    expect(page.button(askAi).disabled).toBe(true)
+    const busy = page.button(/^Asking…/)
+    expect([busy.disabled, busy.getAttribute("aria-busy")]).toEqual([true, "true"])
+    page.click(busy)
     await page.settle()
+    expect(page.calls.filter(([action]) => action === "askAlert")).toHaveLength(1)
     const shown = page.container.textContent ?? ""
     expect(page.calls).toContainEqual(["askAlert", "a1"])
     expect(page.container.querySelector('[role="progressbar"]')).toBeNull()
     expect(shown).toContain("Likely cause A recent deploy raised latency.")
     expect(shown).toContain("fake-model · read: Changed · Runbook · called: service orders")
     expect(page.container.querySelector('a[href="https://ci.example/1"]')?.textContent).toContain("deployed 26 min")
+    // The server answers an alert once a minute, so the button rests for it rather than earn a refusal.
+    expect(page.button(/^Ask again/).disabled).toBe(true)
   })
 
   test("keeps the answer as a note once", async () => {
@@ -49,7 +55,46 @@ describe("Ask AI on an alert's card", () => {
       "a1",
       "Ask AI (fake-model): A recent deploy raised latency.\n· storefront v2 deployed 26 min before it fired\nNext: Check the runbook\nNext: Compare p99 before and after the deploy\nConfidence: medium",
     ])
-    expect(page.container.textContent).toContain("Kept as a note.")
+    expect(page.container.querySelector('[role="status"]')?.textContent).toContain("Kept as a note, under Notes above")
+    expect(page.calls.filter(([action]) => action === "addNote")).toHaveLength(1)
+  })
+
+  test("says so when the note could not be kept, and shows it is keeping until then", async () => {
+    let settle: (saved: boolean) => void = () => undefined
+    const actions = {
+      ...recording().actions,
+      addNote: () =>
+        new Promise<boolean>((resolve) => {
+          settle = resolve
+        }),
+    }
+    const page = mount(card(), { me: asking, actions })
+    page.click(page.button(askAi))
+    await page.settle()
+    page.click(page.button("Keep as note"))
+    expect(page.button(/^Keeping…/).disabled).toBe(true)
+    settle(false)
+    await page.settle()
+    expect(page.container.querySelector('[role="alert"]')?.textContent).toBe("The note could not be kept. Try again.")
+    expect(page.button("Keep as note").disabled).toBe(false)
+  })
+
+  test("keeps a long answer as a note that fits, dropping evidence from the end and saying how much", () => {
+    const answer = {
+      likelyCause: "The registry is slow.",
+      evidence: Array.from({ length: 30 }, (_, at) => ({ text: `evidence ${at} ${"x".repeat(80)}` })),
+      nextSteps: ["Check the registry"],
+      confidence: "low" as const,
+      model: "m",
+      read: [],
+      called: [],
+    }
+    const note = noteOf(answer)
+    expect(note.length).toBeLessThanOrEqual(longestNote)
+    expect(note).toContain("evidence 0 ")
+    expect(note).toMatch(/· and \d+ more on the card/)
+    expect(note).toContain("Next: Check the registry")
+    expect(note.endsWith("Confidence: low")).toBe(true)
   })
 
   test("says why there is no answer, as an alert", async () => {
@@ -70,7 +115,7 @@ describe("Ask AI on an alert's card", () => {
     const own = mount(() => <AlertPage id="a1" />, { me: asking, actions })
     expect(own.container.textContent).toContain("Likely cause A recent deploy raised latency.")
     expect(
-      [...own.container.querySelectorAll("button")].filter((each) => askAi.test(each.textContent ?? "")),
+      [...own.container.querySelectorAll("button")].filter((each) => /^Ask (AI|again)/.test(each.textContent ?? "")),
     ).toHaveLength(1)
   })
 
@@ -89,5 +134,6 @@ describe("Ask AI on an alert's card", () => {
     expect(signals[0]?.aborted).toBe(true)
     const again = mount(card(), { me: asking, actions })
     expect(again.button(askAi).disabled).toBe(false)
+    expect(again.button(askAi).getAttribute("aria-busy")).toBe("false")
   })
 })

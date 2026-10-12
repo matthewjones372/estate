@@ -1,6 +1,7 @@
 /** `POST /api/notes`: anyone who may see the estate adds a note to an alert, under their own name. */
 import { Clock, Duration, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
+import { longestNote } from "../../shared/events"
 import { Notes } from "../notes"
 import { noteWritten } from "../observed"
 import { forEver } from "../schedule"
@@ -13,8 +14,6 @@ import { json, Refusal, refused, writer } from "./routes"
 
 const Asked = Schema.Struct({ environment: Schema.String, alert: Schema.String, text: Schema.String })
 
-const longest = 2000
-
 export const notesRoute = HttpRouter.add(
   "POST",
   "/api/notes",
@@ -26,7 +25,8 @@ export const notesRoute = HttpRouter.add(
       ),
     )
     const text = asked.text.trim()
-    if (text === "" || text.length > longest) return json({ message: `a note is 1 to ${longest} characters` }, 400)
+    if (text === "" || text.length > longestNote)
+      return json({ message: `a note is 1 to ${longestNote} characters` }, 400)
     const { catalog } = yield* SubscriptionRef.get(yield* Estate)
     if (!catalog.environments.some((each) => each.name === asked.environment))
       return json({ message: `${asked.environment} is not an environment` }, 404)

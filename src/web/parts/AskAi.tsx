@@ -6,35 +6,50 @@
  */
 import { createSignal, For, onCleanup, Show } from "solid-js"
 import type { AskAnswer } from "../../shared/ask"
-import type { Alert } from "../../shared/events"
+import { type Alert, longestNote } from "../../shared/events"
 import { type Actions, useEstate } from "../context"
 import { Out } from "./A"
 
-/** The answer as a note: the model's name, then each part on its own line. */
-const noteOf = (answer: AskAnswer): string =>
-  [
-    `Ask AI (${answer.model}): ${answer.likelyCause}`,
-    ...answer.evidence.map((each) => `· ${each.text}`),
-    ...answer.nextSteps.map((step) => `Next: ${step}`),
-    `Confidence: ${answer.confidence}`,
-  ].join("\n")
+/**
+ * The answer as a note: the model's name, then each part on its own line. A note has a longest, and an answer can
+ * pass it, so evidence goes from the end first, saying how much, and what is left is cut short.
+ */
+export const noteOf = (answer: AskAnswer): string => {
+  const written = (evidence: number) =>
+    [
+      `Ask AI (${answer.model}): ${answer.likelyCause}`,
+      ...answer.evidence.slice(0, evidence).map((each) => `· ${each.text}`),
+      ...(evidence < answer.evidence.length ? [`· and ${answer.evidence.length - evidence} more on the card`] : []),
+      ...answer.nextSteps.map((step) => `Next: ${step}`),
+      `Confidence: ${answer.confidence}`,
+    ].join("\n")
+  const fits = Array.from({ length: answer.evidence.length + 1 }, (_, dropped) => answer.evidence.length - dropped)
+    .map(written)
+    .find((note) => note.length <= longestNote)
+  const whole = written(0)
+  return fits ?? `${whole.slice(0, longestNote - 1)}…`
+}
 
 const held = <T,>(initial: T) => {
   const [get, set] = createSignal<T>(initial)
   return { get, set }
 }
 
-/** One firing's ask: when it went out, while it is out, and what came back. */
+/** One firing's ask: when it went out, while it is out, whether it may be asked again yet, and what came back. */
 const anAsk = () => ({
   since: held<number | undefined>(undefined),
+  resting: held(false),
   error: held<string | undefined>(undefined),
   answer: held<AskAnswer | undefined>(undefined),
-  kept: held(false),
+  kept: held<"no" | "keeping" | "kept" | "failed">("no"),
 })
 
 type Ask = ReturnType<typeof anAsk>
 
 // Keyed by the page's actions, which live as long as Estate is open in the tab, and each test's are its own.
+/** As the server's ask limits: one answer an alert a minute, so the button rests rather than earn a refusal. */
+const rest = 60_000
+
 const asks = new WeakMap<Actions, Map<string, Ask>>()
 
 const askAbout = (actions: Actions, alert: Alert): Ask => {
@@ -55,27 +70,44 @@ export const AskAiButton = (props: { readonly alert: Alert }) => {
     if (out === undefined || out.ask.since.get() === undefined) return
     out.controller.abort()
     out.ask.since.set(undefined)
+    out.ask.resting.set(false)
   })
   const start = () => {
     const state = ask()
-    if (state.since.get() !== undefined) return
+    if (state.since.get() !== undefined || state.resting.get()) return
     const controller = new AbortController()
     out = { controller, ask: state }
     state.since.set(now())
+    state.resting.set(true)
+    setTimeout(() => state.resting.set(false), rest)
     state.error.set(undefined)
-    state.answer.set(undefined)
-    state.kept.set(false)
+    // An answer already there stays until a new one replaces it, so a refusal never takes it away.
     void actions.askAlert(props.alert.id, controller.signal).then((result) => {
       if (controller.signal.aborted) return
       state.since.set(undefined)
       if (typeof result === "string") state.error.set(result)
-      else state.answer.set(result)
+      else {
+        state.answer.set(result)
+        state.kept.set("no")
+      }
     })
   }
+  const busy = () => ask().since.get() !== undefined
   return (
     <Show when={me.ai === true}>
-      <button type="button" class="amber-button ghost" disabled={ask().since.get() !== undefined} onClick={start}>
-        Ask AI<span class="visually-hidden"> about {props.alert.name}</span>
+      <button
+        type="button"
+        class="amber-button ghost ask-button"
+        disabled={busy() || ask().resting.get()}
+        aria-busy={busy()}
+        title={!busy() && ask().resting.get() ? "One answer an alert a minute" : undefined}
+        onClick={start}
+      >
+        <Show when={busy()} fallback={ask().answer.get() === undefined ? "Ask AI" : "Ask again"}>
+          <span class="ask-spinner" aria-hidden="true" />
+          Asking…
+        </Show>
+        <span class="visually-hidden"> about {props.alert.name}</span>
       </button>
     </Show>
   )
@@ -102,8 +134,9 @@ export const AskAiAnswer = (props: { readonly alert: Alert }) => {
   const keep = () => {
     const state = ask()
     const found = state.answer.get()
-    if (found === undefined) return
-    void actions.addNote(props.alert.id, noteOf(found)).then((saved) => state.kept.set(saved))
+    if (found === undefined || state.kept.get() === "keeping" || state.kept.get() === "kept") return
+    state.kept.set("keeping")
+    void actions.addNote(props.alert.id, noteOf(found)).then((saved) => state.kept.set(saved ? "kept" : "failed"))
   }
   return (
     <Show when={me.ai === true}>
@@ -149,16 +182,32 @@ export const AskAiAnswer = (props: { readonly alert: Alert }) => {
                 {found().model} · read: {found().read.join(" · ")}
                 {found().called.length === 0 ? "" : ` · called: ${found().called.join(" · ")}`}
               </p>
-              <div class="choices">
+              <div class="choices ask-keep">
                 <Show
-                  when={ask().kept.get()}
+                  when={ask().kept.get() === "kept"}
                   fallback={
-                    <button type="button" class="amber-button ghost" onClick={keep}>
-                      Keep as note
+                    <button
+                      type="button"
+                      class="amber-button ghost ask-button"
+                      disabled={ask().kept.get() === "keeping"}
+                      aria-busy={ask().kept.get() === "keeping"}
+                      onClick={keep}
+                    >
+                      <Show when={ask().kept.get() === "keeping"} fallback="Keep as note">
+                        <span class="ask-spinner" aria-hidden="true" />
+                        Keeping…
+                      </Show>
                     </button>
                   }
                 >
-                  <span class="muted">Kept as a note.</span>
+                  <span class="ask-kept" role="status">
+                    ✓ Kept as a note, under Notes above
+                  </span>
+                </Show>
+                <Show when={ask().kept.get() === "failed"}>
+                  <span class="alert-detail" role="alert">
+                    The note could not be kept. Try again.
+                  </span>
                 </Show>
               </div>
             </article>
