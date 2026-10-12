@@ -7,7 +7,8 @@
 import { createSignal, For, onCleanup, Show } from "solid-js"
 import type { AskAnswer } from "../../shared/ask"
 import { money } from "../../shared/costs"
-import { type Alert, longestNote } from "../../shared/events"
+import type { Alert } from "../../shared/events"
+import { longestNote } from "../../shared/note"
 import { type Actions, useEstate } from "../context"
 import { Out } from "./A"
 

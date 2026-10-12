@@ -171,6 +171,9 @@ export const serverActions = (
       `/api/incidents/${encodeURIComponent(id)}/firings?env=${encodeURIComponent(env)}&alert=${encodeURIComponent(alert)}`,
     ),
   closeIncident: (id, how) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/close`, { how }),
+  addIncidentNote: (id, text) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/notes`, { text }),
+  removeIncidentNote: (id, note) =>
+    incidentWrite("DELETE", `/api/incidents/${encodeURIComponent(id)}/notes/${encodeURIComponent(note)}`),
   timelineMarkdown: (of) =>
     fetch(timelinePath(of, environment(), "md"))
       .then(

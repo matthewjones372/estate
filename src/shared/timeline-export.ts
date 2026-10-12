@@ -3,7 +3,7 @@
  * firing's or an incident's record for a review, the same content as the Markdown, as data. Times are UTC.
  */
 import { Schema } from "effect"
-import { Note } from "./events"
+import { Note } from "./note"
 import { FiringEvent } from "./timeline"
 
 const optional = Schema.optionalKey
@@ -23,7 +23,7 @@ export const ExportedFiring = Schema.Struct({
   /** Whether it is firing now, so a missing end reads as still firing rather than unseen. */
   firing: Schema.Boolean,
   impact: optional(Schema.String),
-  /** The notes kept while it fired, oldest first, in full. */
+  /** The notes kept while it fired, oldest first, in full; its incident's are the incident's. */
   notes: Schema.Array(Note),
 })
 export type ExportedFiring = typeof ExportedFiring.Type
@@ -40,6 +40,8 @@ export const TimelineExport = Schema.Struct({
       closedAt: optional(Instant),
       ended: optional(Schema.String),
       link: optional(Schema.String),
+      /** Notes written on the incident, oldest first, in full; each firing's own are with the firing. */
+      notes: optional(Schema.Array(Note)),
     }),
   ),
   firings: Schema.Array(ExportedFiring),

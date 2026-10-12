@@ -91,6 +91,32 @@ describe("an alert's incident, on its card", () => {
     expect(chooser(broken.container)?.textContent).toContain("The open incidents could not be read.")
   })
 
+  test("its incident's notes show among its own in time order, labelled, and are removed through the incident", () => {
+    const on = { id: "i1", title: "Orders slow" }
+    const notes = [
+      { id: "n3", at: "2026-10-03T11:58:00Z", by: "gil", text: "pool resized\nwatching", incident: on },
+      { id: "n2", at: "2026-10-03T11:56:00Z", by: "ada lovelace", text: "own note" },
+      { id: "n1", at: "2026-10-02T11:55:00Z", by: "ada lovelace", text: "mine on it", incident: on },
+    ]
+    const page = card({ ...inIncident(false), notes })
+    const heads = [...page.container.querySelectorAll(".note .alert-quiet")].map((each) => each.textContent)
+    expect(heads).toEqual([
+      expect.stringMatching(/^gil · \d\d:58 · on Orders slow · Remove the note by gil$/),
+      expect.stringMatching(/^ada lovelace · \d\d:56 · Remove the note by ada lovelace$/),
+      expect.stringMatching(/^ada lovelace · 2 Oct \d\d:55 · on Orders slow · Remove the note by ada lovelace$/),
+    ])
+    expect(page.container.querySelector(".note-body")?.textContent).toBe("pool resized\nwatching")
+    page.click(page.button(/Remove the note by gil/))
+    page.click(page.button(/Remove the note by ada lovelace/))
+    expect(page.calls).toContainEqual(["removeIncidentNote", "i1", "n3"])
+    expect(page.calls).toContainEqual(["removeNote", "n2"])
+    const viewing = card({ ...inIncident(false), notes }, viewer)
+    expect(viewing.container.textContent).not.toContain("Remove the note by gil")
+    expect(viewing.container.textContent).toContain("Remove the note by ada lovelace")
+    const closed = card({ ...inIncident(true), notes })
+    expect(closed.container.querySelectorAll(".note-remove")).toHaveLength(1)
+  })
+
   test("a viewer sees which incident a card is part of, but neither Link to incident… nor New incident", () => {
     const page = card(inIncident(false), viewer)
     expect(page.container.querySelector(".incident-part")?.textContent).toBe("Part of Orders slow")

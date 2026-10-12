@@ -1,7 +1,8 @@
 /** What `GET /api/firings/:id` answers: one past firing of an alert, as Estate kept it, for its page. */
 import { Schema } from "effect"
 import { Change } from "./around"
-import { Alert, Note } from "./events"
+import { Alert } from "./events"
+import { Note } from "./note"
 
 const optional = Schema.optionalKey
 const Instant = Schema.String

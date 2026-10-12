@@ -7,6 +7,7 @@ import { AgentState, DescribedAgent } from "./agents"
 import { CodeHealth } from "./code"
 import { Cost } from "./costs"
 import { DeploysEvent } from "./deploys"
+import { CardNote, Note } from "./note"
 
 export { type Build, DeploysEvent } from "./deploys"
 
@@ -181,12 +182,6 @@ export const ServicesEvent = Schema.Struct({
 export type ServicesEvent = typeof ServicesEvent.Type
 export type ServiceState = ServicesEvent["services"][number]
 
-/** The longest note Estate keeps, in characters. */
-export const longestNote = 2000
-
-export const Note = Schema.Struct({ id: Schema.String, at: Instant, by: Schema.String, text: Schema.String })
-export type Note = typeof Note.Type
-
 export const Alert = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -201,7 +196,8 @@ export const Alert = Schema.Struct({
   silence: optional(
     Schema.Struct({ id: Schema.String, by: Schema.String, reason: Schema.String, startsAt: Instant, endsAt: Instant }),
   ),
-  notes: Schema.Array(Note),
+  /** Its own notes and its incident's, newest first. */
+  notes: Schema.Array(CardNote),
   /** Its earlier firings, newest first, as far back as they are kept: who silenced each and why, and its notes. */
   history: optional(
     Schema.Array(

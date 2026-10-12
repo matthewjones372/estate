@@ -33,8 +33,7 @@ const incidentOf = (
       (each) => each.environment === environment && each.alert === alert.id && each.startsAt === alert.startsAt,
     ),
   )
-  const found = holding.find((incident) => incident.closedAt === undefined) ?? holding[0]
-  return found === undefined ? undefined : { id: found.id, title: found.title, closed: found.closedAt !== undefined }
+  return holding.find((incident) => incident.closedAt === undefined) ?? holding[0]
 }
 
 /** What an alert means for the people using the product: written on the page, in the catalog, or on its rule. */
@@ -62,8 +61,14 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
       .filter((note) => note.environment === environment && note.alert === alert.id)
       .map(({ id, at, by, text }) => ({ id, at, by, text }))
       .sort((a, b) => b.at.localeCompare(a.at))
-    // This firing's notes on the card; earlier ones with the firing they were written in.
-    const notes = about.filter((note) => note.at >= alert.startsAt)
+    const incident = incidentOf(estate, environment, alert)
+    // This firing's notes on the card, and its incident's, which say so; earlier ones with the firing they were in.
+    const notes = [
+      ...about.filter((note) => note.at >= alert.startsAt),
+      ...(incident === undefined
+        ? []
+        : (incident.notes ?? []).map((note) => ({ ...note, incident: { id: incident.id, title: incident.title } }))),
+    ].sort((a, b) => b.at.localeCompare(a.at))
     const earlier = (estate.firings ?? [])
       .filter(
         (firing) => firing.environment === environment && firing.alert === alert.id && firing.startsAt < alert.startsAt,
@@ -90,7 +95,10 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
       history: history.length === 0 ? undefined : history,
       chart: state.metrics.value?.charts[alert.id],
       thread: threadOf(estate, environment, alert),
-      incident: incidentOf(estate, environment, alert),
+      incident:
+        incident === undefined
+          ? undefined
+          : { id: incident.id, title: incident.title, closed: incident.closedAt !== undefined },
     })
   })
   alerts.sort(
