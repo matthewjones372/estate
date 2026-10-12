@@ -64,11 +64,12 @@ const keep = (incident: Incident) =>
     yield* written({ _tag: "IncidentKept", incident })
   })
 
-/** The firing in `incident`, taken first out of any other it was in. */
+/** The firing in `incident`, taken first out of any other open one it was in; a closed one keeps its record. */
 const linked = (incident: Incident, firing: FiringKey, by: string) =>
   Effect.gen(function* () {
     const was = (yield* kept).find(
-      (each) => each.id !== incident.id && each.firings.some((one) => sameFiring(one, firing)),
+      (each) =>
+        each.id !== incident.id && each.closedAt === undefined && each.firings.some((one) => sameFiring(one, firing)),
     )
     if (was !== undefined) {
       yield* keep({ ...was, firings: was.firings.filter((one) => !sameFiring(one, firing)) })

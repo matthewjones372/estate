@@ -140,6 +140,37 @@ describe("incidents", () => {
       expect(production.map((each) => each.incident)).toEqual([undefined])
     }))
 
+  test("a closed incident keeps its firings: one linked again goes into a new incident, and the alert shows that one", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(operator, firings)
+        const first = (yield* step(
+          server,
+          sending("POST", "/api/incidents", { title: "First", environment: "staging", alert: "a1" }),
+        )).json() as Incident
+        yield* step(server, sending("POST", `/api/incidents/${first.id}/close`, { how: "it passed" }))
+        const second = (yield* step(
+          server,
+          sending("POST", "/api/incidents", { title: "Again", environment: "staging", alert: "a1" }),
+        )).json() as Incident
+        const state = yield* SubscriptionRef.get(Context.get(server.context, Estate))
+        return {
+          kept: state.incidents ?? [],
+          shown: alertsView(state, "staging", false).alerts.find((each) => each.id === "a1")?.incident,
+          events: yield* eventsOf(server, "staging", "a1"),
+          ids: [first.id, second.id] as const,
+        }
+      }),
+    ).then(({ kept, shown, events, ids: [first, second] }) => {
+      expect(kept.find((each) => each.id === first)?.firings.map((each) => each.alert)).toEqual(["a1"])
+      expect(shown).toEqual({ id: second, title: "Again", closed: false })
+      expect(events.map(([, kind, text]) => [kind, text])).toEqual([
+        ["incident-opened", "First"],
+        ["incident-closed", "it passed"],
+        ["incident-opened", "Again"],
+      ])
+    }))
+
   test("are kept by operators only: a viewer reads them, and may open, link, unlink or close none", () =>
     Effect.runPromise(
       Effect.gen(function* () {

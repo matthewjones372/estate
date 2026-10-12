@@ -22,17 +22,18 @@ const threadOf = (
   return told === undefined ? undefined : { url: told.url }
 }
 
-/** The incident this firing of an alert is part of, if it is in one. */
+/** The incident this firing of an alert is part of: its open one, else the closed one it was in, if any. */
 const incidentOf = (
   estate: EstateState,
   environment: string,
   alert: { readonly id: string; readonly startsAt: string },
 ) => {
-  const found = estate.incidents?.find((incident) =>
+  const holding = (estate.incidents ?? []).filter((incident) =>
     incident.firings.some(
       (each) => each.environment === environment && each.alert === alert.id && each.startsAt === alert.startsAt,
     ),
   )
+  const found = holding.find((incident) => incident.closedAt === undefined) ?? holding[0]
   return found === undefined ? undefined : { id: found.id, title: found.title, closed: found.closedAt !== undefined }
 }
 
