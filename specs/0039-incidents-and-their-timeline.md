@@ -135,7 +135,7 @@ Nothing. The notes database gains events and incidents (a table each in Postgres
       Done when: linking two firings from their cards shows both on the incident's page with their events merged in
       order; each card says "Part of" its incident and links to it; a viewer sees neither *Link to incident…* nor
       *New incident*.
-- [ ] **`spec-0039-export`** — the timeline routes as Markdown or JSON; *Copy as Markdown* and *Download* on both
+- [x] **`spec-0039-export`** — the timeline routes as Markdown or JSON; *Copy as Markdown* and *Download* on both
       pages.
       Done when: a firing's and an incident's Markdown carry the header, the UTC table and the notes; the JSON
       decodes as the shared schema; a viewer's export leaves out what a viewer cannot see.
