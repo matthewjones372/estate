@@ -108,23 +108,23 @@ Nothing. The notes database gains events and incidents (a table each in Postgres
 
 ## Stack
 
-- [ ] **`spec-0039-events`** — events kept per firing in each notes store, read in order, swept with the firing;
+- [x] **`spec-0039-events`** — events kept per firing in each notes store, read in order, swept with the firing;
       Estate's own: fired and resolved, as it sees them.
       Done when: each store's test appends and reads a firing's events in order and sweeps them with it; a firing
       Estate sees begin and end has its fired and resolved events.
-- [ ] **`spec-0039-events-written`** — events written by notes (a removed note keeping its text), silences, impact,
+- [x] **`spec-0039-events-written`** — events written by notes (a removed note keeping its text), silences, impact,
       Tell the team and Ask AI.
       Done when: every writing route's test sees its event, with its person and time; a removed note leaves its
       noted event and a removal event.
-- [ ] **`spec-0039-timeline`** — *Timeline* on a firing's page, live and past, with dates, seconds and people.
+- [x] **`spec-0039-timeline`** — *Timeline* on a firing's page, live and past, with dates, seconds and people.
       Done when: `firing-timeline.suite.tsx` shows the events in order with each person and time, on the alert's
       page and a past firing's; `GET /api/firings/:id/events` reads them for viewers, however the start is written.
-- [ ] **`spec-0039-notes-fold`** — a card shows its newest three notes and *Show all*; a note's lines kept, a long
+- [x] **`spec-0039-notes-fold`** — a card shows its newest three notes and *Show all*; a note's lines kept, a long
       one folded to two; dates across midnight.
       Done when: a note's text keeps its line breaks; a card with five notes shows three and *Show all 5 notes*,
       which shows them all and is kept on moving away and back; a long note shows two lines and *more*, which opens
       it, on the card and in the feed; a note from yesterday shows its date.
-- [ ] **`spec-0039-incidents`** — incidents kept in each notes store and shown in state; routes to open, link,
+- [x] **`spec-0039-incidents`** — incidents kept in each notes store and shown in state; routes to open, link,
       unlink, close and read them; their events on each firing; "part of" on the alert.
       Done when: each store keeps, reads and sweeps an incident; opening, linking, moving, unlinking and closing
       leave each record and each firing's events in order with their people; `GET /api/incidents/:id` merges its
