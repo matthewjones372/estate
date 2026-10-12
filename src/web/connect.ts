@@ -5,6 +5,7 @@ import { AroundAlert } from "../shared/around"
 import { AskAnswer } from "../shared/ask"
 import { type EventName, Load } from "../shared/events"
 import { PastFiring } from "../shared/firing"
+import { Incident, IncidentRecord } from "../shared/incidents"
 import { ErrorGroups, LogBatch } from "../shared/log-events"
 import { FiringEvent } from "../shared/timeline"
 import type { Actions, ErrorWindow, LogHandlers, Range } from "./context"
@@ -17,6 +18,9 @@ const decodeEvents = Schema.decodeUnknownOption(Schema.Struct({ events: Schema.A
 const decodeAsk = Schema.decodeUnknownOption(AskAnswer)
 const decodeMessage = Schema.decodeUnknownOption(Schema.Struct({ message: Schema.String }))
 const decodeThread = Schema.decodeUnknownOption(Schema.Struct({ url: Schema.String }))
+const decodeIncident = Schema.decodeUnknownOption(Incident)
+const decodeIncidents = Schema.decodeUnknownOption(Schema.Struct({ incidents: Schema.Array(Incident) }))
+const decodeRecord = Schema.decodeUnknownOption(IncidentRecord)
 
 const names: ReadonlyArray<EventName> = ["catalog", "services", "alerts", "deploys", "feed"]
 
@@ -144,6 +148,28 @@ export const serverActions = (
       )
       .catch(() => undefined),
   askAlert: (alert, signal) => askAlert(environment(), alert, signal),
+  incidents: () =>
+    fetch("/api/incidents")
+      .then((response) => (response.ok ? response.json() : undefined))
+      .then((body) => (body === undefined ? undefined : Option.getOrUndefined(decodeIncidents(body))?.incidents))
+      .catch(() => undefined),
+  incident: (id) =>
+    fetch(`/api/incidents/${encodeURIComponent(id)}`)
+      .then((response): Promise<IncidentRecord | "none" | undefined> => {
+        if (response.status === 404) return Promise.resolve("none")
+        if (!response.ok) return Promise.resolve(undefined)
+        return response.json().then((body) => Option.getOrUndefined(decodeRecord(body)))
+      })
+      .catch(() => undefined),
+  openIncident: (title, alert) => incidentWrite("POST", "/api/incidents", { title, environment: environment(), alert }),
+  linkIncident: (id, alert) =>
+    incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/firings`, { environment: environment(), alert }),
+  unlinkIncident: (id, env, alert) =>
+    incidentWrite(
+      "DELETE",
+      `/api/incidents/${encodeURIComponent(id)}/firings?env=${encodeURIComponent(env)}&alert=${encodeURIComponent(alert)}`,
+    ),
+  closeIncident: (id, how) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/close`, { how }),
   tell: (alert) =>
     fetch(`/api/alerts/${encodeURIComponent(alert)}/tell?env=${encodeURIComponent(environment())}`, {
       method: "POST",
@@ -162,6 +188,27 @@ export const serverActions = (
       )
       .catch(() => "Estate could not be reached."),
 })
+
+/** A change to an incident: the incident as it now is, or why not, in the server's words where it gave them. */
+const incidentWrite = (method: "POST" | "DELETE", path: string, body?: unknown): Promise<Incident | string> =>
+  fetch(path, {
+    method,
+    headers: { "content-type": "application/json" },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  })
+    .then((response) =>
+      response
+        .json()
+        .catch(() => undefined)
+        .then((answer) =>
+          response.ok
+            ? (Option.getOrUndefined(decodeIncident(answer)) ??
+              "The incident came back in a shape the page cannot read.")
+            : (Option.getOrUndefined(decodeMessage(answer))?.message ??
+              `The incident could not be changed (${response.status}).`),
+        ),
+    )
+    .catch(() => "Estate could not be reached.")
 
 /** Why an ask got no answer, in the server's words where it gave them. */
 const refusalOf = (response: Response): Promise<string> =>

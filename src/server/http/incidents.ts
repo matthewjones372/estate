@@ -55,6 +55,13 @@ const live = (environment: string, alert: string) =>
     firing === undefined ? refuse(404, `${alert} is not firing in ${environment}`) : Effect.succeed(firing),
   )
 
+/** What a firing is called, for the incident to keep; apart from the key, which is spread into the firing's events. */
+const nameOf = (firing: FiringKey) =>
+  Effect.map(
+    Effect.flatMap(Estate, SubscriptionRef.get),
+    (estate) => estate.environments[firing.environment]?.alerts.value?.find((each) => each.id === firing.alert)?.name,
+  )
+
 const keyOf = ({ environment, alert, startsAt }: FiringKey): FiringKey => ({ environment, alert, startsAt })
 
 /** The incident kept, and shown wherever the estate is read. */
@@ -75,7 +82,9 @@ const linked = (incident: Incident, firing: FiringKey, by: string) =>
       yield* keep({ ...was, firings: was.firings.filter((one) => !sameFiring(one, firing)) })
       yield* happened(firing, by, "incident-unlinked", was.title)
     }
-    const now = { ...incident, firings: [...incident.firings, { ...firing, linkedBy: by, linkedAt: yield* isoNow }] }
+    const name = yield* nameOf(firing)
+    const one = { ...firing, ...(name === undefined ? {} : { name }), linkedBy: by, linkedAt: yield* isoNow }
+    const now = { ...incident, firings: [...incident.firings, one] }
     yield* keep(now)
     return now
   })

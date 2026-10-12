@@ -21,6 +21,18 @@
 .timeline-who {
   font-weight: 600;
 }
+/* On an incident's timeline, the alert an event was on, before what was done. */
+.timeline-what {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  min-width: 0;
+}
+.timeline-on {
+  color: var(--amber-text);
+  font-size: 12px;
+  white-space: nowrap;
+}
 .note-text {
   font-size: 13px;
   color: #e6dcc8;
