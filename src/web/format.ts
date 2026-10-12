@@ -17,6 +17,10 @@ export const day = (iso: string): string => {
   return `${date.getDate()} ${months[date.getMonth()] ?? ""} ${clock(iso)}`
 }
 
+/** "14:02" for a time today, "2 Oct 09:05" for one before: a note's time, dated once it is not today's. */
+export const stamp = (iso: string, now: number): string =>
+  new Date(iso).toDateString() === new Date(now).toDateString() ? clock(iso) : day(iso)
+
 /** "8 min", "1 h 52 min", "3 d": how long from `iso` to `now`. */
 export const since = (iso: string, now: number): string => duration(now - new Date(iso).getTime())
 

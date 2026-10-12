@@ -113,10 +113,6 @@
 .note-who {
   color: var(--amber-ink);
 }
-.note-text {
-  font-size: 13px;
-  color: #e6dcc8;
-}
 .note-form {
   display: flex;
   gap: 8px;

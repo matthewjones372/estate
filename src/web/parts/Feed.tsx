@@ -5,6 +5,7 @@ import type { FeedEvent, FeedItem } from "../../shared/events"
 import { clock } from "../format"
 import { firingPath } from "../route"
 import { A } from "./A"
+import { NoteText } from "./NoteText"
 
 const dots: Readonly<Record<FeedItem["kind"], string>> = {
   alert: "var(--amber)",
@@ -21,7 +22,9 @@ const FeedText = (props: { readonly item: FeedItem }) => (
   <span style={{ "font-size": "13px", color: "#D5DAE3" }}>
     {props.item.who === undefined ? "" : `${props.item.who}: `}
     {props.item.service === undefined ? "" : `${props.item.service} `}
-    {props.item.text}
+    <Show when={props.item.kind === "note"} fallback={props.item.text}>
+      <NoteText text={props.item.text} />
+    </Show>
   </span>
 )
 
