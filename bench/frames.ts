@@ -47,7 +47,9 @@ const debug = (frame: Frame, bytes: number) => {
     for (const [part, patch] of Object.entries(parts)) shapeOf(patch, `${env}.${part}`, shape)
   for (const [part, patch] of Object.entries(frame.parts)) shapeOf(patch, part, shape)
   const lines = [...shape].map(([key, { count, bytes }]) => `    ${key} x${count} ${bytes}B`).join("\n")
-  process.stderr.write(`DEBUG frame +${((Date.now() - t0) / 1000).toFixed(1)}s ${new Date().toISOString()} ${bytes}B\n${lines}\n`)
+  process.stderr.write(
+    `DEBUG frame +${((Date.now() - t0) / 1000).toFixed(1)}s ${new Date().toISOString()} ${bytes}B\n${lines}\n`,
+  )
 }
 
 /** Waits until the tools have been asked for every range at least once and then nothing for two seconds. */
@@ -80,7 +82,9 @@ export const measureFrames = async (size: number) => {
         ),
       )
       yield* Effect.promise(() => firstReadsDone(tools.calls, size))
-      process.stderr.write(`DEBUG measuring from +${((Date.now() - t0) / 1000).toFixed(1)}s ${new Date().toISOString()} calls ${tools.calls()}\n`)
+      process.stderr.write(
+        `DEBUG measuring from +${((Date.now() - t0) / 1000).toFixed(1)}s ${new Date().toISOString()} calls ${tools.calls()}\n`,
+      )
       const before = { ...counted }
       // The largest change once read, not the first reads, when every part goes from waiting to read whole.
       counted.largest = 0
