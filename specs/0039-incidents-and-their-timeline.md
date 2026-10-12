@@ -106,10 +106,14 @@ Nothing. The notes database gains events and incidents (a table each in Postgres
 
 ## Stack
 
-- [ ] **`spec-0039-events`** — events kept per firing in each notes store, written by notes, silences, impact, Tell
-      the team, Ask AI, and the firing's start and end; swept with the firing.
-      Done when: each store's test appends and reads a firing's events in order; a removed note leaves its event and
-      a removal event; every writing route's test sees its event.
+- [ ] **`spec-0039-events`** — events kept per firing in each notes store, read in order, swept with the firing;
+      Estate's own: fired and resolved, as it sees them.
+      Done when: each store's test appends and reads a firing's events in order and sweeps them with it; a firing
+      Estate sees begin and end has its fired and resolved events.
+- [ ] **`spec-0039-events-written`** — events written by notes (a removed note keeping its text), silences, impact,
+      Tell the team and Ask AI.
+      Done when: every writing route's test sees its event, with its person and time; a removed note leaves its
+      noted event and a removal event.
 - [ ] **`spec-0039-timeline`** — *Timeline* on a firing's page, live and past, with dates, seconds and people.
       Done when: `alert.suite.tsx` and `firing.suite.tsx` show the events in order with each person and time.
 - [ ] **`spec-0039-notes-fold`** — a card shows its newest three notes and *Show all*; dates across midnight.

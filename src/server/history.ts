@@ -3,7 +3,7 @@
  * sees them happen, compared only once an environment's alerts have answered, so a slow start ends nothing.
  */
 import { Clock, Duration, Effect, Stream, SubscriptionRef } from "effect"
-import { Notes, type StoredFiring, sameFiring } from "./notes"
+import { Notes, type StoredEvent, type StoredFiring, sameFiring } from "./notes"
 import { forEver } from "./schedule"
 import type { SlackSettings } from "./sources/slack"
 import { Estate, type EstateState, updateEstate } from "./state"
@@ -66,6 +66,25 @@ export const withFirings = (estate: EstateState, kept: ReadonlyArray<StoredFirin
   firings: [...kept, ...(estate.firings ?? []).filter((each) => !kept.some((one) => sameFiring(one, each)))],
 })
 
+/** What Estate saw happen to a firing it kept: it began, or it ended. */
+const seen = (firing: StoredFiring, begun: boolean): ReadonlyArray<StoredEvent> => {
+  const at = begun ? firing.startsAt : firing.endsAt
+  if (at === undefined) return []
+  const said = [firing.name, firing.severity, firing.service ?? firing.store].filter((each) => each !== undefined)
+  return [
+    {
+      id: crypto.randomUUID(),
+      environment: firing.environment,
+      alert: firing.alert,
+      startsAt: firing.startsAt,
+      at,
+      by: "Estate",
+      kind: begun ? "fired" : "resolved",
+      text: begun ? said.join(", ") : `after ${lasting((Date.parse(at) - Date.parse(firing.startsAt)) / 60_000)}`,
+    },
+  ]
+}
+
 /** Firings kept, into this process's own state. */
 export const keptHere = (kept: ReadonlyArray<StoredFiring>): Effect.Effect<void, never, Estate> =>
   updateEstate((estate) => withFirings(estate, kept))
@@ -88,10 +107,16 @@ export const recordFirings = <R = never>(
       Stream.runForEach((now) =>
         Effect.gen(function* () {
           const kept = changed(was, now, iso(yield* Clock.currentTimeMillis))
+          const events = kept.flatMap((firing) =>
+            firing.endsAt !== undefined ? seen(firing, false) : was.has(keyOf(firing)) ? [] : seen(firing, true),
+          )
           was = new Map([...now.firing].concat([...was].filter(([, firing]) => !now.answered.has(firing.environment))))
           if (kept.length === 0) return
           yield* Effect.forEach(kept, (firing) => notes.keepFiring(firing), { discard: true }).pipe(
             Effect.catch((failure) => Effect.logWarning(`a firing could not be kept: ${failure.message}`)),
+          )
+          yield* Effect.forEach(events, (event) => notes.addEvent(event), { discard: true }).pipe(
+            Effect.catch((failure) => Effect.logWarning(`a firing's event could not be kept: ${failure.message}`)),
           )
           yield* shown(kept)
           yield* Effect.forEach(
