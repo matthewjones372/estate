@@ -23,6 +23,33 @@ const minute = 60_000
 const encode = Schema.encodeSync(Frame)
 const bytesOf = (frame: Frame) => new TextEncoder().encode(JSON.stringify(encode(frame))).byteLength
 
+// DEBUG: each patch's leaves by path, services folded, so a frame says what it carried.
+const shapeOf = (patch: unknown, path: string, into: Map<string, { count: number; bytes: number }>) => {
+  const p = patch as Record<string, unknown>
+  const leaf = (kind: string) => {
+    const key = `${path.replace(/svc-\d+/g, "svc-*")} ${kind}`
+    const was = into.get(key) ?? { count: 0, bytes: 0 }
+    into.set(key, { count: was.count + 1, bytes: was.bytes + JSON.stringify(patch).length })
+  }
+  if ("set" in p) leaf(Array.isArray(p.set) ? `set[${p.set.length}]` : `set:${typeof p.set}`)
+  else if ("shift" in p) leaf(`shift${String(p.shift)}+${(p.tail as Array<unknown>).length}`)
+  else {
+    for (const [key, each] of Object.entries(p.keys as Record<string, unknown>)) shapeOf(each, `${path}.${key}`, into)
+    if (p.drop !== undefined) leaf(`drop${JSON.stringify(p.drop)}`)
+  }
+}
+const t0 = Date.now()
+const debug = (frame: Frame, bytes: number) => {
+  if (frame._tag === "Whole") process.stderr.write(`DEBUG whole +${((Date.now() - t0) / 1000).toFixed(1)}s ${bytes}B\n`)
+  if (frame._tag !== "Changed" || bytes < 2000) return
+  const shape = new Map<string, { count: number; bytes: number }>()
+  for (const [env, parts] of Object.entries(frame.environments))
+    for (const [part, patch] of Object.entries(parts)) shapeOf(patch, `${env}.${part}`, shape)
+  for (const [part, patch] of Object.entries(frame.parts)) shapeOf(patch, part, shape)
+  const lines = [...shape].map(([key, { count, bytes }]) => `    ${key} x${count} ${bytes}B`).join("\n")
+  process.stderr.write(`DEBUG frame +${((Date.now() - t0) / 1000).toFixed(1)}s ${new Date().toISOString()} ${bytes}B\n${lines}\n`)
+}
+
 /** Waits until the tools have been asked for every range at least once and then nothing for two seconds. */
 const firstReadsDone = async (calls: () => number, size: number) => {
   let last = -1
@@ -45,6 +72,7 @@ export const measureFrames = async (size: number) => {
         Stream.runForEach(framesOf(estate, "bench"), (frame) =>
           Effect.sync(() => {
             const bytes = bytesOf(frame)
+            debug(frame, bytes)
             if (frame._tag === "Changed") counted.largest = Math.max(counted.largest, bytes)
             counted.total += bytes
             counted.frames += 1
@@ -52,6 +80,7 @@ export const measureFrames = async (size: number) => {
         ),
       )
       yield* Effect.promise(() => firstReadsDone(tools.calls, size))
+      process.stderr.write(`DEBUG measuring from +${((Date.now() - t0) / 1000).toFixed(1)}s ${new Date().toISOString()} calls ${tools.calls()}\n`)
       const before = { ...counted }
       // The largest change once read, not the first reads, when every part goes from waiting to read whole.
       counted.largest = 0
