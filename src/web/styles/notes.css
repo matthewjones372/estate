@@ -1,0 +1,24 @@
+/* Notes as they read on a card and in the feed: their text as written, folding when long. */
+.note-text {
+  font-size: 13px;
+  color: #e6dcc8;
+}
+/* As it was written: a kept AI answer's cause, evidence and next steps each on their own line. */
+.note-body {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.note-body.clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.note-more {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--amber-text);
+  font-size: 12px;
+  cursor: pointer;
+}

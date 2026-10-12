@@ -73,7 +73,9 @@ Each linked card says "Part of *Chip registry slow*" and links to it. Unlinking 
 each with its date and time to the second in the reader's zone (UTC on hover) and the person.
 
 **Notes fold.** A card shows its newest three notes and *Show all 20 notes*; the choice is kept per card while Estate
-is open. A long note shows its first two lines and *more*, which opens it in place, on the card and in *What changed
+is open. A note keeps its lines as written, so a kept AI
+answer reads as its cause, evidence and next steps rather than one run-on paragraph. A long note shows its first two
+lines and *more*, which opens it in place, on the card and in *What changed
 today* alike, so one long note (a kept AI answer) does not push the card's buttons, or the day's other changes, off
 the screen. Notes show their date as well as the time once a firing crosses midnight.
 
@@ -116,10 +118,11 @@ Nothing. The notes database gains events and incidents (a table each in Postgres
       noted event and a removal event.
 - [ ] **`spec-0039-timeline`** — *Timeline* on a firing's page, live and past, with dates, seconds and people.
       Done when: `alert.suite.tsx` and `firing.suite.tsx` show the events in order with each person and time.
-- [ ] **`spec-0039-notes-fold`** — a card shows its newest three notes and *Show all*; dates across midnight.
-      Done when: a card with five notes shows three and *Show all 5 notes*, which shows them all and is kept on
-      moving away and back; a long note shows two lines and *more*, which opens it, on the card and in the feed; a note from yesterday shows its
-      date.
+- [ ] **`spec-0039-notes-fold`** — a card shows its newest three notes and *Show all*; a note's lines kept, a long
+      one folded to two; dates across midnight.
+      Done when: a note's text keeps its line breaks; a card with five notes shows three and *Show all 5 notes*,
+      which shows them all and is kept on moving away and back; a long note shows two lines and *more*, which opens
+      it, on the card and in the feed; a note from yesterday shows its date.
 - [ ] **`spec-0039-incidents`** — incidents in each notes store; *Link to incident…* and *New incident* on a card;
       `/incidents/:id` with its firings, notes and merged timeline; close and unlink as events.
       Done when: linking two firings shows both on the incident's page with their events merged in order; each card

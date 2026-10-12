@@ -5,7 +5,7 @@ import { Dynamic } from "solid-js/web"
 import type { Alert, CatalogEvent } from "../../shared/events"
 import { reading } from "../chart"
 import { useEstate } from "../context"
-import { amount, clock, initials, since } from "../format"
+import { amount, clock, since } from "../format"
 import { chatOf, onSlack, teamOf } from "../teams"
 import { A, Out } from "./A"
 import { AroundLine } from "./Around"
@@ -14,6 +14,7 @@ import { History } from "./History"
 import { Impact } from "./Impact"
 import { Icon } from "./icons"
 import { ErrorList } from "./LogErrors"
+import { Notes } from "./Notes"
 import { Plot } from "./Plot"
 import { RaiseIncident } from "./RaiseIncident"
 import { TellTeam } from "./TellTeam"
@@ -73,71 +74,6 @@ const Chart = (props: { readonly name: string; readonly chart: AlertChart }) => 
             : `${clock(new Date(read()?.at ?? 0).toISOString())} ${amount(read()?.value)}`}
         </span>
       </div>
-    </div>
-  )
-}
-
-const Notes = (props: { readonly alert: Alert }) => {
-  const { actions, me } = useEstate()
-  const [draft, setDraft] = createSignal("")
-  const notes = () => props.alert.notes
-  const post = () => {
-    const text = draft().trim()
-    if (text === "") return
-    void actions.addNote(props.alert.id, text).then((added) => {
-      if (added) setDraft("")
-    })
-  }
-  return (
-    <div class="alert-notes">
-      <div class="spread">
-        <span class="alert-label">Notes</span>
-        <span class="alert-quiet">
-          {notes().length === 0 ? "none yet" : `${notes().length} note${notes().length > 1 ? "s" : ""}`}
-        </span>
-      </div>
-      <For each={notes()}>
-        {(note) => (
-          <div class="note">
-            <span class="note-avatar" aria-hidden="true">
-              {initials(note.by)}
-            </span>
-            <div style={{ "min-width": 0 }}>
-              <div class="alert-quiet">
-                <strong class="note-who">{note.by}</strong> · {clock(note.at)}
-                <Show when={note.by === me.name || me.role === "operator"}>
-                  {" · "}
-                  <button type="button" class="note-remove" onClick={() => void actions.removeNote(note.id)}>
-                    Remove<span class="visually-hidden"> the note by {note.by}</span>
-                  </button>
-                </Show>
-              </div>
-              <div class="note-text">{note.text}</div>
-            </div>
-          </div>
-        )}
-      </For>
-      <form
-        class="note-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          post()
-        }}
-      >
-        <label class="note-label">
-          <span class="visually-hidden">Add a note to {props.alert.name}</span>
-          <input
-            type="text"
-            value={draft()}
-            onInput={(event) => setDraft(event.currentTarget.value)}
-            placeholder="What you found, or that you are on it"
-            class="amber-input"
-          />
-        </label>
-        <button type="submit" class="amber-button">
-          Add note
-        </button>
-      </form>
     </div>
   )
 }
