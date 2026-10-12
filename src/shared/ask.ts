@@ -20,5 +20,9 @@ export const AskAnswer = Schema.Struct({
   read: Schema.Array(Schema.String),
   /** The read tools the model called beyond the brief, each with what it asked about: "service orders". */
   called: Schema.Array(Schema.String),
+  /** Its tokens as paid for: input at full price, input read from a cache, and output. */
+  usage: Schema.Struct({ input: Schema.Number, cached: Schema.Number, output: Schema.Number }),
+  /** What it cost, by the settings' price for the model, in the bill's currency; none where the model has no price. */
+  cost: Schema.optionalKey(Schema.Struct({ amount: Schema.Number, currency: Schema.String })),
 })
 export type AskAnswer = typeof AskAnswer.Type

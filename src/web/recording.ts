@@ -166,6 +166,8 @@ export const recording = (): Recorded => {
                 model: "fake-model",
                 read: ["Changed", "Runbook"],
                 called: ["service orders"],
+                usage: { input: 3_200, cached: 11_800, output: 1_100 },
+                cost: { amount: 0.0294, currency: "USD" },
               }
             : "this alert was asked about less than a minute ago",
         )
