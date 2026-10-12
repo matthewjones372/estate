@@ -99,13 +99,13 @@ Nothing.
 
 ## Stack
 
-- [ ] **`spec-0038-keep-the-reply`** — Anthropic's reply kept whole between turns; its answer held to the answer's
+- [x] **`spec-0038-keep-the-reply`** — Anthropic's reply kept whole between turns; its answer held to the answer's
       shape with room to think; a failed call names the provider's message.
       Done when: in `model.test.ts`, an Anthropic fake that answers first with a `thinking` block (with `thinking` and
       `signature`) and a tool call receives that block back unchanged on the second call, and the ask answers; a fake
       that answers 400 with an error body gives "Anthropic answered 400: ‹its message›"; Anthropic's call carries
       `max_tokens` 8192 and `output_config.format` with the answer's required fields and closed objects.
-- [ ] **`spec-0038-ask-from-the-card`** — *Ask AI* on every alert card, answered on the card, with a bar and the
+- [x] **`spec-0038-ask-from-the-card`** — *Ask AI* on every alert card, answered on the card, with a bar and the
       seconds while it asks; the alert's page's separate section folded into its card.
       Done when: in `alert.suite.tsx`, a card with `ai:` set has *Ask AI* and one without has not; pressing it shows
       a progress bar and "Reading Estate…" until the answer, then the answer on the card; the alert's page has one
