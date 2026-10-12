@@ -111,15 +111,20 @@ lanes or, when the estate is long to scroll, as a grid of compact cards; the cho
 
 ### Around this alert, and Ask AI
 
-![An alert's own page: what's happening, what is around it, who owns it, and Ask AI](docs/alert.png)
+![An alert's own page: what's happening, what is around it, and who owns it](docs/alert.png)
 
 An alert's own page collects related information without using AI: the deploys and builds of its service and of what
 it calls or what calls it, from the hour before it fired; how those neighbours are, with their stats; its errors from
 ten minutes before it fired, grouped by message; its earlier firings and what was written then; and its runbook's
 text, where the runbook is a page Estate can read.
 
-If a model is configured, Ask AI gives that brief to the model, which may call the same read tools agents use over
-`/mcp` for what the brief does not say, and answers with the likely cause, the evidence for it, and what to do next.
+If a model is configured, every alert's card has Ask AI, on the overview, on Alerts and on the alert's own page. It
+gives that brief to the model, which may call the same read tools agents use over `/mcp` for what the brief does
+not say, and answers on the card with the likely cause, the evidence for it, and what to do next. A bar shows it is
+reading until the answer comes.
+
+![Ask AI's answer on an alert's card in the petshop demo: the likely cause, the evidence for it, and what to do next](docs/ask-ai.png)
+
 The answer lists what it read and called, so the reader can check it. You can keep the answer as a note for
 everyone to see. The model is sent only what the person asking could see on the page. There is at most one answer
 per alert per minute, within a daily token budget.
