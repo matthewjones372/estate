@@ -84,7 +84,8 @@ export const anthropic = (ai: Ai): Api => {
       body: JSON.stringify({
         model: ai.model,
         max_tokens: longestThinking,
-        output_config: { format: answerFormat, effort: ai.effort ?? "low" },
+        // Effort only where set: Haiku refuses the parameter, so a default would break the cheapest model.
+        output_config: { format: answerFormat, ...(ai.effort === undefined ? {} : { effort: ai.effort }) },
         system: [{ type: "text", text: system, cache_control: cachedHere }],
         messages: cachedMessages(messages),
         // The tools stay on the last round, so the cached prefix they start stays whole; the model is told not to call.

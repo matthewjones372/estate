@@ -138,14 +138,14 @@ describe("Anthropic, as Ask AI asks it", () => {
     })
   })
 
-  test("asks Anthropic to think at the effort the settings give, low unless they say", () => {
+  test("asks Anthropic to think at the effort the settings give, and says nothing of effort when they do not", () => {
     const calls: Call[] = []
     const claude: Ai = { provider: "anthropic", model: "claude-opus-5-5", apiKey: Redacted.make("ak") }
     return Promise.all([
       asking(claude, () => anthropic(JSON.stringify(answer)), calls),
       asking({ ...claude, effort: "high" }, () => anthropic(JSON.stringify(answer)), calls),
     ]).then(() =>
-      expect(calls.map((call) => JSON.parse(call.body ?? "{}").output_config.effort)).toEqual(["low", "high"]),
+      expect(calls.map((call) => JSON.parse(call.body ?? "{}").output_config.effort)).toEqual([undefined, "high"]),
     )
   })
 })

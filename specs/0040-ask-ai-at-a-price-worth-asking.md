@@ -25,9 +25,9 @@ and the conversation's latest turn too, so each round reads what came before at 
 and pays full price only for what is new. The chat APIs cache what repeats without being asked.
 
 **Fewer, smaller rounds.** Two rounds of tools rather than four, since the brief already carries what most asks need;
-each tool result cut to `ai.toolResultChars` (default 4,000), saying it was cut. Thinking held to `ai.effort`
-(default `low`), sent to Anthropic as `output_config.effort` always, and to OpenAI and Gemini as `reasoning_effort`
-only when set, since a chat model that does not reason refuses it.
+each tool result cut to `ai.toolResultChars` (default 4,000), saying it was cut. Thinking held to `ai.effort`, sent
+to Anthropic as `output_config.effort` and to OpenAI and Gemini as `reasoning_effort`, only when set: a chat model
+that does not reason refuses it, and so does Claude Haiku 4.5, so a default would break the cheapest models.
 
 **What it cost, on the answer.** The answer's line says its tokens (input, cached and output) and, where `prices`
 names the model, an estimate:
@@ -69,7 +69,7 @@ Nothing. Prices already come from the settings (spec 0019).
       Done when: in `model.test.ts`, Anthropic's calls carry the cache marks in the right places, and an ask's
       tokens split into input, cached and output.
 - [x] **`spec-0040-rounds`**: `ai.toolRounds` (default 2), `ai.toolResultChars` (default 4,000) and `ai.effort`
-      (default `low`).
+      (sent only when set).
       Done when: an ask stops offering tools after its rounds; a long tool result reaches the model cut and saying
       so; the effort reaches the provider's call.
 - [x] **`spec-0040-cost`**: the answer's tokens and its estimated cost from `prices`, on the card; the budget counts
