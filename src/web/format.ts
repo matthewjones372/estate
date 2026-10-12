@@ -17,6 +17,12 @@ export const day = (iso: string): string => {
   return `${date.getDate()} ${months[date.getMonth()] ?? ""} ${clock(iso)}`
 }
 
+/** "2 Oct 09:05:30": a moment, to the second, as a timeline lists it. */
+export const instant = (iso: string): string => {
+  const date = new Date(iso)
+  return `${date.getDate()} ${months[date.getMonth()] ?? ""} ${clock(iso)}:${pad(date.getSeconds())}`
+}
+
 /** "14:02" for a time today, "2 Oct 09:05" for one before: a note's time, dated once it is not today's. */
 export const stamp = (iso: string, now: number): string =>
   new Date(iso).toDateString() === new Date(now).toDateString() ? clock(iso) : day(iso)

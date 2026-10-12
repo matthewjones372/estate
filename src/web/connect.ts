@@ -6,12 +6,14 @@ import { AskAnswer } from "../shared/ask"
 import { type EventName, Load } from "../shared/events"
 import { PastFiring } from "../shared/firing"
 import { ErrorGroups, LogBatch } from "../shared/log-events"
+import { FiringEvent } from "../shared/timeline"
 import type { Actions, ErrorWindow, LogHandlers, Range } from "./context"
 import type { Open } from "./live"
 
 const decodeRuns = Schema.decodeUnknownOption(Schema.Array(AgentRun))
 const decodeAround = Schema.decodeUnknownOption(AroundAlert)
 const decodeFiring = Schema.decodeUnknownOption(PastFiring)
+const decodeEvents = Schema.decodeUnknownOption(Schema.Struct({ events: Schema.Array(FiringEvent) }))
 const decodeAsk = Schema.decodeUnknownOption(AskAnswer)
 const decodeMessage = Schema.decodeUnknownOption(Schema.Struct({ message: Schema.String }))
 const decodeThread = Schema.decodeUnknownOption(Schema.Struct({ url: Schema.String }))
@@ -127,6 +129,13 @@ export const serverActions = (
         if (!response.ok) return Promise.resolve(undefined)
         return response.json().then((body) => Option.getOrUndefined(decodeFiring(body)))
       })
+      .catch(() => undefined),
+  events: (alert, startsAt) =>
+    fetch(
+      `/api/firings/${encodeURIComponent(alert)}/events?env=${encodeURIComponent(environment())}&at=${encodeURIComponent(startsAt)}`,
+    )
+      .then((response) => (response.ok ? response.json() : undefined))
+      .then((body) => (body === undefined ? undefined : Option.getOrUndefined(decodeEvents(body))?.events))
       .catch(() => undefined),
   around: (alert) =>
     fetch(`/api/alerts/${encodeURIComponent(alert)}/around?env=${encodeURIComponent(environment())}`)

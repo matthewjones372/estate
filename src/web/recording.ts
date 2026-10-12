@@ -2,6 +2,7 @@
 import type { AroundAlert } from "../shared/around"
 import type { PastFiring } from "../shared/firing"
 import type { LogBatch } from "../shared/log-events"
+import type { FiringEvent } from "../shared/timeline"
 import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
 import { groups, lines } from "./fixture-logs"
@@ -56,6 +57,22 @@ export const brief: AroundAlert = {
 }
 
 /** The fixture's OrdersSlow as it last fired, and once before Estate kept what an alert said. */
+const timeline: ReadonlyArray<FiringEvent> = [
+  { id: "e1", at: "2026-10-02T09:00:00Z", by: "Estate", kind: "fired", text: "OrdersSlow, critical, storefront" },
+  { id: "e2", at: "2026-10-02T09:05:30Z", by: "gil", kind: "ai-asked", text: "claude-haiku-4-5" },
+  { id: "e3", at: "2026-10-02T09:06:02Z", by: "Estate", kind: "ai-answered", text: "The pool is exhausted. (medium)" },
+  { id: "e4", at: "2026-10-02T09:07:00Z", by: "gil", kind: "silenced", text: "for 1 hour: vacuum" },
+  {
+    id: "e5",
+    at: "2026-10-02T09:12:45Z",
+    by: "ada",
+    kind: "team-told",
+    text: "told Orders on Slack",
+    link: "https://slack.example/p1",
+  },
+  { id: "e6", at: "2026-10-02T09:22:00Z", by: "Estate", kind: "resolved", text: "after 22 min" },
+]
+
 const firings: ReadonlyArray<PastFiring> = [
   {
     environment: "production",
@@ -184,6 +201,10 @@ export const recording = (): Recorded => {
         calls.push(at === undefined ? ["firing", alert] : ["firing", alert, at])
         const found = firings.find((each) => each.alert === alert && (at === undefined || each.startsAt === at))
         return Promise.resolve(found ?? "none")
+      },
+      events: (alert, startsAt) => {
+        calls.push(["events", alert, startsAt])
+        return Promise.resolve(alert === "a1" ? timeline : alert === "broken" ? undefined : [])
       },
       around: (alert) => {
         calls.push(["around", alert])
