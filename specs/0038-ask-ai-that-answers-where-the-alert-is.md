@@ -64,7 +64,19 @@ Reading Estate… 12 s                                                          
 ```
 
 **Asking shows it is asking.** While the model reads, the card shows a moving bar and how long it has been reading,
-and the button is disabled, so a wait of half a minute reads as work, not as a page that did nothing.
+and the button reads *Asking…* with a spinner and takes no more presses, so a wait of half a minute reads as work,
+not as a page that did nothing. Once answered it reads *Ask again*, resting for the minute the server would refuse.
+
+**An ask within the minute shares the answer.** The server answers an alert once a minute. Whoever asks again in
+that minute, with the same role, gets that answer, waiting for it if it is still being asked, rather than "this alert
+was asked about less than a minute ago" and nothing. An answer already on a card stays when a later ask fails.
+
+**An alert's row opens it.** On Alerts, an alert's title links to its page and a click anywhere on its row (outside
+its own links and buttons) opens it, rather than only *Notes and silence* opening its card above the table.
+
+**Keeping it as a note says so.** *Keep as note* reads *Keeping…* while it saves, then "Kept as a note, under Notes
+above", or says the note could not be kept. A note has a longest (2,000 characters) and a full answer can pass it, so
+the note drops evidence from the end, saying how many lines are left on the card.
 
 **One place on the alert's page.** The alert's page loses its separate Ask AI section, since its card now asks and
 answers. An answer is kept while the page is open, so moving between the overview and the alert's page does not ask
@@ -97,7 +109,10 @@ Nothing.
       seconds while it asks; the alert's page's separate section folded into its card.
       Done when: in `alert.suite.tsx`, a card with `ai:` set has *Ask AI* and one without has not; pressing it shows
       a progress bar and "Reading Estate…" until the answer, then the answer on the card; the alert's page has one
-      *Ask AI*; an answer asked on one page is still shown on the same alert's card on another.
+      *Ask AI*; an answer asked on one page is still shown on the same alert's card on another; the button reads *Asking…* and takes
+      no second press, then *Ask again*; *Keep as note* says it is keeping, then kept or not; a long answer's note fits;
+      on Alerts, an alert's title links to its page and a click on its row opens it;
+      in `http/ask.test.ts`, two asks within the minute call the model once and both get its answer.
 
 ## Acceptance
 

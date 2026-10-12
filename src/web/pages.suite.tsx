@@ -3,7 +3,7 @@
 import { describe, expect, test } from "bun:test"
 import { App } from "./App"
 import { events, heard, now, operator } from "./fixture"
-import { render } from "./harness"
+import { mount, render } from "./harness"
 import { Alerts, alertsSummary } from "./pages/Alerts"
 import { Deploys, summaryOf } from "./pages/Deploys"
 import { headlineOf, Overview, tilesOf } from "./pages/Overview"
@@ -184,6 +184,17 @@ describe("the other pages", () => {
       "Faster pages",
     ])
       expect(page).toContain(words)
+  })
+
+  test("an alert's row opens its page, by its title or anywhere on the row", () => {
+    const page = mount(() => <Alerts />)
+    const title = page.container.querySelector('a[href="/alerts/a1"]')
+    expect(title?.closest("tr")).not.toBeNull()
+    const row = title?.closest("tr")
+    const cell = row?.querySelector<HTMLElement>("td.mono")
+    if (cell === null || cell === undefined) throw new Error("no cell to click")
+    page.click(cell)
+    expect(page.calls).toContainEqual(["navigate", "/alerts/a1"])
   })
 
   test("alerts lists them all with their latest note, and what resolved", () => {

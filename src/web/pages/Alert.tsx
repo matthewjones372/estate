@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 /**
- * One alert's own page, to share: what's happening, what is around it, who owns it, and Ask AI. The card carries the
- * links to the runbook, the logs and the team, so the page does not repeat them.
+ * One alert's own page, to share: what's happening, what is around it and who owns it. The card carries the links to
+ * the runbook, the logs and the team, and Ask AI, so the page does not repeat them.
  */
 import { createEffect, createSignal, on, onCleanup, Show } from "solid-js"
 import type { PastFiring } from "../../shared/firing"
@@ -10,7 +10,6 @@ import { day, since } from "../format"
 import { A } from "../parts/A"
 import { AlertCard } from "../parts/AlertCard"
 import { Around } from "../parts/Around"
-import { AskAi } from "../parts/AskAi"
 import { Owner } from "../parts/Team"
 import { firingPath } from "../route"
 import { teamOf } from "../teams"
@@ -80,7 +79,7 @@ export const AlertPage = (props: { readonly id: string }) => {
             </p>
             <AlertCard alert={found()} catalog={catalog()} canSilence={canSilence()} level={2} />
           </section>
-          {/* Keyed by the alert, so moving to another alert starts its brief and its answer afresh. */}
+          {/* Keyed by the alert, so moving to another alert starts its brief afresh. */}
           <Show when={found().id} keyed>
             <section aria-labelledby="alert-around" class="stack">
               <h2 id="alert-around" class="section-title">
@@ -94,7 +93,6 @@ export const AlertPage = (props: { readonly id: string }) => {
               </h2>
               <Owner owner={service()?.owner} team={teamOf(catalog(), service()?.owner)} />
             </section>
-            <AskAi alert={found()} />
           </Show>
         </main>
       )}

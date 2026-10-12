@@ -103,8 +103,15 @@ export const Alerts = () => {
             <For each={shown()}>
               {(alert) => {
                 const note = () => alert.notes[0]
+                const path = `/alerts/${encodeURIComponent(alert.id)}`
+                // The whole row opens the alert, for a pointer; the title is the link for a keyboard and a reader.
+                const openRow = (event: MouseEvent) => {
+                  const target = event.target
+                  if (target instanceof Element && target.closest("a, button, select, input")) return
+                  actions.navigate(path)
+                }
                 return (
-                  <tr class={alert.state === "silenced" ? "greyed" : ""}>
+                  <tr class={`row-link ${alert.state === "silenced" ? "greyed" : ""}`} onClick={openRow}>
                     <td>
                       <span class="cell-version">
                         <span
@@ -114,7 +121,9 @@ export const Alerts = () => {
                       </span>
                     </td>
                     <td>
-                      <div style={{ "font-weight": 600 }}>{alert.summary ?? alert.name}</div>
+                      <A to={path} class="row-title">
+                        {alert.summary ?? alert.name}
+                      </A>
                       <Show when={alert.impact}>
                         {(impact) => <div class="cell-note">Impact: {impact().text}</div>}
                       </Show>

@@ -130,6 +130,20 @@ table.grid tbody th {
   font: inherit;
   font-size: 13px;
 }
+tr.row-link {
+  cursor: pointer;
+}
+tr.row-link:hover {
+  background: var(--line-soft);
+}
+.row-title {
+  display: block;
+  font-weight: 600;
+  color: inherit;
+}
+.row-title:hover {
+  text-decoration: underline;
+}
 tr.greyed {
   opacity: 0.6;
 }

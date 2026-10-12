@@ -181,6 +181,9 @@ export const ServicesEvent = Schema.Struct({
 export type ServicesEvent = typeof ServicesEvent.Type
 export type ServiceState = ServicesEvent["services"][number]
 
+/** The longest note Estate keeps, in characters. */
+export const longestNote = 2000
+
 export const Note = Schema.Struct({ id: Schema.String, at: Instant, by: Schema.String, text: Schema.String })
 export type Note = typeof Note.Type
 
