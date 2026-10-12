@@ -225,6 +225,8 @@ export const Alert = Schema.Struct({
   chart: optional(Schema.Struct({ points: Schema.Array(Schema.NullOr(Schema.Number)), threshold: Schema.Number })),
   /** The thread in its team's Slack channel, once this firing was told there. */
   thread: optional(Schema.Struct({ url: Schema.String })),
+  /** The incident this firing is part of, if a person linked it to one. */
+  incident: optional(Schema.Struct({ id: Schema.String, title: Schema.String, closed: Schema.Boolean })),
 })
 export type Alert = typeof Alert.Type
 

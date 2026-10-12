@@ -142,11 +142,13 @@ export const loadHistory = (days: number) =>
     const since = iso(before(now, Duration.days(days)))
     const firings = yield* notes.firings(since)
     const threads = yield* notes.threads(since)
+    const incidents = yield* notes.incidents(since)
     const today = iso(before(now, Duration.days(1)))
     yield* updateEstate((estate) => ({
       ...estate,
       firings,
       threads,
+      incidents,
       environments: Object.fromEntries(
         Object.entries(estate.environments).map(([name, state]) => [
           name,
@@ -172,7 +174,7 @@ export const loadHistory = (days: number) =>
     }))
   })
 
-/** Every hour, firings older than `days` removed, from the store and the page. */
+/** Every hour, firings and incidents older than `days` removed, from the store and the page. */
 export const sweepHistory = (days: number) =>
   Effect.gen(function* () {
     const cutoff = iso(before(yield* Clock.currentTimeMillis, Duration.days(days)))
@@ -180,6 +182,9 @@ export const sweepHistory = (days: number) =>
     yield* updateEstate((estate) => ({
       ...estate,
       firings: (estate.firings ?? []).filter((firing) => firing.startsAt >= cutoff),
+      ...(estate.incidents === undefined
+        ? {}
+        : { incidents: estate.incidents.filter((incident) => incident.openedAt >= cutoff) }),
     }))
   }).pipe(
     Effect.catch((failure) => Effect.logWarning(`old firings could not be removed: ${failure.message}`)),

@@ -73,6 +73,14 @@ const timeline: ReadonlyArray<FiringEvent> = [
   { id: "e6", at: "2026-10-02T09:22:00Z", by: "Estate", kind: "resolved", text: "after 22 min" },
 ]
 
+/** A firing moved from one incident to another, which was then closed. */
+const incidents: ReadonlyArray<FiringEvent> = [
+  { id: "i1", at: "2026-10-02T09:01:00Z", by: "gil", kind: "incident-opened", text: "Orders slow" },
+  { id: "i2", at: "2026-10-02T09:02:00Z", by: "gil", kind: "incident-unlinked", text: "Orders slow" },
+  { id: "i3", at: "2026-10-02T09:02:00Z", by: "gil", kind: "incident-linked", text: "Checkout down" },
+  { id: "i4", at: "2026-10-02T09:30:00Z", by: "ada", kind: "incident-closed", text: "the pool was resized" },
+]
+
 const firings: ReadonlyArray<PastFiring> = [
   {
     environment: "production",
@@ -204,7 +212,9 @@ export const recording = (): Recorded => {
       },
       events: (alert, startsAt) => {
         calls.push(["events", alert, startsAt])
-        return Promise.resolve(alert === "a1" ? timeline : alert === "broken" ? undefined : [])
+        return Promise.resolve(
+          alert === "a1" ? timeline : alert === "a3" ? incidents : alert === "broken" ? undefined : [],
+        )
       },
       around: (alert) => {
         calls.push(["around", alert])

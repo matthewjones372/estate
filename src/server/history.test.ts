@@ -172,8 +172,8 @@ describe("an alert's firings", () => {
         },
       ])
       expect(statements[3]?.[0]).toContain("add column if not exists summary text")
-      expect(statements[7]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
-      expect(statements[7]?.[1]).toEqual([
+      expect(statements[8]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
+      expect(statements[8]?.[1]).toEqual([
         "staging",
         "a1",
         "OrdersSlow",
@@ -187,9 +187,10 @@ describe("an alert's firings", () => {
         null,
         null,
       ])
-      expect(statements.slice(8, 10)).toEqual([
+      expect(statements.slice(9, 12)).toEqual([
         ["delete from estate_firings where starts_at < $1", ["1970-01-01T00:00:00.000Z"]],
         ["delete from estate_events where starts_at < $1", ["1970-01-01T00:00:00.000Z"]],
+        ["delete from estate_incidents where opened_at < $1", ["1970-01-01T00:00:00.000Z"]],
       ])
     })
   })

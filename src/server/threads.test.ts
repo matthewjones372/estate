@@ -46,7 +46,7 @@ describe("a firing's Slack thread", () => {
     ).then((threads) => {
       expect(threads).toEqual([thread])
       expect(statements[4]?.[0]).toStartWith("create table if not exists estate_threads")
-      expect(statements[7]?.[0]).toContain("on conflict (environment, alert, starts_at) do nothing")
+      expect(statements[8]?.[0]).toContain("on conflict (environment, alert, starts_at) do nothing")
     })
   })
 })
