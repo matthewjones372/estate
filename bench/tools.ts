@@ -33,6 +33,12 @@ const firing = Array.from({ length: 5 }, (_, index) => ({
   status: { state: "active", silencedBy: [], inhibitedBy: [] },
 }))
 
+const debugArrivals = new Map<string, Array<string>>()
+Reflect.set(globalThis, "DEBUG_ARRIVALS", debugArrivals)
+
+const debugArrivals = new Map<string, Array<string>>()
+Reflect.set(globalThis, "DEBUG_ARRIVALS", debugArrivals)
+
 export interface Tools {
   readonly url: string
   readonly calls: () => number
@@ -71,10 +77,7 @@ export const startTools = (services: number, latency: number): Tools => {
     fetch: async (request) => {
       calls += 1
       const seen = performance.now()
-      const arrivals = ((globalThis as Record<string, unknown>)["DEBUG_ARRIVALS"] ??= new Map()) as Map<
-        string,
-        Array<string>
-      >
+      const arrivals = debugArrivals
       arrivals.set(request.url, [...(arrivals.get(request.url) ?? []), `+${Math.round(seen)}ms`])
       await Bun.sleep(latency)
       const body = answer(new URL(request.url))
