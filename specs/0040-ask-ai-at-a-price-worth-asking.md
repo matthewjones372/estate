@@ -64,15 +64,15 @@ Nothing. Prices already come from the settings (spec 0019).
 
 ## Stack
 
-- [ ] **`spec-0040-cache`**: `cache_control` on the system prompt, tools, brief and latest turn for Anthropic; the
+- [x] **`spec-0040-cache`**: `cache_control` on the system prompt, tools, brief and latest turn for Anthropic; the
       reply's cached tokens read and counted.
       Done when: in `model.test.ts`, Anthropic's calls carry the cache marks in the right places, and an ask's
       tokens split into input, cached and output.
-- [ ] **`spec-0040-rounds`**: `ai.toolRounds` (default 2), `ai.toolResultChars` (default 4,000) and `ai.effort`
+- [x] **`spec-0040-rounds`**: `ai.toolRounds` (default 2), `ai.toolResultChars` (default 4,000) and `ai.effort`
       (default `low`).
       Done when: an ask stops offering tools after its rounds; a long tool result reaches the model cut and saying
       so; the effort reaches the provider's call.
-- [ ] **`spec-0040-cost`**: the answer's tokens and its estimated cost from `prices`, on the card; the budget counts
+- [x] **`spec-0040-cost`**: the answer's tokens and its estimated cost from `prices`, on the card; the budget counts
       cached input at its price.
       Done when: `ask.suite.tsx` shows "about $0.03" for an answer whose model has a price; the route's answer
       carries its usage, and its cost in the bill's currency only where the model has a price.
