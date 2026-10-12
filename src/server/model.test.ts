@@ -235,8 +235,8 @@ describe("the model Ask AI asks", () => {
         Effect.provide(liveModel(local).pipe(Layer.provide(stubRemote(insistent)))),
       ),
     ).then((asked) => {
-      expect(offered).toBe(4)
-      expect(asked.called).toEqual(["changes", "changes", "changes", "changes"])
+      expect(offered).toBe(2)
+      expect(asked.called).toEqual(["changes", "changes"])
     })
   })
 })

@@ -102,7 +102,12 @@ describe("Anthropic, as Ask AI asks it", () => {
         ? reply({ content: [{ type: "tool_use", id: `t${bodies.length}`, name: "service", input: {} }], usage })
         : reply({ content: [{ type: "text", text: JSON.stringify(answer) }], usage })
     }
-    const claude: Ai = { provider: "anthropic", model: "claude-opus-5-5", apiKey: Redacted.make("ak") }
+    const claude: Ai = {
+      provider: "anthropic",
+      model: "claude-opus-5-5",
+      apiKey: Redacted.make("ak"),
+      toolRounds: 4,
+    }
     const marked = (blocks: ReadonlyArray<{ cache_control?: unknown }> | undefined) =>
       blocks?.map((block) => block.cache_control !== undefined)
     return Effect.runPromise(
@@ -131,5 +136,16 @@ describe("Anthropic, as Ask AI asks it", () => {
       expect(asked.usage).toEqual({ input: 750, cached: 4500, output: 100 })
       expect(asked.tokens).toBe(5350)
     })
+  })
+
+  test("asks Anthropic to think at the effort the settings give, low unless they say", () => {
+    const calls: Call[] = []
+    const claude: Ai = { provider: "anthropic", model: "claude-opus-5-5", apiKey: Redacted.make("ak") }
+    return Promise.all([
+      asking(claude, () => anthropic(JSON.stringify(answer)), calls),
+      asking({ ...claude, effort: "high" }, () => anthropic(JSON.stringify(answer)), calls),
+    ]).then(() =>
+      expect(calls.map((call) => JSON.parse(call.body ?? "{}").output_config.effort)).toEqual(["low", "high"]),
+    )
   })
 })

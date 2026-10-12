@@ -11,6 +11,12 @@ export const Ai = Schema.Struct({
   model: Schema.String,
   url: optional(Schema.String),
   budget: optional(Schema.Struct({ tokensPerDay: optional(Schema.Number) })),
+  /** How hard the model thinks: `low` unless set, sent as each provider names it, and not at all where it has none. */
+  effort: optional(Schema.Literals(["low", "medium", "high"])),
+  /** Rounds of Estate's read tools before the model must answer; 2 unless set. */
+  toolRounds: optional(Schema.Number),
+  /** The most of one tool result the model reads, in characters; 4,000 unless set. */
+  toolResultChars: optional(Schema.Number),
 })
 export type Ai = typeof Ai.Type
 

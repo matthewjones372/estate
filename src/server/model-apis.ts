@@ -132,6 +132,9 @@ const chatUsage = (usage: ChatUsage | undefined): Usage => {
   return { input: usage.prompt_tokens - cached, cached, output: usage.completion_tokens }
 }
 
+/** Providers whose chat API takes `reasoning_effort`. */
+const reasons = (ai: Ai) => ai.provider === "openai" || ai.provider === "gemini"
+
 export const chat = (ai: Ai): Api => {
   const key = keyOf(ai)
   return {
@@ -151,6 +154,8 @@ export const chat = (ai: Ai): Api => {
           model: ai.model,
           max_tokens: longest,
           response_format: { type: "json_object" },
+          // Only where asked: a chat model that does not reason refuses the setting rather than ignoring it.
+          ...(ai.effort === undefined || !reasons(ai) ? {} : { reasoning_effort: ai.effort }),
           messages: [{ role: "system", content: system }, ...messages],
           ...(offers.length === 0
             ? {}

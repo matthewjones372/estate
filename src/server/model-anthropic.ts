@@ -84,7 +84,7 @@ export const anthropic = (ai: Ai): Api => {
       body: JSON.stringify({
         model: ai.model,
         max_tokens: longestThinking,
-        output_config: { format: answerFormat },
+        output_config: { format: answerFormat, effort: ai.effort ?? "low" },
         system: [{ type: "text", text: system, cache_control: cachedHere }],
         messages: cachedMessages(messages),
         // The tools stay on the last round, so the cached prefix they start stays whole; the model is told not to call.

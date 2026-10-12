@@ -26,7 +26,8 @@ and pays full price only for what is new. The chat APIs cache what repeats witho
 
 **Fewer, smaller rounds.** Two rounds of tools rather than four, since the brief already carries what most asks need;
 each tool result cut to `ai.toolResultChars` (default 4,000), saying it was cut. Thinking held to `ai.effort`
-(default `low`), sent as the provider's effort setting where it has one.
+(default `low`), sent to Anthropic as `output_config.effort` always, and to OpenAI and Gemini as `reasoning_effort`
+only when set, since a chat model that does not reason refuses it.
 
 **What it cost, on the answer.** The answer's line says its tokens (input, cached and output) and, where `prices`
 names the model, an estimate:

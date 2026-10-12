@@ -45,8 +45,14 @@ export interface Model {
 }
 export const Model = Context.Service<Model>("estate/Model")
 
-/** Rounds of tool calls before the model is told to answer with what it has. */
-const rounds = 4
+/** Rounds of tool calls before the model is told to answer with what it has, unless `ai.toolRounds` says. */
+const rounds = 2
+/** The most of one tool result the model reads, unless `ai.toolResultChars` says: the rest costs more than it tells. */
+const resultChars = 4000
+
+/** A tool result cut to `most` characters, saying how much was left out. */
+const cutTo = (content: string, most: number): string =>
+  content.length <= most ? content : `${content.slice(0, most)}\n… cut here: ${content.length - most} more characters`
 
 const system = `You are Estate's incident investigator. Answer from the brief you are given and, where it does not
 say enough, from Estate's read tools; never from guesses. If what you read does not show the cause, say so with low
@@ -88,6 +94,8 @@ const apiOf = (ai: Ai): Api => (ai.provider === "anthropic" ? anthropic(ai) : ch
 
 const askWith = (remote: Remote, ai: Ai, brief: string, question: string, tools: Tools | undefined) => {
   const api = apiOf(ai)
+  const lastRound = ai.toolRounds ?? rounds
+  const most = ai.toolResultChars ?? resultChars
   const turnOf = (conversation: Conversation, offers: ReadonlyArray<ToolOffer>, answerNow = false) =>
     Effect.gen(function* () {
       const reply = yield* remote
@@ -105,10 +113,10 @@ const askWith = (remote: Remote, ai: Ai, brief: string, question: string, tools:
   const next = (talk: Talk, offered: Tools): Effect.Effect<Talk, ModelError> =>
     Effect.gen(function* () {
       const results = yield* Effect.forEach(talk.turn.calls, (call) =>
-        Effect.map(offered.run(call), (content) => ({ id: call.id, content })),
+        Effect.map(offered.run(call), (content) => ({ id: call.id, content: cutTo(content, most) })),
       )
       const conversation = api.answered(talk.conversation, talk.turn, results)
-      const turn = yield* turnOf(conversation, offered.offers, talk.round >= rounds)
+      const turn = yield* turnOf(conversation, offered.offers, talk.round >= lastRound)
       return {
         conversation,
         turn,
@@ -119,7 +127,7 @@ const askWith = (remote: Remote, ai: Ai, brief: string, question: string, tools:
     })
   // Past its last round the model was told to answer, so a call it makes anyway goes unanswered.
   const talking = (talk: Talk): Effect.Effect<Talk, ModelError> =>
-    talk.turn.calls.length === 0 || tools === undefined || talk.round > rounds
+    talk.turn.calls.length === 0 || tools === undefined || talk.round > lastRound
       ? Effect.succeed(talk)
       : Effect.flatMap(next(talk, tools), talking)
   return Effect.gen(function* () {
