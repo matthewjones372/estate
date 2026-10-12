@@ -70,6 +70,12 @@ export const startTools = (services: number, latency: number): Tools => {
     hostname: "127.0.0.1",
     fetch: async (request) => {
       calls += 1
+      const seen = performance.now()
+      const arrivals = ((globalThis as Record<string, unknown>)["DEBUG_ARRIVALS"] ??= new Map()) as Map<
+        string,
+        Array<string>
+      >
+      arrivals.set(request.url, [...(arrivals.get(request.url) ?? []), `+${Math.round(seen)}ms`])
       await Bun.sleep(latency)
       const body = answer(new URL(request.url))
       return body === undefined ? Response.json({ message: "not found" }, { status: 404 }) : Response.json(body)

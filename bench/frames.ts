@@ -61,6 +61,33 @@ const firstReadsDone = async (calls: () => number, size: number) => {
   }
 }
 
+let fetched = 0
+const realFetch = globalThis.fetch
+const debugFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  fetched += 1
+  const started = performance.now()
+  const url = String(input instanceof Request ? input.url : input)
+  const report = (outcome: string) => {
+    const took = performance.now() - started
+    if (took < 1000) return
+    const arrivals = (
+      (globalThis as Record<string, unknown>)["DEBUG_ARRIVALS"] as Map<string, Array<string>> | undefined
+    )?.get(url)
+    process.stderr.write(
+      `DEBUG slow fetch ${Math.round(took)}ms from +${Math.round(started)}ms ${outcome} ${url.slice(0, 160)} server saw ${JSON.stringify(arrivals ?? [])}\n`,
+    )
+  }
+  try {
+    const response = await realFetch(input, init)
+    report(`status ${response.status}`)
+    return response
+  } catch (error) {
+    report(`error ${String(error)}`)
+    throw error
+  }
+}) as typeof fetch
+globalThis.fetch = debugFetch
+
 export const measureFrames = async (size: number) => {
   const tools = startTools(size, 20)
   try {
@@ -83,7 +110,7 @@ export const measureFrames = async (size: number) => {
       )
       yield* Effect.promise(() => firstReadsDone(tools.calls, size))
       process.stderr.write(
-        `DEBUG measuring from +${((Date.now() - t0) / 1000).toFixed(1)}s ${new Date().toISOString()} calls ${tools.calls()}\n`,
+        `DEBUG measuring from +${((Date.now() - t0) / 1000).toFixed(1)}s ${new Date().toISOString()} calls ${tools.calls()} fetched ${fetched}\n`,
       )
       const before = { ...counted }
       // The largest change once read, not the first reads, when every part goes from waiting to read whole.
