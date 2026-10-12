@@ -22,6 +22,21 @@ const threadOf = (
   return told === undefined ? undefined : { url: told.url }
 }
 
+/** The incident this firing of an alert is part of: its open one, else the closed one it was in, if any. */
+const incidentOf = (
+  estate: EstateState,
+  environment: string,
+  alert: { readonly id: string; readonly startsAt: string },
+) => {
+  const holding = (estate.incidents ?? []).filter((incident) =>
+    incident.firings.some(
+      (each) => each.environment === environment && each.alert === alert.id && each.startsAt === alert.startsAt,
+    ),
+  )
+  const found = holding.find((incident) => incident.closedAt === undefined) ?? holding[0]
+  return found === undefined ? undefined : { id: found.id, title: found.title, closed: found.closedAt !== undefined }
+}
+
 /** What an alert means for the people using the product: written on the page, in the catalog, or on its rule. */
 export const impactOf = (estate: EstateState, name: string, said?: string) => {
   const onPage = estate.impacts?.find((each) => each.alert === name)
@@ -75,6 +90,7 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
       history: history.length === 0 ? undefined : history,
       chart: state.metrics.value?.charts[alert.id],
       thread: threadOf(estate, environment, alert),
+      incident: incidentOf(estate, environment, alert),
     })
   })
   alerts.sort(

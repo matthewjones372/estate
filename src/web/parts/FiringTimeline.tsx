@@ -34,6 +34,14 @@ const said = (event: FiringEvent): string => {
       return `AI could not answer: ${event.text}`
     case "ai-kept":
       return `kept the AI's answer as a note: ${event.text}`
+    case "incident-opened":
+      return `opened incident "${event.text}" with this firing`
+    case "incident-linked":
+      return `linked to incident "${event.text}"`
+    case "incident-unlinked":
+      return `unlinked from incident "${event.text}"`
+    case "incident-closed":
+      return `closed the incident: ${event.text}`
   }
 }
 

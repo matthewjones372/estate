@@ -14,6 +14,10 @@ export const EventKind = Schema.Literals([
   "ai-answered",
   "ai-failed",
   "ai-kept",
+  "incident-opened",
+  "incident-linked",
+  "incident-unlinked",
+  "incident-closed",
 ])
 export type EventKind = typeof EventKind.Type
 
@@ -24,7 +28,7 @@ export const FiringEvent = Schema.Struct({
   /** The signed-in person's name, or Estate for what it saw. */
   by: Schema.String,
   kind: EventKind,
-  /** What it said: a note's text, a silence's span and reason, the AI's likely cause. */
+  /** What it said: a note's text, a silence's span and reason, the AI's likely cause, an incident's title. */
   text: Schema.String,
   link: Schema.optionalKey(Schema.String),
 })

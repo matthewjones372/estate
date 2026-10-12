@@ -6,6 +6,7 @@ import { Effect, Layer, Option, Schedule, Schema } from "effect"
 import { makeAwsJson } from "./aws/json"
 import { Notes, NotesError, type StoredFiring, type StoredImpact, type StoredNote, type StoredThread } from "./notes"
 import { dynamoEvents, sweepDynamoEvents } from "./notes-dynamodb-events"
+import { dynamoIncidents, sweepDynamoIncidents } from "./notes-dynamodb-incidents"
 import { type Dynamo, dynamoDb, dynamoFailure, type Item, removeItems, scanItems } from "./notes-dynamodb-items"
 import { SourceFailure } from "./sources/run"
 
@@ -126,6 +127,7 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
       yield* ensureTable(dynamo, table)
       return {
         ...dynamoEvents(dynamo, table),
+        ...dynamoIncidents(dynamo, table),
         all: scanItems(dynamo, table, {}).pipe(
           Effect.map((items) =>
             items
@@ -224,6 +226,7 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
             Effect.flatMap((items) => removeItems(dynamo, table, items)),
             Effect.mapError(dynamoFailure),
             Effect.andThen(sweepDynamoEvents(dynamo, table, at)),
+            Effect.andThen(sweepDynamoIncidents(dynamo, table, at)),
           ),
         // A thread's channel and URL ride in the item's `by` and `text`, its timestamp in `id`.
         threads: (since: string) =>
