@@ -36,9 +36,6 @@ const firing = Array.from({ length: 5 }, (_, index) => ({
 const debugArrivals = new Map<string, Array<string>>()
 Reflect.set(globalThis, "DEBUG_ARRIVALS", debugArrivals)
 
-const debugArrivals = new Map<string, Array<string>>()
-Reflect.set(globalThis, "DEBUG_ARRIVALS", debugArrivals)
-
 export interface Tools {
   readonly url: string
   readonly calls: () => number
