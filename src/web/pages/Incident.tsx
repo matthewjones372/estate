@@ -12,6 +12,7 @@ import { day, duration, since } from "../format"
 import { A } from "../parts/A"
 import { IncidentFirings } from "../parts/IncidentFirings"
 import { canKeepIncidents } from "../parts/IncidentLink"
+import { TimelineExport } from "../parts/TimelineExport"
 import { TimelineRow } from "../parts/TimelineRow"
 
 const lede = (incident: Incident, now: number) => {
@@ -119,9 +120,12 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
       </section>
       <IncidentFirings record={props.record} changed={props.changed} />
       <section aria-labelledby="incident-timeline" class="panel section-box stack">
-        <h2 id="incident-timeline" class="section-title">
-          Timeline
-        </h2>
+        <div class="section-head">
+          <h2 id="incident-timeline" class="section-title">
+            Timeline
+          </h2>
+          <TimelineExport of={{ incident: incident().id }} />
+        </div>
         <Show
           when={props.record.events.length > 0}
           fallback={

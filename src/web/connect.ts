@@ -10,6 +10,7 @@ import { ErrorGroups, LogBatch } from "../shared/log-events"
 import { FiringEvent } from "../shared/timeline"
 import type { Actions, ErrorWindow, LogHandlers, Range } from "./context"
 import type { Open } from "./live"
+import { timelinePath } from "./timeline-path"
 
 const decodeRuns = Schema.decodeUnknownOption(Schema.Array(AgentRun))
 const decodeAround = Schema.decodeUnknownOption(AroundAlert)
@@ -170,6 +171,19 @@ export const serverActions = (
       `/api/incidents/${encodeURIComponent(id)}/firings?env=${encodeURIComponent(env)}&alert=${encodeURIComponent(alert)}`,
     ),
   closeIncident: (id, how) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/close`, { how }),
+  timelineMarkdown: (of) =>
+    fetch(timelinePath(of, environment(), "md"))
+      .then(
+        (response): Promise<{ readonly text: string } | string> =>
+          response.ok
+            ? response.text().then((text) => ({ text }))
+            : response
+                .json()
+                .then((body) => Option.getOrUndefined(decodeMessage(body))?.message)
+                .catch(() => undefined)
+                .then((message) => message ?? `The timeline could not be read (${response.status}).`),
+      )
+      .catch(() => "Estate could not be reached."),
   tell: (alert) =>
     fetch(`/api/alerts/${encodeURIComponent(alert)}/tell?env=${encodeURIComponent(environment())}`, {
       method: "POST",
