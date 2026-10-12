@@ -10,6 +10,7 @@ import { day, since } from "../format"
 import { A } from "../parts/A"
 import { AlertCard } from "../parts/AlertCard"
 import { Around } from "../parts/Around"
+import { FiringTimeline } from "../parts/FiringTimeline"
 import { Owner } from "../parts/Team"
 import { firingPath } from "../route"
 import { teamOf } from "../teams"
@@ -92,6 +93,16 @@ export const AlertPage = (props: { readonly id: string }) => {
                 Who owns it
               </h2>
               <Owner owner={service()?.owner} team={teamOf(catalog(), service()?.owner)} />
+            </section>
+            <section aria-labelledby="alert-timeline" class="stack">
+              <h2 id="alert-timeline" class="section-title">
+                Timeline
+              </h2>
+              <FiringTimeline
+                alert={found().id}
+                startsAt={found().startsAt}
+                refresh={`${found().notes.length} ${found().silence?.id ?? ""} ${found().thread?.url ?? ""}`}
+              />
             </section>
           </Show>
         </main>

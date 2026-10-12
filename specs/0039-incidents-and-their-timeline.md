@@ -117,7 +117,8 @@ Nothing. The notes database gains events and incidents (a table each in Postgres
       Done when: every writing route's test sees its event, with its person and time; a removed note leaves its
       noted event and a removal event.
 - [ ] **`spec-0039-timeline`** — *Timeline* on a firing's page, live and past, with dates, seconds and people.
-      Done when: `alert.suite.tsx` and `firing.suite.tsx` show the events in order with each person and time.
+      Done when: `firing-timeline.suite.tsx` shows the events in order with each person and time, on the alert's
+      page and a past firing's; `GET /api/firings/:id/events` reads them for viewers, however the start is written.
 - [ ] **`spec-0039-notes-fold`** — a card shows its newest three notes and *Show all*; a note's lines kept, a long
       one folded to two; dates across midnight.
       Done when: a note's text keeps its line breaks; a card with five notes shows three and *Show all 5 notes*,

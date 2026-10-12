@@ -1,4 +1,26 @@
-/* Notes as they read on a card and in the feed: their text as written, folding when long. */
+/* Notes as they read on a card and in the feed: their text as written, folding when long. And a firing's timeline. */
+.timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.timeline li {
+  display: grid;
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+.timeline time {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.timeline-who {
+  font-weight: 600;
+}
 .note-text {
   font-size: 13px;
   color: #e6dcc8;

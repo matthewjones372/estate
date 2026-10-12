@@ -9,6 +9,7 @@ import { useEstate, useSnapshot } from "../context"
 import { clock, day, duration } from "../format"
 import { A, Out } from "../parts/A"
 import { AroundThen } from "../parts/AroundThen"
+import { FiringTimeline } from "../parts/FiringTimeline"
 import { LoadThen } from "../parts/LoadThen"
 import { ErrorList } from "../parts/LogErrors"
 import { firingPath } from "../route"
@@ -135,6 +136,12 @@ export const FiringPage = (props: { readonly id: string; readonly at: string }) 
             <A to="/">Overview</A> / <A to="/alerts">Alerts</A> / {firing().name} · {day(firing().startsAt)}
           </nav>
           <WhatHappened firing={firing()} />
+          <section aria-labelledby="firing-timeline" class="panel section-box stack">
+            <h2 id="firing-timeline" class="section-title">
+              Timeline
+            </h2>
+            <FiringTimeline alert={firing().alert} startsAt={firing().startsAt} />
+          </section>
           <Show when={firing().around}>{(around) => <AroundThen around={around()} />}</Show>
           <Show when={firing().service}>
             {(service) => (

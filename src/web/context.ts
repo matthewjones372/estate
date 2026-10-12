@@ -7,6 +7,7 @@ import type { AskAnswer } from "../shared/ask"
 import type { Me, ServiceState } from "../shared/events"
 import type { PastFiring } from "../shared/firing"
 import type { ErrorGroups, LogBatch } from "../shared/log-events"
+import type { FiringEvent } from "../shared/timeline"
 import type { Live, Snapshot } from "./live"
 import type { Page } from "./route"
 
@@ -39,6 +40,8 @@ export interface Actions {
    */
   /** One past firing of an alert, or its latest without `at`: "none" where it is not kept, undefined on failure. */
   readonly firing: (alert: string, at?: string) => Promise<PastFiring | "none" | undefined>
+  /** A firing's events, oldest first: undefined where they could not be read. */
+  readonly events: (alert: string, startsAt: string) => Promise<ReadonlyArray<FiringEvent> | undefined>
   /** An alert's brief, *Around this alert*: undefined where it could not be gathered. */
   readonly around: (alert: string) => Promise<AroundAlert | undefined>
   /** Tells an alert's team on Slack: the thread's link, or why it could not. */
