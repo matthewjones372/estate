@@ -6,6 +6,7 @@ import type { AroundAlert } from "../shared/around"
 import type { AskAnswer } from "../shared/ask"
 import type { Me, ServiceState } from "../shared/events"
 import type { PastFiring } from "../shared/firing"
+import type { Incident, IncidentRecord } from "../shared/incidents"
 import type { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { FiringEvent } from "../shared/timeline"
 import type { Live, Snapshot } from "./live"
@@ -48,6 +49,15 @@ export interface Actions {
   readonly tell: (alert: string) => Promise<{ readonly url: string } | string>
   /** Ask AI about an alert: its answer, or why there is none; `signal` stops the ask when the page is left. */
   readonly askAlert: (alert: string, signal: AbortSignal) => Promise<AskAnswer | string>
+  /** The incidents open now, newest first: undefined where they could not be read. */
+  readonly incidents: () => Promise<ReadonlyArray<Incident> | undefined>
+  /** An incident and its firings' events: "none" where there is no such incident, undefined on failure. */
+  readonly incident: (id: string) => Promise<IncidentRecord | "none" | undefined>
+  /** Each write answers with the incident as it now is, or why it could not. */
+  readonly openIncident: (title: string, alert: string) => Promise<Incident | string>
+  readonly linkIncident: (id: string, alert: string) => Promise<Incident | string>
+  readonly unlinkIncident: (id: string, environment: string, alert: string) => Promise<Incident | string>
+  readonly closeIncident: (id: string, how: string) => Promise<Incident | string>
 }
 
 export interface LogHandlers {

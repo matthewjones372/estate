@@ -119,12 +119,14 @@ describe("where the page is", () => {
       "/stores/orders-db",
       "/jobs/nightly-settlement",
       "/agents/support-triage",
+      "/incidents/i%201",
     ])
       expect(pathOf(pageOf(path))).toBe(path)
     expect(pageOf("/stores/orders-db")).toEqual({ page: "store", name: "orders-db" })
     expect(pageOf("/jobs/nightly-settlement")).toEqual({ page: "job", name: "nightly-settlement" })
     expect(pageOf("/agents/support-triage")).toEqual({ page: "agent", name: "support-triage" })
     expect(pageOf("/alerts/a1")).toEqual({ page: "alert", id: "a1" })
+    expect(pageOf("/incidents/i1")).toEqual({ page: "incident", id: "i1" })
     expect(pageOf("/alerts/a1/2026-10-06T09%3A00%3A00Z")).toEqual({
       page: "firing",
       id: "a1",

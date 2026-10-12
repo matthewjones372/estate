@@ -81,11 +81,11 @@ const story = Effect.gen(function* () {
   }
 })
 
-const linkedBy = (environment: string, alert: string) =>
-  expect.objectContaining({ environment, alert, startsAt: "2026-10-12T16:47:58Z", linkedBy: "gil" })
+const linkedBy = (environment: string, alert: string, name: string) =>
+  expect.objectContaining({ environment, alert, name, startsAt: "2026-10-12T16:47:58Z", linkedBy: "gil" })
 
 describe("incidents", () => {
-  test("are opened, linked, moved, unlinked and closed, each step an event on its firings", () =>
+  test("are opened, linked, moved, unlinked and closed, each step an event on its firings, each firing named", () =>
     Effect.runPromise(story).then(({ statuses, ids, shown, kept, a1, a2, a3, read, open, staging, production }) => {
       expect(statuses).toEqual([201, 200, 200, 200])
       const slow = shown.find((each) => each.id === ids.slow)
@@ -105,7 +105,10 @@ describe("incidents", () => {
         closedBy: "gil",
         closedAt: expect.any(String),
         ended: "registry restarted, adoptions recovering",
-        firings: [linkedBy("staging", "a2"), linkedBy("staging", "a1")],
+        firings: [
+          linkedBy("staging", "a2", "AdoptionsNotRecorded"),
+          linkedBy("staging", "a1", "ChipRegistryUnreachable"),
+        ],
       })
       const byOpening = (a: Incident, b: Incident) => a.openedAt.localeCompare(b.openedAt)
       expect(kept.toSorted(byOpening)).toEqual(shown.toSorted(byOpening))
