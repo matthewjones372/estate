@@ -88,6 +88,10 @@ builds:
 # Or OpenAI, xAI or Gemini with their keys (provider: openai, xai or gemini), or a model on your own hardware behind
 # an OpenAI-compatible server, such as vLLM, Ollama or LiteLLM:
 # ai: { provider: openai-compatible, url: http://vllm.internal:8000/v1, model: my-model }
+# What an ask may spend: how hard the model thinks (low unless set; medium or high think longer and cost more), the
+# rounds of read tools before it must answer (2 unless set), and how much of one tool's result it reads (4,000
+# characters unless set). Effort reaches Anthropic always, OpenAI and Gemini only when set.
+#   effort: low, toolRounds: 2, toolResultChars: 4000
 
 # A Slack bot with chat:write, invited to the teams' channels, so an alert's card can tell its team (optional).
 # slack: { token: ${SLACK_BOT_TOKEN} }
