@@ -124,10 +124,17 @@ Nothing. The notes database gains events and incidents (a table each in Postgres
       Done when: a note's text keeps its line breaks; a card with five notes shows three and *Show all 5 notes*,
       which shows them all and is kept on moving away and back; a long note shows two lines and *more*, which opens
       it, on the card and in the feed; a note from yesterday shows its date.
-- [ ] **`spec-0039-incidents`** — incidents in each notes store; *Link to incident…* and *New incident* on a card;
-      `/incidents/:id` with its firings, notes and merged timeline; close and unlink as events.
-      Done when: linking two firings shows both on the incident's page with their events merged in order; each card
-      says which incident it is part of; a viewer cannot link, unlink or close.
+- [ ] **`spec-0039-incidents`** — incidents kept in each notes store and shown in state; routes to open, link,
+      unlink, close and read them; their events on each firing; "part of" on the alert.
+      Done when: each store keeps, reads and sweeps an incident; opening, linking, moving, unlinking and closing
+      leave each record and each firing's events in order with their people; `GET /api/incidents/:id` merges its
+      firings' events in order; the alert says which incident it is part of; a viewer cannot open, link, unlink or
+      close.
+- [ ] **`spec-0039-incidents-page`** — *Link to incident…* and *New incident* on a card; `/incidents/:id` with its
+      firings, notes and merged timeline.
+      Done when: linking two firings from their cards shows both on the incident's page with their events merged in
+      order; each card says "Part of" its incident and links to it; a viewer sees neither *Link to incident…* nor
+      *New incident*.
 - [ ] **`spec-0039-export`** — the timeline routes as Markdown or JSON; *Copy as Markdown* and *Download* on both
       pages.
       Done when: a firing's and an incident's Markdown carry the header, the UTC table and the notes; the JSON
