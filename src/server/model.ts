@@ -5,7 +5,20 @@
  */
 import { Context, Data, Effect, Layer, Schema } from "effect"
 import { ModelAnswer } from "../shared/ask"
-import { apiOf, type Conversation, refusalOf, started, type ToolCall, type ToolOffer, type Turn } from "./model-apis"
+import { anthropic } from "./model-anthropic"
+import {
+  type Api,
+  added,
+  type Conversation,
+  chat,
+  noUsage,
+  refusalOf,
+  started,
+  type ToolCall,
+  type ToolOffer,
+  type Turn,
+  type Usage,
+} from "./model-apis"
 import { Remote } from "./remote"
 import type { Ai } from "./settings"
 
@@ -18,12 +31,13 @@ export interface Tools {
   readonly run: (call: ToolCall) => Effect.Effect<string>
 }
 
-/** What a model answered, the tools it called, and how many tokens it took, for the day's budget. */
+/** What a model answered, the tools it called, and the tokens it took: in all, for the day's budget, and as paid. */
 interface Asked {
   readonly answer: ModelAnswer
   readonly model: string
   readonly called: ReadonlyArray<string>
   readonly tokens: number
+  readonly usage: Usage
 }
 
 export interface Model {
@@ -66,16 +80,18 @@ interface Talk {
   readonly conversation: Conversation
   readonly turn: Turn
   readonly called: ReadonlyArray<string>
-  readonly tokens: number
+  readonly usage: Usage
   readonly round: number
 }
 
+const apiOf = (ai: Ai): Api => (ai.provider === "anthropic" ? anthropic(ai) : chat(ai))
+
 const askWith = (remote: Remote, ai: Ai, brief: string, question: string, tools: Tools | undefined) => {
   const api = apiOf(ai)
-  const turnOf = (conversation: Conversation, offers: ReadonlyArray<ToolOffer>) =>
+  const turnOf = (conversation: Conversation, offers: ReadonlyArray<ToolOffer>, answerNow = false) =>
     Effect.gen(function* () {
       const reply = yield* remote
-        .call(api.call(conversation, offers))
+        .call(api.call(conversation, offers, answerNow))
         .pipe(Effect.mapError((error) => new ModelError({ message: error.message })))
       if (reply.status < 200 || reply.status > 299)
         return yield* new ModelError({
@@ -92,27 +108,35 @@ const askWith = (remote: Remote, ai: Ai, brief: string, question: string, tools:
         Effect.map(offered.run(call), (content) => ({ id: call.id, content })),
       )
       const conversation = api.answered(talk.conversation, talk.turn, results)
-      const turn = yield* turnOf(conversation, talk.round < rounds ? offered.offers : [])
+      const turn = yield* turnOf(conversation, offered.offers, talk.round >= rounds)
       return {
         conversation,
         turn,
         called: [...talk.called, ...talk.turn.calls.map(calledAs)],
-        tokens: talk.tokens + turn.tokens,
+        usage: added(talk.usage, turn.usage),
         round: talk.round + 1,
       }
     })
+  // Past its last round the model was told to answer, so a call it makes anyway goes unanswered.
   const talking = (talk: Talk): Effect.Effect<Talk, ModelError> =>
-    talk.turn.calls.length === 0 || tools === undefined
+    talk.turn.calls.length === 0 || tools === undefined || talk.round > rounds
       ? Effect.succeed(talk)
       : Effect.flatMap(next(talk, tools), talking)
   return Effect.gen(function* () {
     const conversation = started(system, `Brief:\n${brief}\n\nQuestion: ${question}`)
     const turn = yield* turnOf(conversation, tools?.offers ?? [])
-    const talk = yield* talking({ conversation, turn, called: [], tokens: turn.tokens, round: 1 })
+    const talk = yield* talking({ conversation, turn, called: [], usage: added(noUsage, turn.usage), round: 1 })
     const answer = yield* decodeAnswer(objectIn(talk.turn.text)).pipe(
       Effect.mapError(() => new ModelError({ message: "the model did not answer in the shape it was asked for" })),
     )
-    return { answer: safely(answer), model: ai.model, called: talk.called, tokens: talk.tokens }
+    const { usage } = talk
+    return {
+      answer: safely(answer),
+      model: ai.model,
+      called: talk.called,
+      tokens: usage.input + usage.cached + usage.output,
+      usage,
+    }
   })
 }
 

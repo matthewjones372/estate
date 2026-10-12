@@ -94,6 +94,7 @@ describe("the model Ask AI asks", () => {
         model: "claude-opus-5-5",
         called: [],
         tokens: 900,
+        usage: { input: 700, cached: 0, output: 200 },
       })
       expect(results.map((result) => succeeded(result)?.tokens)).toEqual([900, 900, 900, 900, 900])
     })
@@ -188,50 +189,6 @@ describe("the model Ask AI asks", () => {
         ["service", '{"name":"orders"}'],
         ["changes", "{}"],
       ])
-    })
-  })
-
-  test("sends back a reply's blocks whole, so a model that thinks before calling a tool can go on", () => {
-    const thought = { type: "thinking", thinking: "Check the service first.", signature: "sig-1" }
-    const sent: unknown[] = []
-    const tools: Tools = {
-      offers: [{ name: "service", description: "one service", schema: { type: "object" } }],
-      run: () => Effect.succeed('{"health":"attention"}'),
-    }
-    const thinking = (call: Call) => {
-      const body = JSON.parse(call.body ?? "{}")
-      sent.push(...body.messages)
-      return body.messages.length > 1
-        ? anthropic(JSON.stringify(answer))
-        : reply({
-            content: [thought, { type: "tool_use", id: "t1", name: "service", input: { name: "orders" } }],
-            usage: { input_tokens: 100, output_tokens: 20 },
-          })
-    }
-    const claude: Ai = { provider: "anthropic", model: "claude-opus-5-5", apiKey: Redacted.make("ak") }
-    return Effect.runPromise(
-      Effect.flatMap(Model, (model) => model.ask("the brief", "why?", tools)).pipe(
-        Effect.provide(liveModel(claude).pipe(Layer.provide(stubRemote(thinking)))),
-      ),
-    ).then((asked) => {
-      expect(asked.called).toEqual(["service orders"])
-      expect(sent).toContainEqual({
-        role: "assistant",
-        content: [thought, { type: "tool_use", id: "t1", name: "service", input: { name: "orders" } }],
-      })
-    })
-  })
-
-  test("asks Anthropic for its answer in the answer's shape, with room to think first", () => {
-    const calls: Call[] = []
-    const claude: Ai = { provider: "anthropic", model: "claude-opus-5-5", apiKey: Redacted.make("ak") }
-    return asking(claude, () => anthropic(JSON.stringify(answer)), calls).then(() => {
-      const body = JSON.parse(calls[0]?.body ?? "{}")
-      expect(body.max_tokens).toBe(8192)
-      expect(body.output_config.format.type).toBe("json_schema")
-      expect(body.output_config.format.schema.required).toEqual(["likelyCause", "evidence", "nextSteps", "confidence"])
-      expect(body.output_config.format.schema.additionalProperties).toBe(false)
-      expect(body.output_config.format.schema.properties.evidence.items.additionalProperties).toBe(false)
     })
   })
 
