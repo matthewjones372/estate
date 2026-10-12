@@ -16,6 +16,9 @@ export const Costs = Schema.Struct({
   currency: optional(Schema.String),
 })
 
-/** What a model's tokens cost, per million, for the estimate between the providers' reports. */
-export const Prices = Schema.Record(Schema.String, Schema.Struct({ input: Schema.Number, output: Schema.Number }))
+/** What a model's tokens cost, per million, for estimates: input, output, and input read from a cache. */
+export const Prices = Schema.Record(
+  Schema.String,
+  Schema.Struct({ input: Schema.Number, output: Schema.Number, cachedInput: optional(Schema.Number) }),
+)
 export type Prices = typeof Prices.Type

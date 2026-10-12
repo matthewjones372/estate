@@ -38,7 +38,9 @@ describe("Ask AI on an alert's card", () => {
     expect(page.calls).toContainEqual(["askAlert", "a1"])
     expect(page.container.querySelector('[role="progressbar"]')).toBeNull()
     expect(shown).toContain("Likely cause A recent deploy raised latency.")
-    expect(shown).toContain("fake-model · read: Changed · Runbook · called: service orders")
+    expect(shown).toContain(
+      "fake-model · 15,000 in (11,800 cached) · 1,100 out · about $0.03 · read: Changed · Runbook · called: service orders",
+    )
     expect(page.container.querySelector('a[href="https://ci.example/1"]')?.textContent).toContain("deployed 26 min")
     // The server answers an alert once a minute, so the button rests for it rather than earn a refusal.
     expect(page.button(/^Ask again/).disabled).toBe(true)
@@ -88,6 +90,7 @@ describe("Ask AI on an alert's card", () => {
       model: "m",
       read: [],
       called: [],
+      usage: { input: 0, cached: 0, output: 0 },
     }
     const note = noteOf(answer)
     expect(note.length).toBeLessThanOrEqual(longestNote)

@@ -8,6 +8,7 @@ import { Effect, SubscriptionRef } from "effect"
 import { HttpRouter } from "effect/http"
 import type { AskAnswer } from "../../shared/ask"
 import { briefText, gatherAround, sectionsOf } from "../around"
+import { budgeted, costOf } from "../ask-cost"
 import { AskLimits } from "../ask-limits"
 import { Model } from "../model"
 import { Configured } from "../settings"
@@ -49,9 +50,18 @@ export const askRoute = HttpRouter.add(
       yield* limits.giveBack(turn)
       return json({ message: result.failure.message }, 502)
     }
-    yield* limits.spend(result.success.tokens)
-    const { answer, model: name, called } = result.success
-    const body: AskAnswer = { ...answer, model: name, read: sectionsOf(brief), called }
+    const { answer, model: name, called, usage } = result.success
+    const price = settings.prices?.[name]
+    yield* limits.spend(budgeted(usage, price))
+    const currency = settings.sources[environment]?.costs?.currency ?? "USD"
+    const body: AskAnswer = {
+      ...answer,
+      model: name,
+      read: sectionsOf(brief),
+      called,
+      usage,
+      ...(price === undefined ? {} : { cost: { amount: costOf(usage, price), currency } }),
+    }
     yield* limits.keep(turn, body)
     return json(body)
   }).pipe(Effect.catchTag("Refusal", refused)),

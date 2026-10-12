@@ -79,6 +79,7 @@ describe("POST /api/alerts/:id/ask", () => {
           model: "fake-model",
           read: ["Changed", "Depends"],
           called: [],
+          usage: { input: 400, cached: 0, output: 0 },
         },
       ])
       expect(calls.find((call) => call.url.endsWith("/chat/completions"))?.body).toContain(
@@ -160,6 +161,23 @@ describe("POST /api/alerts/:id/ask", () => {
         [429, "Ask AI has used today's 300 tokens"],
       ]),
     ))
+
+  test("says what the answer took, and what it cost where the model has a price", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const priced = { ...withAi(), prices: { "fake-model": { input: 3, output: 15 } } }
+        const unpriced = yield* serverFor(withAi(), withAlert, modelReply)
+        const server = yield* serverFor(priced, withAlert, modelReply)
+        return [(yield* ask(server, asked("a1"))).json(), (yield* ask(unpriced, asked("a1"))).json()] as const
+      }),
+    ).then(([withPrice, without]) => {
+      expect(withPrice).toMatchObject({
+        usage: { input: 400, cached: 0, output: 0 },
+        cost: { amount: 0.0012, currency: "USD" },
+      })
+      expect(without).toMatchObject({ usage: { input: 400, cached: 0, output: 0 } })
+      expect(without).not.toHaveProperty("cost")
+    }))
 
   test("lets the model call Estate's read tools as the person asking, and says which it called", () => {
     const sent: Array<string> = []

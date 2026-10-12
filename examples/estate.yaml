@@ -78,8 +78,9 @@ builds:
 #     anthropic: { adminKey: ${ANTHROPIC_ADMIN_KEY} }         # an agent's spend, by the workspace its entry names
 #     openai: { adminKey: ${OPENAI_ADMIN_KEY} }               # or by its OpenAI project
 #   every: { costs: 6h }                                      # Cost Explorer charges a call; 6h unless set
-# and what models' tokens cost, per million, for the estimate of an agent's spend between its provider's reports:
-# prices: { claude-sonnet-5-5: { input: 3, output: 15 } }
+# and what models' tokens cost, per million, for the estimate of an agent's spend between its provider's reports and
+# of each Ask AI answer; cachedInput is input read from the provider's cache, at input's price unless set:
+# prices: { claude-sonnet-5-5: { input: 3, output: 15, cachedInput: 0.3 } }
 
 # Ask AI on an alert (optional): one model. The model is named, never chosen for you; Claude Opus 5.5 reads an
 # alert's brief best, Claude Sonnet 5.5 where cost matters. One answer an alert a minute, within a budget of tokens a

@@ -6,6 +6,7 @@
  */
 import { createSignal, For, onCleanup, Show } from "solid-js"
 import type { AskAnswer } from "../../shared/ask"
+import { money } from "../../shared/costs"
 import { type Alert, longestNote } from "../../shared/events"
 import { type Actions, useEstate } from "../context"
 import { Out } from "./A"
@@ -28,6 +29,16 @@ export const noteOf = (answer: AskAnswer): string => {
     .find((note) => note.length <= longestNote)
   const whole = written(0)
   return fits ?? `${whole.slice(0, longestNote - 1)}…`
+}
+
+/** "15,000 in (11,800 cached) · 1,100 out · about $0.03": what the answer took, and cost where it is priced. */
+const spent = (answer: AskAnswer): string => {
+  const { input, cached, output } = answer.usage
+  const count = (tokens: number) => tokens.toLocaleString("en-GB")
+  const tokens = `${count(input + cached)} in${cached === 0 ? "" : ` (${count(cached)} cached)`} · ${count(output)} out`
+  if (answer.cost === undefined) return tokens
+  const { amount, currency } = answer.cost
+  return `${tokens} · ${amount < 0.01 ? `under ${money(0.01, currency)}` : `about ${money(amount, currency)}`}`
 }
 
 const held = <T,>(initial: T) => {
@@ -179,7 +190,7 @@ export const AskAiAnswer = (props: { readonly alert: Alert }) => {
                 </ul>
               </div>
               <p class="alert-quiet">
-                {found().model} · read: {found().read.join(" · ")}
+                {found().model} · {spent(found())} · read: {found().read.join(" · ")}
                 {found().called.length === 0 ? "" : ` · called: ${found().called.join(" · ")}`}
               </p>
               <div class="choices ask-keep">

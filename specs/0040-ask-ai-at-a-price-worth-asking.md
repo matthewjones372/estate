@@ -33,7 +33,7 @@ only when set, since a chat model that does not reason refuses it.
 names the model, an estimate:
 
 ```text
-claude-sonnet-5-5 · 14,200 in (11,800 cached) · 1,100 out · about 2p · read: Changed · Depends · called: service petshop
+claude-sonnet-5-5 · 14,200 in (11,800 cached) · 1,100 out · about $0.03 · read: Changed · Depends · called: service petshop
 ```
 
 The day's budget counts what was paid for: cached input at its share of the input price, rather than a token a token.
@@ -74,7 +74,8 @@ Nothing. Prices already come from the settings (spec 0019).
       so; the effort reaches the provider's call.
 - [ ] **`spec-0040-cost`**: the answer's tokens and its estimated cost from `prices`, on the card; the budget counts
       cached input at its price.
-      Done when: `ask.suite.tsx` shows "about 2p" for an answer whose model has a price and none without one.
+      Done when: `ask.suite.tsx` shows "about $0.03" for an answer whose model has a price; the route's answer
+      carries its usage, and its cost in the bill's currency only where the model has a price.
 
 ## Acceptance
 

@@ -125,7 +125,8 @@ reading until the answer comes.
 
 ![Ask AI's answer on an alert's card in the petshop demo: the likely cause, the evidence for it, and what to do next](docs/ask-ai.png)
 
-The answer lists what it read and called, so the reader can check it. You can keep the answer as a note for
+The answer lists what it read and called, so the reader can check it, and what it took in tokens, with an estimate
+of its cost where `prices` names the model. You can keep the answer as a note for
 everyone to see. The model is sent only what the person asking could see on the page. There is at most one answer
 per alert per minute, within a daily token budget.
 

@@ -46,7 +46,7 @@ export const Cost = Schema.Struct({
 export type Cost = typeof Cost.Type
 
 /** "$612", "$4.20", "€31": whole above a hundred, to the cent below. */
-const money = (amount: number, currency: string): string => {
+export const money = (amount: number, currency: string): string => {
   const symbol = currency === "USD" ? "$" : currency === "EUR" ? "€" : currency === "GBP" ? "£" : `${currency} `
   return `${symbol}${amount >= 100 ? Math.round(amount).toLocaleString("en-GB") : amount.toFixed(2)}`
 }
