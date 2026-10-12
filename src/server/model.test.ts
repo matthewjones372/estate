@@ -191,6 +191,53 @@ describe("the model Ask AI asks", () => {
     })
   })
 
+  test("sends back a reply's blocks whole, so a model that thinks before calling a tool can go on", () => {
+    const thought = { type: "thinking", thinking: "Check the service first.", signature: "sig-1" }
+    const sent: unknown[] = []
+    const tools: Tools = {
+      offers: [{ name: "service", description: "one service", schema: { type: "object" } }],
+      run: () => Effect.succeed('{"health":"attention"}'),
+    }
+    const thinking = (call: Call) => {
+      const body = JSON.parse(call.body ?? "{}")
+      sent.push(...body.messages)
+      return body.messages.length > 1
+        ? anthropic(JSON.stringify(answer))
+        : reply({
+            content: [thought, { type: "tool_use", id: "t1", name: "service", input: { name: "orders" } }],
+            usage: { input_tokens: 100, output_tokens: 20 },
+          })
+    }
+    const claude: Ai = { provider: "anthropic", model: "claude-opus-5-5", apiKey: Redacted.make("ak") }
+    return Effect.runPromise(
+      Effect.flatMap(Model, (model) => model.ask("the brief", "why?", tools)).pipe(
+        Effect.provide(liveModel(claude).pipe(Layer.provide(stubRemote(thinking)))),
+      ),
+    ).then((asked) => {
+      expect(asked.called).toEqual(["service orders"])
+      expect(sent).toContainEqual({
+        role: "assistant",
+        content: [thought, { type: "tool_use", id: "t1", name: "service", input: { name: "orders" } }],
+      })
+    })
+  })
+
+  test("a refused call says what the provider said, cut short", () => {
+    const claude: Ai = { provider: "anthropic", model: "claude-opus-5-5", apiKey: Redacted.make("ak") }
+    const local: Ai = { provider: "openai-compatible", url: "http://vllm.test/v1", model: "local" }
+    const refusal = (message: string) =>
+      reply({ type: "error", error: { type: "invalid_request_error", message } }, 400)
+    return Promise.all([
+      asking(claude, () => refusal("messages.1.content.0.thinking.thinking: Field required")),
+      asking(local, () => refusal("x".repeat(300))),
+    ]).then((results) =>
+      expect(results.map(failed)).toEqual([
+        "Anthropic answered 400: messages.1.content.0.thinking.thinking: Field required",
+        `the model answered 400: ${"x".repeat(200)}`,
+      ]),
+    )
+  })
+
   test("is told to answer with what it has once its rounds of tools are spent", () => {
     let offered = 0
     const tools: Tools = {

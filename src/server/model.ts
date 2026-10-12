@@ -5,7 +5,7 @@
  */
 import { Context, Data, Effect, Layer, Schema } from "effect"
 import { ModelAnswer } from "../shared/ask"
-import { apiOf, type Conversation, started, type ToolCall, type ToolOffer, type Turn } from "./model-apis"
+import { apiOf, type Conversation, refusalOf, started, type ToolCall, type ToolOffer, type Turn } from "./model-apis"
 import { Remote } from "./remote"
 import type { Ai } from "./settings"
 
@@ -78,7 +78,9 @@ const askWith = (remote: Remote, ai: Ai, brief: string, question: string, tools:
         .call(api.call(conversation, offers))
         .pipe(Effect.mapError((error) => new ModelError({ message: error.message })))
       if (reply.status < 200 || reply.status > 299)
-        return yield* new ModelError({ message: `${api.name} answered ${reply.status}` })
+        return yield* new ModelError({
+          message: [`${api.name} answered ${reply.status}`, refusalOf(reply.text)].filter(Boolean).join(": "),
+        })
       return yield* api
         .read(reply.text)
         .pipe(Effect.mapError(() => new ModelError({ message: `${api.name}'s reply was not in its API's shape` })))

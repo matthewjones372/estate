@@ -3,7 +3,7 @@
  * (text, tools to call, tokens), and how the tools' answers are added to it. Anthropic's Messages API; and the Chat
  * Completions API of OpenAI, xAI, Gemini and self-hosted servers.
  */
-import { Duration, Effect, Redacted, Schema } from "effect"
+import { Duration, Effect, Option, Redacted, Schema } from "effect"
 import type { Call } from "./remote"
 import type { Ai } from "./settings"
 
@@ -92,7 +92,19 @@ const ChatReply = Schema.fromJsonString(
   }),
 )
 
+// A reply's blocks as they came, every field kept: a thinking block must go back with its signature, and so must any
+// block added later that Estate does not read.
+const AnthropicBlocks = Schema.fromJsonString(Schema.Struct({ content: Schema.Array(Schema.Unknown) }))
+
+const Refusal = Schema.fromJsonString(Schema.Struct({ error: Schema.Struct({ message: Schema.String }) }))
+
 const decodeAnthropic = Schema.decodeUnknownEffect(AnthropicReply)
+const decodeAnthropicBlocks = Schema.decodeUnknownEffect(AnthropicBlocks)
+const decodeRefusal = Schema.decodeUnknownOption(Refusal)
+
+/** What a provider said when it refused a call, cut short, if it said it in the shape both APIs use. */
+export const refusalOf = (text: string): string | undefined =>
+  Option.getOrUndefined(Option.map(decodeRefusal(text), (refused) => refused.error.message.slice(0, 200)))
 const decodeChat = Schema.decodeUnknownEffect(ChatReply)
 const decodeArguments = Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown))
 
@@ -123,7 +135,7 @@ const anthropic = (ai: Ai): Api => {
       }),
     }),
     read: (text) =>
-      Effect.map(decodeAnthropic(text), (reply) => ({
+      Effect.map(Effect.all([decodeAnthropic(text), decodeAnthropicBlocks(text)]), ([reply, blocks]) => ({
         text: reply.content
           .flatMap((block) => (block.type === "text" && block.text !== undefined ? [block.text] : []))
           .join(""),
@@ -133,7 +145,7 @@ const anthropic = (ai: Ai): Api => {
             : [],
         ),
         tokens: (reply.usage?.input_tokens ?? 0) + (reply.usage?.output_tokens ?? 0),
-        kept: { role: "assistant", content: reply.content },
+        kept: { role: "assistant", content: blocks.content },
       })),
     answered: (conversation, turn, results) => ({
       ...conversation,
