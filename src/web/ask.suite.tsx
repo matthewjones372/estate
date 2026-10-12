@@ -1,32 +1,47 @@
 /** @jsxImportSource solid-js */
-/** Ask AI on an alert's page: run by `ask.test.ts` once Solid's compiler is in place. */
+/** Ask AI on an alert's card: run by `ask.test.ts` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
 import type { Alert } from "../shared/events"
 import { events, operator } from "./fixture"
 import { mount } from "./harness"
-import { AskAi } from "./parts/AskAi"
+import { AlertPage } from "./pages/Alert"
+import { AlertCard } from "./parts/AlertCard"
 import { recording } from "./recording"
 
 const alert = events.alerts.alerts[0] as Alert
 const asking = { ...operator, ai: true }
+const askAi = /^Ask AI/
+const card =
+  (shown: Alert = alert) =>
+  () => <AlertCard alert={shown} catalog={events.catalog} canSilence={false} />
 
-describe("Ask AI on an alert", () => {
-  test("says it is not configured when ai is off", () => {
-    const page = mount(() => <AskAi alert={alert} />)
-    expect(page.container.textContent).toContain("Ask AI is not configured")
-    expect(page.container.querySelector("button")).toBeNull()
+describe("Ask AI on an alert's card", () => {
+  test("is not offered when ai is off", () => {
+    const page = mount(card())
+    expect(page.container.textContent).not.toContain("Ask AI")
   })
 
-  test("shows the model's answer with its linked evidence and what it read, and keeps it as a note once", async () => {
-    const page = mount(() => <AskAi alert={alert} />, { me: asking })
-    page.click(page.button("Ask AI"))
-    expect(page.container.textContent).toContain("Reading Estate…")
+  test("asks from the card, shows a bar while it reads, and answers on the card", async () => {
+    const page = mount(card(), { me: asking })
+    page.click(page.button(askAi))
+    expect(page.container.querySelector('[role="progressbar"]')?.getAttribute("aria-label")).toBe(
+      "Asking AI about OrdersSlow",
+    )
+    expect(page.container.textContent).toContain("Reading Estate… 0 s")
+    expect(page.button(askAi).disabled).toBe(true)
     await page.settle()
     const shown = page.container.textContent ?? ""
     expect(page.calls).toContainEqual(["askAlert", "a1"])
+    expect(page.container.querySelector('[role="progressbar"]')).toBeNull()
     expect(shown).toContain("Likely cause A recent deploy raised latency.")
     expect(shown).toContain("fake-model · read: Changed · Runbook · called: service orders")
     expect(page.container.querySelector('a[href="https://ci.example/1"]')?.textContent).toContain("deployed 26 min")
+  })
+
+  test("keeps the answer as a note once", async () => {
+    const page = mount(card(), { me: asking })
+    page.click(page.button(askAi))
+    await page.settle()
     page.click(page.button("Keep as note"))
     await page.settle()
     expect(page.calls).toContainEqual([
@@ -38,28 +53,41 @@ describe("Ask AI on an alert", () => {
   })
 
   test("says why there is no answer, as an alert", async () => {
-    const page = mount(() => <AskAi alert={{ ...alert, id: "a2" }} />, { me: asking })
-    page.click(page.button("Ask AI"))
+    const page = mount(card({ ...alert, id: "a2" }), { me: asking })
+    page.click(page.button(askAi))
     await page.settle()
     expect(page.container.querySelector('[role="alert"]')?.textContent).toBe(
       "this alert was asked about less than a minute ago",
     )
   })
 
-  test("stops its ask when the page is left", async () => {
+  test("an answer asked on one page is on the same alert's card on another", async () => {
+    const { actions } = recording()
+    const overview = mount(card(), { me: asking, actions })
+    overview.click(overview.button(askAi))
+    await overview.settle()
+    overview.dispose()
+    const own = mount(() => <AlertPage id="a1" />, { me: asking, actions })
+    expect(own.container.textContent).toContain("Likely cause A recent deploy raised latency.")
+    expect(
+      [...own.container.querySelectorAll("button")].filter((each) => askAi.test(each.textContent ?? "")),
+    ).toHaveLength(1)
+  })
+
+  test("stops its ask when the card is left, and can ask again", async () => {
     const signals: AbortSignal[] = []
-    const page = mount(() => <AskAi alert={alert} />, {
-      me: asking,
-      actions: {
-        ...recording().actions,
-        askAlert: (_alert, signal) => {
-          signals.push(signal)
-          return new Promise(() => undefined)
-        },
+    const actions = {
+      ...recording().actions,
+      askAlert: (_alert: string, signal: AbortSignal) => {
+        signals.push(signal)
+        return new Promise<never>(() => undefined)
       },
-    })
-    page.click(page.button("Ask AI"))
+    }
+    const page = mount(card(), { me: asking, actions })
+    page.click(page.button(askAi))
     page.dispose()
     expect(signals[0]?.aborted).toBe(true)
+    const again = mount(card(), { me: asking, actions })
+    expect(again.button(askAi).disabled).toBe(false)
   })
 })

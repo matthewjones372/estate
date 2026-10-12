@@ -1,0 +1,44 @@
+/* Ask AI on an alert's card: the bar while it reads, and the answer. */
+.ask-ai:empty {
+  display: none;
+}
+.ask-reading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+/* A bar that sweeps while the model reads: there is no fraction done to show, only that it is working. */
+.ask-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--amber) 50%, transparent 100%) var(--amber-deep);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: ask-sweep 1.4s ease-in-out infinite;
+}
+@keyframes ask-sweep {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ask-bar {
+    animation: none;
+    background: var(--amber);
+    opacity: 0.6;
+  }
+}
+.ask-answer .alert-label {
+  display: inline-block;
+  min-width: 7em;
+}
+.ask-stream {
+  white-space: pre-wrap;
+  font-size: 12px;
+  max-height: 120px;
+  overflow: auto;
+}

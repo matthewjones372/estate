@@ -12,15 +12,9 @@ const text = (html: string) =>
     .replace(/\s+/g, " ")
 
 describe("an alert's own page", () => {
-  test("shows what's happening, what is around it, who owns it and Ask AI", () => {
+  test("shows what's happening, what is around it and who owns it", () => {
     const page = text(render(() => <AlertPage id="a1" />))
-    for (const words of [
-      "What's happening",
-      "OrdersSlow",
-      "Around this alert",
-      "Who owns it",
-      "Ask AI is not configured",
-    ])
+    for (const words of ["What's happening", "OrdersSlow", "Around this alert", "Who owns it"])
       expect(page).toContain(words)
   })
 

@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-/** An alert that needs someone: what fired against its threshold, its notes, Silence, and where to look. */
+/** An alert that needs someone: what fired against its threshold, its notes, Silence, Ask AI, and where to look. */
 import { createMemo, createSignal, For, on, Show } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import type { Alert, CatalogEvent } from "../../shared/events"
@@ -9,6 +9,7 @@ import { amount, clock, initials, since } from "../format"
 import { chatOf, onSlack, teamOf } from "../teams"
 import { A, Out } from "./A"
 import { AroundLine } from "./Around"
+import { AskAiAnswer, AskAiButton } from "./AskAi"
 import { History } from "./History"
 import { Impact } from "./Impact"
 import { Icon } from "./icons"
@@ -279,6 +280,7 @@ export const AlertCard = (props: {
             </Out>
           )}
         </Show>
+        <AskAiButton alert={props.alert} />
         <Show when={props.alert.service !== undefined}>
           <button type="button" class="amber-button ghost" aria-pressed={lines()} onClick={() => setLines(!lines())}>
             Lines from then
@@ -291,6 +293,7 @@ export const AlertCard = (props: {
           </button>
         </Show>
       </div>
+      <AskAiAnswer alert={props.alert} />
     </article>
   )
 }
