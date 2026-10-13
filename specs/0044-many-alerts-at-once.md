@@ -116,7 +116,7 @@ Spec 0039's incidents, for grouping. Spec 0042's suggestions are shown on rows o
       Done when: `alert-rows.suite.tsx` shows cards for three firing and rows for four, each row with its severity,
       name, service, time, latest note and incident; pressing a toggle opens that card under it with
       `aria-expanded` true, Escape closes it and focus returns to the toggle; two can be open at once.
-- [ ] **`spec-0044-groups`**: group rows by incident, then by service or store, ordered worst first.
+- [x] **`spec-0044-groups`**: group rows by incident, then by service or store, ordered worst first.
       Done when: six firings in one incident and three on one service read as two group rows and the rest single,
       each group named with its count and worst severity, opening to its rows; an alert in an incident is not also
       in its service's group.
