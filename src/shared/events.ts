@@ -7,6 +7,7 @@ import { AgentState, DescribedAgent } from "./agents"
 import { CodeHealth } from "./code"
 import { Cost } from "./costs"
 import { DeploysEvent } from "./deploys"
+import { FeedEvent } from "./feed"
 import { CardNote, Note } from "./note"
 
 export { type Build, DeploysEvent } from "./deploys"
@@ -241,21 +242,6 @@ export const AlertsEvent = Schema.Struct({
   silences: Schema.Boolean,
 })
 export type AlertsEvent = typeof AlertsEvent.Type
-
-export const FeedItem = Schema.Struct({
-  at: Instant,
-  kind: Schema.Literals(["deploy", "build", "alert", "resolved", "silence", "note", "debug", "job"]),
-  service: optional(Schema.String),
-  text: Schema.String,
-  who: optional(Schema.String),
-  url: optional(Schema.String),
-  /** The firing a resolved item is about, so it opens that firing's page. */
-  firing: optional(Schema.Struct({ alert: Schema.String, startsAt: Instant })),
-})
-export type FeedItem = typeof FeedItem.Type
-
-export const FeedEvent = Schema.Struct({ items: Schema.Array(FeedItem) })
-export type FeedEvent = typeof FeedEvent.Type
 
 /** A partial services event: the services and other parts that changed, the rest as the page already has them. */
 export const ServicesPartEvent = Schema.Struct({

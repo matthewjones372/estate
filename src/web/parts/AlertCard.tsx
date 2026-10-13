@@ -165,7 +165,7 @@ export const AlertCard = (props: {
         <Show when={props.alert.service}>{(name) => <p class="alert-detail">{name()}</p>}</Show>
       </div>
       <Impact alert={props.alert} />
-      <PartOf alert={props.alert} />
+      <PartOf incident={props.alert.incident} />
       <History alert={props.alert} />
       <AroundLine alert={props.alert} />
       <Show when={props.alert.chart}>{(chart) => <Chart name={props.alert.name} chart={chart()} />}</Show>
