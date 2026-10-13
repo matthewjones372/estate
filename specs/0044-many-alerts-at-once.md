@@ -111,7 +111,7 @@ Spec 0039's incidents, for grouping. Spec 0042's suggestions are shown on rows o
       the box; the alert's own page keeps them open.
       Done when: `notes-fold.suite.tsx` shows "Notes · 5 · latest: …" and *Show notes* on an overview card, which
       opens the newest three and the box, kept on moving away and back; the alert's page shows them open.
-- [ ] **`spec-0044-rows`**: `parts/AlertRows.tsx`, one row an alert opening its card in place, on *Needs you now*
+- [x] **`spec-0044-rows`**: `parts/AlertRows.tsx`, one row an alert opening its card in place, on *Needs you now*
       and *What's happening* past three firing; the row's line shared with the Alerts table.
       Done when: `alert-rows.suite.tsx` shows cards for three firing and rows for four, each row with its severity,
       name, service, time, latest note and incident; pressing a toggle opens that card under it with
