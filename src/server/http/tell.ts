@@ -66,13 +66,9 @@ export const tellRoute = HttpRouter.add(
       .keepThread(thread)
       .pipe(Effect.catch((failure) => Effect.logWarning(`a thread could not be kept: ${failure.message}`)))
     yield* written({ _tag: "ThreadKept", thread })
-    yield* happened(
-      thread,
-      person.name,
-      "team-told",
-      `told ${team?.title ?? team?.name ?? "the team"} on Slack`,
-      thread.url,
-    )
+    yield* happened(thread, person.name, "team-told", `told ${team?.title ?? team?.name ?? "the team"} on Slack`, {
+      link: thread.url,
+    })
     return json({ url: thread.url })
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

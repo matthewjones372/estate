@@ -19,7 +19,9 @@ const event = (id: string, at: string, more: Partial<StoredEvent> = {}): StoredE
 // with the firing's start, or their own time, written to the second, as a source may write them.
 const appendAndRead = (notes: NotesService) =>
   Effect.gen(function* () {
-    yield* notes.addEvent(event("e4", "2026-10-12T16:53:00.500Z"))
+    yield* notes.addEvent(
+      event("e4", "2026-10-12T16:53:00.500Z", { by: "Estate", kind: "ai-answered", readLogs: true }),
+    )
     yield* notes.addEvent(event("e3", "2026-10-12T16:53:00Z", { startsAt: "2026-10-12T16:47:58Z" }))
     yield* notes.addEvent(event("hash", "2026-10-12T16:51:00.000Z", { alert: "a1#x" }))
     yield* notes.addEvent(event("e2", "2026-10-12T16:52:04.000Z", { kind: "silenced", link: "https://silence/1" }))
@@ -38,9 +40,14 @@ const expectations = ({ read, before, after, kept }: Effect.Success<ReturnType<t
     ["e1", "Estate", "fired"],
     ["e2", "matt", "silenced"],
     ["e3", "matt", "noted"],
-    ["e4", "matt", "noted"],
+    ["e4", "Estate", "ai-answered"],
   ])
   expect(read[1]).toEqual(event("e2", "2026-10-12T16:52:04.000Z", { kind: "silenced", link: "https://silence/1" }))
+  // Whether an answer read logs is kept with it; an event that never says reads back without it.
+  expect(read[3]).toEqual(
+    event("e4", "2026-10-12T16:53:00.500Z", { by: "Estate", kind: "ai-answered", readLogs: true }),
+  )
+  expect(read[2]).not.toHaveProperty("readLogs")
   expect(before.map((each) => each.id)).toEqual(["old"])
   expect(after).toEqual([])
   expect(kept.map((each) => each.id)).toEqual(["e1", "e2", "e3", "e4"])
@@ -51,7 +58,7 @@ const eventsDatabase = (): Query => {
   let rows: Array<Record<string, unknown>> = []
   return (statement, parameters) => {
     if (statement.startsWith("insert into estate_events")) {
-      const [id, environment, alert, startsAt, at, by, kind, text, link] = parameters
+      const [id, environment, alert, startsAt, at, by, kind, text, link, readLogs] = parameters
       rows.push({
         id,
         environment,
@@ -62,6 +69,7 @@ const eventsDatabase = (): Query => {
         kind,
         text,
         link,
+        read_logs: readLogs,
       })
     }
     if (statement.startsWith("delete from estate_events"))

@@ -24,5 +24,7 @@ export const AskAnswer = Schema.Struct({
   usage: Schema.Struct({ input: Schema.Number, cached: Schema.Number, output: Schema.Number }),
   /** What it cost, by the settings' price for the model, in the bill's currency; none where the model has no price. */
   cost: Schema.optionalKey(Schema.Struct({ amount: Schema.Number, currency: Schema.String })),
+  /** Whether it read the service's logs: the brief carried Errors, or the model called `errors` and was answered. */
+  readLogs: Schema.Boolean,
 })
 export type AskAnswer = typeof AskAnswer.Type

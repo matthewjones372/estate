@@ -17,7 +17,13 @@ export const firingNow = (environment: string, alert: string) =>
     return found === undefined ? undefined : { environment, alert, startsAt: found.startsAt }
   })
 
-const kept = (firing: FiringKey, at: string, by: string, kind: EventKind, text: string, link?: string) =>
+/** What an event may carry beyond its text: a link, and on an AI's answer whether it read logs. */
+interface More {
+  readonly link?: string
+  readonly readLogs?: boolean
+}
+
+const kept = (firing: FiringKey, at: string, by: string, kind: EventKind, text: string, more: More = {}) =>
   Effect.gen(function* () {
     yield* (yield* Notes).addEvent({
       ...firing,
@@ -26,7 +32,8 @@ const kept = (firing: FiringKey, at: string, by: string, kind: EventKind, text: 
       by,
       kind,
       text,
-      ...(link === undefined ? {} : { link }),
+      ...(more.link === undefined ? {} : { link: more.link }),
+      ...(more.readLogs === undefined ? {} : { readLogs: more.readLogs }),
     })
   }).pipe(Effect.catch((failure) => Effect.logWarning(`a firing's event could not be kept: ${failure.message}`)))
 
@@ -35,9 +42,9 @@ export const happened = (
   by: string,
   kind: EventKind,
   text: string,
-  link?: string,
+  more: More = {},
 ): Effect.Effect<void, never, Notes> =>
-  firing === undefined ? Effect.void : Effect.flatMap(isoNow, (at) => kept(firing, at, by, kind, text, link))
+  firing === undefined ? Effect.void : Effect.flatMap(isoNow, (at) => kept(firing, at, by, kind, text, more))
 
 /** What was done to an incident, on each of its firings at one time, so its page can show it once. */
 export const happenedOnEach = (

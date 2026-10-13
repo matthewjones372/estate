@@ -45,7 +45,7 @@ export const askRoute = HttpRouter.add(
     const model = yield* Model
     const firing = yield* firingNow(environment, id)
     yield* happened(firing, person.name, "ai-asked", settings.ai.model)
-    const tools = yield* askTools({ name: person.name, role: person.role }, environment)
+    const { tools, readLogs: toolReadLogs } = yield* askTools({ name: person.name, role: person.role }, environment)
     const result = yield* Effect.result(
       model.ask(briefText(brief), `What is the likely cause of ${brief.name}, and what should we do next?`, tools),
     )
@@ -54,11 +54,15 @@ export const askRoute = HttpRouter.add(
       yield* happened(firing, "Estate", "ai-failed", result.failure.message)
       return json({ message: result.failure.message }, 502)
     }
+    const read = sectionsOf(brief)
+    // Logs were read if the brief carried them, or the model called `errors` and was answered.
+    const readLogs = read.includes("Errors") || (yield* toolReadLogs)
     yield* happened(
       firing,
       "Estate",
       "ai-answered",
       `${result.success.answer.likelyCause} (${result.success.answer.confidence})`,
+      { readLogs },
     )
     const { answer, model: name, called, usage } = result.success
     const price = settings.prices?.[name]
@@ -67,9 +71,10 @@ export const askRoute = HttpRouter.add(
     const body: AskAnswer = {
       ...answer,
       model: name,
-      read: sectionsOf(brief),
+      read,
       called,
       usage,
+      readLogs,
       ...(price === undefined ? {} : { cost: { amount: costOf(usage, price), currency } }),
     }
     yield* limits.keep(turn, body)

@@ -36,6 +36,7 @@ export const createEvents = [
   link text
 )`,
   "create index if not exists estate_events_firing on estate_events (environment, alert, starts_at, at)",
+  "alter table estate_events add column if not exists read_logs boolean",
 ]
 
 const instant = (value: unknown) => iso(value instanceof Date ? value : String(value))
@@ -50,6 +51,7 @@ const eventOf = (row: Record<string, unknown>): StoredEvent => ({
   kind: row["kind"] as StoredEvent["kind"],
   text: String(row["text"]),
   ...(row["link"] === null || row["link"] === undefined ? {} : { link: String(row["link"]) }),
+  ...(typeof row["read_logs"] === "boolean" ? { readLogs: row["read_logs"] } : {}),
 })
 
 /** The events in Postgres, and the statement that sweeps those of firings begun before a time. */
@@ -59,14 +61,14 @@ export const postgresEvents = (
   events: (firing) =>
     Effect.suspend(() =>
       query(
-        "select id, environment, alert, starts_at, at, by, kind, text, link from estate_events where environment = $1 and alert = $2 and starts_at = $3 order by at",
+        "select id, environment, alert, starts_at, at, by, kind, text, link, read_logs from estate_events where environment = $1 and alert = $2 and starts_at = $3 order by at",
         [firing.environment, firing.alert, firing.startsAt],
       ),
     ).pipe(Effect.map((rows) => rows.map(eventOf))),
   addEvent: (event) =>
     Effect.suspend(() =>
       query(
-        "insert into estate_events (id, environment, alert, starts_at, at, by, kind, text, link) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        "insert into estate_events (id, environment, alert, starts_at, at, by, kind, text, link, read_logs) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
         [
           event.id,
           event.environment,
@@ -77,6 +79,7 @@ export const postgresEvents = (
           event.kind,
           event.text,
           event.link ?? null,
+          event.readLogs ?? null,
         ],
       ),
     ).pipe(Effect.asVoid),
