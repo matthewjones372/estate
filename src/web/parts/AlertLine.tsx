@@ -13,8 +13,8 @@ export const SeverityDot = (props: { readonly alert: Alert }) => (
 )
 
 /** The latest note's who and first line, so a glance says whether someone is on it. */
-export const LatestNote = (props: { readonly alert: Alert }) => (
-  <Show when={props.alert.notes[0]} fallback={<span class="muted">no notes</span>}>
+export const LatestNote = (props: { readonly note: Alert["notes"][number] | undefined }) => (
+  <Show when={props.note} fallback={<span class="muted">no notes</span>}>
     {(note) => (
       <span class="latest-note">
         {note().by}: “{firstLine(note().text)}”
@@ -25,11 +25,12 @@ export const LatestNote = (props: { readonly alert: Alert }) => (
 
 const severities = ["critical", "warning"]
 
-/** Critical first, then warning, then any other; the earlier one fired, the sooner. */
-export const worstFirst = (a: Alert, b: Alert) => {
-  const rank = (alert: Alert) => {
-    const at = severities.indexOf(alert.severity)
-    return at === -1 ? severities.length : at
-  }
-  return rank(a) - rank(b) || Date.parse(a.startsAt) - Date.parse(b.startsAt)
+/** Critical first, then warning, then any other. */
+export const rankOf = (alert: Alert) => {
+  const at = severities.indexOf(alert.severity)
+  return at === -1 ? severities.length : at
 }
+
+/** Worst first; the earlier one fired, the sooner. */
+export const worstFirst = (a: Alert, b: Alert) =>
+  rankOf(a) - rankOf(b) || Date.parse(a.startsAt) - Date.parse(b.startsAt)

@@ -2,7 +2,7 @@
 /** Firing alerts about a service: the "What's happening" block at the top of its page. */
 import { Show } from "solid-js"
 import type { Alert, CatalogEvent } from "../../shared/events"
-import { FiringAlerts } from "./AlertRows"
+import { FiringAlerts } from "./FiringAlerts"
 
 export const ServiceAlerts = (props: {
   readonly alerts: ReadonlyArray<Alert>
@@ -20,7 +20,7 @@ export const ServiceAlerts = (props: {
           Nothing firing.
         </p>
       </Show>
-      <FiringAlerts alerts={firing()} catalog={props.catalog} canSilence={props.canSilence} />
+      <FiringAlerts alerts={firing()} catalog={props.catalog} canSilence={props.canSilence} by="incident" />
     </section>
   )
 }

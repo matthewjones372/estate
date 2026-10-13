@@ -137,8 +137,8 @@ describe("incidents", () => {
       ])
       expect(open).toEqual({ incidents: shown.filter((each) => each.id === ids.slow) })
       expect(staging.map((each) => [each.id, each.incident])).toEqual([
-        ["a1", { id: ids.down, title: "Adoptions down", closed: true }],
-        ["a2", { id: ids.down, title: "Adoptions down", closed: true }],
+        ["a1", { id: ids.down, title: "Adoptions down", closed: true, openedAt: down?.openedAt ?? "" }],
+        ["a2", { id: ids.down, title: "Adoptions down", closed: true, openedAt: down?.openedAt ?? "" }],
       ])
       expect(production.map((each) => each.incident)).toEqual([undefined])
     }))
@@ -166,7 +166,12 @@ describe("incidents", () => {
       }),
     ).then(({ kept, shown, events, ids: [first, second] }) => {
       expect(kept.find((each) => each.id === first)?.firings.map((each) => each.alert)).toEqual(["a1"])
-      expect(shown).toEqual({ id: second, title: "Again", closed: false })
+      expect(shown).toEqual({
+        id: second,
+        title: "Again",
+        closed: false,
+        openedAt: kept.find((each) => each.id === second)?.openedAt ?? "",
+      })
       expect(events.map(([, kind, text]) => [kind, text])).toEqual([
         ["incident-opened", "First"],
         ["incident-closed", "it passed"],

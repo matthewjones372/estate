@@ -128,7 +128,7 @@ const firings: ReadonlyArray<PastFiring> = [
       },
       { id: "n8", at: "2026-10-01T09:10:00Z", by: "gil", text: "on it" },
     ],
-    incident: { id: "i3", title: "Orders slow", closed: true },
+    incident: { id: "i3", title: "Orders slow", closed: true, openedAt: "2026-10-03T11:50:00Z" },
     others: [],
   },
 ]

@@ -69,7 +69,12 @@ export const pastFiring = (
     incident:
       incident === undefined
         ? undefined
-        : { id: incident.id, title: incident.title, closed: incident.closedAt !== undefined },
+        : {
+            id: incident.id,
+            title: incident.title,
+            closed: incident.closedAt !== undefined,
+            openedAt: incident.openedAt,
+          },
     impact: impactOf(estate, firing.name),
     around: aroundThen(estate, firing),
     others: all.filter((each) => each !== firing).map((each) => each.startsAt),

@@ -26,7 +26,12 @@ const state = estate({
 describe("a past firing's page", () => {
   test("has the notes of the incident it was in, each naming it, among its own, newest first", () => {
     const firing = pastFiring(state, "staging", "a1", "2026-10-03T09:00:00Z")
-    expect(firing?.incident).toEqual({ id: "i1", title: "Orders slow", closed: false })
+    expect(firing?.incident).toEqual({
+      id: "i1",
+      title: "Orders slow",
+      closed: false,
+      openedAt: "2026-10-03T09:05:00Z",
+    })
     expect(firing?.notes).toEqual([
       {
         id: "n1",
