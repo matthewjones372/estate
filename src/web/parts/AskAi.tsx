@@ -152,6 +152,8 @@ export const AskAiAnswer = (props: { readonly alert: Alert }) => {
       .addNote(props.alert.id, noteOf(found), "ask-ai")
       .then((saved) => state.kept.set(saved ? "kept" : "failed"))
   }
+  // A note is seen by everyone, so an answer drawn from logs only operators read says so before it is kept.
+  const warned = () => me.logsForOperators === true && ask().answer.get()?.readLogs === true
   return (
     <Show when={me.ai === true}>
       <div class="ask-ai" aria-live="polite" aria-busy={ask().since.get() !== undefined}>
@@ -196,6 +198,12 @@ export const AskAiAnswer = (props: { readonly alert: Alert }) => {
                 {found().model} · {spent(found())} · read: {found().read.join(" · ")}
                 {found().called.length === 0 ? "" : ` · called: ${found().called.join(" · ")}`}
               </p>
+              <Show when={warned() && ask().kept.get() !== "kept"}>
+                <p class="alert-quiet">
+                  This answer read logs only operators can read. A note is seen by everyone, viewers and the Slack
+                  thread too.
+                </p>
+              </Show>
               <div class="choices ask-keep">
                 <Show
                   when={ask().kept.get() === "kept"}
@@ -207,7 +215,10 @@ export const AskAiAnswer = (props: { readonly alert: Alert }) => {
                       aria-busy={ask().kept.get() === "keeping"}
                       onClick={keep}
                     >
-                      <Show when={ask().kept.get() === "keeping"} fallback="Keep as note">
+                      <Show
+                        when={ask().kept.get() === "keeping"}
+                        fallback={warned() ? "Keep as note for everyone" : "Keep as note"}
+                      >
                         <span class="ask-spinner" aria-hidden="true" />
                         Keeping…
                       </Show>

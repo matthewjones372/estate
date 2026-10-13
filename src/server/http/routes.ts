@@ -134,6 +134,7 @@ const me = HttpRouter.add(
       ...(person.kiosk === true ? { kiosk: true } : {}),
       ...(settings.ai === undefined ? {} : { ai: true }),
       ...(settings.slack === undefined || settings.readOnly === true ? {} : { slack: true }),
+      ...(settings.auth.logs === "operator" ? { logsForOperators: true } : {}),
       ...(settings.kiosk === undefined
         ? {}
         : {
