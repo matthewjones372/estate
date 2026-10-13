@@ -6,8 +6,10 @@
 import { createSignal, For, Show } from "solid-js"
 import type { Alert, Me } from "../../shared/events"
 import { useEstate } from "../context"
+import { cardFold } from "../fold"
 import { initials, stamp } from "../format"
-import { cardFold, NoteText } from "./NoteText"
+import { firstLine } from "./AlertLine"
+import { NoteText } from "./NoteText"
 
 /** A card shows its newest notes; the rest wait for *Show all*. */
 const newest = 3
@@ -18,8 +20,6 @@ type CardNote = Alert["notes"][number]
 const removable = (note: CardNote, alert: Alert, me: Me) =>
   (note.by === me.name || me.role === "operator") &&
   (note.incident === undefined || (alert.incident?.closed !== true && me.readOnly !== true && me.kiosk !== true))
-
-const firstLine = (text: string) => text.split("\n")[0] ?? ""
 
 /** The folded notes: how many, the newest's who, when and first line, and the button that opens them. */
 const NotesLine = (props: {
