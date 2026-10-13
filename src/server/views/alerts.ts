@@ -4,6 +4,7 @@ import type { AlertsEvent } from "../../shared/events"
 import { sameFiring } from "../notes"
 import type { EstateState } from "../state"
 import { serviceOf } from "./health"
+import { incidentOf, notesOn } from "./incident-of"
 import { storeOf, storesIn } from "./stores"
 
 const order = { firing: 0, pending: 1, silenced: 2 } as const
@@ -21,18 +22,6 @@ const threadOf = (
     sameFiring(each, { environment, alert: alert.id, startsAt: alert.startsAt }),
   )
   return told === undefined ? undefined : { url: told.url }
-}
-
-/** The incident this firing of an alert is part of: its open one, else the closed one it was in, if any. */
-const incidentOf = (
-  estate: EstateState,
-  environment: string,
-  alert: { readonly id: string; readonly startsAt: string },
-) => {
-  const holding = (estate.incidents ?? []).filter((incident) =>
-    incident.firings.some((each) => sameFiring(each, { environment, alert: alert.id, startsAt: alert.startsAt })),
-  )
-  return holding.find((incident) => incident.closedAt === undefined) ?? holding[0]
 }
 
 /** What an alert means for the people using the product: written on the page, in the catalog, or on its rule. */
@@ -62,12 +51,9 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
       .sort((a, b) => b.at.localeCompare(a.at))
     const incident = incidentOf(estate, environment, alert)
     // This firing's notes on the card, and its incident's, which say so; earlier ones with the firing they were in.
-    const notes = [
-      ...about.filter((note) => note.at >= alert.startsAt),
-      ...(incident === undefined
-        ? []
-        : (incident.notes ?? []).map((note) => ({ ...note, incident: { id: incident.id, title: incident.title } }))),
-    ].sort((a, b) => b.at.localeCompare(a.at))
+    const notes = [...about.filter((note) => note.at >= alert.startsAt), ...notesOn(incident)].sort((a, b) =>
+      b.at.localeCompare(a.at),
+    )
     const earlier = (estate.firings ?? [])
       .filter(
         (firing) =>

@@ -112,6 +112,25 @@ const firings: ReadonlyArray<PastFiring> = [
     notes: [],
     others: ["2026-10-02T09:00:00Z"],
   },
+  {
+    environment: "production",
+    alert: "a1",
+    name: "OrdersSlow",
+    startsAt: "2026-10-01T09:00:00Z",
+    endsAt: "2026-10-01T09:30:00Z",
+    notes: [
+      {
+        id: "n9",
+        at: "2026-10-01T09:20:00Z",
+        by: "ada",
+        text: "the pool was resized",
+        incident: { id: "i3", title: "Orders slow" },
+      },
+      { id: "n8", at: "2026-10-01T09:10:00Z", by: "gil", text: "on it" },
+    ],
+    incident: { id: "i3", title: "Orders slow", closed: true },
+    others: [],
+  },
 ]
 
 export interface Recorded {

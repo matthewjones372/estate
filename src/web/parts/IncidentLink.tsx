@@ -13,8 +13,9 @@ import { A } from "./A"
 /** The server's longest title, so the box stops where the server would refuse. */
 const longestTitle = 200
 
-export const PartOf = (props: { readonly alert: Alert }) => (
-  <Show when={props.alert.incident}>
+/** Which incident a firing is part of, on its card or its past firing's page, linking to it. */
+export const PartOf = (props: { readonly incident: Alert["incident"] }) => (
+  <Show when={props.incident}>
     {(incident) => (
       <p class="alert-detail incident-part">
         Part of{" "}

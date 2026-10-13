@@ -108,6 +108,7 @@ describe("an agent on the page", () => {
       kind: "deploy",
       service: "support-triage",
       text: "support-triage now uses claude-b, not claude-a",
+      agent: "support-triage",
     })
     expect(servicesView(estate(), "production").agents).toBeUndefined()
   })
