@@ -33,6 +33,8 @@ export const FiringEvent = Schema.Struct({
   /** What it said: a note's text, a silence's span and reason, the AI's likely cause, an incident's title. */
   text: Schema.String,
   link: Schema.optionalKey(Schema.String),
+  /** On `ai-answered` only: whether the answer read the service's logs, so a reader who may not can be kept from it. */
+  readLogs: Schema.optionalKey(Schema.Boolean),
 })
 export type FiringEvent = typeof FiringEvent.Type
 

@@ -213,6 +213,7 @@ export const recording = (): Recorded => {
                 called: ["service orders"],
                 usage: { input: 3_200, cached: 11_800, output: 1_100 },
                 cost: { amount: 0.0294, currency: "USD" },
+                readLogs: false,
               }
             : "this alert was asked about less than a minute ago",
         )

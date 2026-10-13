@@ -31,7 +31,14 @@ describe("Ask AI's limits", () => {
       Effect.gen(function* () {
         const limits = yield* AskLimits
         const answer = { likelyCause: "a deploy", evidence: [], nextSteps: [], confidence: "low" as const }
-        const kept = { ...answer, model: "m", read: [], called: [], usage: { input: 0, cached: 0, output: 0 } }
+        const kept = {
+          ...answer,
+          model: "m",
+          read: [],
+          called: [],
+          usage: { input: 0, cached: 0, output: 0 },
+          readLogs: false,
+        }
         yield* limits.take("a1")
         const waiting = yield* Effect.forkChild(limits.shared("a1"))
         yield* limits.keep("a1", kept)

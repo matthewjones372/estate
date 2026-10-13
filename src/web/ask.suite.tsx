@@ -93,6 +93,7 @@ describe("Ask AI on an alert's card", () => {
       read: [],
       called: [],
       usage: { input: 0, cached: 0, output: 0 },
+      readLogs: false,
     }
     const note = noteOf(answer)
     expect(note.length).toBeLessThanOrEqual(longestNote)

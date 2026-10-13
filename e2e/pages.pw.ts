@@ -86,9 +86,11 @@ test("an alert's own page gathers what is around it, and Ask AI reads it and is 
   await expect(around).toContainText("If p99 is high after a deploy, roll back.")
   await page.getByRole("button", { name: "Ask AI" }).click()
   await expect(page.getByText("orders' new version never rolled out")).toBeVisible()
-  await expect(page.getByText("e2e-model · read: Changed · Depends · Errors · Runbook")).toBeVisible()
+  await expect(
+    page.getByText("e2e-model · 1,200 in · 0 out · read: Changed · Depends · Errors · Runbook"),
+  ).toBeVisible()
   await page.getByRole("button", { name: "Keep as note" }).click()
-  await expect(page.getByText("Kept as a note.")).toBeVisible()
+  await expect(page.getByText("Kept as a note, under Notes above")).toBeVisible()
   await accessible(page)
 })
 
