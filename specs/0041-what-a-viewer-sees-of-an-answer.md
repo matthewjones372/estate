@@ -106,7 +106,7 @@ Nothing. Spec 0039's events and spec 0024's `auth.logs` are already there.
       Done when: in `http/ask.test.ts`, an operator's ask with `auth.logs: operator` whose brief has *Errors* answers
       `readLogs: true` and its event carries it, and a viewer's ask answers `readLogs: false`; an ask whose model
       calls `errors` and is answered is `readLogs: true`; Postgres, DynamoDB and memory each keep and read the field.
-- [ ] **`spec-0041-withheld`**: `seenBy` in `shared/timeline.ts`, used by the firing's events, the incident's record
+- [x] **`spec-0041-withheld`**: `seenBy` in `shared/timeline.ts`, used by the firing's events, the incident's record
       and both exports.
       Done when: with `auth.logs: operator`, a viewer's `GET /api/firings/:id/events`, `GET /api/incidents/:id` and
       both timeline exports show "AI answered from logs only operators read" with no likely cause, and an operator's
