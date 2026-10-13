@@ -38,6 +38,13 @@ export const withRole: Effect.Effect<
   return { name, groups, role, ...(kiosk === true ? { kiosk } : {}) }
 })
 
+/** Whether someone of `role` may read logs here: anyone, unless `auth.logs` keeps them to operators. */
+export const readsLogs = (role: Me["role"]) =>
+  Effect.gen(function* () {
+    const { auth } = yield* Configured
+    return auth.logs !== "operator" || role === "operator"
+  })
+
 /**
  * Whether a request that changes something came from Estate's own pages. A browser says where a request came from in
  * `Sec-Fetch-Site` and `Origin`; one sent from another site, as by a form on a page someone was lured to, is refused,

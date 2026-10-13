@@ -245,8 +245,8 @@ describe("GET /api/incidents/:id/timeline", () => {
 })
 
 describe("a viewer's export", () => {
-  // Nothing on a firing's or an incident's page is kept from viewers today, even where logs are for operators only.
-  test("is an operator's, as Markdown and as JSON, for a firing and an incident", () =>
+  // Only an AI's answer drawn from logs is kept from viewers where logs are for operators (withheld.test.ts).
+  test("with no AI answer in it is an operator's, as Markdown and as JSON, for a firing and an incident", () =>
     Effect.runPromise(
       Effect.gen(function* () {
         const paths = [

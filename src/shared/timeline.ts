@@ -35,8 +35,21 @@ export const FiringEvent = Schema.Struct({
   link: Schema.optionalKey(Schema.String),
   /** On `ai-answered` only: whether the answer read the service's logs, so a reader who may not can be kept from it. */
   readLogs: Schema.optionalKey(Schema.Boolean),
+  /** Its text is kept from this reader: an AI's answer drawn from logs they may not read. */
+  withheld: Schema.optionalKey(Schema.Boolean),
 })
 export type FiringEvent = typeof FiringEvent.Type
+
+/**
+ * The events as this reader may see them: an answer drawn from logs they may not read keeps only that it was. An
+ * answer with no mark, kept before answers were marked, is taken to have read them.
+ */
+export const seenBy = <A extends FiringEvent>(events: ReadonlyArray<A>, readsLogs: boolean): ReadonlyArray<A> =>
+  readsLogs
+    ? events
+    : events.map((event) =>
+        event.kind === "ai-answered" && event.readLogs !== false ? { ...event, text: "", withheld: true } : event,
+      )
 
 /** What an event says in a line, on the page and in an export: what was done, then what it said. */
 export const said = (event: FiringEvent): string => {
@@ -60,7 +73,7 @@ export const said = (event: FiringEvent): string => {
     case "ai-asked":
       return `asked AI (${event.text})`
     case "ai-answered":
-      return `AI answered: ${event.text}`
+      return event.withheld === true ? "AI answered from logs only operators read" : `AI answered: ${event.text}`
     case "ai-failed":
       return `AI could not answer: ${event.text}`
     case "ai-kept":

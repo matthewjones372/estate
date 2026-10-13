@@ -1,18 +1,18 @@
 /**
  * A timeline to take away, as Markdown or JSON, for anyone who can read the page:
  * `GET /api/firings/:id/timeline?env=&at=&format=md|json`, the live firing without `at`, and
- * `GET /api/incidents/:id/timeline?format=md|json`, every firing of the incident merged. A viewer's is an operator's:
- * nothing on these pages is kept from viewers.
+ * `GET /api/incidents/:id/timeline?format=md|json`, every firing of the incident merged. A viewer's is an operator's
+ * but where logs are for operators: there an AI's answer drawn from logs says only that it answered.
  */
 import { Effect, Layer, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerResponse } from "effect/http"
-import { mergedOnce } from "../../shared/timeline"
+import { mergedOnce, seenBy } from "../../shared/timeline"
 import type { ExportedFiring, TimelineExport } from "../../shared/timeline-export"
 import { Notes } from "../notes"
 import { Estate } from "../state"
 import { exportedFiring, incidentFirings } from "../views/timeline-export"
 import { fileName, markdownOf } from "../views/timeline-markdown"
-import { json, refused, searchParams, withRole } from "./routes"
+import { json, readsLogs, refused, searchParams, withRole } from "./routes"
 
 const Format = Schema.optionalKey(Schema.Literals(["md", "json"]))
 const FiringAsked = Schema.Struct({
@@ -46,7 +46,7 @@ const firingRoute = HttpRouter.add(
   "GET",
   "/api/firings/:id/timeline",
   Effect.gen(function* () {
-    yield* withRole
+    const person = yield* withRole
     const { id = "" } = yield* HttpRouter.params
     const { env: asked, at, format } = yield* searchParams(FiringAsked, "env and at are one each, format md or json")
     const estate = yield* SubscriptionRef.get(yield* Estate)
@@ -56,7 +56,7 @@ const firingRoute = HttpRouter.add(
       return yield* missing(
         `no firing of ${id} in ${environment}${at === undefined ? "" : ` started at ${at}`} is kept`,
       )
-    const events = yield* eventsOf(firing, false)
+    const events = seenBy(yield* eventsOf(firing, false), yield* readsLogs(person.role))
     return exported({ title: firing.name, firings: [firing], events }, firing.startsAt, format)
   }).pipe(
     Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 503))),
@@ -68,14 +68,17 @@ const incidentRoute = HttpRouter.add(
   "GET",
   "/api/incidents/:id/timeline",
   Effect.gen(function* () {
-    yield* withRole
+    const person = yield* withRole
     const { id = "" } = yield* HttpRouter.params
     const { format } = yield* searchParams(IncidentAsked, "format is md or json")
     const estate = yield* SubscriptionRef.get(yield* Estate)
     const incident = (estate.incidents ?? []).find((each) => each.id === id)
     if (incident === undefined) return yield* missing("there is no such incident")
     const firings = incidentFirings(estate, incident)
-    const events = mergedOnce((yield* Effect.forEach(firings, (firing) => eventsOf(firing, true))).flat())
+    const events = seenBy(
+      mergedOnce((yield* Effect.forEach(firings, (firing) => eventsOf(firing, true))).flat()),
+      yield* readsLogs(person.role),
+    )
     const { title, firings: _, ...kept } = incident
     return exported({ title, incident: kept, firings, events }, incident.openedAt, format)
   }).pipe(
