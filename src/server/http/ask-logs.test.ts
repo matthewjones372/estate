@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Context, Effect, Redacted } from "effect"
-import { ask, environment, estate, type Server, serverFor, settings } from "../fixture"
+import { seal } from "../auth/session"
+import { ask, environment, estate, type Server, secret, serverFor, settings } from "../fixture"
 import { Notes } from "../notes"
 import { type Call, type Reply, reply } from "../remote"
 import type { Settings } from "../settings"
@@ -127,5 +128,67 @@ describe("what an Ask AI answer read", () => {
     ).then(({ read, readLogs }) => {
       expect(read).not.toContain("Errors")
       expect(readLogs).toBe(true)
+    }))
+})
+
+/** Signed in, so a viewer and an operator can ask of one Estate. */
+const signedIn = (logs?: "operator"): Settings => ({
+  ...configured("viewer", logs),
+  auth: settings({
+    oidc: {
+      issuer: "https://id.example",
+      clientId: "estate",
+      clientSecret: Redacted.make("s"),
+      publicUrl: "https://e",
+    },
+    ...(logs === undefined ? {} : { logs }),
+  }).auth,
+})
+
+const askedBy = (groups: ReadonlyArray<string>) =>
+  Effect.map(
+    seal({ name: groups[0] ?? "", groups }, Date.now() + 60_000, secret),
+    (sealed) =>
+      new Request("http://estate/api/alerts/a1/ask?env=production", {
+        method: "POST",
+        headers: { cookie: `estate_session=${sealed}` },
+      }),
+  )
+
+/** How often the model is called when a viewer, then an operator, ask about one alert within the minute. */
+const modelCalls = (logs?: "operator") => {
+  let called = 0
+  const counting = (call: Call) => {
+    if (call.url.includes("/chat/completions")) called += 1
+    return fromBrief(call)
+  }
+  return Effect.gen(function* () {
+    const server = yield* serverFor(signedIn(logs), withAlert, counting)
+    const answers = [yield* ask(server, yield* askedBy(["developers"])), yield* ask(server, yield* askedBy(["ops"]))]
+    return { called, statuses: answers.map((answer) => answer.status) }
+  })
+}
+
+describe("an answer shared within the minute", () => {
+  test("is one call to the model for a viewer and an operator where both read logs", () =>
+    Effect.runPromise(modelCalls()).then((asked) => expect(asked).toEqual({ called: 1, statuses: [200, 200] })))
+
+  test("is two where logs are for operators, so an operator's answer never reaches a viewer", () =>
+    Effect.runPromise(modelCalls("operator")).then((asked) =>
+      expect(asked).toEqual({ called: 2, statuses: [200, 200] }),
+    ))
+})
+
+describe("who a person is", () => {
+  test("says where logs are for operators, so keeping an answer that read them can say who sees it", () =>
+    Effect.runPromise(
+      Effect.forEach([configured("viewer", "operator"), configured("viewer")], (each) =>
+        Effect.flatMap(serverFor(each, withAlert), (server) =>
+          Effect.map(ask(server, new Request("http://estate/api/me")), (me) => me.json()),
+        ),
+      ),
+    ).then(([kept, open]) => {
+      expect(kept).toMatchObject({ logsForOperators: true })
+      expect(open).not.toHaveProperty("logsForOperators")
     }))
 })

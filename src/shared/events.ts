@@ -277,6 +277,8 @@ export const Me = Schema.Struct({
   ai: optional(Schema.Boolean),
   /** Estate may post to Slack: an alert's card may tell its team. */
   slack: optional(Schema.Boolean),
+  /** Logs are for operators here, so keeping an AI's answer that read them says who will see it. */
+  logsForOperators: optional(Schema.Boolean),
   /** What a screen shows, where the settings say: its environments in turn, each for `every` seconds. */
   screen: optional(Schema.Struct({ environments: Schema.Array(Schema.String), every: Schema.Number })),
 })

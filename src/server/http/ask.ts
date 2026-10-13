@@ -1,8 +1,8 @@
 /**
  * `POST /api/alerts/:id/ask?env=`: Ask AI about an alert. The model reads the alert's brief, *Around this alert*,
  * may call Estate's read tools as the person asking, and answers with a likely cause, its evidence and what to do next.
- * Asked again within the minute by anyone with the same role, it gives that answer, waiting for it while it is being
- * asked. It is 404 when `ai` is not set, 429 when the day's tokens are spent, and 502 when the model failed.
+ * Asked again within the minute by anyone who may read the same, it gives that answer, waiting for it while it is
+ * being asked. It is 404 when `ai` is not set, 429 when the day's tokens are spent, and 502 when the model failed.
  */
 import { Effect, SubscriptionRef } from "effect"
 import { HttpRouter } from "effect/http"
@@ -15,7 +15,7 @@ import { Model } from "../model"
 import { Configured } from "../settings"
 import { Estate } from "../state"
 import { askTools } from "./ask-tools"
-import { EnvParam, json, refused, searchParams, writer } from "./routes"
+import { EnvParam, json, readsLogs, refused, searchParams, writer } from "./routes"
 
 export const askRoute = HttpRouter.add(
   "POST",
@@ -29,15 +29,17 @@ export const askRoute = HttpRouter.add(
     const { catalog } = yield* SubscriptionRef.get(yield* Estate)
     const environment = asked ?? catalog.environments[0]?.name ?? ""
     const limits = yield* AskLimits
-    // Keyed by role too, so an answer drawn from what an operator may read is never shared with a viewer.
-    const turn = `${environment}\u0000${id}\u0000${person.role}`
+    // Keyed by whether the asker may read logs, the one thing the tools read differently by role, so an answer drawn
+    // from logs is never shared with someone who may not read them.
+    const reads = yield* readsLogs(person.role)
+    const turn = `${environment}\u0000${id}\u0000${reads ? "logs" : "no-logs"}`
     const limited = yield* Effect.result(limits.take(turn))
     if (limited._tag === "Failure") {
       const shared = yield* limits.shared(turn)
       return shared === undefined ? json({ message: limited.failure.message }, 429) : json(shared)
     }
     // The model reads what this person could read on the page, and no more.
-    const brief = yield* gatherAround(environment, id, settings.auth.logs !== "operator" || person.role === "operator")
+    const brief = yield* gatherAround(environment, id, reads)
     if (brief === undefined) {
       yield* limits.giveBack(turn)
       return json({ message: `there is no alert ${id} in ${environment}` }, 404)

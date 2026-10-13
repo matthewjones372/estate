@@ -142,4 +142,38 @@ describe("Ask AI on an alert's card", () => {
     expect(again.button(askAi).disabled).toBe(false)
     expect(again.button(askAi).getAttribute("aria-busy")).toBe("false")
   })
+
+  test("warns before keeping an answer that read logs as a note for everyone, only where logs are for operators", async () => {
+    const warning =
+      "This answer read logs only operators can read. A note is seen by everyone, viewers and the Slack thread too."
+    const shown = async (readLogs: boolean, logsForOperators: boolean) => {
+      const { actions, calls } = recording()
+      const answering = {
+        ...actions,
+        askAlert: (id: string, signal: AbortSignal) =>
+          actions.askAlert(id, signal).then((found) => (typeof found === "string" ? found : { ...found, readLogs })),
+      }
+      const page = mount(card(), {
+        me: { ...asking, ...(logsForOperators ? { logsForOperators } : {}) },
+        actions: answering,
+      })
+      page.click(page.button(askAi))
+      await page.settle()
+      const keeps = [...page.container.querySelectorAll(".ask-keep button")].map((each) => each.textContent)
+      return { page, calls, keeps, warned: page.container.textContent?.includes(warning) ?? false }
+    }
+    const warned = await shown(true, true)
+    expect([warned.keeps, warned.warned]).toEqual([["Keep as note for everyone"], true])
+    warned.page.click(warned.page.button("Keep as note for everyone"))
+    await warned.page.settle()
+    expect(warned.calls.filter(([action]) => action === "addNote")).toHaveLength(1)
+    expect(warned.page.container.textContent).not.toContain(warning)
+    for (const [readLogs, logsForOperators] of [
+      [true, false],
+      [false, true],
+    ] as const) {
+      const plain = await shown(readLogs, logsForOperators)
+      expect([plain.keeps, plain.warned]).toEqual([["Keep as note"], false])
+    }
+  })
 })
