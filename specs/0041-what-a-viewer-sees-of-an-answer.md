@@ -111,7 +111,7 @@ Nothing. Spec 0039's events and spec 0024's `auth.logs` are already there.
       Done when: with `auth.logs: operator`, a viewer's `GET /api/firings/:id/events`, `GET /api/incidents/:id` and
       both timeline exports show "AI answered from logs only operators read" with no likely cause, and an operator's
       show it whole; with `auth.logs` unset, both see it whole.
-- [ ] **`spec-0041-keep-and-share`**: *Keep as note for everyone* and its line on an answer that read logs; the
+- [x] **`spec-0041-keep-and-share`**: *Keep as note for everyone* and its line on an answer that read logs; the
       shared answer keyed by whether the asker reads logs.
       Done when: `ask.suite.tsx` shows the line and the button's words for a `readLogs` answer only where logs are
       for operators; in `http/ask.test.ts`, with `auth.logs` unset a viewer and an operator asking within the minute
