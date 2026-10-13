@@ -120,7 +120,7 @@ Spec 0039's incidents, for grouping. Spec 0042's suggestions are shown on rows o
       Done when: six firings in one incident and three on one service read as two group rows and the rest single,
       each group named with its count and worst severity, opening to its rows; an alert in an incident is not also
       in its service's group.
-- [ ] **`spec-0044-choice`**: *Auto*, *Cards* and *Rows*, kept as `estate.alerts.layout`.
+- [x] **`spec-0044-choice`**: *Auto*, *Cards* and *Rows*, kept as `estate.alerts.layout`.
       Done when: choosing *Cards* with five firing shows five cards, kept across a reload; *Auto* switches at four.
 
 ## Acceptance
