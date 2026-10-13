@@ -12,6 +12,7 @@ import { Header } from "./parts/Header"
 describe("acting on an alert", () => {
   test("adds a note", async () => {
     const page = mount(() => <Overview />)
+    page.click(page.button("Show notes"))
     const input = page.container.querySelector<HTMLInputElement>(".note-form input")
     if (input === null) throw new Error("no note input")
     page.type(input, "  vacuuming the table  ")
@@ -53,6 +54,7 @@ describe("the page as events arrive", () => {
     send("catalog", events.catalog)
     send("alerts", events.alerts)
     const page = mount(() => <Overview />, { live })
+    page.click(page.button("Show notes"))
     const input = page.container.querySelector<HTMLInputElement>(".note-form input")
     if (input === null) throw new Error("no note input")
     page.type(input, "half written")
@@ -72,8 +74,22 @@ describe("the page as events arrive", () => {
 describe("a note", () => {
   test("is removed by an operator, or by whoever wrote it", () => {
     const page = mount(() => <Overview />)
+    page.click(page.button("Show notes"))
     page.click(page.button(/^Remove/))
     expect(page.calls).toContainEqual(["removeNote", "n1"])
+  })
+
+  test("cannot be removed by a viewer who did not write it", () => {
+    const viewer = { ...operator, role: "viewer" as const }
+    const notesOf = (me: typeof viewer) => {
+      const page = mount(() => <Overview />, { me })
+      page.click(page.button("Show notes"))
+      const shown = page.container.textContent
+      page.dispose()
+      return shown
+    }
+    expect(notesOf(viewer)).not.toContain("Remove the note")
+    expect(notesOf({ ...viewer, name: "gil" })).toContain("Remove the note by gil")
   })
 })
 

@@ -104,6 +104,7 @@ describe("an alert's incident, on its card", () => {
       { id: "n1", at: "2026-10-02T11:55:00Z", by: "ada lovelace", text: "mine on it", incident: on },
     ]
     const page = card({ ...inIncident(false), notes })
+    page.click(page.button("Show notes"))
     const heads = [...page.container.querySelectorAll(".note .alert-quiet")].map((each) => each.textContent)
     expect(heads).toEqual([
       expect.stringMatching(/^gil · \d\d:58 · on Orders slow · Remove the note by gil$/),
@@ -116,9 +117,11 @@ describe("an alert's incident, on its card", () => {
     expect(page.calls).toContainEqual(["removeIncidentNote", "i1", "n3"])
     expect(page.calls).toContainEqual(["removeNote", "n2"])
     const viewing = card({ ...inIncident(false), notes }, viewer)
+    viewing.click(viewing.button("Show notes"))
     expect(viewing.container.textContent).not.toContain("Remove the note by gil")
     expect(viewing.container.textContent).toContain("Remove the note by ada lovelace")
     const closed = card({ ...inIncident(true), notes })
+    closed.click(closed.button("Show notes"))
     expect(closed.container.querySelectorAll(".note-remove")).toHaveLength(1)
   })
 

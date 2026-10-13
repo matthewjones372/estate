@@ -28,8 +28,11 @@ export const NoteText = (props: { readonly text: string }) => {
 // Keyed by the page's actions, which live as long as Estate is open in the tab, and each test's are its own.
 const unfolded = new WeakMap<Actions, Map<string, ReturnType<typeof createSignal<boolean>>>>()
 
-/** Whether a card shows all its notes: kept per card while Estate is open, so moving away and back keeps it. */
-export const allNotesShown = (actions: Actions, card: string) => {
+/**
+ * Whether a card's fold is open, such as its notes or all of them: kept per card while Estate is open, so moving
+ * away and back keeps it.
+ */
+export const cardFold = (actions: Actions, card: string) => {
   const mine = unfolded.get(actions) ?? new Map()
   unfolded.set(actions, mine)
   const found = mine.get(card) ?? createSignal(false)

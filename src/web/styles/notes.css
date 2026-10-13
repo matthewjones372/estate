@@ -71,3 +71,21 @@
   align-items: baseline;
   font-size: 13px;
 }
+/* A card's notes among others, folded to one line: the latest's first line, cut to fit, and Show notes beside it. */
+.notes-line {
+  display: flex;
+  gap: 8px 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--amber-quiet);
+}
+.notes-latest {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notes-line .note-more {
+  flex: none;
+}
