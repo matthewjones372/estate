@@ -8,7 +8,7 @@ import { longestNote } from "../../shared/note"
 import { happenedOnEach } from "../happened"
 import { Configured } from "../settings"
 import { isoNow } from "../time"
-import { answered, keep, keyOf, malformed, open, refuse } from "./incident-record"
+import { answered, keep, keyOf, malformed, oneAtATime, open, refuse } from "./incident-record"
 import { json, writer } from "./routes"
 
 const Asked = Schema.Struct({ text: Schema.String })
@@ -29,11 +29,16 @@ const addRoute = HttpRouter.add(
     const asked = yield* HttpServerRequest.schemaBodyJson(Asked).pipe(Effect.mapError(malformed("a note is its text")))
     const text = asked.text.trim()
     if (text === "" || text.length > longestNote) return yield* refuse(400, `a note is 1 to ${longestNote} characters`)
-    const incident = yield* open(id)
     const note = { id: crypto.randomUUID(), at: yield* isoNow, by: person.name, text }
-    const now = { ...incident, notes: [...(incident.notes ?? []), note] }
-    yield* keep(now)
-    yield* happenedOnEach(incident.firings.map(keyOf), person.name, "incident-noted", text)
+    const now = yield* oneAtATime(
+      Effect.gen(function* () {
+        const incident = yield* open(id)
+        const now = { ...incident, notes: [...(incident.notes ?? []), note] }
+        yield* keep(now)
+        return now
+      }),
+    )
+    yield* happenedOnEach(now.firings.map(keyOf), person.name, "incident-noted", text)
     return json(now, 201)
   }).pipe(answered),
 )
@@ -44,16 +49,21 @@ const removeRoute = HttpRouter.add(
   Effect.gen(function* () {
     const person = yield* noteWriter
     const { id = "", note: noteId = "" } = yield* HttpRouter.params
-    const incident = yield* open(id)
-    const note = incident.notes?.find((each) => each.id === noteId)
-    if (note === undefined) return yield* refuse(404, "there is no such note")
-    if (note.by !== person.name && person.role !== "operator")
-      return yield* refuse(403, "a note is removed by whoever wrote it, or an operator")
-    const now = { ...incident, notes: (incident.notes ?? []).filter((each) => each !== note) }
-    yield* keep(now)
+    const { now, note } = yield* oneAtATime(
+      Effect.gen(function* () {
+        const incident = yield* open(id)
+        const note = incident.notes?.find((each) => each.id === noteId)
+        if (note === undefined) return yield* refuse(404, "there is no such note")
+        if (note.by !== person.name && person.role !== "operator")
+          return yield* refuse(403, "a note is removed by whoever wrote it, or an operator")
+        const now = { ...incident, notes: (incident.notes ?? []).filter((each) => each !== note) }
+        yield* keep(now)
+        return { now, note }
+      }),
+    )
     // The removal keeps what the note said: the timeline is a record, not what was left.
     yield* happenedOnEach(
-      incident.firings.map(keyOf),
+      now.firings.map(keyOf),
       person.name,
       "incident-note-removed",
       `a note by ${note.by}: ${note.text}`,

@@ -53,6 +53,11 @@ describe("an alert's incident, on its card", () => {
     expect(chooser(page.container)).toBeNull()
   })
 
+  test("opening the chooser takes the focus into it, since the button that opened it is gone", async () => {
+    const page = await choosing()
+    expect(document.activeElement).toBe(page.container.querySelector(".incident-chooser input"))
+  })
+
   test("the incident an alert is already part of is not offered again", async () => {
     const page = await choosing(inIncident(false))
     const offered = [...page.container.querySelectorAll(".incident-choice")].map((each) => each.textContent)

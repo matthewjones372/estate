@@ -179,8 +179,8 @@ export const incidentActions = (
       const open = openIncidents.find((each) => each.id === id)
       return Promise.resolve(open === undefined || id === "i2" ? `"Checkout down" is closed` : open)
     },
-    unlinkIncident: (id, environment, alert) => {
-      calls.push(["unlinkIncident", id, environment, alert])
+    unlinkIncident: (id, environment, alert, startsAt) => {
+      calls.push(["unlinkIncident", id, environment, alert, startsAt])
       const incident = found(id)
       return Promise.resolve(
         incident === undefined

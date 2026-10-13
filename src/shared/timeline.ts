@@ -80,7 +80,7 @@ export const said = (event: FiringEvent): string => {
 
 /** Whether an event was on the incident rather than one firing: kept on each of its firings, the same each time. */
 export const onIncident = (event: Pick<FiringEvent, "kind">) =>
-  event.kind === "incident-noted" || event.kind === "incident-note-removed"
+  event.kind === "incident-noted" || event.kind === "incident-note-removed" || event.kind === "incident-closed"
 
 /**
  * An incident's events from all its firings, in time order, with an event on the incident shown once: its copies

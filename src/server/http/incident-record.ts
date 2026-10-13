@@ -1,5 +1,5 @@
 /** An incident as its routes read and keep it: found by its id, changed only while open, kept whole in store and state. */
-import { Effect, SubscriptionRef } from "effect"
+import { Effect, Semaphore, SubscriptionRef } from "effect"
 import type { HttpServerResponse } from "effect/http"
 import type { Incident } from "../../shared/incidents"
 import { Notes } from "../notes"
@@ -29,6 +29,14 @@ export const open = (id: string) =>
   )
 
 export const keyOf = ({ environment, alert, startsAt }: FiringKey): FiringKey => ({ environment, alert, startsAt })
+
+const one = Semaphore.makeUnsafe(1)
+
+/**
+ * A change to incidents, from reading the record to keeping it, made while no other is: each keeps an incident whole,
+ * so two at once would each keep what it read, and the later would undo the earlier.
+ */
+export const oneAtATime = <A, E, R>(change: Effect.Effect<A, E, R>) => one.withPermits(1)(change)
 
 /** The incident kept, and shown wherever the estate is read. */
 export const keep = (incident: Incident) =>

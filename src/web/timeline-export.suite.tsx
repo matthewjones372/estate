@@ -72,6 +72,17 @@ describe("a timeline to take away", () => {
     expect(page.calls).toContainEqual(["timelineMarkdown", { incident: "i1" }])
   })
 
+  test("has its status there before it says anything, so a screen reader hears it say Copied", async () => {
+    clipboard()
+    const page = mount(() => <TimelineExport of={{ incident: "i1" }} />)
+    const status = page.container.querySelector(".timeline-export [role=status]")
+    expect(status?.textContent).toBe("")
+    page.click(page.button("Copy as Markdown"))
+    await page.settle()
+    expect(page.container.querySelector(".timeline-export [role=status]")).toBe(status)
+    expect(status?.textContent).toBe("Copied")
+  })
+
   test("says why it could not copy: the timeline was not read, the browser refused, or has no clipboard", async () => {
     const copied = clipboard()
     const unread = mount(() => <TimelineExport of={{ incident: "broken" }} />)

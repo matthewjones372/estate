@@ -6,7 +6,7 @@ import { Effect, Ref } from "effect"
 import type { FiringEvent } from "../shared/timeline"
 import type { Query } from "./query"
 import type { Failure } from "./sources/run"
-import { iso } from "./time"
+import { iso, sameInstant } from "./time"
 
 /** Which firing: its environment, its alert and when it started. */
 export interface FiringKey {
@@ -85,15 +85,20 @@ export const postgresEvents = (
 })
 
 const sameFiringAs = (firing: FiringKey) => (event: StoredEvent) =>
-  event.environment === firing.environment && event.alert === firing.alert && event.startsAt === firing.startsAt
+  event.environment === firing.environment &&
+  event.alert === firing.alert &&
+  sameInstant(event.startsAt, firing.startsAt)
+
+/** Oldest first by instant, as Postgres orders them, though one time is written to the second and another to the ms. */
+export const inOrder = (events: ReadonlyArray<StoredEvent>) =>
+  events.toSorted((a, b) => Date.parse(a.at) - Date.parse(b.at))
 
 /** The events for as long as Estate runs. */
 export const memoryEvents = (kept: Ref.Ref<ReadonlyArray<StoredEvent>>): FiringEvents => ({
-  events: (firing) =>
-    Effect.map(Ref.get(kept), (all) => all.filter(sameFiringAs(firing)).toSorted((a, b) => a.at.localeCompare(b.at))),
+  events: (firing) => Effect.map(Ref.get(kept), (all) => inOrder(all.filter(sameFiringAs(firing)))),
   addEvent: (event) => Ref.update(kept, (all) => [...all, event]),
 })
 
 /** The events of firings begun before `at`, gone from memory. */
 export const sweepMemoryEvents = (kept: Ref.Ref<ReadonlyArray<StoredEvent>>, at: string) =>
-  Ref.update(kept, (all) => all.filter((event) => event.startsAt >= at))
+  Ref.update(kept, (all) => all.filter((event) => Date.parse(event.startsAt) >= Date.parse(at)))

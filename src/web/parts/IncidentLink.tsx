@@ -3,7 +3,7 @@
  * An alert card's incident: which one it is part of, and for operators *Link to incident…*, a chooser of the incidents
  * open now and *New incident*. The card follows from the alerts the server sends, so a link done here shows there.
  */
-import { createSignal, For, Show } from "solid-js"
+import { createSignal, For, onMount, Show } from "solid-js"
 import type { Alert, Me } from "../../shared/events"
 import type { Incident } from "../../shared/incidents"
 import { useEstate } from "../context"
@@ -114,6 +114,8 @@ export const IncidentChooser = (props: { readonly alert: Alert; readonly close: 
       <label class="reason">
         Or a new incident, titled
         <input
+          // The button that opened the chooser is gone, so the focus comes here rather than to the page.
+          ref={(box) => onMount(() => box.focus())}
           type="text"
           value={title()}
           maxLength={longestTitle}

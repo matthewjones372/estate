@@ -1,6 +1,7 @@
 /** The `alerts` event: firing, pending and silenced together, each with its service or store, notes and chart. */
 import { compact } from "../../shared/compact"
 import type { AlertsEvent } from "../../shared/events"
+import { sameFiring } from "../notes"
 import type { EstateState } from "../state"
 import { serviceOf } from "./health"
 import { storeOf, storesIn } from "./stores"
@@ -16,8 +17,8 @@ const threadOf = (
   environment: string,
   alert: { readonly id: string; readonly startsAt: string },
 ) => {
-  const told = estate.threads?.find(
-    (each) => each.environment === environment && each.alert === alert.id && each.startsAt === alert.startsAt,
+  const told = estate.threads?.find((each) =>
+    sameFiring(each, { environment, alert: alert.id, startsAt: alert.startsAt }),
   )
   return told === undefined ? undefined : { url: told.url }
 }
@@ -29,9 +30,7 @@ const incidentOf = (
   alert: { readonly id: string; readonly startsAt: string },
 ) => {
   const holding = (estate.incidents ?? []).filter((incident) =>
-    incident.firings.some(
-      (each) => each.environment === environment && each.alert === alert.id && each.startsAt === alert.startsAt,
-    ),
+    incident.firings.some((each) => sameFiring(each, { environment, alert: alert.id, startsAt: alert.startsAt })),
   )
   return holding.find((incident) => incident.closedAt === undefined) ?? holding[0]
 }
@@ -71,7 +70,10 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
     ].sort((a, b) => b.at.localeCompare(a.at))
     const earlier = (estate.firings ?? [])
       .filter(
-        (firing) => firing.environment === environment && firing.alert === alert.id && firing.startsAt < alert.startsAt,
+        (firing) =>
+          firing.environment === environment &&
+          firing.alert === alert.id &&
+          Date.parse(firing.startsAt) < Date.parse(alert.startsAt),
       )
       .toSorted((a, b) => b.startsAt.localeCompare(a.startsAt))
       .slice(0, kept)
