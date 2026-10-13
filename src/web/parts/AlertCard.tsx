@@ -169,7 +169,7 @@ export const AlertCard = (props: {
       <History alert={props.alert} />
       <AroundLine alert={props.alert} />
       <Show when={props.alert.chart}>{(chart) => <Chart name={props.alert.name} chart={chart()} />}</Show>
-      <Notes alert={props.alert} />
+      <Notes alert={props.alert} folded={props.level !== 2} />
       <Show when={choosing()}>
         <Silencing alert={props.alert} close={() => setChoosing(false)} />
       </Show>
