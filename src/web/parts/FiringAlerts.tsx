@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 /**
- * Many alerts at once: past a few firing, rows, grouped where they are one problem and worst first, each opening in
- * place; a few, their cards.
+ * Many alerts at once as rows, grouped where they are one problem and worst first, each opening in place; or their
+ * cards, as the layout chosen says.
  */
 import { For, Match, Switch } from "solid-js"
 import type { Alert } from "../../shared/events"
@@ -10,13 +10,9 @@ import { AlertCard } from "./AlertCard"
 import { AlertGroup } from "./AlertGroup"
 import { AlertRow, type Shown } from "./AlertRows"
 
-/** More firing than this, and they are rows: two cards fill a laptop's width, four are about a screen. */
-const fewest = 3
-
-/** Whether these many firing show as rows rather than cards. */
-export const asRows = (alerts: ReadonlyArray<Alert>) => alerts.length > fewest
-
-export const FiringAlerts = (props: Shown & { readonly alerts: ReadonlyArray<Alert>; readonly by: GroupBy }) => (
+export const FiringAlerts = (
+  props: Shown & { readonly alerts: ReadonlyArray<Alert>; readonly by: GroupBy; readonly rows: boolean },
+) => (
   <Switch
     fallback={
       <div class="cards">
@@ -26,7 +22,7 @@ export const FiringAlerts = (props: Shown & { readonly alerts: ReadonlyArray<Ale
       </div>
     }
   >
-    <Match when={asRows(props.alerts)}>
+    <Match when={props.rows}>
       <ul class="alert-rows">
         <For each={groupedOf(props.alerts, props.by)}>
           {(entry) =>

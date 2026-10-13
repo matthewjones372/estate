@@ -79,3 +79,6 @@
 .alert-group > .alert-row .row-name {
   font-weight: 700;
 }
+.alerts-layout {
+  margin: 0;
+}
