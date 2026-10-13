@@ -7,7 +7,7 @@ import { Effect, Layer, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import type { Incident } from "../../shared/incidents"
 import { longestNote } from "../../shared/note"
-import { mergedOnce } from "../../shared/timeline"
+import { mergedOnce, seenBy } from "../../shared/timeline"
 import { firingNow, happened, happenedOnEach } from "../happened"
 import { Notes, sameFiring } from "../notes"
 import type { FiringKey } from "../notes-events"
@@ -16,7 +16,7 @@ import { Estate } from "../state"
 import { isoNow, sameInstant } from "../time"
 import { incidentNoteRoutes } from "./incident-notes"
 import { answered, keep, kept, keyOf, malformed, named, oneAtATime, open, refuse } from "./incident-record"
-import { json, refused, searchParams, withRole, writer } from "./routes"
+import { json, readsLogs, refused, searchParams, withRole, writer } from "./routes"
 
 const longestTitle = 200
 
@@ -165,14 +165,14 @@ const readRoute = HttpRouter.add(
   "GET",
   "/api/incidents/:id",
   Effect.gen(function* () {
-    yield* withRole
+    const person = yield* withRole
     const { id = "" } = yield* HttpRouter.params
     const incident = yield* named(id)
     const notes = yield* Notes
     const events = yield* Effect.forEach(incident.firings, (firing) =>
       Effect.map(notes.events(keyOf(firing)), (all) => all.map(({ startsAt: _, ...event }) => event)),
     )
-    return json({ incident, events: mergedOnce(events.flat()) })
+    return json({ incident, events: seenBy(mergedOnce(events.flat()), yield* readsLogs(person.role)) })
   }).pipe(answered),
 )
 

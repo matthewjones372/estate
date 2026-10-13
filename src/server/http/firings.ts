@@ -4,10 +4,11 @@
  */
 import { Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter } from "effect/http"
+import { seenBy } from "../../shared/timeline"
 import { Notes } from "../notes"
 import { Estate } from "../state"
 import { pastFiring } from "../views/firing"
-import { json, refused, searchParams, withRole } from "./routes"
+import { json, readsLogs, refused, searchParams, withRole } from "./routes"
 
 const FiringAsked = Schema.Struct({ env: Schema.optionalKey(Schema.String), at: Schema.optionalKey(Schema.String) })
 
@@ -37,7 +38,7 @@ export const firingEventsRoute = HttpRouter.add(
   "GET",
   "/api/firings/:id/events",
   Effect.gen(function* () {
-    yield* withRole
+    const person = yield* withRole
     const { id = "" } = yield* HttpRouter.params
     const { env: asked, at } = yield* searchParams(FiringAsked, "env and at are one each")
     const estate = yield* SubscriptionRef.get(yield* Estate)
@@ -48,7 +49,10 @@ export const firingEventsRoute = HttpRouter.add(
     )
     const startsAt = live?.startsAt ?? pastFiring(estate, environment, id, at)?.startsAt ?? at
     if (startsAt === undefined) return json({ events: [] })
-    const events = yield* (yield* Notes).events({ environment, alert: id, startsAt })
+    const events = seenBy(
+      yield* (yield* Notes).events({ environment, alert: id, startsAt }),
+      yield* readsLogs(person.role),
+    )
     return json({ events: events.map(({ environment: _, alert: __, startsAt: ___, ...event }) => event) })
   }).pipe(
     Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 503))),

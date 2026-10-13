@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { type EventKind, mergedOnce, said } from "./timeline"
+import { type EventKind, type FiringEvent, mergedOnce, said, seenBy } from "./timeline"
 
 const line = (kind: EventKind, text: string) => said({ id: "e", at: "2026-10-02T09:00:00Z", by: "gil", kind, text })
 
@@ -61,4 +61,31 @@ describe("an incident's merged events", () => {
     ])
     expect(merged.map((each) => each.id)).toEqual(["a", "b", "d", "e", "f"])
   })
+})
+
+describe("the events as a reader may see them", () => {
+  const answered = (id: string, readLogs?: boolean): FiringEvent => ({
+    id,
+    at: "2026-10-12T16:49:52Z",
+    by: "Estate",
+    kind: "ai-answered",
+    text: "lock timeout on orders_items (medium)",
+    ...(readLogs === undefined ? {} : { readLogs }),
+  })
+  const asked: FiringEvent = { id: "q", at: "2026-10-12T16:49:10Z", by: "matt", kind: "ai-asked", text: "claude" }
+  const events = [asked, answered("logs", true), answered("none", false), answered("old")]
+
+  test("keep only that an answer drawn from logs was, for one who may not read logs", () => {
+    const seen = seenBy(events, false)
+    expect(seen.map(said)).toEqual([
+      "asked AI (claude)",
+      "AI answered from logs only operators read",
+      "AI answered: lock timeout on orders_items (medium)",
+      // An answer kept before it was marked is withheld rather than guessed safe.
+      "AI answered from logs only operators read",
+    ])
+    expect(seen[1]).toEqual({ ...answered("logs", true), text: "", withheld: true })
+  })
+
+  test("are whole for one who may read logs", () => expect(seenBy(events, true)).toEqual(events))
 })
