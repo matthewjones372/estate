@@ -7,7 +7,8 @@ import { For, Show } from "solid-js"
 import type { Alert, Events } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock, counted, measured } from "../format"
-import { AlertCard } from "../parts/AlertCard"
+import { A } from "../parts/A"
+import { asRows, FiringAlerts } from "../parts/AlertRows"
 import { Feed } from "../parts/Feed"
 import { Icon } from "../parts/icons"
 import { Lanes } from "../parts/Lanes"
@@ -209,19 +210,20 @@ export const Overview = () => {
         </div>
       </section>
       <section aria-labelledby="needs" class="stack">
-        <h2 id="needs" class="section-title">
-          Needs you now
-        </h2>
+        <div class="spread">
+          <h2 id="needs" class="section-title">
+            Needs you now{firing().length === 0 ? "" : ` · ${firing().length} firing`}
+          </h2>
+          <Show when={asRows(firing())}>
+            <A to="/alerts">All on Alerts →</A>
+          </Show>
+        </div>
         <Show when={firing().length === 0}>
           <p class="muted" style={{ margin: 0 }}>
             Nothing. When something does, it appears here first.
           </p>
         </Show>
-        <div class="cards">
-          <For each={firing()}>
-            {(alert) => <AlertCard alert={alert} catalog={events().catalog} canSilence={canSilence()} />}
-          </For>
-        </div>
+        <FiringAlerts alerts={firing()} catalog={events().catalog} canSilence={canSilence()} />
         <Silenced alerts={silenced()} canSilence={canSilence()} />
       </section>
       <section aria-label="Vitals and map" class="now">

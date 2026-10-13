@@ -6,6 +6,7 @@ import { useEstate, useSnapshot } from "../context"
 import { clock, counted, duration, since } from "../format"
 import { A, Out } from "../parts/A"
 import { AlertCard } from "../parts/AlertCard"
+import { LatestNote, SeverityDot } from "../parts/AlertLine"
 import { firingPath } from "../route"
 
 type Filter = "all" | Alert["state"]
@@ -114,9 +115,7 @@ export const Alerts = () => {
                   <tr class={`row-link ${alert.state === "silenced" ? "greyed" : ""}`} onClick={openRow}>
                     <td>
                       <span class="cell-version">
-                        <span
-                          class={`dot ${alert.state === "firing" ? (alert.severity === "critical" ? "critical" : "attention") : "unknown"}`}
-                        />
+                        <SeverityDot alert={alert} />
                         {alert.state}
                       </span>
                     </td>
@@ -147,16 +146,8 @@ export const Alerts = () => {
                     </td>
                     <td class="mono">{since(alert.startsAt, now())}</td>
                     <td>
-                      <Show when={note()} fallback={<span class="muted">none</span>}>
-                        {(latest) => (
-                          <>
-                            {latest().text}
-                            <div class="cell-note">
-                              {latest().by} · {clock(latest().at)}
-                            </div>
-                          </>
-                        )}
-                      </Show>
+                      <LatestNote alert={alert} />
+                      <Show when={note()}>{(latest) => <div class="cell-note">{clock(latest().at)}</div>}</Show>
                     </td>
                     <td>
                       <div class="choices" style={{ "justify-content": "flex-end" }}>
