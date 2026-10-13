@@ -102,7 +102,7 @@ Nothing. Spec 0039's events and spec 0024's `auth.logs` are already there.
 
 ## Stack
 
-- [ ] **`spec-0041-read-logs`**: `readLogs` on the answer and on its `ai-answered` event, kept by each notes store.
+- [x] **`spec-0041-read-logs`**: `readLogs` on the answer and on its `ai-answered` event, kept by each notes store.
       Done when: in `http/ask.test.ts`, an operator's ask with `auth.logs: operator` whose brief has *Errors* answers
       `readLogs: true` and its event carries it, and a viewer's ask answers `readLogs: false`; an ask whose model
       calls `errors` and is answered is `readLogs: true`; Postgres, DynamoDB and memory each keep and read the field.
