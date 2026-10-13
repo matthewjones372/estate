@@ -140,7 +140,7 @@ test("a note added to an alert is there for everyone", async ({ page }) => {
   await card.getByRole("button", { name: /Show notes|Add a note/ }).click()
   await card.getByRole("textbox", { name: /Add a note/ }).fill("Looking: the payment provider is slow")
   await card.getByRole("button", { name: "Add note" }).click()
-  await expect(card.getByText("Looking: the payment provider is slow")).toBeVisible()
+  await expect(card.locator(".note-body").getByText("Looking: the payment provider is slow")).toBeVisible()
   await page.reload()
   const again = page.getByRole("article").filter({ hasText: "Orders are slow to place" })
   await again.getByRole("button", { name: "Show notes" }).click()
