@@ -107,7 +107,7 @@ Spec 0039's incidents, for grouping. Spec 0042's suggestions are shown on rows o
 
 ## Stack
 
-- [ ] **`spec-0044-notes-minimised`**: notes on a card among others as one line, *Show notes* opening the fold and
+- [x] **`spec-0044-notes-minimised`**: notes on a card among others as one line, *Show notes* opening the fold and
       the box; the alert's own page keeps them open.
       Done when: `notes-fold.suite.tsx` shows "Notes · 5 · latest: …" and *Show notes* on an overview card, which
       opens the newest three and the box, kept on moving away and back; the alert's page shows them open.
