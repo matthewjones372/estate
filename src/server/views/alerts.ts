@@ -86,7 +86,12 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
       incident:
         incident === undefined
           ? undefined
-          : { id: incident.id, title: incident.title, closed: incident.closedAt !== undefined },
+          : {
+              id: incident.id,
+              title: incident.title,
+              closed: incident.closedAt !== undefined,
+              openedAt: incident.openedAt,
+            },
     })
   })
   alerts.sort(

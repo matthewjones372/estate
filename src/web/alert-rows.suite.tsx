@@ -14,7 +14,8 @@ const firing = (at: number, over: Partial<Alert> = {}): Alert => ({
   name: `Firing${at}`,
   state: "firing",
   severity: "warning",
-  service: "storefront",
+  // Each on its own service, so none are grouped.
+  service: `service${at}`,
   summary: `Firing number ${at}`,
   startsAt: `2026-10-03T11:${String(30 + at).padStart(2, "0")}:00Z`,
   labels: {},
@@ -29,7 +30,8 @@ const onStore = (alert: Alert, store: string): Alert => {
 }
 
 const sent = (alerts: ReadonlyArray<Alert>) => ({ ...events, alerts: { ...events.alerts, alerts } })
-const several = (count: number) => Array.from({ length: count }, (_, at) => firing(at))
+const several = (count: number, service?: string) =>
+  Array.from({ length: count }, (_, at) => firing(at, service === undefined ? {} : { service }))
 const rows = (container: HTMLElement) => [...container.querySelectorAll(".alert-rows > li")]
 const cards = (container: HTMLElement) => container.querySelectorAll(".alert-card").length
 
@@ -43,12 +45,13 @@ describe("needs you now, with many firing", () => {
   test("shows a row each for four, with its severity, name, service, time, latest note and incident", () => {
     const alerts = [
       firing(1, {
+        service: "storefront",
         severity: "critical",
         notes: [
           { id: "n2", at: "2026-10-03T11:55:00Z", by: "ada", text: "looking at the cache\nand the pool" },
           { id: "n1", at: "2026-10-03T11:50:00Z", by: "gil", text: "older" },
         ],
-        incident: { id: "i1", title: "Checkout", closed: false },
+        incident: { id: "i1", title: "Checkout", closed: false, openedAt: "2026-10-03T11:50:00Z" },
       }),
       onStore(firing(2), "orders-db"),
       firing(3),
@@ -119,9 +122,9 @@ describe("needs you now, with many firing", () => {
 
 describe("what's happening on a service's page", () => {
   test("shows cards for three firing and rows for four", () => {
-    const three = mount(() => <ServicePage name="storefront" />, { sent: sent(several(3)) })
+    const three = mount(() => <ServicePage name="storefront" />, { sent: sent(several(3, "storefront")) })
     expect(cards(three.container)).toBe(3)
-    const four = mount(() => <ServicePage name="storefront" />, { sent: sent(several(4)) })
+    const four = mount(() => <ServicePage name="storefront" />, { sent: sent(several(4, "storefront")) })
     expect(rows(four.container)).toHaveLength(4)
     expect(cards(four.container)).toBe(0)
   })

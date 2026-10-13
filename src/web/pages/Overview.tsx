@@ -8,8 +8,8 @@ import type { Alert, Events } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock, counted, measured } from "../format"
 import { A } from "../parts/A"
-import { asRows, FiringAlerts } from "../parts/AlertRows"
 import { Feed } from "../parts/Feed"
+import { asRows, FiringAlerts } from "../parts/FiringAlerts"
 import { Icon } from "../parts/icons"
 import { Lanes } from "../parts/Lanes"
 import { EstateMap } from "../parts/Map"
@@ -223,7 +223,12 @@ export const Overview = () => {
             Nothing. When something does, it appears here first.
           </p>
         </Show>
-        <FiringAlerts alerts={firing()} catalog={events().catalog} canSilence={canSilence()} />
+        <FiringAlerts
+          alerts={firing()}
+          catalog={events().catalog}
+          canSilence={canSilence()}
+          by="incident and service"
+        />
         <Silenced alerts={silenced()} canSilence={canSilence()} />
       </section>
       <section aria-label="Vitals and map" class="now">

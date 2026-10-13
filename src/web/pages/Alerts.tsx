@@ -146,7 +146,7 @@ export const Alerts = () => {
                     </td>
                     <td class="mono">{since(alert.startsAt, now())}</td>
                     <td>
-                      <LatestNote alert={alert} />
+                      <LatestNote note={note()} />
                       <Show when={note()}>{(latest) => <div class="cell-note">{clock(latest().at)}</div>}</Show>
                     </td>
                     <td>

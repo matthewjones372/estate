@@ -72,3 +72,10 @@
   display: flex;
   margin: 6px 0 4px 30px;
 }
+/* A group's rows, under it and set in, so they read as its. */
+.alert-rows.nested {
+  margin: 6px 0 4px 30px;
+}
+.alert-group > .alert-row .row-name {
+  font-weight: 700;
+}

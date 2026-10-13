@@ -14,7 +14,10 @@ const viewer: Me = { ...operator, role: "viewer" }
 const card = (alert: Alert, me: Me = operator) =>
   mount(() => <AlertCard alert={alert} catalog={events.catalog} canSilence={me.role === "operator"} />, { me })
 
-const inIncident = (closed: boolean): Alert => ({ ...ordersSlow, incident: { id: "i1", title: "Orders slow", closed } })
+const inIncident = (closed: boolean): Alert => ({
+  ...ordersSlow,
+  incident: { id: "i1", title: "Orders slow", closed, openedAt: "2026-10-03T11:50:00Z" },
+})
 
 /** The chooser, opened from the card. */
 const choosing = async (alert: Alert = ordersSlow) => {
