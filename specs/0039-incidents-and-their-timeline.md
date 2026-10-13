@@ -139,11 +139,11 @@ Nothing. The notes database gains events and incidents (a table each in Postgres
       pages.
       Done when: a firing's and an incident's Markdown carry the header, the UTC table and the notes; the JSON
       decodes as the shared schema; a viewer's export leaves out what a viewer cannot see.
-- [ ] **`spec-0039-incident-notes-everywhere`**: an incident's notes on a past firing's page, for the incident it was
+- [x] **`spec-0039-incident-notes-everywhere`**: an incident's notes on a past firing's page, for the incident it was
       in, and in *What changed today*, labelled with the incident's title and folded when long.
       Done when: a past firing in an incident shows its notes, each naming the incident and linking to it; the feed
       shows an incident's notes in each environment it has a firing in, with its title, a long one folded.
-- [ ] **`spec-0039-feed-links`**: each change in *What changed today* opens what it is about: an alert's page while it
+- [x] **`spec-0039-feed-links`**: each change in *What changed today* opens what it is about: an alert's page while it
       fires, else its past firing; an incident; a service, agent or job; a build's own page.
       Done when: each kind's line links to its page, a note's who and what it is on rather than its *more*; the
       links are reached by keyboard and named by what they open.
