@@ -14,7 +14,11 @@ const utc = (at: string) => {
 /** A cell's text on one line, with no pipe to end the cell early. */
 const cell = (text: string) => text.replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>")
 
-const line = (label: string, value: string | undefined) => (value === undefined ? [] : [`- **${label}:** ${value}`])
+/** Text on one line: written over several, it would end the line it is on and could start a heading of its own. */
+const oneLine = (text: string) => text.replace(/\s*[\r\n]+\s*/g, " ").trim()
+
+const line = (label: string, value: string | undefined) =>
+  value === undefined ? [] : [`- **${label}:** ${oneLine(value)}`]
 
 const about = (firing: ExportedFiring) => [
   ...line("Service", firing.service),
@@ -71,7 +75,7 @@ const notes = (record: TimelineExport) => {
   const own = record.incident.notes ?? []
   const sections = [
     ...(own.length === 0 ? [] : ["### On the incident", "", ...quoted(own)]),
-    ...written.flatMap((firing) => [`### ${firing.name}, ${firing.environment}`, "", ...quoted(firing.notes)]),
+    ...written.flatMap((firing) => [`### ${oneLine(firing.name)}, ${firing.environment}`, "", ...quoted(firing.notes)]),
   ]
   return sections.length === 0 ? ["No notes were kept.", ""] : sections
 }
@@ -84,10 +88,10 @@ export const markdownOf = (record: TimelineExport): string => {
           ...incidentLines(record.incident),
           "",
           "## Firings",
-          ...record.firings.flatMap((firing) => ["", `### ${firing.name}`, "", ...about(firing)]),
+          ...record.firings.flatMap((firing) => ["", `### ${oneLine(firing.name)}`, "", ...about(firing)]),
         ]
   return [
-    `# ${record.title}`,
+    `# ${oneLine(record.title)}`,
     "",
     ...head,
     "",

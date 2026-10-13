@@ -12,8 +12,11 @@ import { before, iso } from "./time"
 import { serviceOf } from "./views/health"
 import { storeOf, storesIn } from "./views/stores"
 
-const keyOf = (firing: Pick<StoredFiring, "environment" | "alert" | "startsAt">) =>
-  `${firing.environment}\u0000${firing.alert}\u0000${firing.startsAt}`
+// By the start's instant: a store reads a start back written its own way, and it is still the firing that fires.
+const keyOf = (firing: Pick<StoredFiring, "environment" | "alert" | "startsAt">) => {
+  const at = Date.parse(firing.startsAt)
+  return `${firing.environment}\u0000${firing.alert}\u0000${Number.isNaN(at) ? firing.startsAt : at}`
+}
 
 /** What fires now in each environment whose alerts have answered, by firing; and those environments. */
 export const firingNow = (estate: EstateState) => {

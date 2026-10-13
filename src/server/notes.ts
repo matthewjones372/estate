@@ -23,7 +23,7 @@ import {
 import type { Query } from "./query"
 import type { Failure } from "./sources/run"
 import type { StoredFiring, StoredThread } from "./state"
-import { iso } from "./time"
+import { iso, sameInstant } from "./time"
 
 export type { StoredEvent } from "./notes-events"
 export type { StoredFiring, StoredThread } from "./state"
@@ -251,10 +251,11 @@ export const postgresNotes = (query: Query) => {
   )
 }
 
+/** The same firing, however each start is written: a source's own form, or a store's read back with milliseconds. */
 export const sameFiring = (
   a: Pick<StoredFiring, "environment" | "alert" | "startsAt">,
   b: Pick<StoredFiring, "environment" | "alert" | "startsAt">,
-) => a.environment === b.environment && a.alert === b.alert && a.startsAt === b.startsAt
+) => a.environment === b.environment && a.alert === b.alert && sameInstant(a.startsAt, b.startsAt)
 
 /** Notes, impacts and firings for as long as Estate runs. */
 export const memoryNotes = Layer.effect(Notes)(

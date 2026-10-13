@@ -8,21 +8,21 @@ import { HttpRouter, HttpServerRequest } from "effect/http"
 import type { Incident } from "../../shared/incidents"
 import { longestNote } from "../../shared/note"
 import { mergedOnce } from "../../shared/timeline"
-import { firingNow, happened } from "../happened"
+import { firingNow, happened, happenedOnEach } from "../happened"
 import { Notes, sameFiring } from "../notes"
 import type { FiringKey } from "../notes-events"
 import { Configured } from "../settings"
 import { Estate } from "../state"
-import { isoNow } from "../time"
+import { isoNow, sameInstant } from "../time"
 import { incidentNoteRoutes } from "./incident-notes"
-import { answered, keep, kept, keyOf, malformed, named, open, refuse } from "./incident-record"
+import { answered, keep, kept, keyOf, malformed, named, oneAtATime, open, refuse } from "./incident-record"
 import { json, refused, searchParams, withRole, writer } from "./routes"
 
 const longestTitle = 200
 
 const Opened = Schema.Struct({ title: Schema.String, environment: Schema.String, alert: Schema.String })
 const Linked = Schema.Struct({ environment: Schema.String, alert: Schema.String })
-const Unlinked = Schema.Struct({ env: Schema.String, alert: Schema.String })
+const Unlinked = Schema.Struct({ env: Schema.String, alert: Schema.String, at: Schema.optionalKey(Schema.String) })
 const Closed = Schema.Struct({ how: Schema.String })
 
 const operator = Effect.gen(function* () {
@@ -74,10 +74,12 @@ const openRoute = HttpRouter.add(
     if (title === "" || title.length > longestTitle)
       return yield* refuse(400, `an incident's title is 1 to ${longestTitle} characters`)
     const firing = yield* live(asked.environment, asked.alert)
-    const incident = yield* linked(
-      { id: crypto.randomUUID(), title, openedBy: person.name, openedAt: yield* isoNow, firings: [] },
-      firing,
-      person.name,
+    const incident = yield* oneAtATime(
+      linked(
+        { id: crypto.randomUUID(), title, openedBy: person.name, openedAt: yield* isoNow, firings: [] },
+        firing,
+        person.name,
+      ),
     )
     yield* happened(firing, person.name, "incident-opened", title)
     return json(incident, 201)
@@ -93,12 +95,16 @@ const linkRoute = HttpRouter.add(
     const asked = yield* HttpServerRequest.schemaBodyJson(Linked).pipe(
       Effect.mapError(malformed("a firing is an environment and an alert")),
     )
-    const incident = yield* open(id)
     const firing = yield* live(asked.environment, asked.alert)
-    if (incident.firings.some((one) => sameFiring(one, firing))) return json(incident)
-    const now = yield* linked(incident, firing, person.name)
-    yield* happened(firing, person.name, "incident-linked", incident.title)
-    return json(now)
+    const now = yield* oneAtATime(
+      Effect.gen(function* () {
+        const incident = yield* open(id)
+        if (incident.firings.some((one) => sameFiring(one, firing))) return { incident, linked: false }
+        return { incident: yield* linked(incident, firing, person.name), linked: true }
+      }),
+    )
+    if (now.linked) yield* happened(firing, person.name, "incident-linked", now.incident.title)
+    return json(now.incident)
   }).pipe(answered),
 )
 
@@ -108,16 +114,24 @@ const unlinkRoute = HttpRouter.add(
   Effect.gen(function* () {
     const person = yield* operator
     const { id = "" } = yield* HttpRouter.params
-    const { env, alert } = yield* searchParams(Unlinked, "env and alert name the firing")
-    const incident = yield* open(id)
-    // Its latest firing of that alert there, which is the live one if the alert still fires.
-    const firing = incident.firings
-      .filter((one) => one.environment === env && one.alert === alert)
-      .toSorted((a, b) => b.startsAt.localeCompare(a.startsAt))[0]
-    if (firing === undefined) return yield* refuse(404, `${alert} in ${env} is not part of "${incident.title}"`)
-    const now = { ...incident, firings: incident.firings.filter((one) => one !== firing) }
-    yield* keep(now)
-    yield* happened(keyOf(firing), person.name, "incident-unlinked", incident.title)
+    const { env, alert, at } = yield* searchParams(Unlinked, "env and alert name the firing, and at when it started")
+    const { now, firing } = yield* oneAtATime(
+      Effect.gen(function* () {
+        const incident = yield* open(id)
+        // The firing that started `at`; without it, its latest of that alert there, the live one if it still fires.
+        const firing = incident.firings
+          .filter(
+            (one) =>
+              one.environment === env && one.alert === alert && (at === undefined || sameInstant(one.startsAt, at)),
+          )
+          .toSorted((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0]
+        if (firing === undefined) return yield* refuse(404, `${alert} in ${env} is not part of "${incident.title}"`)
+        const now = { ...incident, firings: incident.firings.filter((one) => one !== firing) }
+        yield* keep(now)
+        return { now, firing }
+      }),
+    )
+    yield* happened(keyOf(firing), person.name, "incident-unlinked", now.title)
     return json(now)
   }).pipe(answered),
 )
@@ -134,12 +148,14 @@ const closeRoute = HttpRouter.add(
     const how = asked.how.trim()
     if (how === "" || how.length > longestNote)
       return yield* refuse(400, `how it ended is 1 to ${longestNote} characters`)
-    const incident = yield* open(id)
-    const now = { ...incident, closedBy: person.name, closedAt: yield* isoNow, ended: how }
-    yield* keep(now)
-    yield* Effect.forEach(incident.firings, (firing) => happened(keyOf(firing), person.name, "incident-closed", how), {
-      discard: true,
-    })
+    const now = yield* oneAtATime(
+      Effect.gen(function* () {
+        const now = { ...(yield* open(id)), closedBy: person.name, closedAt: yield* isoNow, ended: how }
+        yield* keep(now)
+        return now
+      }),
+    )
+    yield* happenedOnEach(now.firings.map(keyOf), person.name, "incident-closed", how)
     return json(now)
   }).pipe(answered),
 )

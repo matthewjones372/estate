@@ -66,7 +66,8 @@ export const IncidentFirings = (props: {
     if (busy() !== undefined) return
     setBusy(firing)
     setRefused(undefined)
-    void actions.unlinkIncident(props.record.incident.id, firing.environment, firing.alert).then((result) => {
+    const { environment, alert, startsAt } = firing
+    void actions.unlinkIncident(props.record.incident.id, environment, alert, startsAt).then((result) => {
       setBusy(undefined)
       if (typeof result === "string") setRefused(result)
       else props.changed()
@@ -99,6 +100,7 @@ export const IncidentFirings = (props: {
                     class="amber-button ghost"
                     disabled={busy() !== undefined}
                     aria-busy={busy() === firing}
+                    aria-label={`Unlink ${firing.name ?? firing.alert} in ${firing.environment}`}
                     onClick={() => unlink(firing)}
                   >
                     {busy() === firing ? "Unlinking…" : "Unlink"}

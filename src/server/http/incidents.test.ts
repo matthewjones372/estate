@@ -132,8 +132,8 @@ describe("incidents", () => {
         ["staging", "a2", "incident-opened", "Adoptions down"],
         ["staging", "a1", "incident-unlinked", "Chip registry slow"],
         ["staging", "a1", "incident-linked", "Adoptions down"],
+        // Closing is done to the incident, so its page says it once, though each firing keeps it.
         ["staging", "a2", "incident-closed", "registry restarted, adoptions recovering"],
-        ["staging", "a1", "incident-closed", "registry restarted, adoptions recovering"],
       ])
       expect(open).toEqual({ incidents: shown.filter((each) => each.id === ids.slow) })
       expect(staging.map((each) => [each.id, each.incident])).toEqual([

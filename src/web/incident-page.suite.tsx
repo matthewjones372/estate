@@ -67,8 +67,16 @@ describe("an incident's page", () => {
     const page = await opened("i1")
     page.click(page.button("Unlink", 1))
     await page.settle()
-    expect(page.calls).toContainEqual(["unlinkIncident", "i1", "staging", "a9"])
+    expect(page.calls).toContainEqual(["unlinkIncident", "i1", "staging", "a9", "2026-10-03T11:40:00Z"])
     expect(page.calls.filter(([name]) => name === "incident")).toHaveLength(2)
+  })
+
+  test("names the firing each Unlink would take out, for a reader that hears only the button", async () => {
+    const page = await opened("i1")
+    const named = [...page.container.querySelectorAll(".incident-firings button")].map((each) =>
+      each.getAttribute("aria-label"),
+    )
+    expect(named).toEqual(["Unlink OrdersSlow in production", "Unlink PaymentsDown in staging"])
   })
 
   test("an operator closes it with a line on how it ended, and not without one", async () => {
@@ -82,6 +90,12 @@ describe("an incident's page", () => {
     await page.settle()
     expect(page.calls).toContainEqual(["closeIncident", "i1", "the pool was resized"])
     expect(page.container.querySelector(".incident-close")).toBeNull()
+  })
+
+  test("opening Close incident… takes the focus to how it ended, since the button that opened it is gone", async () => {
+    const page = await opened("i1")
+    page.click(page.button("Close incident…"))
+    expect(document.activeElement).toBe(page.container.querySelector(".incident-close input"))
   })
 
   test("a refused change says why", async () => {

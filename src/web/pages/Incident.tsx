@@ -4,7 +4,7 @@
  * and every event of its firings merged in order, each saying which alert it was on, or that it was on the incident.
  * Incidents span environments, so it is read whole, whichever environment the page is in.
  */
-import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
+import { createEffect, createSignal, For, on, onCleanup, onMount, Show } from "solid-js"
 import type { Incident, IncidentEvent, IncidentRecord } from "../../shared/incidents"
 import { longestNote } from "../../shared/note"
 import { onIncident } from "../../shared/timeline"
@@ -66,6 +66,8 @@ const Closing = (props: { readonly incident: Incident; readonly done: () => void
         <label class="reason">
           How it ended (required, kept on its record)
           <input
+            // The button that opened this is gone, so the focus comes here rather than to the page.
+            ref={(box) => onMount(() => box.focus())}
             type="text"
             value={how()}
             maxLength={longestNote}

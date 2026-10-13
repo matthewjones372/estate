@@ -7,7 +7,8 @@ import { Effect, Option, Schema } from "effect"
 import { EventKind } from "../shared/timeline"
 import type { AwsJson } from "./aws/json"
 import { type DynamoItem, dynamoFailure, removeItems, scanItems } from "./notes-dynamodb-items"
-import type { FiringEvents, FiringKey, StoredEvent } from "./notes-events"
+import { type FiringEvents, type FiringKey, inOrder, type StoredEvent } from "./notes-events"
+import { sameInstant } from "./time"
 
 const prefix = "!event#"
 const pkOf = (firing: FiringKey) => `${prefix}${firing.environment}#${firing.alert}#`
@@ -36,18 +37,18 @@ const eventOf = (item: DynamoItem): ReadonlyArray<StoredEvent> =>
   })
 
 export const dynamoEvents = (dynamo: AwsJson, table: string): FiringEvents => ({
-  // `time` is the firing's start, so reading one firing is the same filter as the firings' own.
+  // `time` is the firing's start, matched as an instant: text compared would miss one written to the second.
   events: (firing) =>
     scanItems(dynamo, table, {
-      FilterExpression: "begins_with(pk, :firing) AND #time >= :since",
-      ExpressionAttributeNames: { "#time": "time" },
-      ExpressionAttributeValues: { ":firing": { S: pkOf(firing) }, ":since": { S: firing.startsAt } },
+      FilterExpression: "begins_with(pk, :firing)",
+      ExpressionAttributeValues: { ":firing": { S: pkOf(firing) } },
     }).pipe(
       Effect.map((items) =>
-        items
-          .filter((item) => item.time.S === firing.startsAt)
-          .flatMap(eventOf)
-          .toSorted((a, b) => a.at.localeCompare(b.at)),
+        inOrder(
+          items
+            .filter((item) => item.pk.S === pkOf(firing) && sameInstant(item.time.S, firing.startsAt))
+            .flatMap(eventOf),
+        ),
       ),
       Effect.mapError(dynamoFailure),
     ),

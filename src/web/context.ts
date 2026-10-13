@@ -57,7 +57,13 @@ export interface Actions {
   /** Each write answers with the incident as it now is, or why it could not. */
   readonly openIncident: (title: string, alert: string) => Promise<Incident | string>
   readonly linkIncident: (id: string, alert: string) => Promise<Incident | string>
-  readonly unlinkIncident: (id: string, environment: string, alert: string) => Promise<Incident | string>
+  /** Takes out the firing of `alert` in `environment` that started `startsAt`, of the several it may have had. */
+  readonly unlinkIncident: (
+    id: string,
+    environment: string,
+    alert: string,
+    startsAt: string,
+  ) => Promise<Incident | string>
   readonly closeIncident: (id: string, how: string) => Promise<Incident | string>
   readonly addIncidentNote: (id: string, text: string) => Promise<Incident | string>
   readonly removeIncidentNote: (id: string, note: string) => Promise<Incident | string>

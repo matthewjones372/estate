@@ -15,9 +15,13 @@ const event = (id: string, at: string, more: Partial<StoredEvent> = {}): StoredE
   ...more,
 })
 
-// Appended out of order, beside another firing of the same alert and one of an alert whose id starts the same.
+// Appended out of order, beside another firing of the same alert and one of an alert whose id starts the same; two
+// with the firing's start, or their own time, written to the second, as a source may write them.
 const appendAndRead = (notes: NotesService) =>
   Effect.gen(function* () {
+    yield* notes.addEvent(event("e4", "2026-10-12T16:53:00.500Z"))
+    yield* notes.addEvent(event("e3", "2026-10-12T16:53:00Z", { startsAt: "2026-10-12T16:47:58Z" }))
+    yield* notes.addEvent(event("hash", "2026-10-12T16:51:00.000Z", { alert: "a1#x" }))
     yield* notes.addEvent(event("e2", "2026-10-12T16:52:04.000Z", { kind: "silenced", link: "https://silence/1" }))
     yield* notes.addEvent(event("e1", "2026-10-12T16:49:10.000Z", { by: "Estate", kind: "fired" }))
     yield* notes.addEvent(event("old", "2026-09-01T10:00:00.000Z", { startsAt: "2026-09-01T10:00:00.000Z" }))
@@ -33,11 +37,13 @@ const expectations = ({ read, before, after, kept }: Effect.Success<ReturnType<t
   expect(read.map((each) => [each.id, each.by, each.kind])).toEqual([
     ["e1", "Estate", "fired"],
     ["e2", "matt", "silenced"],
+    ["e3", "matt", "noted"],
+    ["e4", "matt", "noted"],
   ])
   expect(read[1]).toEqual(event("e2", "2026-10-12T16:52:04.000Z", { kind: "silenced", link: "https://silence/1" }))
   expect(before.map((each) => each.id)).toEqual(["old"])
   expect(after).toEqual([])
-  expect(kept.map((each) => each.id)).toEqual(["e1", "e2"])
+  expect(kept.map((each) => each.id)).toEqual(["e1", "e2", "e3", "e4"])
 }
 
 /** A database that keeps events as Postgres would, enough for the statements the events use. */
