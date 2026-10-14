@@ -1,4 +1,5 @@
 /** The `alerts` event: firing, pending and silenced together, each with its service or store, notes and chart. */
+import { Option } from "effect"
 import { compact } from "../../shared/compact"
 import type { AlertsEvent } from "../../shared/events"
 import { sameFiring } from "../notes"
@@ -6,6 +7,7 @@ import type { EstateState } from "../state"
 import { serviceOf } from "./health"
 import { incidentOf, notesOn } from "./incident-of"
 import { storeOf, storesIn } from "./stores"
+import { suggestedFor } from "./suggested"
 
 const order = { firing: 0, pending: 1, silenced: 2 } as const
 /** How many earlier firings an alert carries to the page. */
@@ -37,7 +39,13 @@ export const impactOf = (estate: EstateState, name: string, said?: string) => {
         : { text: said, from: "rule" as const }
 }
 
-export const alertsView = (estate: EstateState, environment: string, silences: boolean): AlertsEvent => {
+/** The alerts in `environment`; with `suggestWithin`, for someone who may link, each with an incident it may belong to. */
+export const alertsView = (
+  estate: EstateState,
+  environment: string,
+  silences: boolean,
+  suggestWithin?: number,
+): AlertsEvent => {
   const state = estate.environments[environment]
   if (state === undefined) return { alerts: [], resolved: [], silences }
   const services = estate.catalog.services
@@ -73,11 +81,17 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
       })
     })
     const { expression: _, impact: said, ...shown } = alert
+    const store = storeOf(alert.labels, stores)
+    // Only a firing in no open incident is suggested, so one already in an incident is not looked at again.
+    const suggested =
+      suggestWithin === undefined || (incident !== undefined && incident.closedAt === undefined)
+        ? undefined
+        : Option.getOrUndefined(suggestedFor(estate, environment, { ...alert, service, store }, suggestWithin))
     return compact({
       ...shown,
       impact: impactOf(estate, alert.name, said),
       service,
-      store: storeOf(alert.labels, stores),
+      store,
       runbook,
       notes,
       history: history.length === 0 ? undefined : history,
@@ -92,6 +106,7 @@ export const alertsView = (estate: EstateState, environment: string, silences: b
               closed: incident.closedAt !== undefined,
               openedAt: incident.openedAt,
             },
+      suggested,
     })
   })
   alerts.sort(

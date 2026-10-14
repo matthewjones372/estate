@@ -2,12 +2,14 @@
 import { Effect, Semaphore, SubscriptionRef } from "effect"
 import type { HttpServerResponse } from "effect/http"
 import type { Incident } from "../../shared/incidents"
+import { firingNow } from "../happened"
 import { Notes } from "../notes"
 import type { FiringKey } from "../notes-events"
+import { Configured } from "../settings"
 import type { SourceFailure } from "../sources/run"
 import { Estate } from "../state"
 import { written } from "../writes"
-import { json, Refusal, refused } from "./routes"
+import { json, Refusal, refused, writer } from "./routes"
 
 export const refuse = (status: Refusal["status"], message: string): Effect.Effect<never, Refusal> =>
   Effect.fail(new Refusal({ status, body: { message } }))
@@ -26,6 +28,20 @@ export const named = (id: string) =>
 export const open = (id: string) =>
   Effect.flatMap(named(id), (incident) =>
     incident.closedAt === undefined ? Effect.succeed(incident) : refuse(400, `"${incident.title}" is closed`),
+  )
+
+/** The person changing incidents: an operator, where Estate writes. */
+export const operator = Effect.gen(function* () {
+  const person = yield* writer
+  if ((yield* Configured).readOnly === true)
+    return yield* refuse(403, "Estate is read-only here: it keeps no incidents")
+  return person.role === "operator" ? person : yield* refuse(403, "incidents are kept by operators")
+})
+
+/** The firing of `alert` in `environment` now, which only a live firing has. */
+export const live = (environment: string, alert: string) =>
+  Effect.flatMap(firingNow(environment, alert), (firing) =>
+    firing === undefined ? refuse(404, `${alert} is not firing in ${environment}`) : Effect.succeed(firing),
   )
 
 export const keyOf = ({ environment, alert, startsAt }: FiringKey): FiringKey => ({ environment, alert, startsAt })

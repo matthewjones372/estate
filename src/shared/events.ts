@@ -8,6 +8,7 @@ import { CodeHealth } from "./code"
 import { Cost } from "./costs"
 import { DeploysEvent } from "./deploys"
 import { FeedEvent } from "./feed"
+import { Suggested } from "./incidents"
 import { CardNote, Note } from "./note"
 
 export { type Build, DeploysEvent } from "./deploys"
@@ -226,6 +227,8 @@ export const Alert = Schema.Struct({
   incident: optional(
     Schema.Struct({ id: Schema.String, title: Schema.String, closed: Schema.Boolean, openedAt: Instant }),
   ),
+  /** The open incident it may belong to, for someone who may link it, and why (spec 0042). */
+  suggested: optional(Suggested),
 })
 export type Alert = typeof Alert.Type
 

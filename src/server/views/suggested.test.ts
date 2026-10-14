@@ -59,7 +59,7 @@ const firing = (id: string, name: string, minute: number, about: { service?: str
 
 const ordersSlow = held("o1", "OrdersSlow", { service: "orders" })
 const slow = incident("i1", [{ environment: "production", alert: "o1" }])
-const fromOrders = { environment: "production", alert: "o1", name: "OrdersSlow" }
+const fromOrders = { environment: "production", alert: "o1", name: "OrdersSlow", about: "orders" }
 
 describe("a firing that may belong to an incident", () => {
   test("is the same alert in another environment", () =>
@@ -96,21 +96,22 @@ describe("a firing that may belong to an incident", () => {
       Option.some({
         incident: { id: "i2", title: "Incident i2" },
         why: "same store",
-        to: { environment: "production", alert: "d1", name: "PoolFull" },
+        to: { environment: "production", alert: "d1", name: "PoolFull", about: "orders-db" },
         apart: 0,
       }),
     )
   })
 
-  test("is next to it on the map, either way, started before it", () =>
-    expect(
-      suggestedFor(
-        on([slow], [ordersSlow]),
-        "production",
-        firing("f1", "CheckoutSlow", 0, { service: "storefront" }),
-        30,
-      ).pipe(Option.map((each) => [each.why, each.apart])),
-    ).toEqual(Option.some(["next to it", 0])))
+  test("is next to it on the map, either way, said from its own side", () => {
+    const later = incident("i7", [{ environment: "production", alert: "o1" }])
+    const anchored = { ...later, firings: later.firings.map((each) => ({ ...each, startsAt: at(3) })) }
+    const near = (id: string, service: string) =>
+      suggestedFor(on([anchored], [ordersSlow]), "production", firing(id, "Slow", 0, { service }), 30).pipe(
+        Option.map((each) => [each.why, each.side, each.apart]),
+      )
+    expect(near("f1", "storefront")).toEqual(Option.some(["next to it", "calls", -3]))
+    expect(near("p1", "payments")).toEqual(Option.some(["next to it", "called by", -3]))
+  })
 
   test("is not one that started outside the window", () =>
     expect(

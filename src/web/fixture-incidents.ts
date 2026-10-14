@@ -141,6 +141,7 @@ export const incidentActions = (
   | "closeIncident"
   | "addIncidentNote"
   | "removeIncidentNote"
+  | "dismissIncident"
 > => {
   const records = new Map(incidentRecords)
   const found = (id: string) => records.get(id)?.incident
@@ -201,6 +202,13 @@ export const incidentActions = (
       calls.push(["addIncidentNote", id, text])
       const note = { id: `n${calls.length}`, at: "2026-10-03T12:00:00Z", by: "ada lovelace", text }
       return noted(id, (incident) => [...(incident.notes ?? []), note])
+    },
+    dismissIncident: (id, alert, environment) => {
+      calls.push(
+        environment === undefined ? ["dismissIncident", id, alert] : ["dismissIncident", id, alert, environment],
+      )
+      const incident = found(id)
+      return Promise.resolve(incident === undefined ? "there is no such incident" : incident)
     },
     removeIncidentNote: (id, note) => {
       calls.push(["removeIncidentNote", id, note])

@@ -16,12 +16,14 @@ import { servicesView } from "./views/services"
 export interface Viewer {
   readonly environment: string
   readonly silences: boolean
+  /** For someone who may link firings into incidents, the minutes within which one is suggested for an incident. */
+  readonly suggestWithin?: number
 }
 
 export const viewsOf = (estate: EstateState, viewer: Viewer, now: number): Events => ({
   catalog: catalogView(estate.catalog, viewer.environment),
   services: servicesView(estate, viewer.environment),
-  alerts: alertsView(estate, viewer.environment, viewer.silences),
+  alerts: alertsView(estate, viewer.environment, viewer.silences, viewer.suggestWithin),
   deploys: deploysView(estate),
   feed: feedView(estate, viewer.environment, now),
 })
@@ -123,8 +125,12 @@ export const sharedViewsLayer = Layer.effect(SharedViews)(
     const readers = yield* RcMap.make({
       lookup: (key: string) =>
         Effect.gen(function* () {
-          const [environment = "", silences] = key.split("\u0000")
-          const viewer = { environment, silences: silences === "true" }
+          const [environment = "", silences, within = ""] = key.split("\u0000")
+          const viewer = {
+            environment,
+            silences: silences === "true",
+            ...(within === "" ? {} : { suggestWithin: Number(within) }),
+          }
           const renderings = yield* PubSub.unbounded<Rendered>({ replay: 1 })
           yield* SubscriptionRef.changes(ref).pipe(
             Stream.mapEffect((estate) =>
@@ -140,7 +146,10 @@ export const sharedViewsLayer = Layer.effect(SharedViews)(
     })
     return {
       watch: (viewer: Viewer) =>
-        Effect.map(RcMap.get(readers, `${viewer.environment}\u0000${viewer.silences}`), Stream.fromPubSub),
+        Effect.map(
+          RcMap.get(readers, `${viewer.environment}\u0000${viewer.silences}\u0000${viewer.suggestWithin ?? ""}`),
+          Stream.fromPubSub,
+        ),
     }
   }),
 )

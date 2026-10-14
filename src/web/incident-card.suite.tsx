@@ -2,9 +2,11 @@
 /** An alert card's incident: run by `incident-card.test.ts` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
 import type { Alert, Me } from "../shared/events"
+import type { Suggested } from "../shared/incidents"
 import { events, operator } from "./fixture"
 import { mount } from "./harness"
 import { AlertCard } from "./parts/AlertCard"
+import { reasonOf } from "./parts/MayBelong"
 import { recording } from "./recording"
 
 const ordersSlow = events.alerts?.alerts[0] as Alert
@@ -133,5 +135,55 @@ describe("an alert's incident, on its card", () => {
     expect(page.container.querySelector(".incident-part")?.textContent).toBe("Part of Orders slow")
     expect(page.container.textContent).not.toContain("Link to incident")
     expect(page.container.textContent).not.toContain("New incident")
+  })
+
+  test("an operator sees the incident it may belong to and why, links it, or says it is not part of it", async () => {
+    const may: Alert = {
+      ...ordersSlow,
+      suggested: {
+        incident: { id: "i1", title: "Chip registry slow" },
+        why: "next to it",
+        side: "calls",
+        to: { environment: "production", alert: "a5", name: "ChipRegistryUnreachable", about: "chip-registry" },
+        apart: 4,
+      },
+    }
+    const page = card(may)
+    expect(page.container.querySelector(".incident-suggested p")?.textContent).toBe(
+      'May be part of "Chip registry slow": storefront calls chip-registry, and it fired 4 min after ChipRegistryUnreachable.',
+    )
+    page.click(page.button("Link"))
+    await page.settle()
+    expect(page.calls).toContainEqual(["linkIncident", "i1", "a1"])
+    page.click(page.button("Not this"))
+    await page.settle()
+    expect(page.calls).toContainEqual(["dismissIncident", "i1", "a1"])
+    expect(card(may, viewer).container.querySelector(".incident-suggested")).toBeNull()
+  })
+
+  test("each reason says how the two are related and when it fired, and a refusal says why", async () => {
+    const to = { environment: "production", alert: "a5", name: "PoolFull", about: "orders-db" }
+    const one = (why: Suggested["why"], apart: number, side?: Suggested["side"]): Suggested => ({
+      incident: { id: "i2", title: "Checkout down" },
+      why,
+      to,
+      apart,
+      ...(side === undefined ? {} : { side }),
+    })
+    expect(reasonOf(one("same alert", -2), "orders")).toBe(
+      "the same alert is part of it in production, and this one fired 2 min before it",
+    )
+    expect(reasonOf(one("same store", 0), "orders-db")).toBe(
+      "it is on orders-db too, and it fired in the same minute as PoolFull",
+    )
+    expect(reasonOf(one("next to it", 1, "called by"), "orders")).toBe(
+      "orders-db calls orders, and it fired 1 min after PoolFull",
+    )
+    const page = card({ ...ordersSlow, suggested: one("same service", 3) })
+    page.click(page.button("Link"))
+    await page.settle()
+    expect(page.container.querySelector('.incident-suggested [role="alert"]')?.textContent).toBe(
+      '"Checkout down" is closed',
+    )
   })
 })

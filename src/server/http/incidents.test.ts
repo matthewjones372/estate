@@ -84,6 +84,10 @@ const story = Effect.gen(function* () {
 const linkedBy = (environment: string, alert: string, name: string) =>
   expect.objectContaining({ environment, alert, name, startsAt: "2026-10-12T16:47:58Z", linkedBy: "gil" })
 
+const a1 = { environment: "staging", alert: "a1" }
+const dismiss = (id: string) =>
+  sending("POST", `/api/incidents/${id}/dismissed`, { environment: "staging", alert: "a2" })
+
 describe("incidents", () => {
   test("are opened, linked, moved, unlinked and closed, each step an event on its firings, each firing named", () =>
     Effect.runPromise(story).then(({ statuses, ids, shown, kept, a1, a2, a3, read, open, staging, production }) => {
@@ -237,5 +241,47 @@ describe("incidents", () => {
       expect(statuses).toEqual([400, 400, 404, 404, 400, 404, 400, 404, 400, 404, 404])
       expect(after).toEqual([400, 400])
       expect(readOnly).toBe(403)
+    }))
+
+  test("a firing said not to belong is kept on the record with who said so, an event, and is suggested no more", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const related = (id: string, name: string, service: string) => ({ ...firing(id, name), labels: { service } })
+        const alerts = [related("a1", "OrdersSlow", "orders"), related("a2", "CheckoutSlow", "storefront")]
+        const near = estate({ environments: { staging: environment({ alerts: { state: "ok", value: alerts } }) } })
+        const server = yield* serverFor(operator, near)
+        const opened = yield* ask(server, sending("POST", "/api/incidents", { title: "Orders slow", ...a1 }))
+        const id = (opened.json() as Incident).id
+        const ref = Context.get(server.context, Estate)
+        const suggested = Effect.map(
+          SubscriptionRef.get(ref),
+          (state) => alertsView(state, "staging", false, 30).alerts.find((each) => each.id === "a2")?.suggested?.why,
+        )
+        const before = yield* suggested
+        const said = yield* ask(server, dismiss(id))
+        const again = yield* ask(server, dismiss(id))
+        const own = yield* ask(server, sending("POST", `/api/incidents/${id}/dismissed`, a1))
+        const refusals = [
+          yield* ask(yield* serverFor(viewer, near), dismiss(id)),
+          yield* ask(yield* serverFor({ ...operator, readOnly: true }, near), dismiss(id)),
+        ]
+        const state = yield* SubscriptionRef.get(ref)
+        return {
+          before,
+          after: yield* suggested,
+          status: [said.status, again.status, own.status],
+          dismissed: state.incidents?.find((each) => each.id === id)?.dismissed,
+          events: yield* eventsOf(server, "staging", "a2"),
+          refused: refusals.map((each) => each.status),
+        }
+      }),
+    ).then(({ before, after, status, dismissed, events, refused }) => {
+      // Said twice is kept once; one of its own firings is unlinked rather than dismissed.
+      expect([before, after, status]).toEqual(["next to it", undefined, [200, 200, 400]])
+      expect(dismissed).toEqual([
+        { environment: "staging", alert: "a2", startsAt: "2026-10-12T16:47:58Z", by: "gil", at: expect.any(String) },
+      ])
+      expect(events).toEqual([["gil", "incident-dismissed", "Orders slow"]])
+      expect(refused).toEqual([403, 403])
     }))
 })
