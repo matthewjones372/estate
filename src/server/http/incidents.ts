@@ -8,15 +8,27 @@ import { HttpRouter, HttpServerRequest } from "effect/http"
 import type { Incident } from "../../shared/incidents"
 import { longestNote } from "../../shared/note"
 import { mergedOnce, seenBy } from "../../shared/timeline"
-import { firingNow, happened, happenedOnEach } from "../happened"
+import { happened, happenedOnEach } from "../happened"
 import { Notes, sameFiring } from "../notes"
 import type { FiringKey } from "../notes-events"
-import { Configured } from "../settings"
 import { Estate } from "../state"
 import { isoNow, sameInstant } from "../time"
+import { incidentDismissedRoute } from "./incident-dismissed"
 import { incidentNoteRoutes } from "./incident-notes"
-import { answered, keep, kept, keyOf, malformed, named, oneAtATime, open, refuse } from "./incident-record"
-import { json, readsLogs, refused, searchParams, withRole, writer } from "./routes"
+import {
+  answered,
+  keep,
+  kept,
+  keyOf,
+  live,
+  malformed,
+  named,
+  oneAtATime,
+  open,
+  operator,
+  refuse,
+} from "./incident-record"
+import { json, readsLogs, refused, searchParams, withRole } from "./routes"
 
 const longestTitle = 200
 
@@ -24,18 +36,6 @@ const Opened = Schema.Struct({ title: Schema.String, environment: Schema.String,
 const Linked = Schema.Struct({ environment: Schema.String, alert: Schema.String })
 const Unlinked = Schema.Struct({ env: Schema.String, alert: Schema.String, at: Schema.optionalKey(Schema.String) })
 const Closed = Schema.Struct({ how: Schema.String })
-
-const operator = Effect.gen(function* () {
-  const person = yield* writer
-  if ((yield* Configured).readOnly === true)
-    return yield* refuse(403, "Estate is read-only here: it keeps no incidents")
-  return person.role === "operator" ? person : yield* refuse(403, "incidents are kept by operators")
-})
-
-const live = (environment: string, alert: string) =>
-  Effect.flatMap(firingNow(environment, alert), (firing) =>
-    firing === undefined ? refuse(404, `${alert} is not firing in ${environment}`) : Effect.succeed(firing),
-  )
 
 /** What a firing is called, for the incident to keep; apart from the key, which is spread into the firing's events. */
 const nameOf = (firing: FiringKey) =>
@@ -197,4 +197,5 @@ export const incidentRoutes = Layer.mergeAll(
   readRoute,
   listRoute,
   incidentNoteRoutes,
+  incidentDismissedRoute,
 )

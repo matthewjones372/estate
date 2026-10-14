@@ -58,7 +58,15 @@ export type IncidentRecord = typeof IncidentRecord.Type
 export const Suggested = Schema.Struct({
   incident: Schema.Struct({ id: Schema.String, title: Schema.String }),
   why: Schema.Literals(["same alert", "same service", "same store", "next to it"]),
-  to: Schema.Struct({ environment: Schema.String, alert: Schema.String, name: Schema.String }),
+  /** Next to it on the map: whether this firing's service or store calls the other's, or is called by it. */
+  side: optional(Schema.Literals(["calls", "called by"])),
+  to: Schema.Struct({
+    environment: Schema.String,
+    alert: Schema.String,
+    name: Schema.String,
+    /** The service or store it is about, where Estate knows it. */
+    about: optional(Schema.String),
+  }),
   /** Minutes from the incident's firing's start to this one's: negative when this one started first. */
   apart: Schema.Number,
 })

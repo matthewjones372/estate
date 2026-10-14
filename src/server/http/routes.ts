@@ -6,6 +6,7 @@ import { streamClosed, streamOpened } from "../observed"
 import { awaited, Roles, spoken } from "../role"
 import { Configured } from "../settings"
 import { secondsIn } from "../settings-every"
+import { suggestWithin } from "../settings-incidents"
 import { silencerOf } from "../sources/silencers"
 import { Estate, type EstateState } from "../state"
 import { eventStream, SharedViews } from "../stream"
@@ -164,8 +165,11 @@ const events = HttpRouter.add("GET", "/events", (request) =>
       settings.readOnly !== true &&
       silencerOf(settings.sources[found.sources] ?? {}) !== undefined
     const lastEventId = request.headers["last-event-id"]
+    // Suggestions are offers to link, so only someone who may link is sent them.
+    const links = person.role === "operator" && settings.readOnly !== true
+    const viewer = { environment, silences, ...(links ? { suggestWithin: suggestWithin(settings.incidents) } : {}) }
     yield* streamOpened
-    const body = eventStream({ environment, silences }, lastEventId).pipe(
+    const body = eventStream(viewer, lastEventId).pipe(
       Stream.provideService(SharedViews, yield* SharedViews),
       Stream.encodeText,
       Stream.ensuring(streamClosed),

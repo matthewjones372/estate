@@ -4,6 +4,7 @@
  * Time alone is never enough.
  */
 import { Option } from "effect"
+import { compact } from "../../shared/compact"
 import type { Alert } from "../../shared/events"
 import type { Incident, Suggested } from "../../shared/incidents"
 import { sameFiring } from "../notes"
@@ -12,7 +13,10 @@ import { serviceOf } from "./health"
 import { neighboursOf } from "./neighbours"
 import { storeOf, storesIn } from "./stores"
 
-type Firing = Pick<Alert, "id" | "name" | "state" | "startsAt" | "service" | "store">
+type Firing = Pick<Alert, "id" | "name" | "state" | "startsAt"> & {
+  readonly service?: string | undefined
+  readonly store?: string | undefined
+}
 type Why = Suggested["why"]
 
 /** Strongest first, for a firing that fits more than one incident. */
@@ -42,17 +46,20 @@ const anchorOf = (estate: EstateState, firing: Incident["firings"][number]): Anc
   return { ...key, name: kept?.name ?? firing.name ?? firing.alert, service: kept?.service, store: kept?.store }
 }
 
-const relationOf = (estate: EstateState, environment: string, alert: Firing, anchor: Anchor): Why | undefined => {
-  if (anchor.environment !== environment) return anchor.name === alert.name ? "same alert" : undefined
-  if (alert.service !== undefined && alert.service === anchor.service) return "same service"
-  if (alert.store !== undefined && alert.store === anchor.store) return "same store"
+type Relation = Pick<Suggested, "why" | "side">
+
+const relationOf = (estate: EstateState, environment: string, alert: Firing, anchor: Anchor): Relation | undefined => {
+  if (anchor.environment !== environment) return anchor.name === alert.name ? { why: "same alert" } : undefined
+  if (alert.service !== undefined && alert.service === anchor.service) return { why: "same service" }
+  if (alert.store !== undefined && alert.store === anchor.store) return { why: "same store" }
   const subject = alert.service ?? alert.store
   const other = anchor.service ?? anchor.store
-  return subject !== undefined &&
-    other !== undefined &&
-    neighboursOf(estate, other).some((each) => each.name === subject)
-    ? "next to it"
-    : undefined
+  const next =
+    subject === undefined || other === undefined
+      ? undefined
+      : neighboursOf(estate, other).find((each) => each.name === subject)
+  // The map says how the other is placed to this one; the card says it from this one's side.
+  return next === undefined ? undefined : { why: "next to it", side: next.side === "calls" ? "called by" : "calls" }
 }
 
 const minute = 60_000
@@ -75,14 +82,15 @@ export const suggestedFor = (
         const since = Date.parse(alert.startsAt) - Date.parse(one.startsAt)
         if (Math.abs(since) > within * minute) return []
         const anchor = anchorOf(estate, one)
-        const why = relationOf(estate, environment, alert, anchor)
-        return why === undefined
+        const relation = relationOf(estate, environment, alert, anchor)
+        const about = anchor.service ?? anchor.store
+        return relation === undefined
           ? []
           : [
               {
                 incident: { id: incident.id, title: incident.title },
-                why,
-                to: { environment: anchor.environment, alert: anchor.alert, name: anchor.name },
+                ...relation,
+                to: compact({ environment: anchor.environment, alert: anchor.alert, name: anchor.name, about }),
                 apart: Math.round(since / minute),
               },
             ]

@@ -15,6 +15,7 @@ import { Impact } from "./Impact"
 import { IncidentChooser, LinkToIncident, PartOf } from "./IncidentLink"
 import { Icon } from "./icons"
 import { ErrorList } from "./LogErrors"
+import { MayBelong } from "./MayBelong"
 import { Notes } from "./Notes"
 import { Plot } from "./Plot"
 import { RaiseIncident } from "./RaiseIncident"
@@ -166,6 +167,11 @@ export const AlertCard = (props: {
       </div>
       <Impact alert={props.alert} />
       <PartOf incident={props.alert.incident} />
+      <MayBelong
+        suggested={props.alert.suggested}
+        subject={props.alert.service ?? props.alert.store}
+        alert={props.alert.id}
+      />
       <History alert={props.alert} />
       <AroundLine alert={props.alert} />
       <Show when={props.alert.chart}>{(chart) => <Chart name={props.alert.name} chart={chart()} />}</Show>
