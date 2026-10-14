@@ -10,6 +10,9 @@ import { recording } from "./recording"
 import { firingPath } from "./route"
 
 const viewer: Me = { ...operator, role: "viewer" }
+const raising: Me = { ...operator, incidentTool: "PagerDuty" }
+
+const inTool = (container: HTMLElement) => container.querySelector(".incident-tool")
 
 const rows = (container: HTMLElement) =>
   [...container.querySelectorAll(".timeline li")].map((row) => row.textContent?.replace(/\s+/g, " ").trim())
@@ -212,5 +215,37 @@ describe("an incident's page", () => {
     expect(page.calls).toContainEqual(["dismissIncident", "i1", "a8", "staging"])
     expect(page.container.querySelector(".incident-may-belong")).toBeNull()
     expect((await opened("i1", viewer)).container.querySelector(".incident-may-belong")).toBeNull()
+  })
+
+  test("an operator raises it in the incident tool, and then it links to it there", async () => {
+    const page = await opened("i1", raising)
+    page.click(page.button("Raise in PagerDuty"))
+    expect(page.button(/Raising…/).getAttribute("aria-busy")).toBe("true")
+    await page.settle()
+    expect(page.calls).toContainEqual(["raiseIncident", "i1"])
+    expect(inTool(page.container)?.textContent).toBe("In PagerDuty: Open in PagerDuty")
+    const link = inTool(page.container)?.querySelector("a")
+    expect(link?.getAttribute("href")).toBe("https://example.pagerduty.com/incidents/Q1ABC")
+    expect(page.container.textContent).not.toContain("Raise in PagerDuty")
+  })
+
+  test("a raise the tool refuses says why, in its words", async () => {
+    const page = await opened("i2", raising)
+    page.click(page.button("Raise in PagerDuty"))
+    await page.settle()
+    expect(inTool(page.container)?.querySelector('[role="alert"]')?.textContent).toBe(
+      "PagerDuty answered 400: Invalid Input Provided: Service not found",
+    )
+  })
+
+  test("only an operator raises an open incident, and only where a tool is set", async () => {
+    for (const [id, me] of [
+      ["i1", { ...raising, role: "viewer" }],
+      ["i1", { ...raising, readOnly: true }],
+      ["i1", operator],
+      ["i3", raising],
+    ] as const) {
+      expect((await opened(id, me)).container.textContent).not.toContain("Raise in")
+    }
   })
 })

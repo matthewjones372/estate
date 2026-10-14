@@ -186,4 +186,53 @@ describe("an alert's incident, on its card", () => {
       '"Checkout down" is closed',
     )
   })
+
+  test("where a tool is set, one press on a card in no incident opens one titled with its summary and raises it", async () => {
+    const page = card(ordersSlow, { ...operator, incidentTool: "PagerDuty" })
+    expect([...page.container.querySelectorAll("a")].some((each) => each.textContent === "Raise incident")).toBe(false)
+    page.click(page.button("Raise in PagerDuty"))
+    expect(page.button(/Raising…/).disabled).toBe(true)
+    await page.settle()
+    await page.settle()
+    expect(page.calls).toContainEqual(["openIncident", "Orders are slow", "a1"])
+    expect(page.calls).toContainEqual(["raiseIncident", "i9"])
+  })
+
+  test("a card in an open incident raises that one, or opens it in the tool once raised", async () => {
+    const tool: Me = { ...operator, incidentTool: "PagerDuty" }
+    const page = card(inIncident(false), tool)
+    page.click(page.button("Raise in PagerDuty"))
+    await page.settle()
+    expect(page.calls.filter(([name]) => name === "openIncident" || name === "raiseIncident")).toEqual([
+      ["raiseIncident", "i1"],
+    ])
+    const link = "https://example.pagerduty.com/incidents/Q1ABC"
+    const raised = card(
+      { ...ordersSlow, incident: { id: "i1", title: "Orders slow", closed: false, openedAt: "", link } },
+      tool,
+    )
+    const open = [...raised.container.querySelectorAll("a")].find((each) => each.textContent === "Open in PagerDuty")
+    expect(open?.getAttribute("href")).toBe(link)
+    expect(raised.container.textContent).not.toContain("Raise in PagerDuty")
+  })
+
+  test("a raise refused says why on the card, and a viewer keeps the catalog's link out", async () => {
+    const page = card(
+      { ...ordersSlow, incident: { id: "i2", title: "Checkout down", closed: false, openedAt: "" } },
+      {
+        ...operator,
+        incidentTool: "PagerDuty",
+      },
+    )
+    page.click(page.button("Raise in PagerDuty"))
+    await page.settle()
+    expect(page.container.querySelector('.raise-incident [role="alert"]')?.textContent).toBe(
+      "PagerDuty answered 400: Invalid Input Provided: Service not found",
+    )
+    const viewing = card(ordersSlow, { ...viewer, incidentTool: "PagerDuty" })
+    expect(viewing.container.textContent).not.toContain("Raise in PagerDuty")
+    expect([...viewing.container.querySelectorAll("a")].some((each) => each.textContent === "Raise incident")).toBe(
+      true,
+    )
+  })
 })

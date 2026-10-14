@@ -70,6 +70,8 @@ export interface Actions {
   readonly removeIncidentNote: (id: string, note: string) => Promise<Incident | string>
   /** *Not this*: the firing of `alert`, in `environment` or the page's, is not part of the incident. */
   readonly dismissIncident: (id: string, alert: string, environment?: string) => Promise<Incident | string>
+  /** Raises the incident in the incident tool, or answers with its link there if it was raised already. */
+  readonly raiseIncident: (id: string) => Promise<Incident | string>
   /** A firing's or an incident's timeline as Markdown, to copy: its text, or why it could not be read. */
   readonly timelineMarkdown: (of: Exported) => Promise<{ readonly text: string } | string>
 }

@@ -7,6 +7,7 @@ import { awaited, Roles, spoken } from "../role"
 import { Configured } from "../settings"
 import { secondsIn } from "../settings-every"
 import { suggestWithin } from "../settings-incidents"
+import { incidentToolOf } from "../sources/incident-tool-of"
 import { silencerOf } from "../sources/silencers"
 import { Estate, type EstateState } from "../state"
 import { eventStream, SharedViews } from "../stream"
@@ -128,6 +129,7 @@ const me = HttpRouter.add(
     const person = yield* withRole
     const { catalog } = yield* SubscriptionRef.get(yield* Estate)
     const settings = yield* Configured
+    const tool = incidentToolOf(settings)
     const body: Me = {
       name: person.name,
       role: person.role,
@@ -136,6 +138,7 @@ const me = HttpRouter.add(
       ...(person.kiosk === true ? { kiosk: true } : {}),
       ...(settings.ai === undefined ? {} : { ai: true }),
       ...(settings.slack === undefined || settings.readOnly === true ? {} : { slack: true }),
+      ...(tool === undefined || settings.readOnly === true ? {} : { incidentTool: tool.name }),
       ...(settings.auth.logs === "operator" ? { logsForOperators: true } : {}),
       ...(settings.kiosk === undefined
         ? {}

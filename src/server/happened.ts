@@ -52,7 +52,8 @@ export const happenedOnEach = (
   by: string,
   kind: EventKind,
   text: string,
+  more: More = {},
 ): Effect.Effect<void, never, Notes> =>
   Effect.flatMap(isoNow, (at) =>
-    Effect.forEach(firings, (firing) => kept(firing, at, by, kind, text), { discard: true }),
+    Effect.forEach(firings, (firing) => kept(firing, at, by, kind, text, more), { discard: true }),
   )

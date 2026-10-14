@@ -21,6 +21,7 @@ export const EventKind = Schema.Literals([
   "incident-noted",
   "incident-note-removed",
   "incident-dismissed",
+  "incident-raised",
 ])
 export type EventKind = typeof EventKind.Type
 
@@ -93,12 +94,17 @@ export const said = (event: FiringEvent): string => {
       return `removed from the incident ${event.text}`
     case "incident-dismissed":
       return `said not part of incident "${event.text}"`
+    case "incident-raised":
+      return `raised in ${event.text}`
   }
 }
 
 /** Whether an event was on the incident rather than one firing: kept on each of its firings, the same each time. */
 export const onIncident = (event: Pick<FiringEvent, "kind">) =>
-  event.kind === "incident-noted" || event.kind === "incident-note-removed" || event.kind === "incident-closed"
+  event.kind === "incident-noted" ||
+  event.kind === "incident-note-removed" ||
+  event.kind === "incident-closed" ||
+  event.kind === "incident-raised"
 
 /**
  * An incident's events from all its firings, in time order, with an event on the incident shown once: its copies
