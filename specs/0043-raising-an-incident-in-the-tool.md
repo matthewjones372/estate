@@ -69,10 +69,14 @@ incidentTool:
     every: 1m                   # how often an open incident is read back
 ```
 
-Raising is `POST /incidents` with `incident_key` set to Estate's incident id, the title, `urgency: high` when any of
-its firings is critical, and a body naming each firing, its service and environment, the impact, the link back to
-`/incidents/:id`, and "Raised from Estate by matt". Reading back is `GET /incidents/:id`: its `status`, its
-`priority` (else `urgency`), and its `assignments`' assignees as the responders.
+Raising is `POST /incidents` (with the `From` header, which PagerDuty requires) with `incident_key` set to Estate's
+incident id, the title, `urgency: high` when any of its firings is critical, and a body naming each firing, its
+service and environment, the impact, the link back to `/incidents/:id`, and "Raised from Estate by matt". PagerDuty
+rejects a second raise with the same `incident_key` on the same service while the first is open, rather than handing
+it back, so Estate's own `raised` record is what makes raising twice raise once. A raise whose answer was lost is
+found again with `GET /incidents?incident_key=<Estate's id>`. Reading back is `GET /incidents/:id`: its `status`, its
+`priority` (else `urgency`, since an account may have no priorities), its `assignments`' assignees as the responders,
+and its `html_url` as the link.
 
 A catalog team may name its own PagerDuty service, so payments' incidents go to payments' service:
 
@@ -120,21 +124,21 @@ out, unchanged.
 **Read back, not stored.** Every `every`, Estate reads each open incident that was raised, and keeps what the tool
 said in its state, as it keeps every source's answer. It is not written to the notes store: the tool keeps it. A
 tool that does not answer turns off its line on the page ("PagerDuty did not answer: 503") and nothing else. Without
-`incidentTool`, the parts are off and the page is as it is now. `estate doctor` reads the configured service once
-and says whether the token and `from` work.
+`incidentTool`, the parts are off and the page is as it is now. `estate doctor` reads the configured service once,
+which proves the token, and looks `from` up among the account's users, since only a write would otherwise prove it.
 
-**incident.io next, then Opsgenie**, behind the same interface:
+**incident.io next, then Jira Service Management**, behind the same interface:
 
 ```yaml
 incidentTool:
-  incidentio: { token: ${INCIDENTIO_TOKEN}, severity: Minor }   # POST /v2/incidents, GET /v2/incidents/:id
-  # or
-  opsgenie: { apiKey: ${OPSGENIE_KEY}, url: https://api.eu.opsgenie.com }
+  incidentio: { token: ${INCIDENTIO_TOKEN}, severity: Minor, mode: standard }   # POST /v2/incidents
 ```
 
-One tool an Estate. incident.io raises with `idempotency_key` as the key, and reads back its status, severity and
-role assignments. Opsgenie's Incident API creates asynchronously, so raising waits on its request's id for the
-incident's.
+One tool an Estate. incident.io raises with `idempotency_key` as the key, `visibility`, the title as `name`, and the
+`severity_id` looked up from the configured severity's name, since the API takes an id. `mode: test` raises without
+announcing, for a demo; a `standard` raise is announced and may open a Slack or Teams channel. It reads back
+`incident_status` (its name and category), `severity` and `incident_role_assignments`, and `permalink` as the link.
+Jira Service Management, where Atlassian moves Opsgenie's customers, is the third kind, built when someone asks.
 
 **Who and when.** Raising is for operators, as opening and linking incidents are (`operator` in `incidents.ts`).
 `readOnly: true` raises nothing and hides the button; reading back still runs, since it writes nothing.
@@ -156,8 +160,7 @@ not support.
 ## Depends on
 
 Spec 0039's incidents. A PagerDuty REST API key and a PagerDuty user's email for `from`; an incident.io API key with
-permission to create incidents; Opsgenie's Incident API, which is on its Standard plan and above. Until a team sets
-`incidentTool`, Estate links out as now.
+permission to create incidents. Until a team sets `incidentTool`, Estate links out as now.
 
 ## Stack
 
@@ -180,9 +183,9 @@ permission to create incidents; Opsgenie's Incident API, which is on its Standar
 - [ ] **`spec-0043-incident-io`**: the incident.io kind.
       Done when: `incidentio.test.ts`, against a stub, raises with the idempotency key and reads back status,
       severity and role assignments into the same `InTool`.
-- [ ] **`spec-0043-opsgenie`**: the Opsgenie kind, built only when someone asks for it.
-      Done when: `opsgenie.test.ts`, against a stub, raises, waits on the request for the incident's id, and reads
-      it back.
+- [ ] **`spec-0043-jsm`**: the Jira Service Management kind, built only when someone asks for it.
+      Done when: `jsm.test.ts`, against a stub of its API, raises an incident and reads its status and responders
+      back into the same `InTool`.
 
 ## Acceptance
 
@@ -202,12 +205,11 @@ PagerDuty*, acknowledge it in PagerDuty, and within a minute the incident's page
   own spec after this one: *Tell the team* on the incident's page posts once, and its firings' notes, silences and
   ends reply in that thread instead of their own; it changes the threads' key, which touches notes, silences and
   tell, and is more than this spec's entries should carry.
-- **Push the Markdown export into the tool's postmortem on close?** PagerDuty's and incident.io's postmortems are
-  written in their own editors, and their public APIs do not offer a postmortem body to write. Recommended: not now;
-  on close, a note on the tool's incident (PagerDuty's `POST /incidents/:id/notes`) with the export's link, as a
-  later entry once raising is used.
+- **Push the Markdown export into the tool's postmortem on close?** PagerDuty's public API has no postmortem endpoint;
+  incident.io's can import a Markdown postmortem (`import_postmortem_document`). Recommended: not now; later, on
+  close, the export as incident.io's postmortem, and as a note on PagerDuty's incident (`POST /incidents/:id/notes`)
+  with the export's link, once raising is used.
 - **Which PagerDuty service when the firings belong to different teams?** Recommended: the first firing's team's,
   else the settings' `service`; the body lists every firing and its team.
-- **Opsgenie at all?** Atlassian has announced the end of Opsgenie in favour of Jira Service Management and Compass.
-  Recommended: keep the entry, build it only when asked, and prefer a Jira Service Management kind if that is what
-  is asked for.
+- **Opsgenie at all?** Decided: no. Atlassian stopped selling Opsgenie on 4 June 2025 and shuts it off on 5 April
+  2027, moving customers to Jira Service Management or Compass, so the third kind is Jira Service Management.
