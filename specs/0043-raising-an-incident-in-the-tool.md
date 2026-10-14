@@ -180,7 +180,7 @@ permission to create incidents. Until a team sets `incidentTool`, Estate links o
       incident's page; a tool that fails turns off only its line; `estate doctor` says whether the tool answers.
       Done when: against the stub, the page shows "acknowledged · P2 · ada, gil" and its link; a stub answering 503
       shows "PagerDuty did not answer" and the rest of the page; `doctor.test.ts` reports a bad token.
-- [ ] **`spec-0043-incident-io`**: the incident.io kind.
+- [x] **`spec-0043-incident-io`**: the incident.io kind.
       Done when: `incidentio.test.ts`, against a stub, raises with the idempotency key and reads back status,
       severity and role assignments into the same `InTool`.
 - [ ] **`spec-0043-jsm`**: the Jira Service Management kind, built only when someone asks for it.
