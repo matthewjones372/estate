@@ -164,7 +164,7 @@ permission to create incidents. Until a team sets `incidentTool`, Estate links o
 
 ## Stack
 
-- [ ] **`spec-0043-port`**: `IncidentTool`, the PagerDuty kind, `incidentTool.pagerduty` in the settings and a
+- [x] **`spec-0043-port`**: `IncidentTool`, the PagerDuty kind, `incidentTool.pagerduty` in the settings and a
       team's own service in the catalog, checked at start.
       Done when: `pagerduty.test.ts`, against a stub of PagerDuty's API, raises with the token, `From`, the
       incident key, the title, the urgency and a body with each firing and the link back, and reads status,
