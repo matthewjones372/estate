@@ -59,6 +59,9 @@ const searchSlow: Incident = {
 
 const openIncidents: ReadonlyArray<Incident> = [ordersSlow, checkoutDown]
 
+/** The firing of Orders slow that the firings that may belong to it are like. */
+const inOrdersSlow = { environment: "production", alert: "a1", name: "OrdersSlow", about: "storefront" }
+
 const incidentRecords: ReadonlyMap<string, IncidentRecord> = new Map([
   [
     "i1",
@@ -120,6 +123,26 @@ const incidentRecords: ReadonlyMap<string, IncidentRecord> = new Map([
           text: "after 15 min",
         },
       ],
+      suggested: [
+        {
+          environment: "production",
+          alert: "a3",
+          name: "QueueGrowing",
+          about: "storefront",
+          why: "same service",
+          to: inOrdersSlow,
+          apart: 12,
+        },
+        {
+          environment: "staging",
+          alert: "a8",
+          name: "OrdersSlow",
+          about: "storefront",
+          why: "same alert",
+          to: inOrdersSlow,
+          apart: -1,
+        },
+      ],
     },
   ],
   ["i2", { incident: checkoutDown, events: [] }],
@@ -155,6 +178,19 @@ export const incidentActions = (
     records.set(id, { ...record, incident })
     return Promise.resolve(incident)
   }
+  /** The record without `alert` among what may belong to it, and with `firings`, as the server would read it back. */
+  const mayBelongNo = (
+    id: string,
+    alert: string,
+    firings: (incident: Incident) => Incident["firings"],
+  ): Promise<Incident | string> => {
+    const record = records.get(id)
+    if (record === undefined) return Promise.resolve("there is no such incident")
+    const incident: Incident = { ...record.incident, firings: firings(record.incident) }
+    const suggested = (record.suggested ?? []).filter((each) => each.alert !== alert)
+    records.set(id, { ...record, incident, suggested })
+    return Promise.resolve(incident)
+  }
   return {
     incidents: () => {
       calls.push(["incidents"])
@@ -175,8 +211,16 @@ export const incidentActions = (
       })
     },
     // Checkout down closed in the meantime, so linking to it is refused.
-    linkIncident: (id, alert) => {
-      calls.push(["linkIncident", id, alert])
+    linkIncident: (id, alert, environment) => {
+      calls.push(environment === undefined ? ["linkIncident", id, alert] : ["linkIncident", id, alert, environment])
+      const may = records.get(id)?.suggested?.find((each) => each.alert === alert && each.environment === environment)
+      if (may !== undefined) {
+        const firing = { environment: may.environment, alert, name: may.name, startsAt: "2026-10-03T11:58:00Z" }
+        return mayBelongNo(id, alert, (incident) => [
+          ...incident.firings,
+          { ...firing, linkedBy: "ada lovelace", linkedAt: "2026-10-03T12:00:00Z" },
+        ])
+      }
       const open = openIncidents.find((each) => each.id === id)
       return Promise.resolve(open === undefined || id === "i2" ? `"Checkout down" is closed` : open)
     },
@@ -207,8 +251,7 @@ export const incidentActions = (
       calls.push(
         environment === undefined ? ["dismissIncident", id, alert] : ["dismissIncident", id, alert, environment],
       )
-      const incident = found(id)
-      return Promise.resolve(incident === undefined ? "there is no such incident" : incident)
+      return mayBelongNo(id, alert, (incident) => incident.firings)
     },
     removeIncidentNote: (id, note) => {
       calls.push(["removeIncidentNote", id, note])

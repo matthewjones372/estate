@@ -17,6 +17,9 @@ const rows = (container: HTMLElement) =>
 const firings = (container: HTMLElement) =>
   [...container.querySelectorAll(".incident-firings li")].map((row) => row.textContent?.replace(/\s+/g, " ").trim())
 
+const mayBelong = (container: HTMLElement) =>
+  [...container.querySelectorAll(".incident-may-belong li > p")].map((row) => row.textContent)
+
 const notes = (container: HTMLElement) =>
   [...container.querySelectorAll(".incident-notes .note-body")].map((each) => each.textContent)
 
@@ -191,5 +194,23 @@ describe("an incident's page", () => {
     const page = mount(() => <App estate={{ ...estate, page: () => ({ page: "incident" as const, id: "i1" }) }} />)
     await page.settle()
     expect(page.container.querySelector("h1")?.textContent).toBe("Orders slow")
+  })
+
+  test("lists the firings that may belong, each with its environment and why; Link moves one in, Not this takes one off", async () => {
+    const page = await opened("i1")
+    expect(mayBelong(page.container)).toEqual([
+      "QueueGrowing · production: it is on storefront too, and it fired 12 min after OrdersSlow.",
+      "OrdersSlow · staging: the same alert is part of it in production, and this one fired 1 min before it.",
+    ])
+    page.click(page.button("Link"))
+    await page.settle()
+    expect(page.calls).toContainEqual(["linkIncident", "i1", "a3", "production"])
+    expect(firings(page.container)[2]).toMatch(/^QueueGrowing · production · firing since \d\d:58 Unlink$/)
+    expect(mayBelong(page.container)).toHaveLength(1)
+    page.click(page.button("Not this"))
+    await page.settle()
+    expect(page.calls).toContainEqual(["dismissIncident", "i1", "a8", "staging"])
+    expect(page.container.querySelector(".incident-may-belong")).toBeNull()
+    expect((await opened("i1", viewer)).container.querySelector(".incident-may-belong")).toBeNull()
   })
 })

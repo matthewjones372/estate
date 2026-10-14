@@ -163,8 +163,8 @@ export const serverActions = (
       })
       .catch(() => undefined),
   openIncident: (title, alert) => incidentWrite("POST", "/api/incidents", { title, environment: environment(), alert }),
-  linkIncident: (id, alert) =>
-    incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/firings`, { environment: environment(), alert }),
+  linkIncident: (id, alert, env = environment()) =>
+    incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/firings`, { environment: env, alert }),
   unlinkIncident: (id, env, alert, startsAt) =>
     incidentWrite(
       "DELETE",

@@ -6,7 +6,7 @@
 import { Option } from "effect"
 import { compact } from "../../shared/compact"
 import type { Alert } from "../../shared/events"
-import type { Incident, Suggested } from "../../shared/incidents"
+import type { Incident, MayBelong, Suggested } from "../../shared/incidents"
 import { sameFiring } from "../notes"
 import type { EstateState } from "../state"
 import { serviceOf } from "./health"
@@ -64,6 +64,9 @@ const relationOf = (estate: EstateState, environment: string, alert: Firing, anc
 
 const minute = 60_000
 
+const strongerFirst = (a: Pick<Suggested, "why" | "apart">, b: Pick<Suggested, "why" | "apart">) =>
+  strength[a.why] - strength[b.why] || Math.abs(a.apart) - Math.abs(b.apart)
+
 /** The open incident `alert`, firing in `environment`, may belong to: started within `within` minutes of one of its firings. */
 export const suggestedFor = (
   estate: EstateState,
@@ -96,7 +99,20 @@ export const suggestedFor = (
             ]
       }),
     )
-  return Option.fromUndefinedOr(
-    found.toSorted((a, b) => strength[a.why] - strength[b.why] || Math.abs(a.apart) - Math.abs(b.apart))[0],
-  )
+  return Option.fromUndefinedOr(found.toSorted(strongerFirst)[0])
 }
+
+/** Every live firing, in any environment, suggested for the incident `id`, strongest first. */
+export const mayBelongTo = (estate: EstateState, id: string, within: number): ReadonlyArray<MayBelong> =>
+  Object.entries(estate.environments)
+    .flatMap(([environment, state]) =>
+      (state.alerts.value ?? []).flatMap((alert) => {
+        const service = serviceOf(alert.labels, estate.catalog.services)
+        const store = storeOf(alert.labels, storesIn(estate.catalog, environment))
+        const found = Option.getOrUndefined(suggestedFor(estate, environment, { ...alert, service, store }, within))
+        if (found === undefined || found.incident.id !== id) return []
+        const { incident: _, ...reason } = found
+        return [compact({ environment, alert: alert.id, name: alert.name, about: service ?? store, ...reason })]
+      }),
+    )
+    .toSorted(strongerFirst)

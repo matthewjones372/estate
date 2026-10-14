@@ -29,61 +29,77 @@ export const reasonOf = (suggested: Suggested, subject: string | undefined) => {
   }
 }
 
+/** A suggestion's line, *Link* and *Not this*, and why either was refused; `done` once either is. */
+export const Suggestion = (props: {
+  readonly line: string
+  readonly incident: string
+  readonly alert: string
+  /** The firing's environment, where it is not the page's. */
+  readonly environment?: string
+  readonly done?: () => void
+}) => {
+  const { actions } = useEstate()
+  const [busy, setBusy] = createSignal(false)
+  const [refused, setRefused] = createSignal<string | undefined>(undefined)
+  const act = (write: () => Promise<unknown>) => {
+    if (busy()) return
+    setBusy(true)
+    setRefused(undefined)
+    void write().then((result) => {
+      setBusy(false)
+      if (typeof result === "string") setRefused(result)
+      else props.done?.()
+    })
+  }
+  return (
+    <>
+      <p>{props.line}</p>
+      <div class="choices" aria-busy={busy()}>
+        <button
+          type="button"
+          class="amber-button ghost"
+          disabled={busy()}
+          onClick={() => act(() => actions.linkIncident(props.incident, props.alert, props.environment))}
+        >
+          Link
+        </button>
+        <button
+          type="button"
+          class="amber-button ghost"
+          disabled={busy()}
+          onClick={() => act(() => actions.dismissIncident(props.incident, props.alert, props.environment))}
+        >
+          Not this
+        </button>
+      </div>
+      <Show when={refused()}>
+        {(why) => (
+          <p class="alert-detail" role="alert">
+            {why()}
+          </p>
+        )}
+      </Show>
+    </>
+  )
+}
+
+/** On an alert's card, for someone who may link: the open incident it may be part of, and why. */
 export const MayBelong = (props: {
   readonly suggested: Suggested | undefined
   /** The firing's service or store, which the reason names. */
   readonly subject: string | undefined
   readonly alert: string
-  readonly environment?: string
-  readonly onDone?: () => void
 }) => {
-  const { me, actions } = useEstate()
-  const [busy, setBusy] = createSignal(false)
-  const [refused, setRefused] = createSignal<string | undefined>(undefined)
-  const act = (write: (id: string) => Promise<unknown>, id: string) => {
-    if (busy()) return
-    setBusy(true)
-    setRefused(undefined)
-    void write(id).then((result) => {
-      setBusy(false)
-      if (typeof result === "string") setRefused(result)
-      else props.onDone?.()
-    })
-  }
+  const { me } = useEstate()
   return (
     <Show when={canKeepIncidents(me) ? props.suggested : undefined}>
       {(suggested) => (
-        <div class="alert-detail incident-suggested" aria-busy={busy()}>
-          <p>
-            May be part of "{suggested().incident.title}": {reasonOf(suggested(), props.subject)}.
-          </p>
-          <div class="choices">
-            <button
-              type="button"
-              class="amber-button ghost"
-              disabled={busy()}
-              onClick={() => act((id) => actions.linkIncident(id, props.alert), suggested().incident.id)}
-            >
-              Link
-            </button>
-            <button
-              type="button"
-              class="amber-button ghost"
-              disabled={busy()}
-              onClick={() =>
-                act((id) => actions.dismissIncident(id, props.alert, props.environment), suggested().incident.id)
-              }
-            >
-              Not this
-            </button>
-          </div>
-          <Show when={refused()}>
-            {(why) => (
-              <p class="alert-detail" role="alert">
-                {why()}
-              </p>
-            )}
-          </Show>
+        <div class="alert-detail incident-suggested">
+          <Suggestion
+            line={`May be part of "${suggested().incident.title}": ${reasonOf(suggested(), props.subject)}.`}
+            incident={suggested().incident.id}
+            alert={props.alert}
+          />
         </div>
       )}
     </Show>
