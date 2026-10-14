@@ -165,6 +165,7 @@ export const incidentActions = (
   | "addIncidentNote"
   | "removeIncidentNote"
   | "dismissIncident"
+  | "raiseIncident"
 > => {
   const records = new Map(incidentRecords)
   const found = (id: string) => records.get(id)?.incident
@@ -252,6 +253,20 @@ export const incidentActions = (
         environment === undefined ? ["dismissIncident", id, alert] : ["dismissIncident", id, alert, environment],
       )
       return mayBelongNo(id, alert, (incident) => incident.firings)
+    },
+    // Checkout down cannot be raised: the tool refuses it, in its words.
+    raiseIncident: (id) => {
+      calls.push(["raiseIncident", id])
+      if (id === "i2") return Promise.resolve("PagerDuty answered 400: Invalid Input Provided: Service not found")
+      const record = records.get(id) ?? {
+        incident: { id, title: "", openedBy: "ada lovelace", openedAt: "2026-10-03T12:00:00Z", firings: [] },
+        events: [],
+      }
+      const link = "https://example.pagerduty.com/incidents/Q1ABC"
+      const raised = { tool: "PagerDuty", id: "Q1ABC", by: "ada lovelace", at: "2026-10-03T12:00:00Z" }
+      const incident: Incident = { ...record.incident, link, raised }
+      records.set(id, { ...record, incident })
+      return Promise.resolve(incident)
     },
     removeIncidentNote: (id, note) => {
       calls.push(["removeIncidentNote", id, note])

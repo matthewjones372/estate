@@ -12,6 +12,7 @@ import { useEstate } from "../context"
 import { day, duration, since } from "../format"
 import { A } from "../parts/A"
 import { IncidentFirings } from "../parts/IncidentFirings"
+import { IncidentInTool } from "../parts/IncidentInTool"
 import { canKeepIncidents } from "../parts/IncidentLink"
 import { IncidentMayBelong } from "../parts/IncidentMayBelong"
 import { IncidentNotes } from "../parts/IncidentNotes"
@@ -119,6 +120,7 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
           {incident().title}
         </h1>
         <p class="lede">{lede(incident(), now())}</p>
+        <IncidentInTool incident={incident()} changed={props.changed} />
         <Show when={canKeepIncidents(me) && incident().closedAt === undefined}>
           <Closing incident={incident()} done={props.changed} />
         </Show>

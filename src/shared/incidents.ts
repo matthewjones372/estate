@@ -17,6 +17,8 @@ export const Incident = Schema.Struct({
   ended: optional(Schema.String),
   /** The same incident in the incident tool, if it is kept there too. */
   link: optional(Schema.String),
+  /** Raised in the incident tool from Estate: which tool, its id there, who raised it and when. */
+  raised: optional(Schema.Struct({ tool: Schema.String, id: Schema.String, by: Schema.String, at: Instant })),
   /** Its firings, from any environment; a firing is in one incident at most. */
   firings: Schema.Array(
     Schema.Struct({

@@ -105,6 +105,7 @@ export const alertsView = (
               title: incident.title,
               closed: incident.closedAt !== undefined,
               openedAt: incident.openedAt,
+              ...(incident.link === undefined ? {} : { link: incident.link }),
             },
       suggested,
     })

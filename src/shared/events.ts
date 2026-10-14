@@ -225,7 +225,14 @@ export const Alert = Schema.Struct({
   thread: optional(Schema.Struct({ url: Schema.String })),
   /** The incident this firing is part of, if a person linked it to one, and when it was opened. */
   incident: optional(
-    Schema.Struct({ id: Schema.String, title: Schema.String, closed: Schema.Boolean, openedAt: Instant }),
+    Schema.Struct({
+      id: Schema.String,
+      title: Schema.String,
+      closed: Schema.Boolean,
+      openedAt: Instant,
+      /** The same incident in the incident tool, once it is raised there. */
+      link: optional(Schema.String),
+    }),
   ),
   /** The open incident it may belong to, for someone who may link it, and why (spec 0042). */
   suggested: optional(Suggested),
@@ -280,6 +287,8 @@ export const Me = Schema.Struct({
   ai: optional(Schema.Boolean),
   /** Estate may post to Slack: an alert's card may tell its team. */
   slack: optional(Schema.Boolean),
+  /** The incident tool an operator may raise an incident in, by its name: "PagerDuty". */
+  incidentTool: optional(Schema.String),
   /** Logs are for operators here, so keeping an AI's answer that read them says who will see it. */
   logsForOperators: optional(Schema.Boolean),
   /** What a screen shows, where the settings say: its environments in turn, each for `every` seconds. */

@@ -176,6 +176,7 @@ export const serverActions = (
     incidentWrite("DELETE", `/api/incidents/${encodeURIComponent(id)}/notes/${encodeURIComponent(note)}`),
   dismissIncident: (id, alert, env = environment()) =>
     incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/dismissed`, { environment: env, alert }),
+  raiseIncident: (id) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/raise`),
   timelineMarkdown: (of) =>
     fetch(timelinePath(of, environment(), "md"))
       .then(
