@@ -176,7 +176,7 @@ permission to create incidents. Until a team sets `incidentTool`, Estate links o
       person and link on each firing, and raising again calls the tool no more; a viewer, a closed incident and a
       read-only Estate are refused; `incident-page.suite.tsx` shows the button, then the tool's link; on a card not
       in an incident, one press opens an incident and raises it.
-- [ ] **`spec-0043-read-back`**: open raised incidents read every `every`; status, severity and responders on the
+- [x] **`spec-0043-read-back`**: open raised incidents read every `every`; status, severity and responders on the
       incident's page; a tool that fails turns off only its line; `estate doctor` says whether the tool answers.
       Done when: against the stub, the page shows "acknowledged · P2 · ada, gil" and its link; a stub answering 503
       shows "PagerDuty did not answer" and the rest of the page; `doctor.test.ts` reports a bad token.
