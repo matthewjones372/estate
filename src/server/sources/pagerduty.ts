@@ -6,7 +6,7 @@
 import { Duration, Effect, Option, Redacted, Schema } from "effect"
 import { type Call, Remote, type Reply } from "../remote"
 import type { PagerDutySettings } from "../settings-incident-tool"
-import type { IncidentTool, InTool, Raised, Raising } from "./incident-tools"
+import { detailsOf, type IncidentTool, type InTool, type Raised, type Raising } from "./incident-tools"
 import { type Failure, SourceFailure } from "./run"
 
 const Made = Schema.Struct({ id: Schema.String, html_url: Schema.String })
@@ -43,20 +43,6 @@ const refusal = (answered: Reply): string => {
 }
 
 const resetIn = (answered: Reply): number => Number(answered.headers["ratelimit-reset"] ?? longestWait)
-
-/** The incident's details: what it does to people, each firing, the way back to Estate, and who raised it. */
-const detailsOf = (raising: Raising): string =>
-  [
-    ...(raising.impact === undefined ? [] : [`Impact: ${raising.impact}`, ""]),
-    "Firings:",
-    ...raising.firings.map(
-      (firing) =>
-        `- ${firing.name} in ${firing.environment}${firing.service === undefined ? "" : ` (${firing.service})`}, since ${firing.startsAt}`,
-    ),
-    "",
-    ...(raising.page === undefined ? [] : [`In Estate: ${raising.page}`]),
-    `Raised from Estate by ${raising.by}`,
-  ].join("\n")
 
 export const pagerDuty = (settings: PagerDutySettings): IncidentTool => {
   const base = (settings.url ?? "https://api.pagerduty.com").replace(/\/$/, "")

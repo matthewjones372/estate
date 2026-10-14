@@ -11,7 +11,10 @@ sources: {}
 
 const read = (text: string) =>
   Effect.result(readSettings(`${base}${text}`)).pipe(
-    Effect.provideService(ConfigProvider.ConfigProvider, ConfigProvider.fromUnknown({ PAGERDUTY_TOKEN: "pd-key" })),
+    Effect.provideService(
+      ConfigProvider.ConfigProvider,
+      ConfigProvider.fromUnknown({ PAGERDUTY_TOKEN: "pd-key", INCIDENTIO_TOKEN: "io-key" }),
+    ),
   )
 
 const pagerduty = (every: string) =>
@@ -50,6 +53,36 @@ describe("the incident tool in the settings", () => {
         const result = yield* read("incidentTool: { pagerduty: { token: x, service: PABC123 } }\n")
         expect(Result.isFailure(result) && result.failure.mistakes.map((each) => each.at)).toEqual([
           "incidentTool.pagerduty.from",
+        ])
+      }),
+    ))
+
+  test("is incident.io with its key from the environment, the severity it raises at, and its mode", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const result = yield* read(
+          "incidentTool: { incidentio: { token: ${INCIDENTIO_TOKEN}, severity: Minor, mode: test, every: 2m } }\n",
+        )
+        const tool = Result.isSuccess(result) ? result.success.incidentTool?.incidentio : undefined
+        expect(tool === undefined ? undefined : Redacted.value(tool.token)).toBe("io-key")
+        expect([tool?.severity, tool?.mode]).toEqual(["Minor", "test"])
+        expect(Result.isSuccess(result) && readBackEvery(result.success.incidentTool)).toBe(120)
+      }),
+    ))
+
+  test("is one tool an Estate, each read no more often than every five seconds", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const result = yield* read(
+          `${pagerduty("")}  incidentio: { token: x, severity: Minor, mode: loud, every: 1s }\n`,
+        )
+        expect(Result.isFailure(result) && result.failure.mistakes.map((each) => each.at)).toEqual([
+          "incidentTool.incidentio.mode",
+        ])
+        const both = yield* read(`${pagerduty("")}  incidentio: { token: x, severity: Minor, every: 1s }\n`)
+        expect(Result.isFailure(both) && both.failure.mistakes).toEqual([
+          { at: "incidentTool", message: "names one tool an Estate raises in: pagerduty or incidentio" },
+          { at: "incidentTool.incidentio.every", message: '"1s" is under 5s, the most often Estate reads' },
         ])
       }),
     ))
