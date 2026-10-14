@@ -50,10 +50,6 @@ export type Incident = typeof Incident.Type
 export const IncidentEvent = Schema.Struct({ ...FiringEvent.fields, environment: Schema.String, alert: Schema.String })
 export type IncidentEvent = typeof IncidentEvent.Type
 
-/** An incident as its page reads it: the record, and every event of its firings merged in time order. */
-export const IncidentRecord = Schema.Struct({ incident: Incident, events: Schema.Array(IncidentEvent) })
-export type IncidentRecord = typeof IncidentRecord.Type
-
 /** An open incident a live firing may belong to, the firing of it that it is like, how, and how far apart they started. */
 export const Suggested = Schema.Struct({
   incident: Schema.Struct({ id: Schema.String, title: Schema.String }),
@@ -71,3 +67,26 @@ export const Suggested = Schema.Struct({
   apart: Schema.Number,
 })
 export type Suggested = typeof Suggested.Type
+
+const { incident: _, ...reason } = Suggested.fields
+
+/** A live firing that may belong to an incident, as its page lists it: which, where, what it is about, and why. */
+export const MayBelong = Schema.Struct({
+  environment: Schema.String,
+  alert: Schema.String,
+  name: Schema.String,
+  about: optional(Schema.String),
+  ...reason,
+})
+export type MayBelong = typeof MayBelong.Type
+
+/**
+ * An incident as its page reads it: the record, every event of its firings merged in time order, and, for someone who
+ * may link, the live firings that may belong to it.
+ */
+export const IncidentRecord = Schema.Struct({
+  incident: Incident,
+  events: Schema.Array(IncidentEvent),
+  suggested: optional(Schema.Array(MayBelong)),
+})
+export type IncidentRecord = typeof IncidentRecord.Type

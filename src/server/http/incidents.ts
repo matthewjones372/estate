@@ -11,8 +11,11 @@ import { mergedOnce, seenBy } from "../../shared/timeline"
 import { happened, happenedOnEach } from "../happened"
 import { Notes, sameFiring } from "../notes"
 import type { FiringKey } from "../notes-events"
+import { Configured } from "../settings"
+import { suggestWithin } from "../settings-incidents"
 import { Estate } from "../state"
 import { isoNow, sameInstant } from "../time"
+import { mayBelongTo } from "../views/suggested"
 import { incidentDismissedRoute } from "./incident-dismissed"
 import { incidentNoteRoutes } from "./incident-notes"
 import {
@@ -172,7 +175,14 @@ const readRoute = HttpRouter.add(
     const events = yield* Effect.forEach(incident.firings, (firing) =>
       Effect.map(notes.events(keyOf(firing)), (all) => all.map(({ startsAt: _, ...event }) => event)),
     )
-    return json({ incident, events: seenBy(mergedOnce(events.flat()), yield* readsLogs(person.role)) })
+    const settings = yield* Configured
+    // Suggestions are offers to link, so only someone who may link reads them.
+    const suggested =
+      person.role === "operator" && settings.readOnly !== true
+        ? mayBelongTo(yield* SubscriptionRef.get(yield* Estate), id, suggestWithin(settings.incidents))
+        : undefined
+    const seen = seenBy(mergedOnce(events.flat()), yield* readsLogs(person.role))
+    return json({ incident, events: seen, ...(suggested === undefined ? {} : { suggested }) })
   }).pipe(answered),
 )
 

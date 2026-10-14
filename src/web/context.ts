@@ -56,7 +56,8 @@ export interface Actions {
   readonly incident: (id: string) => Promise<IncidentRecord | "none" | undefined>
   /** Each write answers with the incident as it now is, or why it could not. */
   readonly openIncident: (title: string, alert: string) => Promise<Incident | string>
-  readonly linkIncident: (id: string, alert: string) => Promise<Incident | string>
+  /** Links the firing of `alert`, in `environment` or the page's, into the incident. */
+  readonly linkIncident: (id: string, alert: string, environment?: string) => Promise<Incident | string>
   /** Takes out the firing of `alert` in `environment` that started `startsAt`, of the several it may have had. */
   readonly unlinkIncident: (
     id: string,

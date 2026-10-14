@@ -4,7 +4,7 @@ import type { Catalog } from "../../shared/catalog"
 import type { Incident } from "../../shared/incidents"
 import { catalog, environment, estate } from "../fixture"
 import type { EstateState, SourcedAlert, StoredFiring } from "../state"
-import { suggestedFor } from "./suggested"
+import { mayBelongTo, suggestedFor } from "./suggested"
 
 const ok = <A>(value: A) => ({ state: "ok" as const, value, answeredAt: "2026-10-03T12:00:00Z" })
 
@@ -201,5 +201,27 @@ describe("a firing that may belong to an incident", () => {
         Option.map((each) => [each.incident.id, each.apart]),
       ),
     ).toEqual(Option.some(["i6", 5]))
+  })
+
+  test("on an incident's page are every live firing suggested for it, in any environment, strongest first", () => {
+    const state = on(
+      [slow],
+      [
+        ordersSlow,
+        held("o2", "OrdersErrors", { service: "orders" }, 4),
+        held("f1", "CheckoutSlow", { service: "storefront" }, 2),
+      ],
+      {
+        staging: [held("s1", "OrdersSlow", { service: "orders" }, 10)],
+      },
+    )
+    expect(
+      mayBelongTo(state, "i1", 30).map((each) => [each.environment, each.alert, each.name, each.about, each.why]),
+    ).toEqual([
+      ["staging", "s1", "OrdersSlow", "orders", "same alert"],
+      ["production", "o2", "OrdersErrors", "orders", "same service"],
+      ["production", "f1", "CheckoutSlow", "storefront", "next to it"],
+    ])
+    expect(mayBelongTo(state, "i9", 30)).toEqual([])
   })
 })

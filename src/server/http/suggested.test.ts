@@ -65,4 +65,25 @@ describe("a firing that may belong to an incident, on the page's alerts", () => 
       ])
       expect(readOnly).toEqual(viewer)
     }))
+
+  test("on an incident's page are read by an operator, and not by a viewer", () =>
+    Effect.runPromise(
+      Effect.all(
+        [
+          settings({ anonymous: { name: "gil", role: "operator" } }),
+          settings({ anonymous: { name: "vi", role: "viewer" } }),
+        ].map((configured) =>
+          Effect.flatMap(serverFor(configured, state), (server) =>
+            Effect.promise(() =>
+              server
+                .handler(new Request("http://estate/api/incidents/i1"))
+                .then((response) => response.json() as Promise<{ suggested?: ReadonlyArray<{ alert: string }> }>),
+            ),
+          ),
+        ),
+      ),
+    ).then(([operator, viewer]) => {
+      expect(operator?.suggested?.map((each) => each.alert)).toEqual(["a2"])
+      expect(viewer?.suggested).toBeUndefined()
+    }))
 })

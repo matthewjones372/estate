@@ -13,6 +13,7 @@ import { day, duration, since } from "../format"
 import { A } from "../parts/A"
 import { IncidentFirings } from "../parts/IncidentFirings"
 import { canKeepIncidents } from "../parts/IncidentLink"
+import { IncidentMayBelong } from "../parts/IncidentMayBelong"
 import { IncidentNotes } from "../parts/IncidentNotes"
 import { TimelineExport } from "../parts/TimelineExport"
 import { TimelineRow } from "../parts/TimelineRow"
@@ -123,6 +124,7 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
         </Show>
       </section>
       <IncidentFirings record={props.record} changed={props.changed} />
+      <IncidentMayBelong record={props.record} changed={props.changed} />
       <IncidentNotes incident={incident()} changed={props.changed} />
       <section aria-labelledby="incident-timeline" class="panel section-box stack">
         <div class="section-head">
