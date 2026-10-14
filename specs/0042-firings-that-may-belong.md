@@ -115,13 +115,13 @@ Spec 0039's incidents and links. Nothing from outside.
       and a neighbour on the map, each within the window and each with its reason; it does not suggest one outside
       the window, one related only by time, one two edges away, one already in an open incident, a dismissed one,
       or one for a closed incident; a firing fitting two incidents is suggested for the stronger relation.
-- [ ] **`spec-0042-on-the-card`**: `suggested` on the alerts view; the line, *Link* and *Not this* on the card;
+- [x] **`spec-0042-on-the-card`**: `suggested` on the alerts view; the line, *Link* and *Not this* on the card;
       `POST /api/incidents/:id/dismissed` kept on the record with its event.
       Done when: in `incident-card.suite.tsx`, an operator sees the line and its reason and *Link* links it, and a
       viewer sees no line; in `incidents.test.ts`, dismissing keeps the firing on the record, leaves an
       `incident-dismissed` event with the person, and the firing is no longer suggested; a viewer and a read-only
       Estate are refused.
-- [ ] **`spec-0042-on-the-incident`**: *May belong* on `/incidents/:id`, from `GET /api/incidents/:id`.
+- [x] **`spec-0042-on-the-incident`**: *May belong* on `/incidents/:id`, from `GET /api/incidents/:id`.
       Done when: `incident-page.suite.tsx` lists the suggested firings with their environments and reasons, *Link*
       moves one into the firings, and *Not this* takes it off the list.
 
