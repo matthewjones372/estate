@@ -5,6 +5,7 @@
  */
 import { Effect, Layer, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
+import { compact } from "../../shared/compact"
 import type { Incident } from "../../shared/incidents"
 import { longestNote } from "../../shared/note"
 import { mergedOnce, seenBy } from "../../shared/timeline"
@@ -183,7 +184,8 @@ const readRoute = HttpRouter.add(
         ? mayBelongTo(yield* SubscriptionRef.get(yield* Estate), id, suggestWithin(settings.incidents))
         : undefined
     const seen = seenBy(mergedOnce(events.flat()), yield* readsLogs(person.role))
-    return json({ incident, events: seen, ...(suggested === undefined ? {} : { suggested }) })
+    const inTool = (yield* SubscriptionRef.get(yield* Estate)).inTool?.[id]
+    return json(compact({ incident, events: seen, suggested, inTool }))
   }).pipe(answered),
 )
 

@@ -21,6 +21,11 @@ export const IncidentTool = Schema.Struct({ pagerduty: optional(PagerDuty) })
 type IncidentTool = typeof IncidentTool.Type
 
 const shortest = 5
+const usual = 60
+
+/** How often each open incident raised in the tool is read back, in seconds: a minute unless set. */
+export const readBackEvery = (tool: IncidentTool | undefined): number =>
+  secondsIn(tool?.pagerduty?.every ?? "") ?? usual
 
 export const incidentToolMistakes = (tool: IncidentTool | undefined): ReadonlyArray<Mistake> => {
   const every = tool?.pagerduty?.every

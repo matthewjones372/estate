@@ -120,7 +120,7 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
           {incident().title}
         </h1>
         <p class="lede">{lede(incident(), now())}</p>
-        <IncidentInTool incident={incident()} changed={props.changed} />
+        <IncidentInTool incident={incident()} read={props.record.inTool} changed={props.changed} />
         <Show when={canKeepIncidents(me) && incident().closedAt === undefined}>
           <Closing incident={incident()} done={props.changed} />
         </Show>
@@ -156,6 +156,9 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
   )
 }
 
+/** How often, at most, a raised incident's page reads again what the tool says of it. */
+const readAgain = 30_000
+
 export const IncidentPage = (props: { readonly id: string }) => {
   const { actions } = useEstate()
   const [read, setRead] = createSignal<IncidentRecord | "none" | "loading" | undefined>("loading")
@@ -176,6 +179,18 @@ export const IncidentPage = (props: { readonly id: string }) => {
     const value = read()
     return typeof value === "object" ? value : undefined
   }
+  // The tool's word on a raised incident changes outside Estate, so it is read again as the stream beats, at most
+  // every half minute, while the incident is open.
+  const { live, now } = useEstate()
+  let readAt = now()
+  onCleanup(
+    live.subscribe(() => {
+      const incident = found()?.incident
+      if (incident?.raised === undefined || incident.closedAt !== undefined || now() - readAt < readAgain) return
+      readAt = now()
+      setChanges(changes() + 1)
+    }),
+  )
   return (
     <Show
       when={found()}

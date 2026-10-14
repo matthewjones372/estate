@@ -1,15 +1,34 @@
 /** @jsxImportSource solid-js */
 /**
  * The incident in the incident tool (spec 0043): for an operator, *Raise in PagerDuty* while it is open and not yet
- * raised; once it is, a line linking to it there.
+ * raised; once it is, what the tool says of it and a link to it there.
  */
 import { createSignal, Show } from "solid-js"
-import type { Incident } from "../../shared/incidents"
+import type { Incident, ReadBack } from "../../shared/incidents"
 import { useEstate } from "../context"
 import { Out } from "./A"
 import { canKeepIncidents } from "./IncidentLink"
 
-export const IncidentInTool = (props: { readonly incident: Incident; readonly changed: () => void }) => {
+/** What the tool last said, before the link: its status, severity and responders, or that it did not answer. */
+const saidOf = (tool: string, read: ReadBack | undefined) => {
+  if (read?.failing !== undefined) return `${tool} did not answer: ${read.failing} · `
+  const said = read?.said
+  const parts =
+    said === undefined
+      ? []
+      : [said.status, ...(said.severity === undefined ? [] : [said.severity]), said.responders.join(", ")]
+  return `In ${tool}: ${parts
+    .filter((each) => each !== "")
+    .map((each) => `${each} · `)
+    .join("")}`
+}
+
+export const IncidentInTool = (props: {
+  readonly incident: Incident
+  /** What the tool last said of it, once it is raised and read back. */
+  readonly read: ReadBack | undefined
+  readonly changed: () => void
+}) => {
   const { me, actions } = useEstate()
   const [busy, setBusy] = createSignal(false)
   const [refused, setRefused] = createSignal<string | undefined>(undefined)
@@ -55,7 +74,8 @@ export const IncidentInTool = (props: { readonly incident: Incident; readonly ch
     >
       {(found) => (
         <p class="incident-tool">
-          In {found().tool}: <Out href={found().link}>Open in {found().tool}</Out>
+          {saidOf(found().tool, props.read)}
+          <Out href={found().link}>Open in {found().tool}</Out>
         </p>
       )}
     </Show>

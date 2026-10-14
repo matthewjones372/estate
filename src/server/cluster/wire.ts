@@ -9,7 +9,7 @@ import { CodeHealth } from "../../shared/code"
 import { Cost } from "../../shared/costs"
 import { Build } from "../../shared/deploys"
 import { Alert, Load, SourceKind } from "../../shared/events"
-import { Incident } from "../../shared/incidents"
+import { Incident, ReadBack } from "../../shared/incidents"
 import { Note } from "../../shared/note"
 import { Debug, Job, Pod, Series } from "../../shared/workloads"
 import type { EstateState } from "../state"
@@ -146,6 +146,7 @@ const estateFields = {
   threads: optional(Schema.Array(Thread)),
   impacts: optional(Schema.Array(Impact)),
   incidents: optional(Schema.Array(Incident)),
+  inTool: optional(Schema.Record(Schema.String, ReadBack)),
 }
 
 const WireEstate = Schema.Struct(estateFields)

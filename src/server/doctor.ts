@@ -11,6 +11,7 @@ import { agentsFindings } from "./doctor-agents"
 import { codeFinding } from "./doctor-code"
 import { backstageFinding, discoverFinding } from "./doctor-discover"
 import { amount, type Finding, finding, type Needs } from "./doctor-finding"
+import { incidentToolFinding } from "./doctor-incident-tool"
 import type { Remote } from "./remote"
 import type { Settings, Sources } from "./settings"
 import { readAlerts } from "./sources/alerts"
@@ -222,7 +223,8 @@ export const doctor = (settings: Settings, catalog: Catalog): Effect.Effect<Read
     )
     const backstage = yield* backstageFinding(settings.backstage, catalog)
     const code = yield* codeFinding(settings.code, catalog)
-    const wide = [backstage, code].filter((each) => each !== undefined)
+    const incident = yield* incidentToolFinding(settings)
+    const wide = [backstage, code, incident].filter((each) => each !== undefined)
     const { builds } = settings
     if (builds === undefined)
       return wide.length === 0 ? reports : [...reports, { environment: "every environment", findings: wide }]

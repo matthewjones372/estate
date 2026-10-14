@@ -1,5 +1,5 @@
 /** Estate assembled: settings and catalog read and checked, the routes, the catalog's reload and the sources. */
-import { Data, Effect, type FileSystem, Layer, Result, Stream, SubscriptionRef } from "effect"
+import { Data, Duration, Effect, type FileSystem, Layer, Result, Stream, SubscriptionRef } from "effect"
 import type { Mistake } from "../shared/shape"
 import { liveAskLimits } from "./ask-limits"
 import { providerLayer } from "./auth/oidc"
@@ -39,10 +39,13 @@ import type { Remote } from "./remote"
 import { type Role, roleLayer } from "./role"
 import { backOff } from "./schedule"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
+import { readBackEvery } from "./settings-incident-tool"
 import { backfillHistory } from "./sources/backfill"
 import { runCode } from "./sources/code"
 import { codeEvery } from "./sources/every"
+import { incidentToolOf } from "./sources/incident-tool-of"
 import { toolsOf } from "./sources/ports"
+import { readBack } from "./sources/read-back"
 import { startSources } from "./sources/start"
 import { Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
 import { sharedViewsLayer } from "./stream"
@@ -129,6 +132,12 @@ export const application = Layer.mergeAll(
 
 const historyDays = (settings: Started["settings"]) => settings.alerts?.historyDays ?? 90
 
+/** The incident tool's reading back, where one is set. */
+const readBackOf = (settings: Started["settings"]) => {
+  const tool = incidentToolOf(settings)
+  return tool === undefined ? [] : [readBack(tool, Duration.seconds(readBackEvery(settings.incidentTool)))]
+}
+
 /** The estate's own work: its notes and firings loaded and swept, its catalog reloaded and discovered, its builds. */
 export const estateWork = (
   started: Started,
@@ -162,6 +171,7 @@ export const estateWork = (
       ...(started.settings.code === undefined
         ? []
         : [runCode(started.settings.code, codeEvery(started.settings.code))]),
+      ...readBackOf(started.settings),
     ],
     { concurrency: "unbounded" },
   ).pipe(Effect.andThen(Effect.never))

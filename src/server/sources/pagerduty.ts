@@ -21,6 +21,8 @@ const Read = Schema.Struct({
     assignments: Schema.Array(Schema.Struct({ assignee: Schema.Struct({ summary: Schema.String }) })),
   }),
 })
+const Service = Schema.Struct({ service: Schema.Struct({ name: Schema.String }) })
+const Users = Schema.Struct({ users: Schema.Array(Schema.Struct({ email: Schema.String, name: Schema.String })) })
 const Refused = Schema.fromJsonString(
   Schema.Struct({
     error: Schema.Struct({ message: Schema.String, errors: Schema.optionalKey(Schema.Array(Schema.String)) }),
@@ -133,5 +135,20 @@ export const pagerDuty = (settings: PagerDutySettings): IncidentTool => {
       url: incident.html_url,
     }))
 
-  return { name: "PagerDuty", raise, read }
+  // Reading the service proves the token; only a write would prove `from`, so it is looked up among the users.
+  const check = Effect.gen(function* () {
+    const { service } = yield* ask(
+      { url: `${base}/services/${encodeURIComponent(settings.service)}`, headers },
+      Service,
+    )
+    const { users } = yield* ask(
+      { url: `${base}/users?${new URLSearchParams({ query: settings.from })}`, headers },
+      Users,
+    )
+    const user = users.find((each) => each.email.toLowerCase() === settings.from.toLowerCase())
+    if (user === undefined) return yield* failed(`PagerDuty has no user ${settings.from} to raise as`)
+    return `raises in ${service.name} (${settings.service}) as ${user.name} (${user.email})`
+  })
+
+  return { name: "PagerDuty", raise, read, check }
 }

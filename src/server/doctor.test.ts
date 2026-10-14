@@ -188,4 +188,28 @@ describe("estate doctor", () => {
     says("every environment", "builds").then((lines) => {
       expect(lines).toEqual(["ok storefront 1, last failed"])
     }))
+
+  test("says whether the incident tool answers, whom it raises as, and a bad token in its words", () => {
+    const pagerduty = { token: Redacted.make("pd"), from: "estate@example.com", service: "PABC123" }
+    const account = (call: Call): Reply =>
+      call.headers?.["Authorization"] !== "Token token=pd"
+        ? reply({ error: { message: "Unauthorized", code: 2006 } }, 401)
+        : call.url.includes("/services/")
+          ? reply({ service: { name: "Shop" } })
+          : reply({ users: [{ email: "estate@example.com", name: "Estate" }] })
+    const asked = (token: string) =>
+      doctor(
+        { ...settings(), sources: {}, incidentTool: { pagerduty: { ...pagerduty, token: Redacted.make(token) } } },
+        { ...catalog, environments: [] },
+      ).pipe(
+        Effect.provide(Layer.merge(stubRemote(account), platform)),
+        Effect.map((reports) => reports.flatMap((report) => report.findings)),
+      )
+    return Effect.runPromise(Effect.all([asked("pd"), asked("wrong")])).then(([good, bad]) => {
+      expect(good).toEqual([
+        { part: "incident", ok: true, says: "PagerDuty raises in Shop (PABC123) as Estate (estate@example.com)" },
+      ])
+      expect(bad).toEqual([{ part: "incident", ok: false, says: "PagerDuty answered 401: Unauthorized" }])
+    })
+  })
 })

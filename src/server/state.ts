@@ -9,7 +9,7 @@ import type { Catalog } from "../shared/catalog"
 import type { CodeHealth } from "../shared/code"
 import type { Cost } from "../shared/costs"
 import type { Alert, Build, Debug, Job, Load, Pod, Series, SourceKind } from "../shared/events"
-import type { Incident } from "../shared/incidents"
+import type { Incident, ReadBack } from "../shared/incidents"
 import type { Note } from "../shared/note"
 
 export interface Part<A> {
@@ -136,6 +136,8 @@ export interface EstateState {
   readonly threads?: ReadonlyArray<StoredThread>
   /** The incidents opened as far back as firings are kept, open or closed. */
   readonly incidents?: ReadonlyArray<Incident>
+  /** What the incident tool last said of each open incident raised in it, by the incident's id (spec 0043). */
+  readonly inTool?: Readonly<Record<string, ReadBack>>
   /** What alerts mean for users, by alert name, as operators wrote it on the page. */
   readonly impacts?: ReadonlyArray<{
     readonly alert: string
