@@ -170,7 +170,7 @@ permission to create incidents. Until a team sets `incidentTool`, Estate links o
       incident key, the title, the urgency and a body with each firing and the link back, and reads status,
       priority and assignees; a 400 fails with PagerDuty's message; a team's service is used for its incident;
       `estate check` names a team's service on a tool that is not set.
-- [ ] **`spec-0043-raise`**: `POST /api/incidents/:id/raise`, `raised` and `link` on the record, the
+- [x] **`spec-0043-raise`**: `POST /api/incidents/:id/raise`, `raised` and `link` on the record, the
       `incident-raised` event, *Raise in PagerDuty* on the incident's page and the card.
       Done when: in `incidents.test.ts`, raising keeps the link and `raised`, leaves `incident-raised` with the
       person and link on each firing, and raising again calls the tool no more; a viewer, a closed incident and a
