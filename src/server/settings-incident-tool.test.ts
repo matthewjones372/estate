@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { ConfigProvider, Effect, Redacted, Result } from "effect"
 import { readSettings } from "./settings"
+import { readBackEvery } from "./settings-incident-tool"
 
 const base = `
 catalog: /etc/estate/catalog.yaml
@@ -25,6 +26,8 @@ describe("the incident tool in the settings", () => {
         expect(tool === undefined ? undefined : Redacted.value(tool.token)).toBe("pd-key")
         expect(String(tool?.token)).toBe("<redacted>")
         expect([tool?.from, tool?.service, tool?.every]).toEqual(["estate@example.com", "PABC123", "30s"])
+        expect(Result.isSuccess(result) && readBackEvery(result.success.incidentTool)).toBe(30)
+        expect(readBackEvery(undefined)).toBe(60)
       }),
     ))
 

@@ -46,6 +46,8 @@ export interface IncidentTool {
   readonly name: string
   readonly raise: (raising: Raising) => Effect.Effect<Raised, Failure, Remote>
   readonly read: (id: string) => Effect.Effect<InTool, Failure, Remote>
+  /** For `estate doctor`: what the tool says of the settings, proving them as far as a read can. */
+  readonly check: Effect.Effect<string, Failure, Remote>
 }
 
 /** Where the team that owns `service` sends its incidents, if it says. */

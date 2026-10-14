@@ -82,13 +82,29 @@ export const MayBelong = Schema.Struct({
 })
 export type MayBelong = typeof MayBelong.Type
 
+/** What the incident tool last said of an incident raised in it (spec 0043), or why it did not answer. */
+export const ReadBack = Schema.Struct({
+  tool: Schema.String,
+  said: optional(
+    Schema.Struct({
+      /** The tool's word: triggered, acknowledged, resolved. */
+      status: Schema.String,
+      severity: optional(Schema.String),
+      responders: Schema.Array(Schema.String),
+    }),
+  ),
+  failing: optional(Schema.String),
+})
+export type ReadBack = typeof ReadBack.Type
+
 /**
- * An incident as its page reads it: the record, every event of its firings merged in time order, and, for someone who
- * may link, the live firings that may belong to it.
+ * An incident as its page reads it: the record, every event of its firings merged in time order, for someone who
+ * may link the live firings that may belong to it, and what the incident tool says of it once raised.
  */
 export const IncidentRecord = Schema.Struct({
   incident: Incident,
   events: Schema.Array(IncidentEvent),
   suggested: optional(Schema.Array(MayBelong)),
+  inTool: optional(ReadBack),
 })
 export type IncidentRecord = typeof IncidentRecord.Type

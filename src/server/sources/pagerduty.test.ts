@@ -193,4 +193,25 @@ describe("PagerDuty", () => {
     run(pagerDuty(settings).read("Q1ABC"), () => reply({ incident: { id: "Q1ABC" } })).then((read) => {
       expect(Result.isFailure(read) && read.failure.message).toBe("PagerDuty answered in a shape Estate does not know")
     }))
+
+  test("is checked by reading the service it raises in and finding the user it raises as", () => {
+    const account = (users: ReadonlyArray<{ readonly email: string; readonly name: string }>) => (call: Call) => {
+      if (!authorised(call)) return reply({ error: { message: "Unauthorized" } }, 401)
+      const url = new URL(call.url)
+      if (url.pathname === "/services/PABC123") return reply({ service: { id: "PABC123", name: "Shop" } })
+      return url.pathname === "/users" && url.searchParams.get("query") === "estate@example.com"
+        ? reply({ users })
+        : undefined
+    }
+    const estate = { email: "Estate@example.com", name: "Estate" }
+    return Promise.all([
+      run(pagerDuty(settings).check, account([{ email: "estate@example.com.au", name: "Other" }, estate])),
+      run(pagerDuty(settings).check, account([])),
+    ]).then(([found, missing]) => {
+      expect(found).toEqual(Result.succeed("raises in Shop (PABC123) as Estate (Estate@example.com)"))
+      expect(Result.isFailure(missing) && missing.failure.message).toBe(
+        "PagerDuty has no user estate@example.com to raise as",
+      )
+    })
+  })
 })
