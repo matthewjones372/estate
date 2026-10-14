@@ -88,9 +88,9 @@ adds itself: notes, what an alert means, and each alert's past firings.
 - compare what's deployed in each environment
 - open an alert's own page to share: what's happening, what is around it, who owns it
 - ask AI about an alert, when a model is set in `estate.yaml`
-- raise an incident in PagerDuty from its page or an alert's card, when `incidentTool` is set in `estate.yaml`; the
-  incident then links to it there, its timeline says who raised it, and its page says what PagerDuty says of it:
-  acknowledged or not, its priority and who is on it
+- raise an incident in PagerDuty or incident.io from its page or an alert's card, when `incidentTool` is set in
+  `estate.yaml`; the incident then links to it there, its timeline says who raised it, and its page says what the tool
+  says of it: its status, its priority or severity, and who is on it
 - otherwise, open your incident tool's own form from the alert, when the catalog names its link
 - tell the team that owns an alert in its Slack channel, once a firing; the card then links to the thread
 - jump to any service, store, job or agent by name from the header, or with ⌘K (Ctrl K)

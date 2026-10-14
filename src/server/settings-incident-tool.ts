@@ -17,7 +17,23 @@ const PagerDuty = Schema.Struct({
 })
 export type PagerDutySettings = typeof PagerDuty.Type
 
-export const IncidentTool = Schema.Struct({ pagerduty: optional(PagerDuty) })
+/**
+ * incident.io's API: a key that may create incidents, the severity an incident is raised at by its name, and `test`
+ * to raise without announcing, for a demo.
+ */
+const IncidentIo = Schema.Struct({
+  token: Secret,
+  severity: Schema.String,
+  mode: optional(Schema.Literals(["standard", "test"])),
+  /** Public unless set: a private incident is seen only by those invited to it. */
+  visibility: optional(Schema.Literals(["public", "private"])),
+  every: optional(Schema.String),
+  /** api.incident.io unless set. */
+  url: optional(Schema.String),
+})
+export type IncidentIoSettings = typeof IncidentIo.Type
+
+export const IncidentTool = Schema.Struct({ pagerduty: optional(PagerDuty), incidentio: optional(IncidentIo) })
 type IncidentTool = typeof IncidentTool.Type
 
 const shortest = 5
@@ -25,13 +41,20 @@ const usual = 60
 
 /** How often each open incident raised in the tool is read back, in seconds: a minute unless set. */
 export const readBackEvery = (tool: IncidentTool | undefined): number =>
-  secondsIn(tool?.pagerduty?.every ?? "") ?? usual
+  secondsIn(tool?.pagerduty?.every ?? tool?.incidentio?.every ?? "") ?? usual
 
-export const incidentToolMistakes = (tool: IncidentTool | undefined): ReadonlyArray<Mistake> => {
-  const every = tool?.pagerduty?.every
+const everyMistakes = (kind: string, every: string | undefined): ReadonlyArray<Mistake> => {
   if (every === undefined) return []
   const seconds = secondsIn(every)
-  const at = "incidentTool.pagerduty.every"
+  const at = `incidentTool.${kind}.every`
   if (seconds === undefined) return [{ at, message: notADuration(every) }]
   return seconds < shortest ? [{ at, message: `"${every}" is under ${shortest}s, the most often Estate reads` }] : []
 }
+
+export const incidentToolMistakes = (tool: IncidentTool | undefined): ReadonlyArray<Mistake> => [
+  ...(tool?.pagerduty !== undefined && tool.incidentio !== undefined
+    ? [{ at: "incidentTool", message: "names one tool an Estate raises in: pagerduty or incidentio" }]
+    : []),
+  ...everyMistakes("pagerduty", tool?.pagerduty?.every),
+  ...everyMistakes("incidentio", tool?.incidentio?.every),
+]

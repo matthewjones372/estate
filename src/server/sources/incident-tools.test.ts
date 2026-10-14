@@ -8,6 +8,8 @@ describe("the incident tool", () => {
   test("is the kind the settings name, and none where they name none", () => {
     const pagerduty = { token: Redacted.make("pd"), from: "estate@example.com", service: "PABC123" }
     expect(incidentToolOf({ ...settings(), incidentTool: { pagerduty } })?.name).toBe("PagerDuty")
+    const incidentio = { token: Redacted.make("io"), severity: "Minor" }
+    expect(incidentToolOf({ ...settings(), incidentTool: { incidentio } })?.name).toBe("incident.io")
     expect(incidentToolOf(settings())).toBeUndefined()
   })
 

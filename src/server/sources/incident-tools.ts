@@ -55,3 +55,17 @@ export const teamToolsOf = (catalog: Catalog, service: string | undefined): Team
   const owner = catalog.services.find((each) => each.name === service)?.owner
   return catalog.teams?.find((each) => each.name === owner)?.incidentTool
 }
+
+/** The incident's details: what it does to people, each firing, the way back to Estate, and who raised it. */
+export const detailsOf = (raising: Raising): string =>
+  [
+    ...(raising.impact === undefined ? [] : [`Impact: ${raising.impact}`, ""]),
+    "Firings:",
+    ...raising.firings.map(
+      (firing) =>
+        `- ${firing.name} in ${firing.environment}${firing.service === undefined ? "" : ` (${firing.service})`}, since ${firing.startsAt}`,
+    ),
+    "",
+    ...(raising.page === undefined ? [] : [`In Estate: ${raising.page}`]),
+    `Raised from Estate by ${raising.by}`,
+  ].join("\n")
