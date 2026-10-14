@@ -109,7 +109,7 @@ Spec 0039's incidents and links. Nothing from outside.
 
 ## Stack
 
-- [ ] **`spec-0042-rule`**: `suggestedFor` in `src/server/views/suggested.ts`, and `incidents.suggestWithin` in the
+- [x] **`spec-0042-rule`**: `suggestedFor` in `src/server/views/suggested.ts`, and `incidents.suggestWithin` in the
       settings.
       Done when: `suggested.test.ts` suggests a firing with the same alert in another environment, the same service,
       and a neighbour on the map, each within the window and each with its reason; it does not suggest one outside
