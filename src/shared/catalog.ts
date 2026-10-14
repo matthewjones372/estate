@@ -213,7 +213,10 @@ const Team = Schema.Struct({
   name: Schema.String,
   title: optional(Schema.String),
   links: optional(Schema.Record(Schema.String, Schema.String)),
+  /** Where its incidents go in the incident tool, by the tool's kind: its own PagerDuty service. */
+  incidentTool: optional(Schema.Struct({ pagerduty: optional(Schema.String) })),
 })
+export type Team = typeof Team.Type
 
 /**
  * A job no service owns: a Kubernetes CronJob or Job by name in its namespace, or an ECS scheduled task by its task
