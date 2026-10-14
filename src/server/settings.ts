@@ -12,6 +12,7 @@ import { Code } from "./settings-code"
 import { Costs, Prices } from "./settings-costs"
 import { Database, databaseMistakes, misplacedDatabase } from "./settings-database"
 import { notADuration, secondsIn } from "./settings-every"
+import { IncidentTool, incidentToolMistakes } from "./settings-incident-tool"
 import { Incidents, incidentsMistakes } from "./settings-incidents"
 
 const optional = Schema.optionalKey
@@ -171,6 +172,8 @@ export const Settings = Schema.Struct({
   notes: optional(Schema.Struct({ keepDays: optional(Schema.Number) })),
   /** How far apart two firings may start and still be suggested as one incident: `30m` unless set. */
   incidents: optional(Incidents),
+  /** The incident tool an operator raises an incident in from its page (spec 0043). Without it, the page links out. */
+  incidentTool: optional(IncidentTool),
   sources: Schema.Record(Schema.String, Sources),
   /** A screen on the wall: the token it signs in with once, the environments it shows in turn, and how long each. */
   kiosk: optional(
@@ -287,6 +290,7 @@ export const readSettings = (text: string): Effect.Effect<Settings, SettingsErro
       ...databaseMistakes(settings.database),
       ...clusterMistakes(settings),
       ...incidentsMistakes(settings.incidents),
+      ...incidentToolMistakes(settings.incidentTool),
     )
     return sense.length === 0 ? settings : yield* new SettingsError({ mistakes: sense })
   })

@@ -69,6 +69,8 @@ teams:
     links:
       teams: https://teams.microsoft.com/l/channel/payments
       confluence: https://example.atlassian.net/wiki/spaces/PAY
+    # Its own PagerDuty service for its incidents, where estate.yaml sets incidentTool.pagerduty.
+    # incidentTool: { pagerduty: PDEF456 }
 
 services:
   - name: storefront

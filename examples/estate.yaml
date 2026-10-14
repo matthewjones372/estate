@@ -24,6 +24,11 @@ auth:
 # How far apart two related firings may start for one to be suggested as part of the other's incident: 30m unless set.
 # incidents: { suggestWithin: 30m }
 
+# The incident tool an operator raises an incident in from its page: PagerDuty's REST API key, the PagerDuty user it
+# raises as, the service an incident goes to unless its team names its own, and how often it is read back.
+# incidentTool:
+#   pagerduty: { token: ${PAGERDUTY_TOKEN}, from: estate@example.com, service: PABC123, every: 1m }
+
 # Backstage, for the catalog's rule that discovers services from it, with a static token that may read its catalog.
 backstage: { url: https://backstage.invalid }
 # backstage: { url: https://backstage.example.com, token: ${BACKSTAGE_TOKEN} }
