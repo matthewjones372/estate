@@ -6,8 +6,9 @@ import type { PastFiring } from "../../shared/firing"
 import type { EstateState, StoredFiring } from "../state"
 import { before, iso } from "../time"
 import { impactOf } from "./alerts"
-import { changesOf, neighboursOf } from "./around"
+import { changesOf } from "./around"
 import { incidentOf, notesOn } from "./incident-of"
+import { neighboursOf } from "./neighbours"
 
 /** What changed in the hour before it fired, which deploys it may have followed are no longer held, and its neighbours. */
 const aroundThen = (estate: EstateState, firing: StoredFiring) => {

@@ -21,6 +21,9 @@ auth:
 # database: { dynamodb: { table: estate-notes, region: eu-west-2 } }
 # notes: { keepDays: 30 }
 
+# How far apart two related firings may start for one to be suggested as part of the other's incident: 30m unless set.
+# incidents: { suggestWithin: 30m }
+
 # Backstage, for the catalog's rule that discovers services from it, with a static token that may read its catalog.
 backstage: { url: https://backstage.invalid }
 # backstage: { url: https://backstage.example.com, token: ${BACKSTAGE_TOKEN} }
