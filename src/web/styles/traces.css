@@ -1,0 +1,87 @@
+/* Journeys and traces (spec 0046) */
+.table-box {
+  overflow-x: auto;
+}
+.number {
+  text-align: right;
+}
+fieldset.choices {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+}
+
+.journey-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.journey-hint {
+  margin: 0;
+  font-size: 13px;
+}
+.journey-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.journey-headline {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+  max-width: 760px;
+}
+.journey-bar {
+  display: flex;
+  gap: 2px;
+  height: 44px;
+}
+.journey-segment {
+  flex-basis: 0;
+  min-width: 6px;
+  border-radius: 3px;
+  background: var(--link);
+}
+.journey-stages,
+.trace-waterfall {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.journey-stages {
+  min-width: 640px;
+}
+.journey-stages th,
+.journey-stages td,
+.trace-waterfall th,
+.trace-waterfall td {
+  padding: 8px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  font-weight: 400;
+}
+.journey-stages thead th,
+.trace-waterfall thead th {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.journey-stages tbody th {
+  font-weight: 600;
+}
+.journey-largest {
+  background: var(--amber-panel);
+}
+.journey-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

@@ -1,0 +1,247 @@
+/* A trace's page (spec 0046) */
+/* A span is work, a call waits on others, and the time between spans is hatched; the longest wait is amber. */
+.trace-work {
+  background: var(--link);
+}
+.trace-call {
+  border: 1px solid var(--quiet);
+  background: rgba(22, 26, 35, 0.6);
+  box-sizing: border-box;
+}
+.trace-wait {
+  background: repeating-linear-gradient(135deg, var(--line-strong) 0 6px, var(--line-soft) 6px 12px);
+}
+.trace-hot.trace-wait,
+.journey-segment.trace-hot {
+  background: repeating-linear-gradient(135deg, #7a5413 0 6px, var(--amber-deep) 6px 12px);
+  outline: 1px solid var(--amber);
+}
+.trace-failed {
+  outline: 1px solid var(--critical);
+}
+.trace-failed-word {
+  color: var(--critical);
+}
+
+.trace-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.trace-lanes {
+  display: flex;
+  overflow-x: auto;
+}
+/* The names stay in view while the lanes scroll sideways. */
+.trace-lane-names {
+  flex: 0 0 180px;
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: var(--panel);
+}
+.trace-lane-name {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line-soft);
+  box-sizing: border-box;
+}
+.trace-tracks {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 640px;
+}
+.trace-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 64px;
+  border-bottom: 1px solid var(--line-soft);
+  box-sizing: border-box;
+}
+.trace-bar {
+  position: absolute;
+  height: 24px;
+  border-radius: 3px;
+}
+.trace-lanes .trace-bar {
+  padding: 0;
+  margin: 0;
+  min-height: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.trace-lanes .trace-bar:hover,
+.trace-lanes .trace-bar:focus-visible {
+  filter: brightness(1.25);
+  z-index: 2;
+}
+.trace-lanes .trace-bar[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--ink);
+  z-index: 3;
+}
+.trace-lanes .trace-work,
+.trace-lanes .trace-wait {
+  border: 0;
+}
+.trace-nested {
+  border-style: dashed;
+}
+/* Cut off where the bar ends, so only bars wide enough to say what they are say it. */
+.trace-bar-label {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--ground);
+}
+.trace-wait .trace-bar-label {
+  color: var(--ink);
+}
+.trace-hot .trace-bar-label {
+  overflow: visible;
+  color: var(--amber-text);
+  text-shadow: 0 0 3px var(--ground);
+}
+.trace-call .trace-bar-label {
+  color: var(--ink-2);
+  line-height: 16px;
+}
+/* A call inside another names itself at its foot, under its parent's name. */
+.trace-nested .trace-bar-label {
+  position: absolute;
+  bottom: 0;
+}
+.trace-cut {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  opacity: 0.35;
+  background: repeating-linear-gradient(135deg, var(--amber-line) 0 6px, transparent 6px 12px);
+}
+.trace-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--ink-2);
+  opacity: 0.6;
+}
+.trace-answer {
+  border-left-color: var(--healthy);
+}
+.trace-handoff {
+  position: absolute;
+  width: 0;
+  border-left: 1px solid var(--ink-2);
+  opacity: 0.6;
+}
+.trace-handoff::after {
+  content: "";
+  position: absolute;
+  left: -5px;
+  bottom: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid var(--ink-2);
+}
+.trace-handoff-up::after {
+  bottom: auto;
+  top: 0;
+  border-top: 0;
+  border-bottom: 6px solid var(--ink-2);
+}
+.trace-waterfall {
+  min-width: 760px;
+}
+.trace-waterfall tbody th {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.trace-step {
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+  min-height: 0;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.trace-step:hover,
+.trace-step[aria-pressed="true"] {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+.trace-row-chosen {
+  background: var(--raised);
+}
+.trace-chosen {
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--raised);
+}
+.trace-chosen-title {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+.trace-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 16px;
+  font-size: 13px;
+}
+.trace-facts dt {
+  color: var(--ink-3);
+}
+.trace-facts dd {
+  margin: 0;
+}
+.trace-hint {
+  margin: 0;
+  font-size: 12px;
+}
+.trace-text {
+  font-size: 11px;
+}
+.trace-timeline-head {
+  width: 50%;
+}
+.trace-timeline {
+  position: relative;
+}
+.trace-timeline .trace-bar {
+  top: 50%;
+  height: 16px;
+  margin-top: -8px;
+}
+.trace-row-wait {
+  color: var(--ink-soft);
+}
+.trace-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+}
+.trace-key {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+}
+.trace-answer-key {
+  border-left: 2px dashed var(--healthy);
+  width: 0;
+}

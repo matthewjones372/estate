@@ -13,6 +13,7 @@ import { CardNote, Note } from "./note"
 
 export { type Build, DeploysEvent } from "./deploys"
 
+import { DescribedJourney } from "./traces"
 import { Debug, Job, Pod, Series } from "./workloads"
 
 const optional = Schema.optionalKey
@@ -70,6 +71,8 @@ export const CatalogEvent = Schema.Struct({
     Schema.Array(Schema.Struct({ name: Schema.String, title: Schema.String, links: Schema.Array(Link) })),
   ),
   agents: optional(Schema.Array(DescribedAgent)),
+  /** The catalog's journeys here (spec 0046). */
+  journeys: optional(Schema.Array(DescribedJourney)),
   jobs: optional(
     Schema.Array(
       Schema.Struct({

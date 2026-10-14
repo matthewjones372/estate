@@ -9,6 +9,8 @@ import type { PastFiring } from "../shared/firing"
 import type { Incident, IncidentRecord } from "../shared/incidents"
 import type { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { FiringEvent } from "../shared/timeline"
+import type { TraceView } from "../shared/trace-view"
+import type { JourneySample } from "../shared/traces"
 import type { Live, Snapshot } from "./live"
 import type { Page } from "./route"
 import type { Exported } from "./timeline-path"
@@ -34,6 +36,10 @@ export interface Actions {
   readonly watchLogs: (service: string, handlers: LogHandlers) => () => void
   /** An agent's recent runs: "none" where it has no runs to read, undefined where they could not be read. */
   readonly runs: (agent: string) => Promise<ReadonlyArray<AgentRun> | "none" | undefined>
+  /** A journey over a sample of its recent traces: "none" where it has none to read, undefined where they failed. */
+  readonly journey: (journey: string) => Promise<JourneySample | "none" | undefined>
+  /** One trace as lanes and rows, measured as the journey where one is named: "none" where it is not found. */
+  readonly trace: (id: string, journey?: string) => Promise<TraceView | "none" | undefined>
   /** A service's errors grouped, over a range or since a time: "none" where it has no logs to read. */
   readonly errors: (service: string, window: ErrorWindow) => Promise<ErrorGroups | "none" | undefined>
   /**

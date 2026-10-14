@@ -1,6 +1,7 @@
 /** The catalog: an estate's environments, services, vitals and map, as its owner writes it in `catalog.yaml`. */
 import { Schema } from "effect"
 import { Agent } from "./catalog-agent"
+import { Journey } from "./catalog-journey"
 import { Kubernetes } from "./catalog-parts"
 import { CostOf } from "./costs"
 import { CatalogMap } from "./map"
@@ -207,6 +208,7 @@ export const Store = Schema.Struct({
 export type Store = typeof Store.Type
 
 export { Agent } from "./catalog-agent"
+export { Journey } from "./catalog-journey"
 
 /** A team, by the name an owner gives: where to reach it, its chat, its pages and its on-call. */
 const Team = Schema.Struct({
@@ -264,6 +266,8 @@ export const Catalog = Schema.Struct({
   alerts: optional(Schema.Record(Schema.String, Schema.Struct({ impact: optional(Schema.String) }))),
   vitals: optional(Schema.Array(Vital)),
   map: optional(CatalogMap),
+  /** Requests that cross the estate, measured from their traces (spec 0046). */
+  journeys: optional(Schema.Array(Journey)),
   discover: optional(Schema.Array(DiscoverRule)),
 })
 export type Catalog = typeof Catalog.Type

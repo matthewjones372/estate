@@ -39,6 +39,12 @@ export const duration = (milliseconds: number): string => {
   return `${Math.floor(hours / 24)} d`
 }
 
+/** "<1 ms", "48 ms", "1.06 s": how long a span or stage took. */
+export const took = (milliseconds: number): string => {
+  if (milliseconds < 1) return "<1 ms"
+  return milliseconds < 1000 ? `${Math.round(milliseconds)} ms` : `${(milliseconds / 1000).toFixed(2)} s`
+}
+
 /** A metric's value with few digits: 1,250 · 148 · 9.4 · 0.03 · 0. */
 export const amount = (value: number | null | undefined): string => {
   if (value === null || value === undefined || Number.isNaN(value)) return "–"

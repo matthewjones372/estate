@@ -10,6 +10,7 @@ import {
 } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { CatalogEvent } from "../../shared/events"
+import { journeysIn, servicesOf } from "./journeys"
 import { storesIn } from "./stores"
 
 /** A discovered entry as it would be written under `services:`, without the mark only discovery sets. */
@@ -126,6 +127,15 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
             ),
           }),
         ),
+      }),
+  ...(catalog.journeys === undefined
+    ? {}
+    : {
+        journeys: journeysIn(catalog, environment).map((journey) => ({
+          name: journey.name,
+          title: journey.title ?? journey.name,
+          services: servicesOf(catalog, journey),
+        })),
       }),
   ...(catalog.jobs === undefined
     ? {}
