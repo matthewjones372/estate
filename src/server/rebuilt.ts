@@ -5,6 +5,7 @@
  */
 import { Effect, SubscriptionRef } from "effect"
 import type { Incident } from "../shared/incidents"
+import { seenLive } from "../shared/timeline"
 import { Notes } from "./notes"
 import { type Change, finished, podsOf, restarted, runningOf } from "./seen"
 import { Configured } from "./settings"
@@ -12,6 +13,9 @@ import { leadMinutes } from "./settings-incidents"
 import { Estate, type EstateState } from "./state"
 import { isoNow } from "./time"
 import { incidentServices, incidentWindow } from "./views/incident-scope"
+
+/** The environments of its firings, in order: the first is where a build, which is no environment's, is told. */
+const environmentsOf = (incident: Incident) => [...new Set(incident.firings.map((firing) => firing.environment))].sort()
 
 type Rebuilt = Change & { readonly at: string; readonly service: string }
 
@@ -23,7 +27,7 @@ const runUp = (
   from: string,
   now: string,
 ): ReadonlyArray<Rebuilt> => {
-  const environments = [...new Set(incident.firings.map((firing) => firing.environment))].sort()
+  const environments = environmentsOf(incident)
   const since = (at: string | undefined) => at !== undefined && Date.parse(at) >= Date.parse(from)
   return environments
     .flatMap((environment, index) =>
@@ -89,3 +93,31 @@ export const keepRunUp = (was: Incident | undefined, now: Incident) =>
       { discard: true },
     )
   }).pipe(Effect.catch((failure) => Effect.logWarning(`an incident's run-up could not be kept: ${failure.message}`)))
+
+/** Each of its services' versions as it closes, kept as seen, so *What changed* says where it ended. */
+export const keepAtClose = (incident: Incident) =>
+  Effect.gen(function* () {
+    const estate = yield* SubscriptionRef.get(yield* Estate)
+    const at = yield* isoNow
+    const environments = environmentsOf(incident)
+    const notes = yield* Notes
+    yield* Effect.forEach(
+      environments.flatMap((environment) =>
+        incidentServices(estate, incident).flatMap((service) => {
+          const running = runningOf(podsOf(estate.environments[environment], service))
+          return running === undefined ? [] : [{ service, text: `${service} ${running} running in ${environment}` }]
+        }),
+      ),
+      ({ service, text }) =>
+        notes.addIncidentEvent({
+          incident: incident.id,
+          ...seenLive({ id: crypto.randomUUID(), at, by: "Estate", kind: "version-seen", text }),
+          service,
+        }),
+      { discard: true },
+    )
+  }).pipe(
+    Effect.catch((failure) =>
+      Effect.logWarning(`an incident's versions at close could not be kept: ${failure.message}`),
+    ),
+  )

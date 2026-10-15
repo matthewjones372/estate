@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Context, Effect } from "effect"
-import type { Incident } from "../../shared/incidents"
+import type { Incident, IncidentRecord } from "../../shared/incidents"
 import type { Pod } from "../../shared/workloads"
 import { ask, environment, estate, type Server, serverFor, settings } from "../fixture"
 import { Notes } from "../notes"
@@ -117,5 +117,31 @@ describe("an incident's run-up, rebuilt from what Estate holds", () => {
         [start, "version-seen", "payments 3.0.0 running in staging", "payments", "rebuilt"],
       ])
       expect(events.filter((each) => each[1] === "version-seen" && each[3] === "orders")).toHaveLength(1)
+    }))
+
+  test("closing keeps each service's version, and the incident says what changed", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(
+          operator,
+          holding({ version: "2.1.0", ready: true, at: "2026-10-12T09:00:00.000Z" }),
+        )
+        const incident = (yield* ask(
+          server,
+          sending("POST", "/api/incidents", { title: "Orders slow", environment: "staging", alert: "a1" }),
+        )).json() as Incident
+        yield* ask(server, sending("POST", `/api/incidents/${incident.id}/close`, { how: "the pool was resized" }))
+        return (yield* ask(server, sending("GET", `/api/incidents/${incident.id}`))).json() as IncidentRecord
+      }),
+    ).then((record) => {
+      expect(
+        record.events.filter((each) => each.kind === "version-seen").map((each) => [each.text, each.source]),
+      ).toEqual([
+        ["orders 2.1.0 running in staging", "rebuilt"],
+        ["orders 2.1.0 running in staging", "seen"],
+      ])
+      expect(record.versions).toEqual([
+        { service: "orders", environment: "staging", start: "2.1.0", changes: [], close: "2.1.0" },
+      ])
     }))
 })

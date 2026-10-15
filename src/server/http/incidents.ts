@@ -6,6 +6,7 @@
 import { Effect, Layer, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { compact } from "../../shared/compact"
+import { versionsOf } from "../../shared/incident-versions"
 import type { Incident } from "../../shared/incidents"
 import { longestNote } from "../../shared/note"
 import { seenBy } from "../../shared/timeline"
@@ -13,7 +14,7 @@ import { happened, happenedOnEach } from "../happened"
 import { incidentTimeline } from "../incident-timeline"
 import { sameFiring } from "../notes"
 import type { FiringKey } from "../notes-events"
-import { keepRunUp } from "../rebuilt"
+import { keepAtClose, keepRunUp } from "../rebuilt"
 import { Configured } from "../settings"
 import { leadMinutes, suggestWithin } from "../settings-incidents"
 import { Estate } from "../state"
@@ -168,6 +169,7 @@ const closeRoute = HttpRouter.add(
       }),
     )
     yield* happenedOnEach(now.firings.map(keyOf), person.name, "incident-closed", how)
+    yield* keepAtClose(now)
     return json(now)
   }).pipe(answered),
 )
@@ -191,7 +193,8 @@ const readRoute = HttpRouter.add(
     const estate = yield* SubscriptionRef.get(yield* Estate)
     const services = incidentServices(estate, incident)
     const window = incidentWindow(incident, leadMinutes(settings.incidents), yield* isoNow)
-    return json(compact({ incident, events: seen, services, window, suggested, inTool: estate.inTool?.[id] }))
+    const versions = versionsOf(events, services, estate.catalog.services)
+    return json(compact({ incident, events: seen, services, versions, window, suggested, inTool: estate.inTool?.[id] }))
   }).pipe(answered),
 )
 

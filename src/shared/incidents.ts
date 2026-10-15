@@ -1,5 +1,6 @@
 /** An incident: firings a person linked as one problem, who opened it and when, and how it ended once closed. */
 import { Schema } from "effect"
+import { ServiceVersions } from "./incident-versions"
 import { Note } from "./note"
 import { FiringEvent } from "./timeline"
 
@@ -112,6 +113,8 @@ export const IncidentRecord = Schema.Struct({
   events: Schema.Array(IncidentEvent),
   /** The services and stores it is about: its firings', then those added. */
   services: optional(Schema.Array(Schema.String)),
+  /** *What changed*: each service's version at its start, during it and at its close. */
+  versions: optional(Schema.Array(ServiceVersions)),
   /** From its lead before its first firing, or its opening if earlier, to its close; to now while open. */
   window: optional(Schema.Struct({ from: Instant, to: Instant })),
   suggested: optional(Schema.Array(MayBelong)),
