@@ -1,11 +1,13 @@
 /**
  * `GET /api/journeys?env=&journey=&minutes=`: a journey's stages over a sample of its recent traces.
- * `GET /api/traces/:id?env=&journey=`: one trace, as lanes and rows. Both read from Tempo when asked (spec 0046).
+ * `GET /api/traces/:id?env=&journey=`: one trace, as lanes and rows. Both read from Tempo when asked (spec 0046); a
+ * trace an incident kept as evidence opens from what was kept when Tempo does not have it (spec 0047).
  */
 import { Clock, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter } from "effect/http"
 import { traceView } from "../../shared/trace-view"
 import { sampleOf } from "../../shared/traces"
+import { keptTrace } from "../evidence-traces"
 import { Configured } from "../settings"
 import { tempoOf } from "../sources/grafana"
 import { readTrace, searchTraces, spansNamed } from "../sources/tempo"
@@ -81,13 +83,16 @@ export const traceRoute = HttpRouter.add(
     const { id = "" } = yield* HttpRouter.params
     const asked = yield* searchParams(TraceAsked, "a trace is asked for by env and journey")
     const { catalog, env, tempo } = yield* reach(asked.env)
-    if (tempo === undefined)
-      return yield* new Refusal({ status: 404, body: { message: `${env} has no traces to read` } })
-    const read = yield* Effect.result(readTrace(tempo, id))
-    if (read._tag === "Failure") return json({ message: read.failure.message }, 502)
-    if (read.success.spans.length === 0)
+    const read = tempo === undefined ? undefined : yield* Effect.result(readTrace(tempo, id))
+    const live = read?._tag === "Success" && read.success.spans.length > 0 ? read.success : undefined
+    const trace = live ?? (yield* keptTrace(id))
+    if (trace === undefined) {
+      if (read === undefined)
+        return yield* new Refusal({ status: 404, body: { message: `${env} has no traces to read` } })
+      if (read._tag === "Failure") return json({ message: read.failure.message }, 502)
       return yield* new Refusal({ status: 404, body: { message: `no trace ${id} in ${env}` } })
+    }
     const journey = journeysIn(catalog, env).find((each) => each.name === asked.journey)
-    return json(traceView(read.success, lanesOf(catalog), journey))
+    return json(traceView(trace, lanesOf(catalog), journey))
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

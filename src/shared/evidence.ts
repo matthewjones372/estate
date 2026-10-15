@@ -4,6 +4,7 @@
  */
 import { Schema } from "effect"
 import { ErrorGroups, LogLine } from "./log-events"
+import { TraceSpan } from "./traces"
 
 const optional = Schema.optionalKey
 
@@ -34,6 +35,16 @@ export const KeptLogs = Schema.Struct({
 })
 export type KeptLogs = typeof KeptLogs.Type
 
+export const KeptTrace = Schema.Struct({
+  id: Schema.String,
+  environment: Schema.String,
+  /** Among its journey's slowest or failed in the window, or named by a kept log line. */
+  why: Schema.Literals(["slowest", "failed", "named"]),
+  journey: optional(Schema.String),
+  spans: Schema.Array(TraceSpan),
+})
+export type KeptTrace = typeof KeptTrace.Type
+
 export const EvidenceSet = Schema.Struct({
   id: Schema.String,
   keptAt: Schema.String,
@@ -43,5 +54,7 @@ export const EvidenceSet = Schema.Struct({
   charts: Schema.Array(KeptChart),
   /** Each service's logs; none for a reader who may not read logs. */
   logs: optional(Schema.Array(KeptLogs)),
+  /** Traces, read whole; none for a reader who may not read logs. */
+  traces: optional(Schema.Array(KeptTrace)),
 })
 export type EvidenceSet = typeof EvidenceSet.Type

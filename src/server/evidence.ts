@@ -1,7 +1,7 @@
 /**
  * An incident's evidence (spec 0047): each of its services' Load and stats, and each store's stats, over its window,
- * with the query each came from; and each service's errors grouped and its lines, masked as on the page. Read once
- * from the sources and kept as a set of its own.
+ * with the query each came from; each service's errors grouped and its lines, masked as on the page; and the traces
+ * of its journeys (`evidence-traces.ts`). Read once from the sources and kept as a set of its own.
  */
 import { Effect, SubscriptionRef } from "effect"
 import type { Catalog } from "../shared/catalog"
@@ -10,6 +10,7 @@ import type { Incident } from "../shared/incidents"
 import { statsOf } from "../shared/stats"
 import { storeStatsOf } from "../shared/stores"
 import { windowOf } from "../shared/window"
+import { tracesOf } from "./evidence-traces"
 import { happenedOnIncident } from "./happened"
 import { serviceLogs } from "./log-hub"
 import { Notes } from "./notes"
@@ -121,8 +122,28 @@ export const keepEvidence = (incident: Incident, by: string) =>
         (each) => each.flat(),
       ),
     )
-    const set = { id: crypto.randomUUID(), keptAt, keptBy: by, window, charts: charts.flat(), logs: logs.flat() }
-    if (set.charts.length === 0 && set.logs.length === 0) return undefined
+    const traces = yield* Effect.forEach(environmentsOf(incident), (environment) => {
+      const where = estate.catalog.environments.find((each) => each.name === environment)
+      const window = { from: Date.parse(from), to: Date.parse(to) }
+      return tracesOf(
+        estate.catalog,
+        settings.sources[where?.sources ?? ""] ?? {},
+        environment,
+        services,
+        window,
+        logs.flat(),
+      )
+    })
+    const set = {
+      id: crypto.randomUUID(),
+      keptAt,
+      keptBy: by,
+      window,
+      charts: charts.flat(),
+      logs: logs.flat(),
+      traces: traces.flat(),
+    }
+    if (set.charts.length === 0 && set.logs.length === 0 && set.traces.length === 0) return undefined
     yield* (yield* Notes).keepEvidence(incident.id, set)
     const kept = new Set([...set.charts, ...set.logs].map((each) => each.service)).size
     const sum = (of: (logs: KeptLogs) => number) => set.logs.reduce((total, logs) => total + of(logs), 0)
@@ -130,6 +151,7 @@ export const keepEvidence = (incident: Incident, by: string) =>
     const said = [
       `kept ${many(kept, "service's", "services'")} charts, ${many(set.charts.length, "series", "series")}`,
       lines === 0 ? "" : `, ${many(lines, "line", "lines")}`,
+      set.traces.length === 0 ? "" : `, ${many(set.traces.length, "trace", "traces")}`,
       leftOut === 0 ? "" : `; ${many(leftOut, "line", "lines")} left out past incidents.evidence.lines`,
     ].join("")
     yield* happenedOnIncident(incident.id, by, "evidence-kept", said)
