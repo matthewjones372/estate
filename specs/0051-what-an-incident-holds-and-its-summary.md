@@ -158,7 +158,7 @@ the 300-line limit, so the incident actions move out of it first.
 - [x] **`spec-0051-include-charts`** — *Include* on a service's and a store's charts, with the range on screen.
       Done when: including Errors over 6 h sends the service, panel, environment and range, and the incident's page
       draws it.
-- [ ] **`spec-0051-include-traces`** — *Include* on a trace's page.
+- [x] **`spec-0051-include-traces`** — *Include* on a trace's page.
       Done when: including a trace keeps it whole and the incident's page draws it in lanes linking to its page.
 - [ ] **`spec-0051-evidence-first`** — the page's sections reordered; *Included* listed newest first above Estate's
       set, each drawn as where it was found, with *Remove*; the export's `included/` and `removed/`.
