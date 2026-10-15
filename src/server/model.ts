@@ -32,16 +32,31 @@ export interface Tools {
 }
 
 /** What a model answered, the tools it called, and the tokens it took: in all, for the day's budget, and as paid. */
-interface Asked {
-  readonly answer: ModelAnswer
+interface Asked<A> {
+  readonly answer: A
   readonly model: string
   readonly called: ReadonlyArray<string>
   readonly tokens: number
   readonly usage: Usage
 }
 
+/** What a caller asks the model for: its instructions, the schema its answer is decoded with, and a last tidy. */
+export interface Shape<A, I> {
+  readonly system: string
+  readonly answer: Schema.Codec<A, I>
+  readonly tidy: (answer: A) => A
+}
+
 export interface Model {
-  readonly ask: (brief: string, question: string, tools?: Tools) => Effect.Effect<Asked, ModelError>
+  /** Ask AI about an alert, in `alertAnswer`'s shape. */
+  readonly ask: (brief: string, question: string, tools?: Tools) => Effect.Effect<Asked<ModelAnswer>, ModelError>
+  /** Any other question, answered in `shape`. */
+  readonly answer: <A, I>(
+    shape: Shape<A, I>,
+    brief: string,
+    question: string,
+    tools?: Tools,
+  ) => Effect.Effect<Asked<A>, ModelError>
 }
 export const Model = Context.Service<Model>("estate/Model")
 
@@ -60,8 +75,6 @@ confidence. When you have answered, reply with one JSON object and nothing else:
 {"likelyCause": string, "evidence": [{"text": string, "href"?: string}], "nextSteps": [string],
  "confidence": "low" | "medium" | "high"}. Each piece of evidence quotes what you read.`
 
-const decodeAnswer = Schema.decodeUnknownEffect(Schema.fromJsonString(ModelAnswer))
-
 /** The JSON object in what the model wrote, past any prose or code fence around it. */
 const objectIn = (text: string): string => text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)
 
@@ -72,6 +85,12 @@ const safely = (answer: ModelAnswer): ModelAnswer => ({
     href !== undefined && /^https?:\/\//i.test(href) ? { text, href } : { text },
   ),
 })
+
+export const alertAnswer: Shape<ModelAnswer, typeof ModelAnswer.Encoded> = {
+  system,
+  answer: ModelAnswer,
+  tidy: safely,
+}
 
 /** A tool call as the page lists it: its name and what it was asked about. */
 const calledAs = ({ name, input }: ToolCall): string => {
@@ -98,14 +117,15 @@ const refusesEffort = (status: number, text: string) =>
 
 const withoutEffort = ({ effort: _, ...ai }: Ai): Ai => ai
 
-const askWith = (
+const askWith = <A, I>(
   remote: Remote,
   ai: Ai,
   effortRefused: Ref.Ref<boolean>,
+  shape: Shape<A, I>,
   brief: string,
   question: string,
   tools: Tools | undefined,
-) => {
+): Effect.Effect<Asked<A>, ModelError> => {
   const api = apiOf(ai)
   const lastRound = ai.toolRounds ?? rounds
   const most = ai.toolResultChars ?? resultChars
@@ -155,15 +175,16 @@ const askWith = (
       ? Effect.succeed(talk)
       : Effect.flatMap(next(talk, tools), talking)
   return Effect.gen(function* () {
-    const conversation = started(system, `Brief:\n${brief}\n\nQuestion: ${question}`)
+    const format = Schema.toJsonSchemaDocument(shape.answer).schema
+    const conversation = started(shape.system, format, `Brief:\n${brief}\n\nQuestion: ${question}`)
     const turn = yield* turnOf(conversation, tools?.offers ?? [])
     const talk = yield* talking({ conversation, turn, called: [], usage: added(noUsage, turn.usage), round: 1 })
-    const answer = yield* decodeAnswer(objectIn(talk.turn.text)).pipe(
-      Effect.mapError(() => new ModelError({ message: "the model did not answer in the shape it was asked for" })),
-    )
+    const answer = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(shape.answer))(
+      objectIn(talk.turn.text),
+    ).pipe(Effect.mapError(() => new ModelError({ message: "the model did not answer in the shape it was asked for" })))
     const { usage } = talk
     return {
-      answer: safely(answer),
+      answer: shape.tidy(answer),
       model: ai.model,
       called: talk.called,
       tokens: usage.input + usage.cached + usage.output,
@@ -178,11 +199,13 @@ export const liveModel = (ai: Ai | undefined): Layer.Layer<Model, never, Remote>
     Effect.gen(function* () {
       const remote = yield* Remote
       const effortRefused = yield* Ref.make(false)
+      const answer = <A, I>(shape: Shape<A, I>, brief: string, question: string, tools?: Tools) =>
+        ai === undefined
+          ? Effect.fail(new ModelError({ message: "Ask AI is not configured" }))
+          : askWith(remote, ai, effortRefused, shape, brief, question, tools)
       return {
-        ask: (brief: string, question: string, tools?: Tools) =>
-          ai === undefined
-            ? Effect.fail(new ModelError({ message: "Ask AI is not configured" }))
-            : askWith(remote, ai, effortRefused, brief, question, tools),
+        answer,
+        ask: (brief: string, question: string, tools?: Tools) => answer(alertAnswer, brief, question, tools),
       }
     }),
   )

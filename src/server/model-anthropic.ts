@@ -3,7 +3,6 @@
  * JSON Schema, and the reply's blocks kept whole for the next turn.
  */
 import { Effect, Schema } from "effect"
-import { ModelAnswer } from "../shared/ask"
 import { type Api, base, keyOf, thinking } from "./model-apis"
 import type { Ai } from "./settings"
 
@@ -18,9 +17,6 @@ const closed = (schema: unknown): unknown => {
     Object.entries(schema).map(([key, value]) => [key, key === "additionalProperties" ? false : closed(value)]),
   )
 }
-
-/** The answer's shape, which Anthropic holds the final reply to, as `response_format` does for the chat APIs. */
-const answerFormat = { type: "json_schema", schema: closed(Schema.toJsonSchemaDocument(ModelAnswer).schema) }
 
 const AnthropicReply = Schema.fromJsonString(
   Schema.Struct({
@@ -72,7 +68,7 @@ export const anthropic = (ai: Ai): Api => {
   const key = keyOf(ai)
   return {
     name: "Anthropic",
-    call: ({ system, messages }, offers, answerNow) => ({
+    call: ({ system, format, messages }, offers, answerNow) => ({
       url: `${base(ai.url ?? "https://api.anthropic.com")}/v1/messages`,
       method: "POST",
       timeout: thinking,
@@ -85,7 +81,11 @@ export const anthropic = (ai: Ai): Api => {
         model: ai.model,
         max_tokens: longestThinking,
         // Effort only where set: Haiku refuses the parameter, so a default would break the cheapest model.
-        output_config: { format: answerFormat, ...(ai.effort === undefined ? {} : { effort: ai.effort }) },
+        // The answer's shape, which Anthropic holds the final reply to, as `response_format` does for the chat APIs.
+        output_config: {
+          format: { type: "json_schema", schema: closed(format) },
+          ...(ai.effort === undefined ? {} : { effort: ai.effort }),
+        },
         system: [{ type: "text", text: system, cache_control: cachedHere }],
         messages: cachedMessages(messages),
         // The tools stay on the last round, so the cached prefix they start stays whole; the model is told not to call.
