@@ -210,4 +210,6 @@ export const DescribedJourney = Schema.Struct({
   name: Schema.String,
   title: Schema.String,
   services: Schema.Array(Schema.String),
+  /** The map's nodes it passes through, in order, and its stages at each. */
+  places: Schema.Array(Schema.Struct({ node: Schema.String, stages: Schema.Array(Schema.Number) })),
 })

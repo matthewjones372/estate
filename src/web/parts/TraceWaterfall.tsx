@@ -3,7 +3,7 @@
 import { For, Show } from "solid-js"
 import type { Row, TraceView } from "../../shared/trace-view"
 import { took } from "../format"
-import { barAt, CutBand, type Drawn, hot, kindWords, Marks } from "./TraceDrawn"
+import { against, barAt, CutBand, type Drawn, hot, kindWords, Marks, type Usual } from "./TraceDrawn"
 
 export const Waterfall = (props: Drawn) => (
   <div class="table-box">
@@ -18,6 +18,11 @@ export const Waterfall = (props: Drawn) => (
           <th scope="col" class="number">
             Took
           </th>
+          <Show when={props.usual}>
+            <th scope="col" class="number">
+              Against usual
+            </th>
+          </Show>
         </tr>
       </thead>
       <tbody>
@@ -52,6 +57,17 @@ export const Waterfall = (props: Drawn) => (
                   <span class="trace-failed-word"> failed</span>
                 </Show>
               </td>
+              <Show when={props.usual}>
+                <td class="number">
+                  <Show when={against(row, props.usual)}>
+                    {(compared) => (
+                      <span classList={{ "trace-slow-word": compared().slow }}>
+                        {compared().words} <span class="muted mono">({took(compared().p50)})</span>
+                      </span>
+                    )}
+                  </Show>
+                </td>
+              </Show>
             </tr>
           )}
         </For>
@@ -61,7 +77,7 @@ export const Waterfall = (props: Drawn) => (
 )
 
 /** The chosen step: what it was, where, when it started and how long it took. */
-export const Chosen = (props: { readonly view: TraceView; readonly row: Row }) => (
+export const Chosen = (props: { readonly view: TraceView; readonly row: Row; readonly usual?: Usual | undefined }) => (
   <section aria-label="The chosen step" class="trace-chosen" aria-live="polite">
     <p class="trace-chosen-title">
       {props.row.title}
@@ -73,6 +89,17 @@ export const Chosen = (props: { readonly view: TraceView; readonly row: Row }) =
     <dl class="trace-facts">
       <dt>Took</dt>
       <dd class="mono">{took(props.row.to - props.row.from)}</dd>
+      <Show when={against(props.row, props.usual)}>
+        {(compared) => (
+          <>
+            <dt>Usually</dt>
+            <dd>
+              <span class="mono">{took(compared().p50)}</span>, the p50 of its recent traces:{" "}
+              <span classList={{ "trace-slow-word": compared().slow }}>{compared().words}</span>
+            </dd>
+          </>
+        )}
+      </Show>
       <dt>Started</dt>
       <dd class="mono">{took(props.row.from)} in</dd>
       <dt>Is</dt>

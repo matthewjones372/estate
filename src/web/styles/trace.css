@@ -22,6 +22,13 @@
 .trace-failed-word {
   color: var(--critical);
 }
+/* A step half as long again as its stage usually takes. */
+.trace-slow-word {
+  color: var(--amber-text);
+}
+.trace-lanes .trace-slow {
+  box-shadow: 0 0 0 2px var(--amber);
+}
 
 .trace-controls {
   display: flex;

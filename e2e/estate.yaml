@@ -35,6 +35,8 @@ sources:
     prometheus: { url: http://127.0.0.1:8282 }
     alertmanager: { url: http://127.0.0.1:8282 }
     kubernetes: { url: http://127.0.0.1:8282, token: fake }
+    # The orders' traces, for the catalog's journey.
+    tempo: { url: http://127.0.0.1:8282 }
     flux: {}
     langfuse: { url: http://127.0.0.1:8282, publicKey: pk-lf-e2e, secretKey: sk-lf-e2e }
     # Kubernetes' share of the bill from OpenCost, and the support agent's spend from Anthropic's report, both faked

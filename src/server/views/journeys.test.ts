@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { Catalog } from "../../shared/catalog"
 import { catalogView } from "./catalog"
-import { lanesOf } from "./journeys"
+import { lanesOf, placesOf } from "./journeys"
 
 const catalog: Catalog = {
   environments: [
@@ -38,9 +38,28 @@ const catalog: Catalog = {
 describe("a journey in the catalog event", () => {
   test("names the services it crosses, by node or name, in the environments it is in", () => {
     expect(catalogView(catalog, "production").journeys).toEqual([
-      { name: "adoption", title: "adoption", services: ["shop-web", "shop"] },
+      {
+        name: "adoption",
+        title: "adoption",
+        services: ["shop-web", "shop"],
+        places: [
+          { node: "web", stages: [] },
+          { node: "registry", stages: [1] },
+          { node: "db", stages: [2] },
+        ],
+      },
     ])
     expect(catalogView(catalog, "staging").journeys).toEqual([])
+  })
+})
+
+describe("a journey on the map", () => {
+  test("is the map's nodes its stages happen in, in order, each with the stages it spends there", () => {
+    expect(placesOf(catalog, catalog.journeys?.[0] ?? (undefined as never))).toEqual([
+      { node: "web", stages: [] },
+      { node: "registry", stages: [1] },
+      { node: "db", stages: [2] },
+    ])
   })
 })
 

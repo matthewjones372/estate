@@ -21,6 +21,8 @@ const Row = Schema.Struct({
   failed: Schema.Boolean,
   /** The lane of the span that started it, where that is another: the trace moved from there to here. */
   handedFrom: optional(Schema.Number),
+  /** The journey's stage it is, by its place in the journey, so it can be set beside that stage's usual time. */
+  stage: optional(Schema.Number),
 })
 export type Row = typeof Row.Type
 
@@ -68,6 +70,12 @@ export const traceView = (trace: Trace, lanes: Lanes, journey?: Journey): TraceV
   const named = (journey?.stages ?? []).filter((stage) => stage.span !== undefined)
   const stageOf = (span: TraceSpan) =>
     named.find((stage) => stage.span === span.name && (stage.service === undefined || stage.service === span.service))
+  // Only the span a stage was measured from is that stage; another of the same name is a span like any other.
+  const stageIndexOf = (span: TraceSpan): number | undefined => {
+    const stage = stageOf(span)
+    if (stage?.span === undefined || found(trace, stage.span, stage.service)?.id !== span.id) return undefined
+    return journey?.stages.indexOf(stage)
+  }
   const laneOf = (span: TraceSpan): Lane => {
     const stage = stageOf(span)
     return stage === undefined ? lanes.service(span.service) : lanes.where(stage.where)
@@ -94,7 +102,9 @@ export const traceView = (trace: Trace, lanes: Lanes, journey?: Journey): TraceV
     .map((span) => ({ span, lane: laneOf(span) }))
   const gapRows = (journey?.stages ?? []).flatMap((stage, index) => {
     const took = measured?.stages[index]
-    return stage.span !== undefined || took === undefined ? [] : [{ stage, took, lane: lanes.where(stage.where) }]
+    return stage.span !== undefined || took === undefined
+      ? []
+      : [{ stage, index, took, lane: lanes.where(stage.where) }]
   })
   const unordered = [
     ...spanRows.map(({ span, lane }) => {
@@ -103,6 +113,7 @@ export const traceView = (trace: Trace, lanes: Lanes, journey?: Journey): TraceV
       return {
         lane,
         parentLane: parentLane !== undefined && parentLane.id !== lane.id ? parentLane : undefined,
+        stage: stageIndexOf(span),
         row: {
           title: stageOf(span)?.title ?? span.name,
           text: `${span.name} · ${span.kind}`,
@@ -115,9 +126,10 @@ export const traceView = (trace: Trace, lanes: Lanes, journey?: Journey): TraceV
         } as const,
       }
     }),
-    ...gapRows.map(({ stage, took, lane }) => ({
+    ...gapRows.map(({ stage, index, took, lane }) => ({
       lane,
       parentLane: undefined,
+      stage: index as number | undefined,
       row: {
         title: stage.title,
         text: `gap · ${stageText(stage)}`,
@@ -130,9 +142,14 @@ export const traceView = (trace: Trace, lanes: Lanes, journey?: Journey): TraceV
       } as const,
     })),
   ].sort((one, other) => one.row.from - other.row.from || one.row.depth - other.row.depth)
-  const rows = unordered.map(({ lane, parentLane, row }) => {
+  const rows = unordered.map(({ lane, parentLane, stage, row }) => {
     const handedFrom = parentLane === undefined ? undefined : indexOf(parentLane)
-    return { ...row, lane: indexOf(lane), ...(handedFrom === undefined ? {} : { handedFrom }) }
+    return {
+      ...row,
+      lane: indexOf(lane),
+      ...(handedFrom === undefined ? {} : { handedFrom }),
+      ...(stage === undefined ? {} : { stage }),
+    }
   })
   const total = Math.max(measured?.total ?? 0, ...trace.spans.map((span) => span.end - origin))
   const longest = rows

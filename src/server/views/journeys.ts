@@ -36,3 +36,32 @@ export const servicesOf = (catalog: Catalog, journey: Journey): ReadonlyArray<st
   })
   return [...new Set(crossed)]
 }
+
+/** A place on the map a journey passes through, and the stages it spends there, by their place in the journey. */
+interface Place {
+  readonly node: string
+  readonly stages: ReadonlyArray<number>
+}
+
+/**
+ * The map's nodes a journey passes through, in order: where it starts, then each stage's, a node it stays at for
+ * several stages once. A stage somewhere the map does not draw is left out.
+ */
+export const placesOf = (catalog: Catalog, journey: Journey): ReadonlyArray<Place> => {
+  const nodes = catalog.map?.nodes ?? []
+  const nodeOf = (where: string) =>
+    nodes.find((node) => node.id === where)?.id ??
+    nodes.find((node) => node.service === where || node.store === where)?.id
+  const steps = [
+    { node: nodeOf(journey.start.service), stage: undefined },
+    ...journey.stages.map((stage, index) => ({ node: nodeOf(stage.where), stage: index })),
+  ]
+  return steps.reduce<ReadonlyArray<Place>>((places, step) => {
+    if (step.node === undefined) return places
+    const last = places.at(-1)
+    const stages = step.stage === undefined ? [] : [step.stage]
+    return last?.node === step.node
+      ? [...places.slice(0, -1), { node: last.node, stages: [...last.stages, ...stages] }]
+      : [...places, { node: step.node, stages }]
+  }, [])
+}

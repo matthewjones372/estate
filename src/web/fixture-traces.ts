@@ -1,7 +1,9 @@
 /** A journey and its traces as the server would answer them, for the pages' tests. */
 import type { Journey } from "../shared/catalog"
+import type { Events } from "../shared/events"
 import { traceView } from "../shared/trace-view"
 import { type Lanes, sampleOf, type Trace, type TraceSpan } from "../shared/traces"
+import { events } from "./fixture"
 
 const at = Date.parse("2026-10-03T11:58:00Z")
 
@@ -62,3 +64,27 @@ export const refusedTrace = traceView(
   lanes,
   journey,
 )
+
+/** The fixture's events with one journey, by `name`, across storefront, orders and the database. */
+export const withJourney = (name: string): Partial<Events> => ({
+  ...events,
+  ...(events.catalog === undefined
+    ? {}
+    : {
+        catalog: {
+          ...events.catalog,
+          journeys: [
+            {
+              name,
+              title: "Placing an order",
+              services: ["storefront", "orders"],
+              places: [
+                { node: "storefront", stages: [0] },
+                { node: "orders", stages: [1] },
+                { node: "db", stages: [2, 3] },
+              ],
+            },
+          ],
+        },
+      }),
+})

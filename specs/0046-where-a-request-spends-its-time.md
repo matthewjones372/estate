@@ -79,6 +79,11 @@ sources:
 marked with the traces icon: it opens the service's page with the journey's panel open and in view, so traces are
 found from where people already look.
 
+**On the overview's map**, a button per journey in its caption: choosing one dims the map, draws the journey's route
+from node to node in the order its stages happen, numbers each node it passes through, and says how long it usually
+spends there, from the journey's sample, read then. A line under the map gives the whole and opens the journey's
+panel. The choice is kept per browser.
+
 **On the page of each service a journey's stages are in**, closed until someone asks: its title, a line saying what it
 shows, and *Show where its time goes*. Tempo is read only then, so a page nobody opens it on costs no reads, and the
 rest of the page stays as quiet as it was. Opened, nothing on it is live:
@@ -115,7 +120,7 @@ Took 1.06 s to reach everyone's screen; the caller had an answer in 49 ms.  [ Wa
 Lanes        one row per `where`, spans placed in time, calls outlined, work filled, the time between spans
              hatched in the lane the stage names; arrows where the trace moves from one lane to another
 Waterfall    one row per span or stage gap in time order, indented by depth, each with its lane, how long it
-             took
+             took, and against the journey's usual time for that stage
 ```
 
 Every bar and row is a button: choosing one, in either view, marks it in both and says under the trace what it was,
@@ -173,7 +178,7 @@ are missing from every trace and the panel says so.
       scale.
       Done when: a suite shows a trace's lanes with a hand-off between them, the waterfall's rows in time order, and
       the cut marked.
-- [ ] **`trace-against-usual`** — each step on a trace's page beside the journey's p50 for it, and Playwright opening a
+- [x] **`trace-against-usual`** — each step on a trace's page beside the journey's p50 for it, and Playwright opening a
       trace from a journey panel.
       Done when: a suite shows a slow step marked against its p50, and the Playwright walk is accessible.
 

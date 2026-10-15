@@ -143,6 +143,24 @@ describe("a trace's view", () => {
     expect(view.answered).toBe(49)
   })
 
+  test("names the journey's stage each row is, so the page can set it beside its usual time", () => {
+    const view = traceView(adoption("t1"), lanes, journey)
+    expect(view.rows.map((row) => [row.title, row.stage])).toEqual([
+      ["adopt pet", undefined],
+      ["Reaches the shop", 0],
+      ["POST /adoptions", undefined],
+      ["POST /adoptions", undefined],
+      ["Decides", 1],
+      ["Checks the chip", 2],
+      ["Written to the outbox", 3],
+      ["Waits in the outbox", 4],
+      ["Published", 5],
+      ["process", undefined],
+      ["Reaches the page", 6],
+      ["live event", undefined],
+    ])
+  })
+
   test("marks where the trace moves to another lane, and cuts a wait longer than half of it", () => {
     const view = traceView(adoption("t1"), lanes, journey)
     const handed = view.rows.flatMap((row) =>
