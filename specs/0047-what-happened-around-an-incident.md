@@ -254,7 +254,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
       and say so; a live export says it is live.
       Done when: a viewer's zip has no `logs/` or `traces/` where logs are for operators, and its manifest says why;
       an export before evidence is kept has `"live": true`.
-- [ ] **`spec-0047-keep`** — `incidents.keepDays`: an incident, its firings, events and evidence kept that long;
+- [x] **`spec-0047-keep`** — `incidents.keepDays`: an incident, its firings, events and evidence kept that long;
       firings in no incident swept as now.
       Done when: a sweep past `alerts.historyDays` keeps a firing that is in an incident and its events, and a sweep
       past `incidents.keepDays` removes the incident with all of it.

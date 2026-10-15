@@ -30,7 +30,7 @@ describe("a firing kept before a restart, its start read back written another wa
         yield* notes.keepFiring({ ...key, name: "OrdersSlow", severity: "warning", startsAt: asTheStoreReadsIt })
         yield* notes.keepThread({ ...key, startsAt: asTheStoreReadsIt, channel: "C1", ts: "1.2", url: "https://t" })
         yield* TestClock.setTime(Date.parse("1970-01-02T11:00:00Z"))
-        yield* loadHistory(90)
+        yield* loadHistory(90, 400)
         const recording = yield* Effect.forkChild(recordFirings())
         yield* TestClock.adjust("1 second")
         const live = environment({ alerts: { state: "ok", value: [slow] } })

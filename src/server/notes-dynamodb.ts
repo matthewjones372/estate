@@ -9,6 +9,8 @@ import { dynamoEvents, sweepDynamoEvents } from "./notes-dynamodb-events"
 import { dynamoEvidence } from "./notes-dynamodb-evidence"
 import { dynamoIncidents, sweepDynamoIncidents } from "./notes-dynamodb-incidents"
 import { type Dynamo, dynamoDb, dynamoFailure, type Item, removeItems, scanItems } from "./notes-dynamodb-items"
+import type { FiringKey } from "./notes-events"
+import { keptBy } from "./notes-sweep"
 import { SourceFailure } from "./sources/run"
 
 export interface DynamoNotes {
@@ -77,6 +79,10 @@ const noteOf = (item: typeof Item.Type): StoredNote => ({
   by: item.by.S,
   text: item.text.S,
 })
+
+/** Whether an item of a firing is of one in `keep`. */
+const firingKept = (keep: ReadonlyArray<FiringKey>, item: typeof Item.Type) =>
+  keptBy(keep)({ environment: item.environment.S, alert: item.alert.S, startsAt: item.time.S })
 
 /** The table, made and waited for when it is not there. */
 const ensureTable = (dynamo: Dynamo, table: string) =>
@@ -219,17 +225,23 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
               },
             },
           }).pipe(Effect.asVoid, Effect.mapError(dynamoFailure)),
-        removeFiringsBefore: (at: string) =>
+        removeFiringsBefore: (at: string, keep: ReadonlyArray<FiringKey> = []) =>
           scanItems(dynamo, table, {
             FilterExpression: "begins_with(pk, :firing) AND #time < :at",
             ExpressionAttributeNames: { "#time": "time" },
             ExpressionAttributeValues: { ":firing": { S: `${other}firing#` }, ":at": { S: at } },
           }).pipe(
-            Effect.flatMap((items) => removeItems(dynamo, table, items)),
+            Effect.flatMap((items) =>
+              removeItems(
+                dynamo,
+                table,
+                items.filter((item) => !firingKept(keep, item)),
+              ),
+            ),
             Effect.mapError(dynamoFailure),
-            Effect.andThen(sweepDynamoEvents(dynamo, table, at)),
-            Effect.andThen(sweepDynamoIncidents(dynamo, table, at)),
+            Effect.andThen(sweepDynamoEvents(dynamo, table, at, keep)),
           ),
+        removeIncidentsBefore: (at: string) => sweepDynamoIncidents(dynamo, table, at),
         // A thread's channel and URL ride in the item's `by` and `text`, its timestamp in `id`.
         threads: (since: string) =>
           scanItems(dynamo, table, {

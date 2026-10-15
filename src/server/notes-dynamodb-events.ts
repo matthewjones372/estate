@@ -9,9 +9,15 @@ import { EventKind, EventSource, type FiringEvent } from "../shared/timeline"
 import type { AwsJson } from "./aws/json"
 import { type DynamoItem, dynamoFailure, removeItems, scanItems } from "./notes-dynamodb-items"
 import { type FiringEvents, type FiringKey, inOrder, type StoredEvent, type StoredIncidentEvent } from "./notes-events"
+import { keptBy } from "./notes-sweep"
 import { sameInstant } from "./time"
 
 const prefix = "!event#"
+const firingOfItem = (item: DynamoItem): FiringKey => ({
+  environment: item.environment.S,
+  alert: item.alert.S,
+  startsAt: item.time.S,
+})
 const pkOf = (firing: FiringKey) => `${prefix}${firing.environment}#${firing.alert}#`
 const incidentPk = (incident: string) => `!incident-event#${incident}`
 
@@ -121,13 +127,19 @@ export const dynamoEvents = (dynamo: AwsJson, table: string): FiringEvents => ({
     }).pipe(Effect.asVoid, Effect.mapError(dynamoFailure)),
 })
 
-/** The events of firings begun before `at`. */
-export const sweepDynamoEvents = (dynamo: AwsJson, table: string, at: string) =>
+/** The events of firings begun before `at`, but those of firings in `keep`. */
+export const sweepDynamoEvents = (dynamo: AwsJson, table: string, at: string, keep: ReadonlyArray<FiringKey>) =>
   scanItems(dynamo, table, {
     FilterExpression: "begins_with(pk, :firing) AND #time < :at",
     ExpressionAttributeNames: { "#time": "time" },
     ExpressionAttributeValues: { ":firing": { S: prefix }, ":at": { S: at } },
   }).pipe(
-    Effect.flatMap((items) => removeItems(dynamo, table, items)),
+    Effect.flatMap((items) =>
+      removeItems(
+        dynamo,
+        table,
+        items.filter((item) => !keptBy(keep)(firingOfItem(item))),
+      ),
+    ),
     Effect.mapError(dynamoFailure),
   )

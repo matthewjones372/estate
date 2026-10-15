@@ -39,13 +39,26 @@ export const dynamoIncidents = (dynamo: AwsJson, table: string): KeptIncidents =
     }).pipe(Effect.asVoid, Effect.mapError(dynamoFailure)),
 })
 
-/** The incidents opened before `at`. */
+const under = (dynamo: AwsJson, table: string, partition: string) =>
+  scanItems(dynamo, table, {
+    FilterExpression: "begins_with(pk, :partition)",
+    ExpressionAttributeValues: { ":partition": { S: partition } },
+  }).pipe(Effect.map((items) => items.filter((item) => item.pk.S === partition)))
+
+/** The incidents opened before `at`, with their own events and evidence. */
 export const sweepDynamoIncidents = (dynamo: AwsJson, table: string, at: string) =>
   scanItems(dynamo, table, {
     FilterExpression: "begins_with(pk, :incident) AND #time < :at",
     ExpressionAttributeNames: { "#time": "time" },
     ExpressionAttributeValues: { ":incident": { S: pk }, ":at": { S: at } },
   }).pipe(
-    Effect.flatMap((items) => removeItems(dynamo, table, items)),
+    Effect.flatMap((incidents) =>
+      Effect.forEach(incidents, (incident) =>
+        Effect.all([
+          under(dynamo, table, `!incident-event#${incident.id.S}`),
+          under(dynamo, table, `!evidence#${incident.id.S}`),
+        ]),
+      ).pipe(Effect.flatMap((held) => removeItems(dynamo, table, [...held.flat(2), ...incidents]))),
+    ),
     Effect.mapError(dynamoFailure),
   )

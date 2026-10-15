@@ -9,6 +9,7 @@ import type { Note } from "../shared/note"
 import {
   createEvents,
   type FiringEvents,
+  type FiringKey,
   memoryEvents,
   postgresEvents,
   type StoredEvent,
@@ -17,13 +18,8 @@ import {
 } from "./notes-events"
 import { createEvidence, type KeptEvidence, memoryEvidence, postgresEvidence } from "./notes-evidence"
 import { firingOf, instant } from "./notes-firings"
-import {
-  createIncidents,
-  type KeptIncidents,
-  memoryIncidents,
-  postgresIncidents,
-  sweepMemoryIncidents,
-} from "./notes-incidents"
+import { createIncidents, type KeptIncidents, memoryIncidents, postgresIncidents } from "./notes-incidents"
+import { keptBy, postgresSweeps, type Sweeps, sweepMemoryIncidents } from "./notes-sweep"
 import type { Query } from "./query"
 import type { Failure } from "./sources/run"
 import type { StoredFiring, StoredThread } from "./state"
@@ -43,7 +39,7 @@ export interface StoredImpact {
 }
 
 /** Notes, impacts, firings and their threads, each firing's events (`notes-events.ts`) and incidents. */
-export interface Notes extends FiringEvents, KeptIncidents, KeptEvidence {
+export interface Notes extends FiringEvents, KeptIncidents, KeptEvidence, Sweeps {
   readonly all: Effect.Effect<ReadonlyArray<StoredNote>, Failure>
   readonly add: (note: StoredNote) => Effect.Effect<void, Failure>
   readonly remove: (id: string) => Effect.Effect<void, Failure>
@@ -56,8 +52,6 @@ export interface Notes extends FiringEvents, KeptIncidents, KeptEvidence {
   readonly firings: (since: string) => Effect.Effect<ReadonlyArray<StoredFiring>, Failure>
   /** Keeps a firing in place of the one with its environment, alert and start, if there is one. */
   readonly keepFiring: (firing: StoredFiring) => Effect.Effect<void, Failure>
-  /** Removes the firings begun before `at`, their events, and the incidents opened before it. */
-  readonly removeFiringsBefore: (at: string) => Effect.Effect<void, Failure>
   /** The Slack threads of firings that started at `since` or later. */
   readonly threads: (since: string) => Effect.Effect<ReadonlyArray<StoredThread>, Failure>
   readonly keepThread: (thread: StoredThread) => Effect.Effect<void, Failure>
@@ -131,8 +125,8 @@ const asNote = ({ id, environment, alert, at, by, text }: Record<string, unknown
 
 /** Notes in Postgres, its table made if it is not there. */
 export const postgresNotes = (query: Query) => {
-  const { sweep: sweepEvents, ...events } = postgresEvents(query)
-  const { sweep: sweepIncidents, ...incidents } = postgresIncidents(query)
+  const events = postgresEvents(query)
+  const incidents = postgresIncidents(query)
   return Layer.effect(Notes)(
     run(query, create).pipe(
       Effect.andThen(run(query, createImpacts)),
@@ -200,11 +194,7 @@ export const postgresNotes = (query: Query) => {
               firing.store ?? null,
             ],
           ).pipe(Effect.asVoid),
-        removeFiringsBefore: (at: string) =>
-          run(query, "delete from estate_firings where starts_at < $1", [at]).pipe(
-            Effect.andThen(sweepEvents(at)),
-            Effect.andThen(sweepIncidents(at)),
-          ),
+        ...postgresSweeps(query),
         ...events,
         ...incidents,
         ...postgresEvidence(query),
@@ -275,11 +265,11 @@ export const memoryNotes = Layer.effect(Notes)(
         ),
       keepFiring: (firing: StoredFiring) =>
         Ref.update(firings, (kept) => [...kept.filter((each) => !sameFiring(each, firing)), firing]),
-      removeFiringsBefore: (at: string) =>
-        Ref.update(firings, (all) => all.filter((firing) => firing.startsAt >= at)).pipe(
-          Effect.andThen(sweepMemoryEvents(kept, at)),
-          Effect.andThen(sweepMemoryIncidents(incidents, at)),
+      removeFiringsBefore: (at: string, keep: ReadonlyArray<FiringKey> = []) =>
+        Ref.update(firings, (all) => all.filter((firing) => firing.startsAt >= at || keptBy(keep)(firing))).pipe(
+          Effect.andThen(sweepMemoryEvents(kept, at, keptBy(keep))),
         ),
+      removeIncidentsBefore: (at: string) => sweepMemoryIncidents(incidents, own, evidence, at),
       threads: (since: string) => Effect.map(Ref.get(threads), (kept) => kept.filter((each) => each.startsAt >= since)),
       keepThread: (thread: StoredThread) =>
         Ref.update(threads, (kept) => (kept.some((each) => sameFiring(each, thread)) ? kept : [...kept, thread])),

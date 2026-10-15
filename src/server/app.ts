@@ -42,6 +42,7 @@ import { backOff } from "./schedule"
 import { recordSeen } from "./seen"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
 import { readBackEvery } from "./settings-incident-tool"
+import { keepDays } from "./settings-incidents"
 import { backfillHistory } from "./sources/backfill"
 import { runCode } from "./sources/code"
 import { codeEvery } from "./sources/every"
@@ -149,14 +150,14 @@ export const estateWork = (
   Effect.all(
     [
       loadNotes.pipe(
-        Effect.andThen(loadHistory(historyDays(started.settings))),
+        Effect.andThen(loadHistory(historyDays(started.settings), keepDays(started.settings.incidents))),
         Effect.tapError((failure) => Effect.logWarning(`notes cannot be read yet: ${failure.message}`)),
         Effect.retry(backOff),
         Effect.orDie,
         Effect.andThen(Effect.never),
       ),
       sweepNotes(started.settings.notes?.keepDays ?? 30),
-      sweepHistory(historyDays(started.settings)),
+      sweepHistory(historyDays(started.settings), keepDays(started.settings.incidents)),
       Effect.flatMap(makeCatalogs(started.initial.catalog), (catalogs) =>
         Effect.all(
           [

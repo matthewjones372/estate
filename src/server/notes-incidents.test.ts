@@ -44,7 +44,7 @@ const keepAndRead = (notes: NotesService) =>
     yield* notes.keepIncident(closed)
     const all = yield* notes.incidents("2026-01-01T00:00:00.000Z")
     const recent = yield* notes.incidents("2026-10-01T00:00:00.000Z")
-    yield* notes.removeFiringsBefore("2026-09-15T00:00:00.000Z")
+    yield* notes.removeIncidentsBefore("2026-09-15T00:00:00.000Z")
     return { all, recent, swept: yield* notes.incidents("2026-01-01T00:00:00.000Z") }
   })
 
