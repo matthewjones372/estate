@@ -164,7 +164,7 @@ the 300-line limit, so the incident actions move out of it first.
       set, each drawn as where it was found, with *Remove*; the export's `included/` and `removed/`.
       Done when: an incident's page shows Summary and Evidence before Firings; included items show who, when and why;
       the zip holds them.
-- [ ] **`spec-0051-model-shape`** — the model port takes its instructions and answer schema from the caller; Ask AI
+- [x] **`spec-0051-model-shape`** — the model port takes its instructions and answer schema from the caller; Ask AI
       passes the alert's, unchanged.
       Done when: Ask AI's tests pass unchanged and a test asks the port for a second shape against a stub provider.
 - [ ] **`spec-0051-summary`** — the incident's brief, `POST /api/incidents/:id/summary`, the shared budget and turn,
