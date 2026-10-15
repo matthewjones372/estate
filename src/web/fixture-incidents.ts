@@ -68,6 +68,8 @@ const incidentRecords: ReadonlyMap<string, IncidentRecord> = new Map([
     "i1",
     {
       incident: ordersSlow,
+      services: ["storefront", "payments"],
+      window: { from: "2026-10-03T11:10:00Z", to: "2026-10-03T12:00:00Z" },
       events: allSeenLive([
         {
           id: "e1",
@@ -164,6 +166,7 @@ export const incidentActions = (
   | "unlinkIncident"
   | "closeIncident"
   | "addIncidentNote"
+  | "addIncidentService"
   | "removeIncidentNote"
   | "dismissIncident"
   | "raiseIncident"
@@ -248,6 +251,15 @@ export const incidentActions = (
       calls.push(["addIncidentNote", id, text])
       const note = { id: `n${calls.length}`, at: "2026-10-03T12:00:00Z", by: "ada lovelace", text }
       return noted(id, (incident) => [...(incident.notes ?? []), note])
+    },
+    addIncidentService: (id, service) => {
+      calls.push(["addIncidentService", id, service])
+      const record = records.get(id)
+      if (record === undefined) return Promise.resolve("there is no such incident")
+      const added = { service, by: "ada lovelace", at: "2026-10-03T12:00:00Z" }
+      const incident: Incident = { ...record.incident, added: [...(record.incident.added ?? []), added] }
+      records.set(id, { ...record, incident, services: [...(record.services ?? []), service] })
+      return Promise.resolve(incident)
     },
     dismissIncident: (id, alert, environment) => {
       calls.push(

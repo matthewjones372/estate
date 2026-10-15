@@ -74,6 +74,8 @@ export interface Actions {
   readonly closeIncident: (id: string, how: string) => Promise<Incident | string>
   readonly addIncidentNote: (id: string, text: string) => Promise<Incident | string>
   readonly removeIncidentNote: (id: string, note: string) => Promise<Incident | string>
+  /** *Add a service*: a service or store the incident is about beyond its firings'. */
+  readonly addIncidentService: (id: string, service: string) => Promise<Incident | string>
   /** *Not this*: the firing of `alert`, in `environment` or the page's, is not part of the incident. */
   readonly dismissIncident: (id: string, alert: string, environment?: string) => Promise<Incident | string>
   /** Raises the incident in the incident tool, or answers with its link there if it was raised already. */

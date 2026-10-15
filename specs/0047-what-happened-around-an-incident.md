@@ -212,7 +212,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
       event, in each notes store, merged into the incident's timeline; older events read as `seen`.
       Done when: each store's test keeps and reads an incident's own events beside its firings', in order by `at`; an
       event kept before this decodes with `source: seen` and `recordedAt` equal to `at`.
-- [ ] **`spec-0047-services-and-window`** — an incident's services from its firings and *Add a service*; its window
+- [x] **`spec-0047-services-and-window`** — an incident's services from its firings and *Add a service*; its window
       from `incidents.leadMinutes`.
       Done when: an incident with a petshop firing has petshop as a service; adding registry is an event; its window
       starts 30 minutes before its first firing.

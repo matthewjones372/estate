@@ -59,3 +59,20 @@ export const happenedOnEach = (
   Effect.flatMap(isoNow, (at) =>
     Effect.forEach(firings, (firing) => kept(firing, at, by, kind, text, more), { discard: true }),
   )
+
+/** What was done to an incident itself, kept once as its own event, about `service` where there is one. */
+export const happenedOnIncident = (
+  incident: string,
+  by: string,
+  kind: EventKind,
+  text: string,
+  service?: string,
+): Effect.Effect<void, never, Notes> =>
+  Effect.gen(function* () {
+    const at = yield* isoNow
+    yield* (yield* Notes).addIncidentEvent({
+      incident,
+      ...seenLive({ id: crypto.randomUUID(), at, by, kind, text }),
+      ...(service === undefined ? {} : { service }),
+    })
+  }).pipe(Effect.catch((failure) => Effect.logWarning(`an incident's event could not be kept: ${failure.message}`)))

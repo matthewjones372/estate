@@ -1,7 +1,8 @@
 /** @jsxImportSource solid-js */
 /**
- * An incident's own page: who opened it and when, how long it has been open or how it ended, its firings, its notes,
- * and every event of its firings merged in order, each saying which alert it was on, or that it was on the incident.
+ * An incident's own page: who opened it and when, how long it has been open or how it ended, its firings, its services
+ * and window, its notes, and every event of it and its firings merged in order, each saying which alert it was on, or
+ * that it was on the incident.
  * Incidents span environments, so it is read whole, whichever environment the page is in.
  */
 import { createEffect, createSignal, For, on, onCleanup, onMount, Show } from "solid-js"
@@ -16,6 +17,7 @@ import { IncidentInTool } from "../parts/IncidentInTool"
 import { canKeepIncidents } from "../parts/IncidentLink"
 import { IncidentMayBelong } from "../parts/IncidentMayBelong"
 import { IncidentNotes } from "../parts/IncidentNotes"
+import { IncidentServices } from "../parts/IncidentServices"
 import { TimelineExport } from "../parts/TimelineExport"
 import { TimelineRow } from "../parts/TimelineRow"
 
@@ -127,6 +129,7 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
         </Show>
       </section>
       <IncidentFirings record={props.record} changed={props.changed} />
+      <IncidentServices record={props.record} changed={props.changed} />
       <IncidentMayBelong record={props.record} changed={props.changed} />
       <IncidentNotes incident={incident()} changed={props.changed} />
       <section aria-labelledby="incident-timeline" class="panel section-box stack">
