@@ -28,7 +28,7 @@ export const KeptLogs = Schema.Struct({
   from: Schema.String,
   /** Its errors over the window, grouped by message. */
   errors: ErrorGroups.fields.groups,
-  /** Its lines, errors first then the newest, up to `incidents.evidence.lines`, oldest first, masked. */
+  /** Its lines masked, errors first then those nearest its first firing, up to `incidents.evidence.lines`. */
   lines: Schema.Array(LogLine),
   /** The lines read and not kept, past `incidents.evidence.lines`. */
   leftOut: Schema.Number,

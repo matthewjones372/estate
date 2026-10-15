@@ -136,6 +136,13 @@ export const incidentZip = (exporting: Exporting): ReadonlyArray<readonly [strin
   const set = kept === undefined || exporting.readsLogs ? kept : withoutLogs(kept)
   const evidence = set === undefined ? [] : evidenceFiles(record, set)
   const leftOut = [
+    ...(set?.logs ?? []).flatMap((logs) =>
+      logs.leftOut === 0
+        ? []
+        : [
+            `${logs.leftOut} ${logs.leftOut === 1 ? "line" : "lines"} of ${logs.service} in ${logs.environment} past incidents.evidence.lines`,
+          ],
+    ),
     ...(set?.leftOut ?? []),
     ...(kept === undefined ? ["evidence: none has been kept for it yet"] : []),
     ...(exporting.readsLogs ? [] : ["logs and traces: they are for operators here"]),
@@ -178,7 +185,7 @@ export const incidentZip = (exporting: Exporting): ReadonlyArray<readonly [strin
         asked: `the lines of ${logs.service} in ${logs.environment}`,
       })),
       ...(set?.traces ?? []).map((trace) => ({ source: "Tempo", asked: `trace ${trace.id}` })),
-    ],
+    ].map((source) => ({ ...source, askedAt: set?.keptAt })),
     leftOut,
     files: files.map(([path, text]) => ({ path, bytes: new TextEncoder().encode(text).length })),
   }

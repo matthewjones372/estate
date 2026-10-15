@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Context, Effect, Layer } from "effect"
+import { strFromU8, unzipSync } from "fflate"
 import type { Incident, IncidentRecord } from "../../shared/incidents"
 import { ask, catalog, environment, estate, serverFor, settings } from "../fixture"
 import { Notes } from "../notes"
@@ -94,19 +95,42 @@ describe("an incident's logs, kept as evidence", () => {
       expect(kept?.text).toBe("kept 1 service's charts, 0 series, 5 lines")
     }))
 
-  test("keep errors first and the newest lines, up to evidence.lines, and name the rest as left out", () =>
+  test("keep errors first and then the lines nearest the first firing, up to evidence.lines, and name the rest", () =>
     Effect.runPromise(closed(3)).then((record) => {
       const [logs] = record.evidence?.at(-1)?.logs ?? []
       expect(logs?.lines.map((line) => line.text)).toEqual([
+        "INFO started",
         "ERROR pool exhausted for •••",
         "ERROR pool exhausted for •••",
-        "INFO recovered",
       ])
       expect(logs?.leftOut).toBe(2)
       const kept = record.events.find((each) => each.kind === "evidence-kept")
       expect(kept?.text).toBe(
         "kept 1 service's charts, 0 series, 3 lines; 2 lines left out past incidents.evidence.lines",
       )
+    }))
+
+  test("name the lines left out, and when each source was asked, in the zip's manifest", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(as("operator", 3), firing, loki)
+        const incident = (yield* ask(
+          server,
+          sending("POST", "/api/incidents", { title: "Orders slow", environment: "staging", alert: "a1" }),
+        )).json() as Incident
+        yield* ask(server, sending("POST", `/api/incidents/${incident.id}/close`, { how: "resized the pool" }))
+        const zip = yield* Effect.promise(() =>
+          server.handler(sending("GET", `/api/incidents/${incident.id}/export?format=zip`)),
+        )
+        const files = unzipSync(new Uint8Array(yield* Effect.promise(() => zip.arrayBuffer())))
+        const [path] = Object.keys(files).filter((each) => each.endsWith("/manifest.json"))
+        const record = (yield* ask(server, sending("GET", `/api/incidents/${incident.id}`))).json() as IncidentRecord
+        return { record, manifest: JSON.parse(strFromU8(files[path ?? ""] ?? new Uint8Array())) }
+      }),
+    ).then(({ record, manifest }) => {
+      const askedAt = record.evidence?.at(-1)?.keptAt
+      expect(manifest.leftOut).toEqual(["2 lines of orders in staging past incidents.evidence.lines"])
+      expect(manifest.sources).toEqual([{ source: "Loki", asked: "the lines of orders in staging", askedAt }])
     }))
 
   test("are left out for a reader who may not read logs here", () =>
