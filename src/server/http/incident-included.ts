@@ -28,7 +28,7 @@ const includeRoute = HttpRouter.add(
       Effect.mapError(malformed("what is included is a chart, lines or an error group, with where it was found")),
     )
     if (included.kind !== "chart" && !(yield* readsLogs(person.role)))
-      return yield* refuse(403, "lines are included by those who may read them here")
+      return yield* refuse(403, "lines and traces are included by those who may read them here")
     const incident = yield* open(id)
     const set = yield* includedSet(included, person.name, yield* isoNow)
     const notes = yield* Notes
@@ -46,7 +46,7 @@ const includeRoute = HttpRouter.add(
       person.name,
       "included",
       `included ${named(included)}${why}`,
-      included.service,
+      included.kind === "trace" ? undefined : included.service,
       set.id,
     )
     return json(set, 201)
@@ -67,9 +67,11 @@ const removeRoute = HttpRouter.add(
     if (found === undefined || removed.has(set)) return yield* refuse(404, `there is nothing included as ${set}`)
     if (found.keptBy !== person.name && person.role !== "operator")
       return yield* refuse(403, "only whoever included it, or an operator, removes it")
+    const trace = found.traces?.[0]
     const what = found.charts[0]?.panel ?? (found.logs?.[0]?.errors.length === 0 ? "lines" : "error")
     const service = found.charts[0]?.service ?? found.logs?.[0]?.service ?? ""
-    const text = `removed ${service} ${what}, included by ${found.keptBy}`
+    const named = trace === undefined ? `${service} ${what}` : `trace ${trace.id}`
+    const text = `removed ${named}, included by ${found.keptBy}`
     yield* happenedOnIncident(id, person.name, "evidence-removed", text, service, set)
     return json({ removed: set })
   }).pipe(answered),

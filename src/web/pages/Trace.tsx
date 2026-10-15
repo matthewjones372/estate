@@ -10,6 +10,7 @@ import { placeOf, type TraceView } from "../../shared/trace-view"
 import { useEstate, useSnapshot } from "../context"
 import { took } from "../format"
 import { A } from "../parts/A"
+import { IncludeInIncident } from "../parts/IncludeInIncident"
 import type { Drawn, Scale, Usual } from "../parts/TraceDrawn"
 import { Lanes } from "../parts/TraceLanes"
 import { Chosen, Waterfall } from "../parts/TraceWaterfall"
@@ -113,7 +114,7 @@ const Read = (props: { readonly view: TraceView }) => {
 }
 
 export const TracePage = (props: { readonly id: string; readonly journey?: string | undefined }) => {
-  const { actions } = useEstate()
+  const { actions, me } = useEstate()
   const snapshot = useSnapshot()
   const [read, setRead] = createSignal<TraceView | "none" | "loading" | undefined>("loading")
   createEffect(
@@ -146,7 +147,22 @@ export const TracePage = (props: { readonly id: string; readonly journey?: strin
               </p>
             }
           >
-            {(view) => <Read view={view()} />}
+            {(view) => (
+              <>
+                <Show when={me.logsForOperators !== true || me.role === "operator"}>
+                  <IncludeInIncident
+                    label="Include this trace…"
+                    what={() => ({
+                      kind: "trace",
+                      environment: snapshot.environment,
+                      id: props.id,
+                      ...(props.journey === undefined ? {} : { journey: props.journey }),
+                    })}
+                  />
+                </Show>
+                <Read view={view()} />
+              </>
+            )}
           </Show>
         </Show>
       </section>

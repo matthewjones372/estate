@@ -3,10 +3,11 @@
 import { createEffect, createMemo, createSignal, For, on, onCleanup, Show } from "solid-js"
 import type { Alert, Load as Read, Series } from "../../shared/events"
 import { reading, whole, type Zoom } from "../chart"
-import { type Range, useEstate } from "../context"
+import { type Range, useEstate, useSnapshot } from "../context"
 import { clock, measured } from "../format"
 import { firingPath, pathOf } from "../route"
 import { A } from "./A"
+import { IncludeInIncident } from "./IncludeInIncident"
 import { Plot } from "./Plot"
 
 const ranges: ReadonlyArray<Range> = ["1h", "6h", "24h", "7d"]
@@ -19,6 +20,12 @@ const spans: Readonly<Record<Range, number>> = {
 }
 
 const at = (ms: number) => clock(new Date(ms).toISOString())
+
+const loadPanels = [
+  { key: "requests", label: "Requests", unit: "/s" },
+  { key: "errors", label: "Errors", unit: "/s" },
+  { key: "p99", label: "p99", unit: "s" },
+] as const
 
 /**
  * What the charts of one window share: how long it is and how to say so, when it ends, the moment marked, the span
@@ -44,7 +51,10 @@ export const Chart = (props: {
   readonly series: Series | undefined
   readonly limit: number | undefined
   readonly reading: Reading
+  /** The service and panel it is, for *Include in incident* over the range on screen (spec 0051). */
+  readonly of?: { readonly service: string; readonly panel: string }
 }) => {
+  const snapshot = useSnapshot()
   const shared = props.reading
   const span = () => shared.span()
   const points = () => props.series?.points ?? []
@@ -88,6 +98,19 @@ export const Chart = (props: {
         </Show>
         <span>{zoomed() && shared.zoom().to < 1 ? edge(shared.zoom().to) : shared.ends()}</span>
       </div>
+      <Show when={props.of}>
+        {(of) => (
+          <IncludeInIncident
+            label="Include…"
+            what={() => {
+              const from = shared.end() - span() + shared.zoom().from * span()
+              const to = shared.end() - span() + shared.zoom().to * span()
+              const iso = (ms: number) => new Date(ms).toISOString()
+              return { kind: "chart", environment: snapshot.environment, ...of(), from: iso(from), to: iso(to) }
+            }}
+          />
+        )}
+      </Show>
     </figure>
   )
 }
@@ -170,9 +193,18 @@ export const Load = (props: {
       </div>
       <Show when={props.title === undefined}>
         <div class="charts">
-          <Chart label="Requests" unit="/s" series={shown()?.requests} limit={undefined} reading={shared} />
-          <Chart label="Errors" unit="/s" series={shown()?.errors} limit={undefined} reading={shared} />
-          <Chart label="p99" unit="s" series={shown()?.p99} limit={limit()} reading={shared} />
+          <For each={loadPanels}>
+            {(panel) => (
+              <Chart
+                label={panel.label}
+                unit={panel.unit}
+                series={shown()?.[panel.key]}
+                limit={panel.key === "p99" ? limit() : undefined}
+                reading={shared}
+                of={{ service: props.name, panel: panel.key }}
+              />
+            )}
+          </For>
         </div>
       </Show>
       <Show when={(shown()?.stats ?? []).length > 0}>
@@ -188,6 +220,7 @@ export const Load = (props: {
                 series={stat.series}
                 limit={undefined}
                 reading={shared}
+                of={{ service: props.name, panel: stat.title }}
               />
             )}
           </For>

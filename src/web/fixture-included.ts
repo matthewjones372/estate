@@ -8,7 +8,7 @@ export const includedAs = (what: Included): EvidenceSet => ({
   keptBy: "ada lovelace",
   window: { start: 0, end: 60, step: 60 },
   charts: [],
-  ...(what.kind === "chart"
+  ...(what.kind === "chart" || what.kind === "trace"
     ? {}
     : {
         logs: [

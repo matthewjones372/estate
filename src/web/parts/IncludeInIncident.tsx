@@ -6,7 +6,17 @@
 import { createSignal, For, onMount, Show } from "solid-js"
 import type { Incident } from "../../shared/incidents"
 import type { Included } from "../../shared/included"
-import { useEstate } from "../context"
+import { type Actions, useEstate } from "../context"
+
+/** The incidents open now, read once for every button on a page within a few seconds of each other. */
+const shared = new WeakMap<Actions, { readonly at: number; readonly read: Promise<ReadonlyArray<Incident>> }>()
+const openNow = (actions: Actions, now: number) => {
+  const held = shared.get(actions)
+  if (held !== undefined && now - held.at < 5000) return held.read
+  const read = actions.incidents().then((found) => found ?? [])
+  shared.set(actions, { at: now, read })
+  return read
+}
 
 export const IncludeInIncident = (props: { readonly label: string; readonly what: () => Included }) => {
   const { me, actions } = useEstate()
@@ -17,7 +27,7 @@ export const IncludeInIncident = (props: { readonly label: string; readonly what
   const [told, setTold] = createSignal("")
   const [refused, setRefused] = createSignal<string | undefined>(undefined)
   onMount(() => {
-    if (me.kiosk !== true && me.readOnly !== true) void actions.incidents().then((found) => setOpen(found ?? []))
+    if (me.kiosk !== true && me.readOnly !== true) void openNow(actions, Date.now()).then(setOpen)
   })
   const include = (incident: Incident) => {
     if (busy()) return

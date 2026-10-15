@@ -3,9 +3,11 @@
 import { describe, expect, test } from "bun:test"
 import type { Me } from "../shared/events"
 import type { Incident } from "../shared/incidents"
-import { operator } from "./fixture"
+import { now, operator } from "./fixture"
 import { groups } from "./fixture-logs"
 import { mount } from "./harness"
+import { TracePage } from "./pages/Trace"
+import { Load } from "./parts/Charts"
 import { ErrorList } from "./parts/LogErrors"
 import { LogsPanel } from "./parts/Logs"
 import { recording } from "./recording"
@@ -98,5 +100,60 @@ describe("including what was found in an incident", () => {
     expect(calls).toEqual([
       ["include", "i1", { kind: "errors", environment: "production", service: "storefront", group: groups.groups[0] }],
     ])
+  })
+
+  test("a chart goes as its service, panel and the range on screen, which the server reads again", async () => {
+    const calls: Array<readonly [string, ...ReadonlyArray<unknown>]> = []
+    const recorded = recording()
+    const actions = {
+      ...recorded.actions,
+      incidents: () => Promise.resolve([ordersSlow]),
+      include: (...args: Parameters<typeof recorded.actions.include>) => {
+        calls.push(["include", ...args])
+        return recorded.actions.include(...args)
+      },
+    }
+    const series = { now: 1, points: [1, 2] }
+    const hour = { requests: series, errors: series, p99: series, stats: [{ title: "Queue", series }] }
+    const page = mount(
+      () => <Load name="storefront" hour={hour} read={() => Promise.resolve(undefined)} alerts={[]} />,
+      { actions },
+    )
+    await page.settle()
+    expect(page.container.querySelectorAll(".chart .plain-button")).toHaveLength(4)
+    page.click(page.button("Include…", 1))
+    page.click(page.button("Include in Orders slow"))
+    await page.settle()
+    page.click(page.button("Include…", 3))
+    page.click(page.button("Include in Orders slow"))
+    await page.settle()
+    const range = { from: new Date(now - 3_600_000).toISOString(), to: new Date(now).toISOString() }
+    expect(calls).toEqual([
+      ["include", "i1", { kind: "chart", environment: "production", service: "storefront", panel: "errors", ...range }],
+      ["include", "i1", { kind: "chart", environment: "production", service: "storefront", panel: "Queue", ...range }],
+    ])
+  })
+
+  test("a trace goes by its id and journey, and is not offered where only operators read logs", async () => {
+    const calls: Array<readonly [string, ...ReadonlyArray<unknown>]> = []
+    const recorded = recording()
+    const actions = {
+      ...recorded.actions,
+      incidents: () => Promise.resolve([ordersSlow]),
+      include: (...args: Parameters<typeof recorded.actions.include>) => {
+        calls.push(["include", ...args])
+        return recorded.actions.include(...args)
+      },
+    }
+    const page = mount(() => <TracePage id="t1" journey="order" />, { actions })
+    await page.settle()
+    page.click(page.button("Include this trace…"))
+    page.click(page.button("Include in Orders slow"))
+    await page.settle()
+    expect(calls).toEqual([["include", "i1", { kind: "trace", environment: "production", id: "t1", journey: "order" }]])
+    const viewer = { ...operator, role: "viewer" as const, logsForOperators: true }
+    const withheld = mount(() => <TracePage id="t1" journey="order" />, { actions, me: viewer })
+    await withheld.settle()
+    expect(withheld.container.textContent).not.toContain("Include this trace")
   })
 })
