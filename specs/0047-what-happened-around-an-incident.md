@@ -122,7 +122,8 @@ is open; a later keep adds a new set beside the earlier one rather than replacin
 - **Charts.** For each of its services, the series of its Load (requests, errors, p99) and its `stats`, over the
   window, at a step that keeps each under 600 points. Each kept with the query it came from.
 - **Logs.** For each service: its errors grouped by message, as `/api/logs/errors` gives them, and up to
-  `incidents.evidence.lines` (2,000) of its lines, newest errors first, masked as on the page.
+  `incidents.evidence.lines` (2,000) of its lines, errors first and then those nearest its first firing, masked as on
+  the page.
 - **Traces.** For each journey (spec 0046) whose stages include one of its services: the ten slowest and the ten that
   failed in the window. Then up to twenty more traces whose ids are in the kept lines. Each read whole through 0046's
   reader.

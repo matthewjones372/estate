@@ -69,20 +69,22 @@ const chartsOf = (catalog: Catalog, ranges: Ranges, name: string, environment: s
 }
 
 /**
- * A service's logs over the window: its errors grouped, and up to `most` of its lines, errors first and then the
- * newest, so a busy service keeps what the incident is about. Twice as many are read, so the rest can be counted. A
- * source that does not answer is named, as what was left out.
+ * A service's logs over the window: its errors grouped, and up to `most` of its lines, errors first and then those
+ * nearest `fired`, its first firing, so a busy service keeps what the incident is about. Twice as many are read, so
+ * the rest can be counted. A source that does not answer is named, as what was left out.
  */
-const logsOf = (environment: string, service: string, from: number, to: number, most: number) =>
+const logsOf = (environment: string, service: string, from: number, to: number, fired: number, most: number) =>
   Effect.gen(function* () {
     const logs = yield* serviceLogs(environment, service)
     if (logs === undefined) return { logs: [], missing: [] }
     const read = yield* Effect.result(logs.read(from, to, most * 2))
     if (read._tag === "Failure")
       return { logs: [], missing: [`the logs of ${service} in ${environment}: ${read.failure.message}`] }
-    const newestFirst = read.success.toSorted((a, b) => b.at.localeCompare(a.at))
+    const nearestFirst = read.success.toSorted(
+      (a, b) => Math.abs(Date.parse(a.at) - fired) - Math.abs(Date.parse(b.at) - fired),
+    )
     const chosen = new Set<Line>(
-      [...newestFirst.filter(logs.isError), ...newestFirst.filter((line) => !logs.isError(line))].slice(0, most),
+      [...nearestFirst.filter(logs.isError), ...nearestFirst.filter((line) => !logs.isError(line))].slice(0, most),
     )
     const kept: KeptLogs = {
       service,
@@ -119,8 +121,9 @@ export const readEvidence = (incident: Incident, by: string) =>
       }),
     )
     const most = evidenceLines(settings.incidents)
+    const fired = Math.min(...incident.firings.map((firing) => Date.parse(firing.startsAt)))
     const logsRead = (yield* Effect.forEach(environmentsOf(incident), (environment) =>
-      Effect.forEach(services, (name) => logsOf(environment, name, Date.parse(from), Date.parse(to), most)),
+      Effect.forEach(services, (name) => logsOf(environment, name, Date.parse(from), Date.parse(to), fired, most)),
     )).flat()
     const logs = logsRead.flatMap((each) => each.logs)
     const traces = yield* Effect.forEach(environmentsOf(incident), (environment) => {
