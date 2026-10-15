@@ -4,6 +4,7 @@
  */
 import { Clock, Duration, Effect, Stream, SubscriptionRef } from "effect"
 import { Notes, type StoredEvent, type StoredFiring, sameFiring } from "./notes"
+import { keptBy } from "./notes-sweep"
 import { forEver } from "./schedule"
 import type { SlackSettings } from "./sources/slack"
 import { Estate, type EstateState, updateEstate } from "./state"
@@ -141,15 +142,21 @@ export const recordFirings = <R = never>(
     )
   })
 
-/** The firings of the last `days`, into the state as Estate starts; those that ended today are what resolved. */
-export const loadHistory = (days: number) =>
+/**
+ * The firings of the last `days`, and the incidents of the last `keepDays` with their firings, into the state as Estate
+ * starts; those that ended today are what resolved.
+ */
+export const loadHistory = (days: number, keepDays: number) =>
   Effect.gen(function* () {
     const now = yield* Clock.currentTimeMillis
     const notes = yield* Notes
     const since = iso(before(now, Duration.days(days)))
-    const firings = yield* notes.firings(since)
+    const incidents = yield* notes.incidents(iso(before(now, Duration.days(Math.max(days, keepDays)))))
+    const inIncidents = keptBy(incidents.flatMap((incident) => incident.firings))
+    const firings = (yield* notes.firings(iso(before(now, Duration.days(Math.max(days, keepDays)))))).filter(
+      (firing) => firing.startsAt >= since || inIncidents(firing),
+    )
     const threads = yield* notes.threads(since)
-    const incidents = yield* notes.incidents(since)
     const today = iso(before(now, Duration.days(1)))
     yield* updateEstate((estate) => ({
       ...estate,
@@ -181,17 +188,24 @@ export const loadHistory = (days: number) =>
     }))
   })
 
-/** Every hour, firings and incidents older than `days` removed, from the store and the page. */
-export const sweepHistory = (days: number) =>
+/**
+ * Every hour, from the store and the page: incidents older than `keepDays`, with all they hold; then firings older than
+ * `days`, but those an incident still holds.
+ */
+export const sweepHistory = (days: number, keepDays: number) =>
   Effect.gen(function* () {
-    const cutoff = iso(before(yield* Clock.currentTimeMillis, Duration.days(days)))
-    yield* (yield* Notes).removeFiringsBefore(cutoff)
+    const now = yield* Clock.currentTimeMillis
+    const [cutoff, kept] = [iso(before(now, Duration.days(days))), iso(before(now, Duration.days(keepDays)))]
+    const notes = yield* Notes
+    yield* notes.removeIncidentsBefore(kept)
+    const held = (yield* notes.incidents(kept)).flatMap((incident) => incident.firings)
+    yield* notes.removeFiringsBefore(cutoff, held)
     yield* updateEstate((estate) => ({
       ...estate,
-      firings: (estate.firings ?? []).filter((firing) => firing.startsAt >= cutoff),
+      firings: (estate.firings ?? []).filter((firing) => firing.startsAt >= cutoff || keptBy(held)(firing)),
       ...(estate.incidents === undefined
         ? {}
-        : { incidents: estate.incidents.filter((incident) => incident.openedAt >= cutoff) }),
+        : { incidents: estate.incidents.filter((incident) => incident.openedAt >= kept) }),
     }))
   }).pipe(
     Effect.catch((failure) => Effect.logWarning(`old firings could not be removed: ${failure.message}`)),

@@ -34,10 +34,8 @@ export const createIncidents = `create table if not exists estate_incidents (
 
 const instant = (value: unknown) => iso(value instanceof Date ? value : String(value))
 
-/** The incidents in Postgres, and the statement that sweeps those opened before a time. */
-export const postgresIncidents = (
-  query: Query,
-): KeptIncidents & { readonly sweep: (at: string) => Effect.Effect<void, Failure> } => ({
+/** The incidents in Postgres. */
+export const postgresIncidents = (query: Query): KeptIncidents => ({
   incidents: (since) =>
     Effect.suspend(() =>
       query("select id, opened_at, record from estate_incidents where opened_at >= $1 order by opened_at desc", [
@@ -55,8 +53,6 @@ export const postgresIncidents = (
         [incident.id, incident.openedAt, restOf(incident)],
       ),
     ).pipe(Effect.asVoid),
-  sweep: (at) =>
-    Effect.suspend(() => query("delete from estate_incidents where opened_at < $1", [at])).pipe(Effect.asVoid),
 })
 
 /** The incidents for as long as Estate runs. */
@@ -67,7 +63,3 @@ export const memoryIncidents = (kept: Ref.Ref<ReadonlyArray<Incident>>): KeptInc
     ),
   keepIncident: (incident) => Ref.update(kept, (all) => [...all.filter((each) => each.id !== incident.id), incident]),
 })
-
-/** The incidents opened before `at`, gone from memory. */
-export const sweepMemoryIncidents = (kept: Ref.Ref<ReadonlyArray<Incident>>, at: string) =>
-  Ref.update(kept, (all) => all.filter((each) => each.openedAt >= at))

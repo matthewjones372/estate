@@ -97,10 +97,8 @@ const saying = (event: FiringEvent) => [
 
 const columns = "at, by, kind, text, link, read_logs, recorded_at, source, service"
 
-/** The events in Postgres, and the statement that sweeps those of firings begun before a time. */
-export const postgresEvents = (
-  query: Query,
-): FiringEvents & { readonly sweep: (at: string) => Effect.Effect<void, Failure> } => ({
+/** The events in Postgres. */
+export const postgresEvents = (query: Query): FiringEvents => ({
   events: (firing) =>
     Effect.suspend(() =>
       query(
@@ -126,8 +124,6 @@ export const postgresEvents = (
         [event.id, event.incident, ...saying(event)],
       ),
     ).pipe(Effect.asVoid),
-  sweep: (at) =>
-    Effect.suspend(() => query("delete from estate_events where starts_at < $1", [at])).pipe(Effect.asVoid),
 })
 
 const sameFiringAs = (firing: FiringKey) => (event: StoredEvent) =>
@@ -152,5 +148,8 @@ export const memoryEvents = (
 })
 
 /** The events of firings begun before `at`, gone from memory. */
-export const sweepMemoryEvents = (kept: Ref.Ref<ReadonlyArray<StoredEvent>>, at: string) =>
-  Ref.update(kept, (all) => all.filter((event) => Date.parse(event.startsAt) >= Date.parse(at)))
+export const sweepMemoryEvents = (
+  kept: Ref.Ref<ReadonlyArray<StoredEvent>>,
+  at: string,
+  keep: (firing: FiringKey) => boolean,
+) => Ref.update(kept, (all) => all.filter((event) => Date.parse(event.startsAt) >= Date.parse(at) || keep(event)))

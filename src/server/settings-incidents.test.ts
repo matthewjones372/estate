@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { ConfigProvider, Effect, Result } from "effect"
 import { readSettings } from "./settings"
-import { evidenceBytes, evidenceLines, leadMinutes, suggestWithin } from "./settings-incidents"
+import { evidenceBytes, evidenceLines, keepDays, leadMinutes, suggestWithin } from "./settings-incidents"
 
 const base = `
 catalog: /etc/estate/catalog.yaml
@@ -97,6 +97,26 @@ describe("how much an incident's evidence keeps in all", () => {
         const result = yield* read("incidents: { evidence: { maxMegabytes: 0 } }\n")
         expect(Result.isFailure(result) && result.failure.mistakes).toEqual([
           { at: "incidents.evidence.maxMegabytes", message: "0 is not a size: write more than 0 megabytes" },
+        ])
+      }),
+    ))
+})
+
+describe("how long an incident is kept, with its firings, events and evidence", () => {
+  test("is 400 days unless set", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const result = yield* read("")
+        expect(Result.isSuccess(result) && keepDays(result.success.incidents)).toBe(400)
+      }),
+    ))
+
+  test("is a mistake when it is less than a day", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const result = yield* read("incidents: { keepDays: 0 }\n")
+        expect(Result.isFailure(result) && result.failure.mistakes).toEqual([
+          { at: "incidents.keepDays", message: "0 is not a number of days: write 1 or more" },
         ])
       }),
     ))

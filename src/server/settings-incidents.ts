@@ -10,6 +10,7 @@ import { notADuration, secondsIn } from "./settings-every"
 export const Incidents = Schema.Struct({
   suggestWithin: Schema.optionalKey(Schema.String),
   leadMinutes: Schema.optionalKey(Schema.Number),
+  keepDays: Schema.optionalKey(Schema.Number),
   evidence: Schema.optionalKey(
     Schema.Struct({ lines: Schema.optionalKey(Schema.Number), maxMegabytes: Schema.optionalKey(Schema.Number) }),
   ),
@@ -26,6 +27,9 @@ export const suggestWithin = (incidents: Incidents | undefined): number => {
 
 /** The minutes before its first firing, or its opening if earlier, that an incident's window starts: 30 unless set. */
 export const leadMinutes = (incidents: Incidents | undefined): number => incidents?.leadMinutes ?? usual
+
+/** The days an incident is kept, with its firings, events and evidence: 400 unless set. */
+export const keepDays = (incidents: Incidents | undefined): number => incidents?.keepDays ?? 400
 
 /** The log lines a service an incident's evidence keeps: 2,000 unless set. */
 export const evidenceLines = (incidents: Incidents | undefined): number => incidents?.evidence?.lines ?? 2000
@@ -48,6 +52,9 @@ export const incidentsMistakes = (incidents: Incidents | undefined): ReadonlyArr
           message: `${incidents.evidence.lines} is not a number of lines: write 1 or more`,
         },
       ]
+    : []),
+  ...(incidents?.keepDays !== undefined && !(incidents.keepDays >= 1)
+    ? [{ at: "incidents.keepDays", message: `${incidents.keepDays} is not a number of days: write 1 or more` }]
     : []),
   ...(incidents?.evidence?.maxMegabytes !== undefined && !(incidents.evidence.maxMegabytes > 0)
     ? [
