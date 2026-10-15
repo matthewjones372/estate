@@ -3,7 +3,7 @@
 import { For, Show } from "solid-js"
 import type { Row, TraceView } from "../../shared/trace-view"
 import { took } from "../format"
-import { barAt, CutBand, type Drawn, hot, labelOf, Marks, percent } from "./TraceDrawn"
+import { against, barAt, CutBand, type Drawn, hot, labelOf, Marks, percent } from "./TraceDrawn"
 
 const LaneHeight = 64
 
@@ -61,8 +61,9 @@ export const Lanes = (props: Drawn) => {
                 "trace-failed": row.failed,
                 "trace-hot": hot(props.view, row),
                 "trace-nested": row.nested > 0,
+                "trace-slow": against(row, props.usual)?.slow === true,
               }}
-              aria-label={labelOf(props.view, row)}
+              aria-label={labelOf(props.view, row, against(row, props.usual)?.words)}
               aria-pressed={props.chosen === index()}
               title={`${row.title}: ${took(row.to - row.from)}`}
               onClick={() => props.choose(index())}

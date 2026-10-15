@@ -90,7 +90,7 @@ describe("a journey on a service's page", () => {
     const page = await opened("storefront", "order")
     await page.settle()
     const bar = [...page.container.querySelectorAll<HTMLButtonElement>(".journey-lanes .trace-lanes button")].find(
-      (each) => each.getAttribute("aria-label") === "Published, events, 5 ms",
+      (each) => each.getAttribute("aria-label")?.startsWith("Published, events, 5 ms") === true,
     )
     if (bar === undefined) throw new Error("no bar for Published")
     page.click(bar)
@@ -157,7 +157,7 @@ describe("a trace's page", () => {
     await page.settle()
     expect(text(page.container)).toContain("Choose a step to see what it was")
     const wait = [...page.container.querySelectorAll<HTMLButtonElement>(".trace-lanes button")].find(
-      (each) => each.getAttribute("aria-label") === "Waits in the outbox, orders-db, 950 ms",
+      (each) => each.getAttribute("aria-label")?.startsWith("Waits in the outbox, orders-db, 950 ms") === true,
     )
     if (wait === undefined) throw new Error("no bar for the outbox wait")
     page.click(wait)
@@ -184,6 +184,37 @@ describe("a trace's page", () => {
     refused.click(refused.button("Takes the order"))
     expect(refused.container.querySelector(".trace-chosen")?.textContent).toContain("Takes the order · orders · failed")
     expect(refused.container.querySelector(".trace-waterfall")?.textContent).toContain("29 ms failed")
+  })
+
+  test("sets each step beside its stage's usual time, and marks one half as long again", async () => {
+    const page = mount(() => <TracePage id="t2" journey="order" />)
+    await page.settle()
+    await page.settle()
+    expect(page.calls).toContainEqual(["journey", "order"])
+    const wait = [...page.container.querySelectorAll<HTMLButtonElement>(".trace-lanes button")].find((each) =>
+      each.getAttribute("aria-label")?.startsWith("Waits in the outbox"),
+    )
+    expect(wait?.getAttribute("aria-label")).toBe("Waits in the outbox, orders-db, 950 ms, 3.2× usual")
+    expect(wait?.classList.contains("trace-slow")).toBe(true)
+    if (wait === undefined) throw new Error("no bar for the outbox wait")
+    page.click(wait)
+    expect(page.container.querySelector(".trace-chosen")?.textContent).toContain(
+      "Usually300 ms, the p50 of its recent traces: 3.2× usual",
+    )
+    page.click(page.button("Waterfall"))
+    const against = [...page.container.querySelectorAll(".trace-waterfall tbody tr")].map(
+      (row) => row.querySelectorAll("td")[3]?.textContent ?? "",
+    )
+    expect(against).toEqual([
+      "",
+      "about usual (6 ms)",
+      "",
+      "about usual (29 ms)",
+      "about usual (3 ms)",
+      "3.2× usual (300 ms)",
+      "about usual (5 ms)",
+    ])
+    expect(page.container.querySelector(".trace-waterfall .trace-slow-word")?.textContent).toBe("3.2× usual (300 ms)")
   })
 
   test("lists the same steps as a waterfall, in time order, each with where and how long", async () => {

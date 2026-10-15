@@ -9,6 +9,7 @@ import { kube } from "./cluster"
 import { codeAnswer } from "./code-fakes"
 import { allocation, costReport } from "./cost-fakes"
 import { slack } from "./slack-fakes"
+import { tempo } from "./tempo-fakes"
 
 const now = () => Math.floor(Date.now() / 1000)
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
@@ -189,6 +190,8 @@ const server = Bun.serve({
       return new Response(runbook, { headers: { "content-type": "text/markdown" } })
     if (path === "/v1/chat/completions") return modelAnswer(request)
     // Langfuse's traces of the support agent: one failed on a tool, one through.
+    const traced = tempo(path)
+    if (traced !== undefined) return json(traced)
     if (path === "/api/public/traces") return json({ data: [{ id: "t2" }, { id: "t1" }], meta: { page: 1 } })
     if (path.startsWith("/api/public/traces/")) return json(traceOf(path.split("/").at(-1) ?? ""))
     // The model the support agent uses, as the label of the series its query groups by.

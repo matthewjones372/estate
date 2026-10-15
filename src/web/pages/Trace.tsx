@@ -10,7 +10,7 @@ import { placeOf, type TraceView } from "../../shared/trace-view"
 import { useEstate, useSnapshot } from "../context"
 import { took } from "../format"
 import { A } from "../parts/A"
-import type { Drawn, Scale } from "../parts/TraceDrawn"
+import type { Drawn, Scale, Usual } from "../parts/TraceDrawn"
 import { Lanes } from "../parts/TraceLanes"
 import { Chosen, Waterfall } from "../parts/TraceWaterfall"
 
@@ -39,12 +39,25 @@ const Read = (props: { readonly view: TraceView }) => {
   const [scale, setScale] = createSignal<Scale>("cut")
   const [chosen, setChosen] = createSignal<number | undefined>()
   const choose = (row: number) => setChosen((now) => (now === row ? undefined : row))
+  const { actions } = useEstate()
+  // Each stage's usual time, from the journey's own sample, to set each step beside.
+  const [usual, setUsual] = createSignal<Usual | undefined>()
+  createEffect(
+    on([() => props.view.journey?.name], ([journey]) => {
+      setUsual(undefined)
+      if (journey === undefined) return
+      void actions.journey(journey).then((sample) => {
+        if (typeof sample === "object") setUsual(sample.stages.map((stage) => stage.p50))
+      })
+    }),
+  )
   const drawn = (): Drawn => ({
     view: props.view,
     place: placeOf(props.view.total, scale() === "cut" ? props.view.cut : undefined),
     scale: scale(),
     chosen: chosen(),
     choose,
+    usual: usual(),
   })
   const row = () => {
     const at = chosen()
@@ -87,7 +100,7 @@ const Read = (props: { readonly view: TraceView }) => {
           when={row()}
           fallback={<p class="muted trace-hint">Choose a step to see what it was, where, and how long it took.</p>}
         >
-          {(found) => <Chosen view={props.view} row={found()} />}
+          {(found) => <Chosen view={props.view} row={found()} usual={usual()} />}
         </Show>
         <p class="muted trace-legend">
           <span class="trace-key trace-work" /> work <span class="trace-key trace-call" /> a call, waiting on others{" "}

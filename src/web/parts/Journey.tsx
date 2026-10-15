@@ -136,7 +136,11 @@ const Read = (props: { readonly sample: JourneySample }) => {
             )}
           </For>
         </fieldset>
-        <Show when={picked()}>{(id) => <ExampleLanes journey={props.sample.name} id={id()} />}</Show>
+        <Show when={picked()}>
+          {(id) => (
+            <ExampleLanes journey={props.sample.name} id={id()} usual={props.sample.stages.map((stage) => stage.p50)} />
+          )}
+        </Show>
       </Show>
     </>
   )

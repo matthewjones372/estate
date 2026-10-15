@@ -8,10 +8,15 @@ import { placeOf, type TraceView } from "../../shared/trace-view"
 import { useEstate, useSnapshot } from "../context"
 import { pathOf } from "../route"
 import { A } from "./A"
+import type { Usual } from "./TraceDrawn"
 import { Lanes } from "./TraceLanes"
 import { Chosen } from "./TraceWaterfall"
 
-export const ExampleLanes = (props: { readonly journey: string; readonly id: string }) => {
+export const ExampleLanes = (props: {
+  readonly journey: string
+  readonly id: string
+  readonly usual?: Usual | undefined
+}) => {
   const { actions } = useEstate()
   const snapshot = useSnapshot()
   const [read, setRead] = createSignal<TraceView | "none" | "loading" | undefined>("loading")
@@ -43,6 +48,7 @@ export const ExampleLanes = (props: { readonly journey: string; readonly id: str
                 scale="cut"
                 chosen={chosen()}
                 choose={(at) => setChosen((now) => (now === at ? undefined : at))}
+                usual={props.usual}
               />
               <Show
                 when={row()}
@@ -50,7 +56,7 @@ export const ExampleLanes = (props: { readonly journey: string; readonly id: str
                   <p class="muted trace-hint">Choose a step to see what it was, where, and how long it took.</p>
                 }
               >
-                {(step) => <Chosen view={found()} row={step()} />}
+                {(step) => <Chosen view={found()} row={step()} usual={props.usual} />}
               </Show>
             </>
           )}
