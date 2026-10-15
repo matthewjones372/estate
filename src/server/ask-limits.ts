@@ -5,6 +5,10 @@
  */
 import { Clock, Context, Data, Deferred, Duration, Effect, Layer, Ref } from "effect"
 import type { AskAnswer } from "../shared/ask"
+import type { SummaryAnswer } from "../shared/summary"
+
+/** What a turn answers: Ask AI about an alert, or Summarise an incident, which share the day's budget. */
+type Answer = AskAnswer | SummaryAnswer
 
 const AskLimited = Data.TaggedError("AskLimited")<{ readonly message: string }>
 type AskLimited = InstanceType<typeof AskLimited>
@@ -13,9 +17,9 @@ export interface AskLimits {
   /** Takes an alert's turn, or fails saying why it must wait. */
   readonly take: (alert: string) => Effect.Effect<void, AskLimited>
   /** The answer of an alert's turn, waited for while it is asked: undefined once it has passed, or if it failed. */
-  readonly shared: (alert: string) => Effect.Effect<AskAnswer | undefined>
+  readonly shared: (alert: string) => Effect.Effect<Answer | undefined>
   /** Keeps an alert's answer for whoever asks within its minute. */
-  readonly keep: (alert: string, answer: AskAnswer) => Effect.Effect<void>
+  readonly keep: (alert: string, answer: Answer) => Effect.Effect<void>
   /** Counts what an answer cost against the day's budget. */
   readonly spend: (tokens: number) => Effect.Effect<void>
   /** Gives back an alert's turn when its ask failed, so it can be asked again at once. */
@@ -29,7 +33,7 @@ const turn = Duration.toMillis(Duration.minutes(1))
 
 interface Turn {
   readonly at: number
-  readonly answer: Deferred.Deferred<AskAnswer | undefined>
+  readonly answer: Deferred.Deferred<Answer | undefined>
 }
 
 interface Held {
@@ -54,7 +58,7 @@ export const liveAskLimits = (budget = tokensPerDay): Layer.Layer<AskLimits> =>
         take: (alert) =>
           Effect.gen(function* () {
             const now = yield* Clock.currentTimeMillis
-            const answer = yield* Deferred.make<AskAnswer | undefined>()
+            const answer = yield* Deferred.make<Answer | undefined>()
             const refusal = yield* Ref.modify(held, (was): readonly [string | undefined, Held] => {
               const state = today(was, now)
               if (state.spent >= budget)

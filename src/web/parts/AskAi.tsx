@@ -33,7 +33,7 @@ export const noteOf = (answer: AskAnswer): string => {
 }
 
 /** "15,000 in (11,800 cached) · 1,100 out · about $0.03": what the answer took, and cost where it is priced. */
-const spent = (answer: AskAnswer): string => {
+export const spent = (answer: Pick<AskAnswer, "usage" | "cost">): string => {
   const { input, cached, output } = answer.usage
   const count = (tokens: number) => tokens.toLocaleString("en-GB")
   const tokens = `${count(input + cached)} in${cached === 0 ? "" : ` (${count(cached)} cached)`} · ${count(output)} out`

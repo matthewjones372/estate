@@ -47,7 +47,7 @@ const includeRoute = HttpRouter.add(
       "included",
       `included ${named(included)}${why}`,
       included.kind === "trace" ? undefined : included.service,
-      set.id,
+      { link: set.id },
     )
     return json(set, 201)
   }).pipe(answered),
@@ -72,7 +72,7 @@ const removeRoute = HttpRouter.add(
     const service = found.charts[0]?.service ?? found.logs?.[0]?.service ?? ""
     const named = trace === undefined ? `${service} ${what}` : `trace ${trace.id}`
     const text = `removed ${named}, included by ${found.keptBy}`
-    yield* happenedOnIncident(id, person.name, "evidence-removed", text, service, set)
+    yield* happenedOnIncident(id, person.name, "evidence-removed", text, service, { link: set })
     return json({ removed: set })
   }).pipe(answered),
 )
