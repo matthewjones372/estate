@@ -151,8 +151,8 @@ the 300-line limit, so the incident actions move out of it first.
       Done when: each kind is kept and read back in each notes store; a chart's query comes from the catalog; a viewer
       where logs are for operators is refused lines; past the limit is refused with the room left; a removal hides
       the item and keeps the event.
-- [ ] **`spec-0051-picker`** — the open incidents as a picker, taken out of *Link to incident…*; *Include* on picked
-      log lines and on error groups.
+- [x] **`spec-0051-picker`** — the open incidents as a picker beside *Link to incident…*'s, with a line on why;
+      *Include* on picked log lines and on error groups.
       Done when: picking three lines and including them in the only open incident sends them with the line on why;
       with none open the button is not shown; a viewer sees it only where they read logs.
 - [ ] **`spec-0051-include-charts`** — *Include* on a service's and a store's charts, with the range on screen.

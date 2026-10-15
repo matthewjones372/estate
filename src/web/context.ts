@@ -5,8 +5,10 @@ import type { AgentRun } from "../shared/agents"
 import type { AroundAlert } from "../shared/around"
 import type { AskAnswer } from "../shared/ask"
 import type { Me, ServiceState } from "../shared/events"
+import type { EvidenceSet } from "../shared/evidence"
 import type { PastFiring } from "../shared/firing"
 import type { Incident, IncidentRecord } from "../shared/incidents"
+import type { Included } from "../shared/included"
 import type { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { FiringEvent } from "../shared/timeline"
 import type { TraceView } from "../shared/trace-view"
@@ -60,6 +62,8 @@ export interface Actions {
   readonly incidents: () => Promise<ReadonlyArray<Incident> | undefined>
   /** Every incident kept, open and closed, newest first: undefined where they could not be read. */
   readonly allIncidents: () => Promise<ReadonlyArray<Incident> | undefined>
+  /** Keeps what was found in an open incident (spec 0051): the set it was kept as, or why not. */
+  readonly include: (incident: string, what: Included) => Promise<EvidenceSet | string>
   /** An incident and its firings' events: "none" where there is no such incident, undefined on failure. */
   readonly incident: (id: string) => Promise<IncidentRecord | "none" | undefined>
   /** Each write answers with the incident as it now is, or why it could not. */

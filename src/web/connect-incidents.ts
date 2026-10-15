@@ -1,5 +1,6 @@
 /** The incidents' actions against the server: read them, and change one, answering with it as it now is. */
 import { Option, Schema } from "effect"
+import { EvidenceSet } from "../shared/evidence"
 import { Incident, IncidentRecord } from "../shared/incidents"
 import type { Actions } from "./context"
 import { decodeMessage, refusalOf } from "./refusal"
@@ -7,6 +8,7 @@ import { decodeMessage, refusalOf } from "./refusal"
 const decodeIncident = Schema.decodeUnknownOption(Incident)
 const decodeIncidents = Schema.decodeUnknownOption(Schema.Struct({ incidents: Schema.Array(Incident) }))
 const decodeRecord = Schema.decodeUnknownOption(IncidentRecord)
+const decodeSet = Schema.decodeUnknownOption(EvidenceSet)
 
 const listed = (path: string) =>
   fetch(path)
@@ -51,6 +53,7 @@ type IncidentActions = Pick<
   | "removeIncidentNote"
   | "dismissIncident"
   | "raiseIncident"
+  | "include"
 >
 
 export const incidentsOn = (environment: () => string): IncidentActions => ({
@@ -93,4 +96,19 @@ export const incidentsOn = (environment: () => string): IncidentActions => ({
   dismissIncident: (id, alert, env = environment()) =>
     incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/dismissed`, { environment: env, alert }),
   raiseIncident: (id) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/raise`),
+  include: (id, what) =>
+    fetch(`/api/incidents/${encodeURIComponent(id)}/included`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(what),
+    })
+      .then(
+        (response): Promise<EvidenceSet | string> =>
+          response.ok
+            ? response
+                .json()
+                .then((body) => Option.getOrUndefined(decodeSet(body)) ?? "What was kept came back unreadable.")
+            : refusalOf(response, "It could not be included"),
+      )
+      .catch(() => "Estate could not be reached."),
 })
