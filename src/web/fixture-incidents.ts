@@ -168,6 +168,7 @@ export const incidentActions = (
   | "addIncidentNote"
   | "addIncidentService"
   | "addIncidentHappened"
+  | "keepIncidentEvidence"
   | "removeIncidentNote"
   | "dismissIncident"
   | "raiseIncident"
@@ -255,6 +256,10 @@ export const incidentActions = (
     },
     addIncidentHappened: (id, text, at) => {
       calls.push(at === undefined ? ["addIncidentHappened", id, text] : ["addIncidentHappened", id, text, at])
+      return Promise.resolve(records.has(id) ? true : "there is no such incident")
+    },
+    keepIncidentEvidence: (id) => {
+      calls.push(["keepIncidentEvidence", id])
       return Promise.resolve(records.has(id) ? true : "there is no such incident")
     },
     addIncidentService: (id, service) => {

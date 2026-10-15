@@ -232,7 +232,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
       `repository` or `links.compare`.
       Done when: an incident with a deploy and a rollback shows each service's start, changes and close, and a
       compare link for a GitHub repository; a service with no version known says so.
-- [ ] **`spec-0047-evidence-charts`** — charts kept on close and on *Keep evidence now*, in each notes store, drawn on
+- [x] **`spec-0047-evidence-charts`** — charts kept on close and on *Keep evidence now*, in each notes store, drawn on
       the page with the window and events.
       Done when: closing an incident keeps each service's Load and stats series with their queries; the page draws
       them after Prometheus is stopped; a second keep adds a set.

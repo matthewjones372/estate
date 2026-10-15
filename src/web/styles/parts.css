@@ -111,6 +111,11 @@
   fill: var(--amber);
   fill-opacity: 0.12;
 }
+/* A timeline's event, marked where it fell on a kept chart. */
+.plot-mark {
+  stroke: var(--ink-3);
+  stroke-dasharray: 2 3;
+}
 .plot-dot {
   position: absolute;
   width: 7px;

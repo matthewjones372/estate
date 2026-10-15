@@ -206,6 +206,10 @@ export const serverActions = (
     })
       .then<true | string>((response) => (response.ok ? true : refusalOf(response, "What happened could not be kept")))
       .catch(() => "Estate could not be reached."),
+  keepIncidentEvidence: (id) =>
+    fetch(`/api/incidents/${encodeURIComponent(id)}/evidence`, { method: "POST" })
+      .then<true | string>((response) => (response.ok ? true : refusalOf(response, "The evidence could not be kept")))
+      .catch(() => "Estate could not be reached."),
   addIncidentService: (id, service) =>
     incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/services`, { service }),
   removeIncidentNote: (id, note) =>

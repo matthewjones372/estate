@@ -6,6 +6,7 @@ import { Effect, Layer, Option, Schedule, Schema } from "effect"
 import { makeAwsJson } from "./aws/json"
 import { Notes, NotesError, type StoredFiring, type StoredImpact, type StoredNote, type StoredThread } from "./notes"
 import { dynamoEvents, sweepDynamoEvents } from "./notes-dynamodb-events"
+import { dynamoEvidence } from "./notes-dynamodb-evidence"
 import { dynamoIncidents, sweepDynamoIncidents } from "./notes-dynamodb-incidents"
 import { type Dynamo, dynamoDb, dynamoFailure, type Item, removeItems, scanItems } from "./notes-dynamodb-items"
 import { SourceFailure } from "./sources/run"
@@ -128,6 +129,7 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
       return {
         ...dynamoEvents(dynamo, table),
         ...dynamoIncidents(dynamo, table),
+        ...dynamoEvidence(dynamo, table),
         all: scanItems(dynamo, table, {}).pipe(
           Effect.map((items) =>
             items
