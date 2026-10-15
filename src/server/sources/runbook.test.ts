@@ -32,6 +32,52 @@ describe("a runbook", () => {
     })
   })
 
+  test("on GitHub is its raw file: from raw.githubusercontent.com without a token, the contents API with one", () => {
+    const calls: Call[] = []
+    const link = "https://github.com/acme/shop/blob/main/docs/run%20book.md?plain=1#steps"
+    const file = (call: Call) =>
+      call.url === "https://raw.githubusercontent.com/acme/shop/main/docs/run%20book.md"
+        ? reply("# Orders\n\nRoll back.", 200, { "content-type": "text/plain; charset=utf-8" })
+        : call.url === "https://api.github.com/repos/acme/shop/contents/docs/run%20book.md?ref=main"
+          ? reply("# Orders\n\nRoll back.", 200, { "content-type": "application/vnd.github.raw; charset=utf-8" })
+          : undefined
+    const readWith = (runbooks: Parameters<typeof readRunbook>[1]) =>
+      Effect.runPromise(
+        readRunbook(link, runbooks).pipe(
+          Effect.provide(
+            stubRemote((call) => {
+              calls.push(call)
+              return file(call)
+            }),
+          ),
+        ),
+      )
+    return readWith(undefined)
+      .then((open) => readWith([{ host: "github.com", token: Redacted.make("ghp") }]).then((token) => [open, token]))
+      .then(([open, token]) => {
+        expect(open).toEqual({ text: "# Orders\n\nRoll back." })
+        expect(token).toEqual({ text: "# Orders\n\nRoll back." })
+        expect(calls.map((call) => call.headers?.["authorization"])).toEqual([undefined, "Bearer ghp"])
+        expect(calls[1]?.headers?.["accept"]).toBe("application/vnd.github.raw")
+      })
+  })
+
+  test("on GitHub but not a file is read as the link, and a private one not found says which host", () => {
+    const calls: Call[] = []
+    return Promise.all([
+      read("https://github.com/acme/shop", () => reply("<p>Shop</p>", 200, { "content-type": "text/html" }), calls),
+      Effect.runPromise(
+        readRunbook("https://github.com/acme/secret/blob/main/run.md", [
+          { host: "github.com", token: Redacted.make("ghp") },
+        ]).pipe(Effect.provide(stubRemote(() => undefined))),
+      ),
+    ]).then(([page, missing]) => {
+      expect(page).toEqual({ text: "Shop" })
+      expect(calls.map((call) => call.url)).toEqual(["https://github.com/acme/shop"])
+      expect(missing).toEqual({ failed: "api.github.com answered 404" })
+    })
+  })
+
   test("says why where it could not be read as text", () =>
     Promise.all([
       read("https://git.example/a.pdf", () => reply("%PDF", 200, { "content-type": "application/pdf" })),

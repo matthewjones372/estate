@@ -144,9 +144,11 @@ ai: { provider: anthropic, apiKey: "${ANTHROPIC_API_KEY}", model: claude-opus-5-
 # take it is asked without), rounds of read tools (2), and how much of one tool's result it reads (4000).
 #   effort: low, toolRounds: 2, toolResultChars: 4000
 
-# Credentials for reading runbooks' text, by the host their links name
+# Credentials for reading runbooks' text, by the host their links name. A file on GitHub is read as the file: from
+# raw.githubusercontent.com, or with github.com's token through GitHub's API, for a private repository.
 runbooks:
   - { host: wiki.example.com, user: estate@example.com, token: "${WIKI_TOKEN}" }
+  - { host: github.com, token: "${GITHUB_TOKEN}" }
 ```
 
 ### MCP for agents
