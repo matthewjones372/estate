@@ -10,13 +10,14 @@ import type { Incident } from "../shared/incidents"
 import { statsOf } from "../shared/stats"
 import { storeStatsOf } from "../shared/stores"
 import { windowOf } from "../shared/window"
+import { withinLimit } from "./evidence-limit"
 import { tracesOf } from "./evidence-traces"
 import { happenedOnIncident } from "./happened"
 import { serviceLogs } from "./log-hub"
 import { Notes } from "./notes"
 import { environmentsOf } from "./rebuilt"
 import { Configured } from "./settings"
-import { evidenceLines, leadMinutes } from "./settings-incidents"
+import { evidenceBytes, evidenceLines, leadMinutes } from "./settings-incidents"
 import { groupErrors, type Line } from "./sources/lines"
 import { loadOf, storeLoadOf } from "./sources/metrics"
 import type { Ranges, Span } from "./sources/prometheus"
@@ -69,14 +70,16 @@ const chartsOf = (catalog: Catalog, ranges: Ranges, name: string, environment: s
 
 /**
  * A service's logs over the window: its errors grouped, and up to `most` of its lines, errors first and then the
- * newest, so a busy service keeps what the incident is about. Twice as many are read, so the rest can be counted.
+ * newest, so a busy service keeps what the incident is about. Twice as many are read, so the rest can be counted. A
+ * source that does not answer is named, as what was left out.
  */
 const logsOf = (environment: string, service: string, from: number, to: number, most: number) =>
   Effect.gen(function* () {
     const logs = yield* serviceLogs(environment, service)
-    if (logs === undefined) return []
+    if (logs === undefined) return { logs: [], missing: [] }
     const read = yield* Effect.result(logs.read(from, to, most * 2))
-    if (read._tag === "Failure") return []
+    if (read._tag === "Failure")
+      return { logs: [], missing: [`the logs of ${service} in ${environment}: ${read.failure.message}`] }
     const newestFirst = read.success.toSorted((a, b) => b.at.localeCompare(a.at))
     const chosen = new Set<Line>(
       [...newestFirst.filter(logs.isError), ...newestFirst.filter((line) => !logs.isError(line))].slice(0, most),
@@ -89,7 +92,7 @@ const logsOf = (environment: string, service: string, from: number, to: number, 
       lines: read.success.filter((line) => chosen.has(line)),
       leftOut: read.success.length - chosen.size,
     }
-    return [kept]
+    return { logs: [kept], missing: [] }
   })
 
 const many = (count: number, one: string, more: string) => `${count} ${count === 1 ? one : more}`
@@ -116,43 +119,38 @@ export const keepEvidence = (incident: Incident, by: string) =>
       }),
     )
     const most = evidenceLines(settings.incidents)
-    const logs = yield* Effect.forEach(environmentsOf(incident), (environment) =>
-      Effect.map(
-        Effect.forEach(services, (name) => logsOf(environment, name, Date.parse(from), Date.parse(to), most)),
-        (each) => each.flat(),
-      ),
-    )
+    const logsRead = (yield* Effect.forEach(environmentsOf(incident), (environment) =>
+      Effect.forEach(services, (name) => logsOf(environment, name, Date.parse(from), Date.parse(to), most)),
+    )).flat()
+    const logs = logsRead.flatMap((each) => each.logs)
     const traces = yield* Effect.forEach(environmentsOf(incident), (environment) => {
       const where = estate.catalog.environments.find((each) => each.name === environment)
       const window = { from: Date.parse(from), to: Date.parse(to) }
-      return tracesOf(
-        estate.catalog,
-        settings.sources[where?.sources ?? ""] ?? {},
-        environment,
-        services,
-        window,
-        logs.flat(),
-      )
+      return tracesOf(estate.catalog, settings.sources[where?.sources ?? ""] ?? {}, environment, services, window, logs)
     })
-    const set = {
+    const missing = [...logsRead.flatMap((each) => each.missing), ...traces.flatMap((each) => each.missing)]
+    const found = {
       id: crypto.randomUUID(),
       keptAt,
       keptBy: by,
       window,
       charts: charts.flat(),
-      logs: logs.flat(),
-      traces: traces.flat(),
+      logs,
+      traces: traces.flatMap((each) => each.traces),
+      ...(missing.length === 0 ? {} : { leftOut: missing }),
     }
-    if (set.charts.length === 0 && set.logs.length === 0 && set.traces.length === 0) return undefined
+    if (found.charts.length + found.logs.length + found.traces.length + missing.length === 0) return undefined
+    const set = withinLimit(found, evidenceBytes(settings.incidents))
     yield* (yield* Notes).keepEvidence(incident.id, set)
-    const kept = new Set([...set.charts, ...set.logs].map((each) => each.service)).size
-    const sum = (of: (logs: KeptLogs) => number) => set.logs.reduce((total, logs) => total + of(logs), 0)
+    const kept = new Set([...set.charts, ...(set.logs ?? [])].map((each) => each.service)).size
+    const sum = (of: (logs: KeptLogs) => number) => (set.logs ?? []).reduce((total, logs) => total + of(logs), 0)
     const [lines, leftOut] = [sum((logs) => logs.lines.length), sum((logs) => logs.leftOut)]
     const said = [
       `kept ${many(kept, "service's", "services'")} charts, ${many(set.charts.length, "series", "series")}`,
       lines === 0 ? "" : `, ${many(lines, "line", "lines")}`,
-      set.traces.length === 0 ? "" : `, ${many(set.traces.length, "trace", "traces")}`,
+      (set.traces ?? []).length === 0 ? "" : `, ${many(set.traces?.length ?? 0, "trace", "traces")}`,
       leftOut === 0 ? "" : `; ${many(leftOut, "line", "lines")} left out past incidents.evidence.lines`,
+      set.leftOut === undefined ? "" : `; left out: ${set.leftOut.join("; ")}`,
     ].join("")
     yield* happenedOnIncident(incident.id, by, "evidence-kept", said)
     return set

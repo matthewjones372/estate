@@ -56,5 +56,7 @@ export const EvidenceSet = Schema.Struct({
   logs: optional(Schema.Array(KeptLogs)),
   /** Traces, read whole; none for a reader who may not read logs. */
   traces: optional(Schema.Array(KeptTrace)),
+  /** What was not kept, past a limit or from a source that did not answer, each said in a line. */
+  leftOut: optional(Schema.Array(Schema.String)),
 })
 export type EvidenceSet = typeof EvidenceSet.Type

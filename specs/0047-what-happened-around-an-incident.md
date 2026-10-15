@@ -243,7 +243,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
       whole.
       Done when: against a stub Tempo, an incident on a journey's service keeps its slowest and failed traces and
       the ones its lines name, and they open on the trace page with Tempo stopped.
-- [ ] **`spec-0047-evidence-limit`** — `maxMegabytes` held; what did not fit and sources that did not answer named.
+- [x] **`spec-0047-evidence-limit`** — `maxMegabytes` held; what did not fit and sources that did not answer named.
       Done when: evidence past the limit keeps charts first, then errors, then traces, then lines, and the
       `evidence-kept` event names what was left out.
 - [ ] **`spec-0047-export-zip`** — `GET /api/incidents/:id/export?format=zip` with every file above; SVGs drawn on

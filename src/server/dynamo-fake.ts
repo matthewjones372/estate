@@ -22,7 +22,7 @@ const passes = (item: Item, filter: string | undefined, values: Item): boolean =
     return operator === "=" ? held === value : operator === "<" ? held < value : held >= value
   })
 
-/** The little of DynamoDB the notes use, in memory: tables made slowly, scans two items a page. */
+/** The little of DynamoDB the notes use, in memory: tables made slowly, scans two items a page, items of 400 KB at most. */
 export const fakeDynamo = (calls: Call[], refuse?: string) => {
   const tables = new Map<string, { described: number; items: Map<string, Item> }>()
   const refusal = (type: string, message: string) =>
@@ -44,6 +44,8 @@ export const fakeDynamo = (calls: Call[], refuse?: string) => {
     }
     if (table === undefined) return refusal("ResourceNotFoundException", "no such table")
     const keyOf = (key: Item) => `${key["pk"]?.S}|${key["sk"]?.S}`
+    if (operation === "PutItem" && JSON.stringify(body.Item).length > 400 * 1024)
+      return refusal("ValidationException", "Item size has exceeded the maximum allowed size")
     if (operation === "PutItem") table.items.set(keyOf(body.Item), body.Item)
     if (operation === "DeleteItem") table.items.delete(keyOf(body.Key))
     if (operation === "Scan") {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { ConfigProvider, Effect, Result } from "effect"
 import { readSettings } from "./settings"
-import { evidenceLines, leadMinutes, suggestWithin } from "./settings-incidents"
+import { evidenceBytes, evidenceLines, leadMinutes, suggestWithin } from "./settings-incidents"
 
 const base = `
 catalog: /etc/estate/catalog.yaml
@@ -77,6 +77,26 @@ describe("how many log lines a service an incident's evidence keeps", () => {
         const result = yield* read("incidents: { evidence: { lines: 0 } }\n")
         expect(Result.isFailure(result) && result.failure.mistakes).toEqual([
           { at: "incidents.evidence.lines", message: "0 is not a number of lines: write 1 or more" },
+        ])
+      }),
+    ))
+})
+
+describe("how much an incident's evidence keeps in all", () => {
+  test("is 25 megabytes unless set", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const result = yield* read("")
+        expect(Result.isSuccess(result) && evidenceBytes(result.success.incidents)).toBe(25 * 1024 * 1024)
+      }),
+    ))
+
+  test("is a mistake when it is none", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const result = yield* read("incidents: { evidence: { maxMegabytes: 0 } }\n")
+        expect(Result.isFailure(result) && result.failure.mistakes).toEqual([
+          { at: "incidents.evidence.maxMegabytes", message: "0 is not a size: write more than 0 megabytes" },
         ])
       }),
     ))
