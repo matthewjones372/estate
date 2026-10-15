@@ -4,6 +4,7 @@
  * environment keeps each change there once.
  */
 import { Clock, Effect, Stream, SubscriptionRef } from "effect"
+import type { Build } from "../shared/deploys"
 import { type EventKind, seenLive } from "../shared/timeline"
 import type { Pod } from "../shared/workloads"
 import { Notes } from "./notes"
@@ -31,10 +32,10 @@ const lower = (from: string, to: string) => {
 }
 
 // Only what both reads saw is compared, so a source answering for the first time is not a change.
-const podsOf = (state: EnvironmentState | undefined, service: string) =>
+export const podsOf = (state: EnvironmentState | undefined, service: string) =>
   state?.cluster.state === "ok" ? state.cluster.value?.pods[service] : undefined
 
-const runningOf = (pods: ReadonlyArray<Pod> | undefined) =>
+export const runningOf = (pods: ReadonlyArray<Pod> | undefined) =>
   versionOf(pods?.find((pod) => pod.ready)?.image ?? pods?.[0]?.image)
 
 /** The service and environment a change is told in. */
@@ -54,12 +55,16 @@ const versions = (
   return [{ kind: "deployed", text: `${service} ${from} → ${to} in ${environment}${back}` } as const]
 }
 
+/** A pod's restarts so far, and why it last stopped where Kubernetes says. */
+export const restarted = (pod: Pod): Change => {
+  const why = pod.lastTermination === undefined ? "" : ` (${pod.lastTermination})`
+  return { kind: "restarted", text: `${pod.name} restarted${why}, ${many(pod.restarts, "restart")}` }
+}
+
 const restarts = (was: ReadonlyArray<Pod> | undefined, now: ReadonlyArray<Pod> | undefined): ReadonlyArray<Change> =>
   (now ?? []).flatMap((pod) => {
     const before = was?.find((each) => each.name === pod.name)
-    if (before === undefined || pod.restarts <= before.restarts) return []
-    const why = pod.lastTermination === undefined ? "" : ` (${pod.lastTermination})`
-    return [{ kind: "restarted", text: `${pod.name} restarted${why}, ${many(pod.restarts, "restart")}` }]
+    return before === undefined || pod.restarts <= before.restarts ? [] : [restarted(pod)]
   })
 
 const scaled = (
@@ -84,12 +89,17 @@ const chosen = (
 
 const outcome = { failure: "failed", success: "passed", cancelled: "was cancelled" } as const
 
+/** A build that has finished, as a change; none while it runs or waits. */
+export const finished = (service: string, build: Build): ReadonlyArray<Change> => {
+  if (build.status === "running" || build.status === "queued") return []
+  const job = build.job === undefined ? "" : ` at ${build.job}`
+  return [{ kind: "build", text: `${service} ${build.title} ${outcome[build.status]}${job}`, link: build.url }]
+}
+
 const builds = (before: EstateState, after: EstateState, service: string): ReadonlyArray<Change> => {
   const [from, to] = [before.builds.value?.[service]?.[0], after.builds.value?.[service]?.[0]]
   if (from === undefined || to === undefined || (from.sha === to.sha && from.status === to.status)) return []
-  if (to.status === "running" || to.status === "queued") return []
-  const job = to.job === undefined ? "" : ` at ${to.job}`
-  return [{ kind: "build", text: `${service} ${to.title} ${outcome[to.status]}${job}`, link: to.url }]
+  return finished(service, to)
 }
 
 const health = (before: EstateState, after: EstateState, { service, environment }: Place) => {

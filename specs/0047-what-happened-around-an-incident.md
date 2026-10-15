@@ -221,7 +221,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
       Done when: against stub sources, a version change, a restart with OOMKilled, a scale to zero and a health change
       on an incident's service each become one event; the same change on a service outside it does not; in a cluster
       each is kept once.
-- [ ] **`spec-0047-rebuilt`** — the run-up rebuilt on open and on a service joining, `source: rebuilt`, with a
+- [x] **`spec-0047-rebuilt`** — the run-up rebuilt on open and on a service joining, `source: rebuilt`, with a
       `version-seen` at the window's start or that it is not known.
       Done when: opening an incident 10 minutes after a deploy keeps that deploy as rebuilt; a deploy newer than the
       window's start says the earlier version is not known here.
