@@ -1,26 +1,14 @@
 /** @jsxImportSource solid-js */
 /** A journey on a service's page and a trace's own page, in happy-dom: run by `traces.test.ts`. */
 import { describe, expect, test } from "bun:test"
-import type { Events } from "../shared/events"
 import { App } from "./App"
 import { events, heard, now, operator } from "./fixture"
+import { withJourney } from "./fixture-traces"
 import { mount } from "./harness"
 import { TracePage } from "./pages/Trace"
 import { JourneyLinks, Journeys } from "./parts/Journey"
 import { recording } from "./recording"
 import { pageOf } from "./route"
-
-const withJourney = (name: string): Partial<Events> => ({
-  ...events,
-  ...(events.catalog === undefined
-    ? {}
-    : {
-        catalog: {
-          ...events.catalog,
-          journeys: [{ name, title: "Placing an order", services: ["storefront", "orders"] }],
-        },
-      }),
-})
 
 const text = (container: HTMLElement) => container.textContent ?? ""
 

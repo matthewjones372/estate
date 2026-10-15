@@ -33,3 +33,20 @@ test("a journey opens from its service's links, and a trace from it sets each st
   await expect(page.getByRole("columnheader", { name: "Against usual" })).toBeVisible()
   await accessible(page)
 })
+
+test("a journey drawn on the map numbers the nodes it passes through, with the time it spends at each", async ({
+  page,
+}) => {
+  await page.goto("/?env=production")
+  const map = page.getByRole("figure", { name: "The estate, live" })
+  await map.getByRole("button", { name: "Placing an order" }).click()
+  await expect(map.locator(".map-route")).toHaveCount(2)
+  await expect(map.locator(".map-on-route", { hasText: "Postgres" })).toContainText(/ms here/)
+  await expect(map).toContainText(/Placing an order usually takes [\d.]+ (ms|s) end to end/)
+  await accessible(page)
+  await map.getByRole("link", { name: "Where its time goes" }).click()
+  await expect(page).toHaveURL(/\/services\/storefront\?/)
+  await expect(
+    page.getByRole("region", { name: "Placing an order" }).getByRole("button", { name: "Hide" }),
+  ).toBeVisible()
+})

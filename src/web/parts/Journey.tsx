@@ -3,7 +3,7 @@
  * A journey on a service's page: where its time goes over a sample of recent traces, as one bar with a segment per
  * stage, the stages' p50 and p99, and one of its traces in lanes. Read when it is opened, for its environment.
  */
-import { createEffect, createSignal, For, on, Show } from "solid-js"
+import { createEffect, createSignal, For, type JSX, on, Show } from "solid-js"
 import type { JourneySample } from "../../shared/traces"
 import { useEstate, useSnapshot } from "../context"
 import { took } from "../format"
@@ -149,32 +149,48 @@ const Read = (props: { readonly sample: JourneySample }) => {
 /** The journey someone asked to see from a link, for its panel to open itself and come into view. */
 const [asked, setAsked] = createSignal<string | undefined>()
 
-/** A journey a service is part of, among its links: to its page, with the journey's panel open. */
-export const JourneyLinks = (props: { readonly service: string }) => {
+/**
+ * A link to a journey: to the page of a service it crosses, with its panel open and in view. The service's page
+ * draws as it is navigated to, so its panel has seen the ask by the time it is cleared.
+ */
+export const JourneyLink = (props: {
+  readonly service: string
+  readonly journey: string
+  readonly children: JSX.Element
+  readonly class?: string
+}) => {
   const { actions } = useEstate()
+  const to = () => pathOf({ page: "service", name: props.service })
+  return (
+    <a
+      href={to()}
+      class={props.class}
+      title="Where its time goes, from its recent traces"
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
+        event.preventDefault()
+        setAsked(props.journey)
+        if (window.location.pathname !== to()) actions.navigate(to())
+        setTimeout(() => setAsked(undefined), 0)
+      }}
+    >
+      {props.children}
+    </a>
+  )
+}
+
+/** The journeys a service is part of, among its links. */
+export const JourneyLinks = (props: { readonly service: string }) => {
   const snapshot = useSnapshot()
   const journeys = () =>
     (snapshot.events.catalog?.journeys ?? []).filter((journey) => journey.services.includes(props.service))
-  const to = () => pathOf({ page: "service", name: props.service })
   return (
     <For each={journeys()}>
       {(journey) => (
-        <a
-          href={to()}
-          class="link-chip"
-          title="Where its time goes, from its recent traces"
-          onClick={(event) => {
-            if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
-            event.preventDefault()
-            setAsked(journey.name)
-            if (window.location.pathname !== to()) actions.navigate(to())
-            // The service's page draws as it is navigated to, so its panel has seen the ask by now.
-            setTimeout(() => setAsked(undefined), 0)
-          }}
-        >
+        <JourneyLink service={props.service} journey={journey.name} class="link-chip">
           <Icon name="traces" />
           {journey.title}
-        </a>
+        </JourneyLink>
       )}
     </For>
   )

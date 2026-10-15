@@ -79,6 +79,11 @@ sources:
 marked with the traces icon: it opens the service's page with the journey's panel open and in view, so traces are
 found from where people already look.
 
+**On the overview's map**, a button per journey in its caption: choosing one dims the map, draws the journey's route
+from node to node in the order its stages happen, numbers each node it passes through, and says how long it usually
+spends there, from the journey's sample, read then. A line under the map gives the whole and opens the journey's
+panel. The choice is kept per browser.
+
 **On the page of each service a journey's stages are in**, closed until someone asks: its title, a line saying what it
 shows, and *Show where its time goes*. Tempo is read only then, so a page nobody opens it on costs no reads, and the
 rest of the page stays as quiet as it was. Opened, nothing on it is live:
