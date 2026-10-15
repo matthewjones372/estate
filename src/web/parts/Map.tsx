@@ -161,8 +161,11 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
     const body = () => (
       <>
         <Show when={steps().length > 0}>
-          <span class="map-step mono" aria-label={`step ${steps().join(" and ")} of ${on.journey()?.title ?? ""}`}>
+          <span class="map-step mono" aria-hidden="true">
             {steps().join(" · ")}
+          </span>
+          <span class="visually-hidden">
+            Step {steps().join(" and ")} of {on.journey()?.title}:{" "}
           </span>
         </Show>
         <span class="map-node-name">
