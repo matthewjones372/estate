@@ -42,8 +42,20 @@ const watch = (url: string) => {
   return { counted, stop: () => controller.abort() }
 }
 
-/** Waits until the tools have been asked for every range at least once and then nothing for two seconds. */
-const firstReadsDone = async (calls: () => number, size: number) => {
+/** Whether Estate's `/readyz` says every configured part has been read once. */
+const ready = (url: string) =>
+  fetch(`${url}/readyz`).then(
+    (response) => response.ok,
+    () => false,
+  )
+
+/**
+ * Waits until Estate is ready, every part read once, and the tools have been asked for every range at least once and
+ * then nothing for two seconds. The tools going quiet alone does not say so: a call that hangs until its timeout
+ * leaves its part unread after the tools have answered everything else.
+ */
+const firstReadsDone = async (url: string, calls: () => number, size: number) => {
+  while (!(await ready(url))) await Bun.sleep(500)
   let last = -1
   while (calls() !== last || calls() < size * 6) {
     last = calls()
@@ -56,7 +68,7 @@ const pageAt = async (size: number) => {
   const tools = startTools(size, 20)
   const estate = await startEstate(size, tools.url)
   try {
-    await firstReadsDone(tools.calls, size)
+    await firstReadsDone(estate.url, tools.calls, size)
     return await measurePage(estate.url, size)
   } finally {
     estate.stop()
@@ -67,7 +79,7 @@ const pageAt = async (size: number) => {
 const tools = startTools(services, 20)
 const estate = await startEstate(services, tools.url)
 try {
-  await firstReadsDone(tools.calls, services)
+  await firstReadsDone(estate.url, tools.calls, services)
   const watchers = Array.from({ length: pages }, () => watch(estate.url))
   await Bun.sleep(3000)
   const before = { calls: tools.calls(), ...(await usage(estate.pid)), bytes: watchers[0]?.counted.total ?? 0 }
