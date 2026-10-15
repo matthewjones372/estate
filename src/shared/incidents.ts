@@ -33,6 +33,8 @@ export const Incident = Schema.Struct({
   ),
   /** Notes written on the incident, oldest first; none on a record kept before it held notes. */
   notes: optional(Schema.Array(Note)),
+  /** Services and stores an operator added to it, beyond those of its firings. */
+  added: optional(Schema.Array(Schema.Struct({ service: Schema.String, by: Schema.String, at: Instant }))),
   /** Firings a person said are not part of it, so they are not suggested for it again. */
   dismissed: optional(
     Schema.Array(
@@ -102,12 +104,16 @@ export const ReadBack = Schema.Struct({
 export type ReadBack = typeof ReadBack.Type
 
 /**
- * An incident as its page reads it: the record, every event of its firings merged in time order, for someone who
- * may link the live firings that may belong to it, and what the incident tool says of it once raised.
+ * An incident as its page reads it: the record, its events merged in time order, its services and window, for someone
+ * who may link the live firings that may belong to it, and what the incident tool says of it once raised.
  */
 export const IncidentRecord = Schema.Struct({
   incident: Incident,
   events: Schema.Array(IncidentEvent),
+  /** The services and stores it is about: its firings', then those added. */
+  services: optional(Schema.Array(Schema.String)),
+  /** From its lead before its first firing, or its opening if earlier, to its close; to now while open. */
+  window: optional(Schema.Struct({ from: Instant, to: Instant })),
   suggested: optional(Schema.Array(MayBelong)),
   inTool: optional(ReadBack),
 })

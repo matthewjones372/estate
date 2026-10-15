@@ -32,7 +32,7 @@ interface Anchor {
 }
 
 /** One of an incident's firings, its service or store read from the alert held now, or its kept record once resolved. */
-const anchorOf = (estate: EstateState, firing: Incident["firings"][number]): Anchor => {
+export const anchorOf = (estate: EstateState, firing: Incident["firings"][number]): Anchor => {
   const held = estate.environments[firing.environment]?.alerts.value?.find((each) => each.id === firing.alert)
   const key = { environment: firing.environment, alert: firing.alert, startsAt: firing.startsAt }
   if (held !== undefined)

@@ -198,6 +198,8 @@ export const serverActions = (
     ),
   closeIncident: (id, how) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/close`, { how }),
   addIncidentNote: (id, text) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/notes`, { text }),
+  addIncidentService: (id, service) =>
+    incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/services`, { service }),
   removeIncidentNote: (id, note) =>
     incidentWrite("DELETE", `/api/incidents/${encodeURIComponent(id)}/notes/${encodeURIComponent(note)}`),
   dismissIncident: (id, alert, env = environment()) =>

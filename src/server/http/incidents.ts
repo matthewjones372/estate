@@ -14,9 +14,10 @@ import { incidentTimeline } from "../incident-timeline"
 import { sameFiring } from "../notes"
 import type { FiringKey } from "../notes-events"
 import { Configured } from "../settings"
-import { suggestWithin } from "../settings-incidents"
+import { leadMinutes, suggestWithin } from "../settings-incidents"
 import { Estate } from "../state"
 import { isoNow, sameInstant } from "../time"
+import { incidentServices, incidentWindow } from "../views/incident-scope"
 import { mayBelongTo } from "../views/suggested"
 import { incidentDismissedRoute } from "./incident-dismissed"
 import { incidentNoteRoutes } from "./incident-notes"
@@ -34,6 +35,7 @@ import {
   operator,
   refuse,
 } from "./incident-record"
+import { incidentServicesRoute } from "./incident-services"
 import { json, readsLogs, refused, searchParams, withRole } from "./routes"
 
 const longestTitle = 200
@@ -182,8 +184,10 @@ const readRoute = HttpRouter.add(
         ? mayBelongTo(yield* SubscriptionRef.get(yield* Estate), id, suggestWithin(settings.incidents))
         : undefined
     const seen = seenBy(events, yield* readsLogs(person.role))
-    const inTool = (yield* SubscriptionRef.get(yield* Estate)).inTool?.[id]
-    return json(compact({ incident, events: seen, suggested, inTool }))
+    const estate = yield* SubscriptionRef.get(yield* Estate)
+    const services = incidentServices(estate, incident)
+    const window = incidentWindow(incident, leadMinutes(settings.incidents), yield* isoNow)
+    return json(compact({ incident, events: seen, services, window, suggested, inTool: estate.inTool?.[id] }))
   }).pipe(answered),
 )
 
@@ -210,4 +214,5 @@ export const incidentRoutes = Layer.mergeAll(
   incidentNoteRoutes,
   incidentDismissedRoute,
   incidentRaiseRoute,
+  incidentServicesRoute,
 )

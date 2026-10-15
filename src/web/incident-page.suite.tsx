@@ -148,6 +148,26 @@ describe("an incident's page", () => {
     expect(notes(page.container)).toEqual(["pool resized"])
   })
 
+  test("shows its services and window, and an operator adds a service to it", async () => {
+    const page = await opened("i1")
+    const services = () => [...page.container.querySelectorAll(".incident-services li")].map((each) => each.textContent)
+    expect(services()).toEqual(["storefront", "payments"])
+    expect(page.container.querySelector(".incident-services .muted")?.textContent).toMatch(
+      /^From 3 Oct \d\d:10 to now$/,
+    )
+    page.type(page.container.querySelector(".incident-services input") as HTMLInputElement, " orders ")
+    page.click(page.button("Add service"))
+    await page.settle()
+    expect(page.calls).toContainEqual(["addIncidentService", "i1", "orders"])
+    expect(services()).toEqual(["storefront", "payments", "orders"])
+  })
+
+  test("a viewer reads its services, but may not add one", async () => {
+    const page = await opened("i1", viewer)
+    expect(page.container.querySelectorAll(".incident-services li")).toHaveLength(2)
+    expect(page.container.querySelector(".incident-services input")).toBeNull()
+  })
+
   test("a note refused says why, and keeps what was written", async () => {
     const { actions } = recording()
     const page = mount(() => <IncidentPage id="i1" />, {
