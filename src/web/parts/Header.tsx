@@ -120,6 +120,9 @@ export const Header = () => {
           <A to="/alerts" current={page().page === "alerts"}>
             Alerts {firing() > 0 && <span class="count">{firing()}</span>}
           </A>
+          <A to="/incidents" current={page().page === "incidents" || page().page === "incident"}>
+            Incidents
+          </A>
         </nav>
         <Jump />
         <div class="header-end">

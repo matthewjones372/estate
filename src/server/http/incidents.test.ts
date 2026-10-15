@@ -76,6 +76,7 @@ const story = Effect.gen(function* () {
       events: ReadonlyArray<{ environment: string; alert: string; by: string; kind: string; text: string }>
     },
     open: (yield* ask(server, sending("GET", "/api/incidents"))).json(),
+    all: (yield* ask(server, sending("GET", "/api/incidents?closed=true"))).json(),
     staging: alertsView(state, "staging", false).alerts,
     production: alertsView(state, "production", false).alerts,
   }
@@ -181,6 +182,11 @@ describe("incidents", () => {
         ["incident-closed", "it passed"],
         ["incident-opened", "Again"],
       ])
+    }))
+
+  test("are all listed, closed ones too, newest first, with closed=true", () =>
+    Effect.runPromise(story).then(({ ids, shown, all }) => {
+      expect(all).toEqual({ incidents: [ids.down, ids.slow].map((id) => shown.find((each) => each.id === id)) })
     }))
 
   test("are kept by operators only: a viewer reads them, and may open, link, unlink or close none", () =>

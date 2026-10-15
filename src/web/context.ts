@@ -58,6 +58,8 @@ export interface Actions {
   readonly askAlert: (alert: string, signal: AbortSignal) => Promise<AskAnswer | string>
   /** The incidents open now, newest first: undefined where they could not be read. */
   readonly incidents: () => Promise<ReadonlyArray<Incident> | undefined>
+  /** Every incident kept, open and closed, newest first: undefined where they could not be read. */
+  readonly allIncidents: () => Promise<ReadonlyArray<Incident> | undefined>
   /** An incident and its firings' events: "none" where there is no such incident, undefined on failure. */
   readonly incident: (id: string) => Promise<IncidentRecord | "none" | undefined>
   /** Each write answers with the incident as it now is, or why it could not. */

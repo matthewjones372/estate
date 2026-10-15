@@ -8,6 +8,7 @@ import { Alerts } from "./pages/Alerts"
 import { Deploys } from "./pages/Deploys"
 import { FiringPage } from "./pages/Firing"
 import { IncidentPage } from "./pages/Incident"
+import { Incidents } from "./pages/Incidents"
 import { JobPage } from "./pages/Job"
 import { Kiosk } from "./pages/Kiosk"
 import { Overview } from "./pages/Overview"
@@ -76,6 +77,9 @@ const Page = (props: { readonly estate: Estate }) => {
       </Match>
       <Match when={page().page === "alerts"}>
         <Alerts />
+      </Match>
+      <Match when={page().page === "incidents"}>
+        <Incidents />
       </Match>
     </Switch>
   )

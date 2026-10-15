@@ -119,7 +119,7 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
   return (
     <main class="main">
       <nav aria-label="Breadcrumb" class="muted crumbs">
-        <A to="/">Overview</A> / <A to="/alerts">Alerts</A> / {incident().title}
+        <A to="/">Overview</A> / <A to="/incidents">Incidents</A> / {incident().title}
       </nav>
       <section aria-labelledby="incident-title" class="stack">
         <h1 id="incident-title" class="headline" style={{ "font-size": "32px" }}>
@@ -213,7 +213,7 @@ export const IncidentPage = (props: { readonly id: string }) => {
                 ? `There is no incident ${props.id} here.`
                 : "The incident could not be read."}
           </p>
-          <A to="/alerts">All alerts, and what resolved today</A>
+          <A to="/incidents">All incidents</A>
         </main>
       }
     >
