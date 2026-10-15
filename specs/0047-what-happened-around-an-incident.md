@@ -205,7 +205,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
 
 ## Stack
 
-- [ ] **`spec-0047`** — this spec, the README's row, and pointers from 0021's and 0025's *Not doing* to 0039 and
+- [x] **`spec-0047`** — this spec, the README's row, and pointers from 0021's and 0025's *Not doing* to 0039 and
       this one.
       Done when: they are committed.
 - [x] **`spec-0047-incident-events`** — events on an incident itself, `recordedAt`, `source` and `service` on every
