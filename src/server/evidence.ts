@@ -1,19 +1,22 @@
 /**
- * An incident's charts kept as evidence (spec 0047): each of its services' Load and stats, and each store's stats,
- * over its window, with the query each came from, read once from the metrics and kept as a set of its own.
+ * An incident's evidence (spec 0047): each of its services' Load and stats, and each store's stats, over its window,
+ * with the query each came from; and each service's errors grouped and its lines, masked as on the page. Read once
+ * from the sources and kept as a set of its own.
  */
 import { Effect, SubscriptionRef } from "effect"
 import type { Catalog } from "../shared/catalog"
-import type { KeptChart } from "../shared/evidence"
+import type { KeptChart, KeptLogs } from "../shared/evidence"
 import type { Incident } from "../shared/incidents"
 import { statsOf } from "../shared/stats"
 import { storeStatsOf } from "../shared/stores"
 import { windowOf } from "../shared/window"
 import { happenedOnIncident } from "./happened"
+import { serviceLogs } from "./log-hub"
 import { Notes } from "./notes"
 import { environmentsOf } from "./rebuilt"
 import { Configured } from "./settings"
-import { leadMinutes } from "./settings-incidents"
+import { evidenceLines, leadMinutes } from "./settings-incidents"
+import { groupErrors, type Line } from "./sources/lines"
 import { loadOf, storeLoadOf } from "./sources/metrics"
 import type { Ranges, Span } from "./sources/prometheus"
 import { rangesIn } from "./sources/ranges"
@@ -63,6 +66,31 @@ const chartsOf = (catalog: Catalog, ranges: Ranges, name: string, environment: s
   )
 }
 
+/**
+ * A service's logs over the window: its errors grouped, and up to `most` of its lines, errors first and then the
+ * newest, so a busy service keeps what the incident is about. Twice as many are read, so the rest can be counted.
+ */
+const logsOf = (environment: string, service: string, from: number, to: number, most: number) =>
+  Effect.gen(function* () {
+    const logs = yield* serviceLogs(environment, service)
+    if (logs === undefined) return []
+    const read = yield* Effect.result(logs.read(from, to, most * 2))
+    if (read._tag === "Failure") return []
+    const newestFirst = read.success.toSorted((a, b) => b.at.localeCompare(a.at))
+    const chosen = new Set<Line>(
+      [...newestFirst.filter(logs.isError), ...newestFirst.filter((line) => !logs.isError(line))].slice(0, most),
+    )
+    const kept: KeptLogs = {
+      service,
+      environment,
+      from: logs.from,
+      errors: groupErrors(read.success, logs.isError),
+      lines: read.success.filter((line) => chosen.has(line)),
+      leftOut: read.success.length - chosen.size,
+    }
+    return [kept]
+  })
+
 const many = (count: number, one: string, more: string) => `${count} ${count === 1 ? one : more}`
 
 /** Its charts over its window, read now and kept as a new set, by `by`; the set kept, or none when none was read. */
@@ -86,11 +114,24 @@ export const keepEvidence = (incident: Incident, by: string) =>
         return each.flat()
       }),
     )
-    const set = { id: crypto.randomUUID(), keptAt, keptBy: by, window, charts: charts.flat() }
-    if (set.charts.length === 0) return undefined
+    const most = evidenceLines(settings.incidents)
+    const logs = yield* Effect.forEach(environmentsOf(incident), (environment) =>
+      Effect.map(
+        Effect.forEach(services, (name) => logsOf(environment, name, Date.parse(from), Date.parse(to), most)),
+        (each) => each.flat(),
+      ),
+    )
+    const set = { id: crypto.randomUUID(), keptAt, keptBy: by, window, charts: charts.flat(), logs: logs.flat() }
+    if (set.charts.length === 0 && set.logs.length === 0) return undefined
     yield* (yield* Notes).keepEvidence(incident.id, set)
-    const kept = new Set(set.charts.map((chart) => chart.service)).size
-    const said = `kept ${many(kept, "service's", "services'")} charts, ${many(set.charts.length, "series", "series")}`
+    const kept = new Set([...set.charts, ...set.logs].map((each) => each.service)).size
+    const sum = (of: (logs: KeptLogs) => number) => set.logs.reduce((total, logs) => total + of(logs), 0)
+    const [lines, leftOut] = [sum((logs) => logs.lines.length), sum((logs) => logs.leftOut)]
+    const said = [
+      `kept ${many(kept, "service's", "services'")} charts, ${many(set.charts.length, "series", "series")}`,
+      lines === 0 ? "" : `, ${many(lines, "line", "lines")}`,
+      leftOut === 0 ? "" : `; ${many(leftOut, "line", "lines")} left out past incidents.evidence.lines`,
+    ].join("")
     yield* happenedOnIncident(incident.id, by, "evidence-kept", said)
     return set
   })

@@ -71,6 +71,39 @@ describe("an incident's evidence, on its page", () => {
     expect(page.calls.filter(([name]) => name === "incident")).toHaveLength(2)
   })
 
+  test("shows each service's errors and lines as kept, and what was left out", async () => {
+    const line = (minute: number, text: string) => ({ at: `2026-10-03T11:${minute}:00Z`, pod: "storefront-1", text })
+    const logs = {
+      service: "storefront",
+      environment: "production",
+      from: "Loki",
+      errors: [
+        {
+          shape: "ERROR pool exhausted for •••",
+          count: 2,
+          firstSeen: "2026-10-03T11:42:00Z",
+          lastSeen: "2026-10-03T11:44:00Z",
+          pods: ["storefront-1"],
+          examples: [line(44, "ERROR pool exhausted for •••")],
+        },
+      ],
+      lines: [line(42, "ERROR pool exhausted for •••"), line(44, "ERROR pool exhausted for •••"), line(45, "INFO ok")],
+      leftOut: 7,
+    }
+    const page = withEvidence([{ ...set("Estate", 9), logs: [logs] }])
+    await page.settle()
+    const kept = page.container.querySelector(".kept-logs")
+    expect(kept?.querySelector("h3")?.textContent).toBe(
+      "storefront logs, production, from Loki: 3 lines kept, 7 left out past incidents.evidence.lines",
+    )
+    expect([...(kept?.querySelectorAll("tbody tr") ?? [])].map((row) => row.textContent)).toEqual([
+      "2ERROR pool exhausted for •••",
+    ])
+    expect(
+      [...(kept?.querySelectorAll(".kept-line") ?? [])].map((each) => each.textContent?.endsWith("INFO ok")),
+    ).toEqual([false, false, true])
+  })
+
   test("says nothing is kept yet before it is", async () => {
     const page = withEvidence([])
     await page.settle()

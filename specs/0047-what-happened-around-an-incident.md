@@ -236,7 +236,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
       the page with the window and events.
       Done when: closing an incident keeps each service's Load and stats series with their queries; the page draws
       them after Prometheus is stopped; a second keep adds a set.
-- [ ] **`spec-0047-evidence-logs`** — errors grouped and lines kept, masked, within the limits.
+- [x] **`spec-0047-evidence-logs`** — errors grouped and lines kept, masked, within the limits.
       Done when: a service's errors and lines are kept and shown with Loki stopped; past `evidence.lines` the rest is
       named as left out.
 - [ ] **`spec-0047-evidence-traces`** — journeys' slowest and failed traces and the traces named in kept lines, kept
