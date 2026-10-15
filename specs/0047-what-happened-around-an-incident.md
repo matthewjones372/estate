@@ -228,7 +228,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
 - [x] **`spec-0047-written`** — *Add what happened* with a time in the window, marked on the timeline.
       Done when: a written entry at 14:05 added at 14:31 shows at 14:05, marked written, with when it was kept; a time
       outside the window is refused with why; a screen cannot add one.
-- [ ] **`spec-0047-versions`** — *What changed* on the incident's page and `versions.json`; compare links from
+- [x] **`spec-0047-versions`** — *What changed* on the incident's page and `versions.json`; compare links from
       `repository` or `links.compare`.
       Done when: an incident with a deploy and a rollback shows each service's start, changes and close, and a
       compare link for a GitHub repository; a service with no version known says so.
