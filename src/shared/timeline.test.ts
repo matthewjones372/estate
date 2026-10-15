@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { type EventKind, type FiringEvent, mergedOnce, said, seenBy } from "./timeline"
+import { type EventKind, type FiringEvent, mergedOnce, said, seenBy, seenLive } from "./timeline"
 
-const line = (kind: EventKind, text: string) => said({ id: "e", at: "2026-10-02T09:00:00Z", by: "gil", kind, text })
+const line = (kind: EventKind, text: string) =>
+  said(seenLive({ id: "e", at: "2026-10-02T09:00:00Z", by: "gil", kind, text }))
 
 describe("what an event says in a line", () => {
   test("names what was done, then what it said, the same on the page and in an export", () => {
@@ -48,7 +49,7 @@ describe("what an event says in a line", () => {
 })
 
 describe("an incident's merged events", () => {
-  const event = (id: string, at: string, kind: EventKind, text: string) => ({ id, at, by: "gil", kind, text })
+  const event = (id: string, at: string, kind: EventKind, text: string) => seenLive({ id, at, by: "gil", kind, text })
 
   test("are in time order, with an event on the incident shown once however many firings kept it", () => {
     const merged = mergedOnce([
@@ -66,13 +67,15 @@ describe("an incident's merged events", () => {
 describe("the events as a reader may see them", () => {
   const answered = (id: string, readLogs?: boolean): FiringEvent => ({
     id,
+    recordedAt: "2026-10-12T16:49:52Z",
+    source: "seen",
     at: "2026-10-12T16:49:52Z",
     by: "Estate",
     kind: "ai-answered",
     text: "lock timeout on orders_items (medium)",
     ...(readLogs === undefined ? {} : { readLogs }),
   })
-  const asked: FiringEvent = { id: "q", at: "2026-10-12T16:49:10Z", by: "matt", kind: "ai-asked", text: "claude" }
+  const asked = seenLive({ id: "q", at: "2026-10-12T16:49:10Z", by: "matt", kind: "ai-asked", text: "claude" })
   const events = [asked, answered("logs", true), answered("none", false), answered("old")]
 
   test("keep only that an answer drawn from logs was, for one who may not read logs", () => {

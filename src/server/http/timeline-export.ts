@@ -1,13 +1,14 @@
 /**
  * A timeline to take away, as Markdown or JSON, for anyone who can read the page:
  * `GET /api/firings/:id/timeline?env=&at=&format=md|json`, the live firing without `at`, and
- * `GET /api/incidents/:id/timeline?format=md|json`, every firing of the incident merged. A viewer's is an operator's
+ * `GET /api/incidents/:id/timeline?format=md|json`, the incident's own events and every firing's merged. A viewer's is an operator's
  * but where logs are for operators: there an AI's answer drawn from logs says only that it answered.
  */
 import { Effect, Layer, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerResponse } from "effect/http"
-import { mergedOnce, seenBy } from "../../shared/timeline"
+import { seenBy } from "../../shared/timeline"
 import type { ExportedFiring, TimelineExport } from "../../shared/timeline-export"
+import { incidentTimeline } from "../incident-timeline"
 import { Notes } from "../notes"
 import { Estate } from "../state"
 import { exportedFiring, incidentFirings } from "../views/timeline-export"
@@ -30,14 +31,11 @@ const exported = (record: TimelineExport, startsAt: string, format: "md" | "json
     : HttpServerResponse.text(markdownOf(record), { contentType: "text/markdown; charset=utf-8", headers })
 }
 
-/** A firing's events, oldest first, each naming its alert where `named` says to. */
-const eventsOf = (firing: ExportedFiring, named: boolean) =>
+/** A firing's events, oldest first. */
+const eventsOf = (firing: ExportedFiring) =>
   Effect.map(
     Effect.flatMap(Notes, (notes) => notes.events(firing)),
-    (events) =>
-      events.map(({ environment: _, alert: __, startsAt: ___, ...event }) =>
-        named ? { ...event, alert: firing.name } : event,
-      ),
+    (events) => events.map(({ environment: _, alert: __, startsAt: ___, ...event }) => event),
   )
 
 const missing = (message: string) => Effect.succeed(json({ message }, 404))
@@ -56,7 +54,7 @@ const firingRoute = HttpRouter.add(
       return yield* missing(
         `no firing of ${id} in ${environment}${at === undefined ? "" : ` started at ${at}`} is kept`,
       )
-    const events = seenBy(yield* eventsOf(firing, false), yield* readsLogs(person.role))
+    const events = seenBy(yield* eventsOf(firing), yield* readsLogs(person.role))
     return exported({ title: firing.name, firings: [firing], events }, firing.startsAt, format)
   }).pipe(
     Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 503))),
@@ -75,12 +73,14 @@ const incidentRoute = HttpRouter.add(
     const incident = (estate.incidents ?? []).find((each) => each.id === id)
     if (incident === undefined) return yield* missing("there is no such incident")
     const firings = incidentFirings(estate, incident)
-    const events = seenBy(
-      mergedOnce((yield* Effect.forEach(firings, (firing) => eventsOf(firing, true))).flat()),
-      yield* readsLogs(person.role),
-    )
+    // Each event on a firing names its alert; one on the incident itself names none.
+    const events = (yield* incidentTimeline(incident)).map(({ environment, alert, ...event }) => {
+      const name = firings.find((each) => each.environment === environment && each.alert === alert)?.name
+      return name === undefined ? event : { ...event, alert: name }
+    })
+    const seen = seenBy(events, yield* readsLogs(person.role))
     const { title, firings: _, ...kept } = incident
-    return exported({ title, incident: kept, firings, events }, incident.openedAt, format)
+    return exported({ title, incident: kept, firings, events: seen }, incident.openedAt, format)
   }).pipe(
     Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 503))),
     Effect.catchTag("Refusal", refused),

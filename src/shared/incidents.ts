@@ -48,8 +48,12 @@ export const Incident = Schema.Struct({
 })
 export type Incident = typeof Incident.Type
 
-/** One of an incident's events, saying which of its firings it was on. */
-export const IncidentEvent = Schema.Struct({ ...FiringEvent.fields, environment: Schema.String, alert: Schema.String })
+/** One of an incident's events, saying which of its firings it was on, or neither when it was on the incident itself. */
+export const IncidentEvent = Schema.Struct({
+  ...FiringEvent.fields,
+  environment: optional(Schema.String),
+  alert: optional(Schema.String),
+})
 export type IncidentEvent = typeof IncidentEvent.Type
 
 /** An open incident a live firing may belong to, the firing of it that it is like, how, and how far apart they started. */

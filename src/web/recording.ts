@@ -2,7 +2,7 @@
 import type { AroundAlert } from "../shared/around"
 import type { PastFiring } from "../shared/firing"
 import type { LogBatch } from "../shared/log-events"
-import type { FiringEvent } from "../shared/timeline"
+import { allSeenLive, type FiringEvent } from "../shared/timeline"
 import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
 import { incidentActions } from "./fixture-incidents"
@@ -59,7 +59,7 @@ export const brief: AroundAlert = {
 }
 
 /** The fixture's OrdersSlow as it last fired, and once before Estate kept what an alert said. */
-const timeline: ReadonlyArray<FiringEvent> = [
+const timeline: ReadonlyArray<FiringEvent> = allSeenLive([
   { id: "e1", at: "2026-10-02T09:00:00Z", by: "Estate", kind: "fired", text: "OrdersSlow, critical, storefront" },
   { id: "e2", at: "2026-10-02T09:05:30Z", by: "gil", kind: "ai-asked", text: "claude-haiku-4-5" },
   { id: "e3", at: "2026-10-02T09:06:02Z", by: "Estate", kind: "ai-answered", text: "The pool is exhausted. (medium)" },
@@ -73,15 +73,15 @@ const timeline: ReadonlyArray<FiringEvent> = [
     link: "https://slack.example/p1",
   },
   { id: "e6", at: "2026-10-02T09:22:00Z", by: "Estate", kind: "resolved", text: "after 22 min" },
-]
+])
 
 /** A firing moved from one incident to another, which was then closed. */
-const incidents: ReadonlyArray<FiringEvent> = [
+const incidents: ReadonlyArray<FiringEvent> = allSeenLive([
   { id: "i1", at: "2026-10-02T09:01:00Z", by: "gil", kind: "incident-opened", text: "Orders slow" },
   { id: "i2", at: "2026-10-02T09:02:00Z", by: "gil", kind: "incident-unlinked", text: "Orders slow" },
   { id: "i3", at: "2026-10-02T09:02:00Z", by: "gil", kind: "incident-linked", text: "Checkout down" },
   { id: "i4", at: "2026-10-02T09:30:00Z", by: "ada", kind: "incident-closed", text: "the pool was resized" },
-]
+])
 
 const firings: ReadonlyArray<PastFiring> = [
   {

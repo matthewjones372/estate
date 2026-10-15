@@ -11,6 +11,7 @@ import {
   memoryEvents,
   postgresEvents,
   type StoredEvent,
+  type StoredIncidentEvent,
   sweepMemoryEvents,
 } from "./notes-events"
 import {
@@ -146,8 +147,8 @@ const asNote = ({ id, environment, alert, at, by, text }: Record<string, unknown
 
 /** Notes in Postgres, its table made if it is not there. */
 export const postgresNotes = (query: Query) => {
-  const events = postgresEvents(query)
-  const incidents = postgresIncidents(query)
+  const { sweep: sweepEvents, ...events } = postgresEvents(query)
+  const { sweep: sweepIncidents, ...incidents } = postgresIncidents(query)
   return Layer.effect(Notes)(
     run(query, create).pipe(
       Effect.andThen(run(query, createImpacts)),
@@ -216,13 +217,11 @@ export const postgresNotes = (query: Query) => {
           ).pipe(Effect.asVoid),
         removeFiringsBefore: (at: string) =>
           run(query, "delete from estate_firings where starts_at < $1", [at]).pipe(
-            Effect.andThen(events.sweep(at)),
-            Effect.andThen(incidents.sweep(at)),
+            Effect.andThen(sweepEvents(at)),
+            Effect.andThen(sweepIncidents(at)),
           ),
-        events: events.events,
-        addEvent: events.addEvent,
-        incidents: incidents.incidents,
-        keepIncident: incidents.keepIncident,
+        ...events,
+        ...incidents,
         threads: (since: string) =>
           run(
             query,
@@ -267,9 +266,10 @@ export const memoryNotes = Layer.effect(Notes)(
       Ref.make<ReadonlyArray<StoredThread>>([]),
       Ref.make<ReadonlyArray<StoredEvent>>([]),
       Ref.make<ReadonlyArray<Incident>>([]),
+      Ref.make<ReadonlyArray<StoredIncidentEvent>>([]),
     ]),
-    ([notes, impacts, firings, threads, kept, incidents]) => ({
-      ...memoryEvents(kept),
+    ([notes, impacts, firings, threads, kept, incidents, own]) => ({
+      ...memoryEvents(kept, own),
       ...memoryIncidents(incidents),
       all: Effect.map(Ref.get(notes), (kept) => [...kept].reverse()),
       add: (note: StoredNote) => Ref.update(notes, (kept) => [...kept, note]),

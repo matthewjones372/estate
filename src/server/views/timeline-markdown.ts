@@ -50,7 +50,7 @@ const table = (record: TimelineExport) => {
   const head = many ? ["At (UTC)", "Who", "Alert", "What"] : ["At (UTC)", "Who", "What"]
   const rows = record.events.map((event) => {
     const what = event.link === undefined ? said(event) : `${said(event)} (<${event.link}>)`
-    const on = onIncident(event) ? "(incident)" : (event.alert ?? "")
+    const on = onIncident(event) || event.alert === undefined ? "(incident)" : event.alert
     const cells = many ? [utc(event.at), event.by, on, what] : [utc(event.at), event.by, what]
     return `| ${cells.map(cell).join(" | ")} |`
   })

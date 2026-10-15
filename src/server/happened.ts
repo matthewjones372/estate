@@ -3,7 +3,7 @@
  * thread, keeping it never fails what was done: a store that will not take it is a warning in the log.
  */
 import { Effect, SubscriptionRef } from "effect"
-import type { EventKind } from "../shared/timeline"
+import { type EventKind, seenLive } from "../shared/timeline"
 import { Notes } from "./notes"
 import type { FiringKey } from "./notes-events"
 import { Estate } from "./state"
@@ -25,16 +25,18 @@ interface More {
 
 const kept = (firing: FiringKey, at: string, by: string, kind: EventKind, text: string, more: More = {}) =>
   Effect.gen(function* () {
-    yield* (yield* Notes).addEvent({
-      ...firing,
-      id: crypto.randomUUID(),
-      at,
-      by,
-      kind,
-      text,
-      ...(more.link === undefined ? {} : { link: more.link }),
-      ...(more.readLogs === undefined ? {} : { readLogs: more.readLogs }),
-    })
+    yield* (yield* Notes).addEvent(
+      seenLive({
+        ...firing,
+        id: crypto.randomUUID(),
+        at,
+        by,
+        kind,
+        text,
+        ...(more.link === undefined ? {} : { link: more.link }),
+        ...(more.readLogs === undefined ? {} : { readLogs: more.readLogs }),
+      }),
+    )
   }).pipe(Effect.catch((failure) => Effect.logWarning(`a firing's event could not be kept: ${failure.message}`)))
 
 export const happened = (

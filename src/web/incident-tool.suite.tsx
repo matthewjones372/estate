@@ -2,6 +2,7 @@
 /** What the incident tool says of an incident, on its page: run by `incident-tool.test.ts` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
 import type { IncidentRecord, ReadBack } from "../shared/incidents"
+import { seenLive } from "../shared/timeline"
 import { App } from "./App"
 import { heard, now, operator } from "./fixture"
 import { mount } from "./harness"
@@ -21,7 +22,7 @@ const raised = (inTool?: ReadBack): IncidentRecord => ({
     raised: { tool: "PagerDuty", id: "Q1ABC", by: "gil", at: "2026-10-03T11:51:00Z" },
   },
   events: [
-    {
+    seenLive({
       id: "e1",
       at: "2026-10-03T11:51:00Z",
       by: "gil",
@@ -30,7 +31,7 @@ const raised = (inTool?: ReadBack): IncidentRecord => ({
       link,
       environment: "production",
       alert: "a1",
-    },
+    }),
   ],
   ...(inTool === undefined ? {} : { inTool }),
 })

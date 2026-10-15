@@ -73,7 +73,8 @@ export const withFirings = (estate: EstateState, kept: ReadonlyArray<StoredFirin
 const seen = (firing: StoredFiring, begun: boolean): ReadonlyArray<StoredEvent> => {
   const at = begun ? firing.startsAt : firing.endsAt
   if (at === undefined) return []
-  const said = [firing.name, firing.severity, firing.service ?? firing.store].filter((each) => each !== undefined)
+  const about = firing.service ?? firing.store
+  const said = [firing.name, firing.severity, about].filter((each) => each !== undefined)
   return [
     {
       id: crypto.randomUUID(),
@@ -81,6 +82,9 @@ const seen = (firing: StoredFiring, begun: boolean): ReadonlyArray<StoredEvent> 
       alert: firing.alert,
       startsAt: firing.startsAt,
       at,
+      recordedAt: at,
+      source: "seen",
+      ...(about === undefined ? {} : { service: about }),
       by: "Estate",
       kind: begun ? "fired" : "resolved",
       text: begun ? said.join(", ") : `after ${lasting((Date.parse(at) - Date.parse(firing.startsAt)) / 60_000)}`,

@@ -9,6 +9,8 @@ const event = (id: string, at: string, more: Partial<StoredEvent> = {}): StoredE
   ...firing,
   id,
   at,
+  recordedAt: at,
+  source: "seen",
   by: "matt",
   kind: "noted",
   text: `note ${id}`,
