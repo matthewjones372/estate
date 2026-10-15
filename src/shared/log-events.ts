@@ -25,17 +25,14 @@ export const LogBatch = Schema.Struct({
 export type LogBatch = typeof LogBatch.Type
 
 /** What `GET /api/logs/errors` answers: where the lines came from, and the errors grouped by message. */
-export const ErrorGroups = Schema.Struct({
-  from: Schema.String,
-  groups: Schema.Array(
-    Schema.Struct({
-      shape: Schema.String,
-      count: Schema.Number,
-      firstSeen: Instant,
-      lastSeen: Instant,
-      pods: Schema.Array(Schema.String),
-      examples: Schema.Array(LogLine),
-    }),
-  ),
+export const ErrorGroup = Schema.Struct({
+  shape: Schema.String,
+  count: Schema.Number,
+  firstSeen: Instant,
+  lastSeen: Instant,
+  pods: Schema.Array(Schema.String),
+  examples: Schema.Array(LogLine),
 })
+
+export const ErrorGroups = Schema.Struct({ from: Schema.String, groups: Schema.Array(ErrorGroup) })
 export type ErrorGroups = typeof ErrorGroups.Type

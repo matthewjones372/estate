@@ -19,7 +19,7 @@ export const json = (body: unknown, status = 200) =>
 
 /** A request refused: the status, and the body that says why. */
 export const Refusal = Data.TaggedError("Refusal")<{
-  readonly status: 400 | 401 | 403 | 404 | 502
+  readonly status: 400 | 401 | 403 | 404 | 409 | 413 | 502
   readonly body: unknown
 }>
 export type Refusal = InstanceType<typeof Refusal>

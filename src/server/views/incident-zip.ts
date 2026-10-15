@@ -3,7 +3,7 @@
  * and JSON lines; what changed; its last kept evidence as charts (SVG and their series), logs and traces; and a
  * manifest of where each came from and what was left out. Each file is under a folder named for the incident.
  */
-import type { EvidenceSet, KeptChart, KeptTrace } from "../../shared/evidence"
+import { type EvidenceSet, type KeptChart, type KeptTrace, keptByEstate } from "../../shared/evidence"
 import type { IncidentRecord } from "../../shared/incidents"
 import { asText } from "../../shared/log-text"
 import type { TimelineExport } from "../../shared/timeline-export"
@@ -139,7 +139,7 @@ const withoutLogs = ({ logs: _, traces: __, ...set }: EvidenceSet): EvidenceSet 
 /** Each file of the zip, by its path under the incident's folder, and its text. */
 export const incidentZip = (exporting: Exporting): ReadonlyArray<readonly [string, string]> => {
   const { record, timeline } = exporting
-  const kept = record.evidence?.at(-1)
+  const kept = keptByEstate(record.evidence).at(-1)
   const set = kept === undefined || exporting.readsLogs ? kept : withoutLogs(kept)
   const evidence = set === undefined ? [] : evidenceFiles(record, set)
   const leftOut = [

@@ -4,6 +4,7 @@
  * the same once the sources are gone; its span shaded and its events marked. An operator keeps them again while open.
  */
 import { createSignal, For, Show } from "solid-js"
+import { keptByEstate } from "../../shared/evidence"
 import type { IncidentRecord } from "../../shared/incidents"
 import { useEstate } from "../context"
 import { day } from "../format"
@@ -18,7 +19,7 @@ export const IncidentEvidence = (props: { readonly record: IncidentRecord; reado
   const [busy, setBusy] = createSignal(false)
   const [refused, setRefused] = createSignal<string | undefined>(undefined)
   const incident = () => props.record.incident
-  const latest = () => props.record.evidence?.at(-1)
+  const latest = () => keptByEstate(props.record.evidence).at(-1)
   // From its first firing, or its opening if earlier, to its close or the last point kept.
   const shade = () => {
     const set = latest()
@@ -71,8 +72,8 @@ export const IncidentEvidence = (props: { readonly record: IncidentRecord; reado
         {(set) => (
           <>
             <p class="muted">
-              Kept by {set().keptBy}, {day(set().keptAt)}. {props.record.evidence?.length ?? 0}{" "}
-              {props.record.evidence?.length === 1 ? "set" : "sets"} kept.
+              Kept by {set().keptBy}, {day(set().keptAt)}. {keptByEstate(props.record.evidence).length}{" "}
+              {keptByEstate(props.record.evidence).length === 1 ? "set" : "sets"} kept.
             </p>
             <div class="charts">
               <For each={set().charts}>
