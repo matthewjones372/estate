@@ -13,6 +13,7 @@ import { useEstate } from "../context"
 import { day, duration, since } from "../format"
 import { A } from "../parts/A"
 import { IncidentFirings } from "../parts/IncidentFirings"
+import { IncidentHappened } from "../parts/IncidentHappened"
 import { IncidentInTool } from "../parts/IncidentInTool"
 import { canKeepIncidents } from "../parts/IncidentLink"
 import { IncidentMayBelong } from "../parts/IncidentMayBelong"
@@ -139,6 +140,7 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
           </h2>
           <TimelineExport of={{ incident: incident().id }} />
         </div>
+        <IncidentHappened incident={incident()} changed={props.changed} />
         <Show
           when={props.record.events.length > 0}
           fallback={

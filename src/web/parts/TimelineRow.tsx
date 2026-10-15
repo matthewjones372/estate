@@ -1,13 +1,27 @@
 /** @jsxImportSource solid-js */
-/** One line of a timeline: when, to the second, who, and what was done; on an incident's, which alert it was on. */
+/**
+ * One line of a timeline: when, to the second, who, and what was done; on an incident's, which alert it was on. What a
+ * person wrote later, or Estate rebuilt, is marked, saying on hover when it was kept.
+ */
 import { Show } from "solid-js"
 import { type FiringEvent, said } from "../../shared/timeline"
-import { instant } from "../format"
+import { clock, instant } from "../format"
 import { Out } from "./A"
 import { NoteText } from "./NoteText"
 
 /** UTC, as a review that crosses zones reads it: "2026-10-02 09:00:00 UTC". */
 const utc = (iso: string) => `${new Date(iso).toISOString().slice(0, 19).replace("T", " ")} UTC`
+
+const Kept = (props: { readonly event: FiringEvent }) => (
+  <Show when={props.event.source !== "seen"}>
+    <span
+      class="timeline-source"
+      title={`${props.event.source === "written" ? `written by ${props.event.by}` : `rebuilt by Estate from what it held`}, kept ${utc(props.event.recordedAt)}`}
+    >
+      {props.event.source === "written" ? `written ${clock(props.event.recordedAt)} ✎` : "rebuilt ↺"}
+    </span>
+  </Show>
+)
 
 export const TimelineRow = (props: {
   readonly event: FiringEvent
@@ -29,7 +43,8 @@ export const TimelineRow = (props: {
       </Show>
       <Show when={props.event.link} fallback={<NoteText text={said(props.event)} />}>
         {(link) => <Out href={link()}>{said(props.event)}</Out>}
-      </Show>
+      </Show>{" "}
+      <Kept event={props.event} />
     </div>
   </li>
 )

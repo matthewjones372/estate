@@ -225,7 +225,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
       `version-seen` at the window's start or that it is not known.
       Done when: opening an incident 10 minutes after a deploy keeps that deploy as rebuilt; a deploy newer than the
       window's start says the earlier version is not known here.
-- [ ] **`spec-0047-written`** — *Add what happened* with a time in the window, marked on the timeline.
+- [x] **`spec-0047-written`** — *Add what happened* with a time in the window, marked on the timeline.
       Done when: a written entry at 14:05 added at 14:31 shows at 14:05, marked written, with when it was kept; a time
       outside the window is refused with why; a screen cannot add one.
 - [ ] **`spec-0047-versions`** — *What changed* on the incident's page and `versions.json`; compare links from

@@ -21,6 +21,7 @@ import { isoNow, sameInstant } from "../time"
 import { incidentServices, incidentWindow } from "../views/incident-scope"
 import { mayBelongTo } from "../views/suggested"
 import { incidentDismissedRoute } from "./incident-dismissed"
+import { incidentHappenedRoute } from "./incident-happened"
 import { incidentNoteRoutes } from "./incident-notes"
 import { incidentRaiseRoute } from "./incident-raise"
 import {
@@ -218,4 +219,5 @@ export const incidentRoutes = Layer.mergeAll(
   incidentDismissedRoute,
   incidentRaiseRoute,
   incidentServicesRoute,
+  incidentHappenedRoute,
 )
