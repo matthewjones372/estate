@@ -48,7 +48,9 @@ describe("a journey on a service's page", () => {
 
   test("says where its time goes, with a segment per stage and the largest stage marked", async () => {
     const page = await opened("storefront", "order")
-    expect(text(page.container)).toContain("It reaches its end in 341 ms at p50. Waits in the outbox is 87% of the time its stages take.")
+    expect(text(page.container)).toContain(
+      "It reaches its end in 341 ms at p50. Waits in the outbox is 87% of the time its stages take.",
+    )
     expect(text(page.container)).toContain("The caller has an answer in 40 ms. 4 traces from the last 15 min")
     expect(page.container.querySelectorAll(".journey-segment")).toHaveLength(5)
     expect(page.container.querySelector(".journey-largest th")?.textContent).toBe("Waits in the outbox")
