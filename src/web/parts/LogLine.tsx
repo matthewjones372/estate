@@ -1,10 +1,12 @@
 /** @jsxImportSource solid-js */
-/** One of a service's log lines: its time, pod, level badge and text, coloured by its level. */
+/** One of a service's log lines: its time, pod, level badge, what wrote it, its trace and text, coloured by its level. */
 import { For, Show } from "solid-js"
 import type { LogLine } from "../../shared/log-events"
 import { clock } from "../format"
 import { asText, copy, levelOf } from "../log-copy"
 import { marked, type Search } from "../log-search"
+import { pathOf } from "../route"
+import { A } from "./A"
 
 export const kinds = [
   { value: "error", label: "Error", levels: ["ERROR", "FATAL", "PANIC"] },
@@ -44,10 +46,30 @@ export const LineRow = (props: {
     </Show>
     <span class="log-pod">{props.line.pod ?? ""}</span>
     <span class="log-level">{levelOf(props.line)}</span>
-    <span class="log-text">
-      <For each={marked(props.line.text, props.search ?? empty)}>
-        {(part) => (part.mark ? <mark>{part.text}</mark> : part.text)}
-      </For>
+    <span class="log-body">
+      <Show when={props.line.logger !== undefined || props.line.trace !== undefined}>
+        <span class="log-fields">
+          <Show when={props.line.logger}>
+            {(logger) => (
+              <span class="log-logger" title={`Written by ${logger()}`}>
+                {logger()}
+              </span>
+            )}
+          </Show>
+          <Show when={props.line.trace}>
+            {(trace) => (
+              <A to={pathOf({ page: "trace", id: trace() })} class="log-trace" title={`Open trace ${trace()}`}>
+                trace {trace().slice(0, 8)}
+              </A>
+            )}
+          </Show>
+        </span>
+      </Show>
+      <span class="log-text">
+        <For each={marked(props.line.text, props.search ?? empty)}>
+          {(part) => (part.mark ? <mark>{part.text}</mark> : part.text)}
+        </For>
+      </span>
     </span>
     <Show when={props.onPick}>
       <button type="button" class="log-copy-one" onClick={() => void copy(asText([props.line]))}>

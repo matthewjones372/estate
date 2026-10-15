@@ -91,6 +91,21 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.log-body {
+  min-width: 0;
+}
+.log-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+.log-logger {
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+.log-trace {
+  color: var(--link);
+}
 .log-foot {
   margin: 0;
   font-size: 12px;

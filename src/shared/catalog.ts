@@ -106,6 +106,13 @@ export const Service = Schema.Struct({
       errors: optional(Schema.String),
       /** Patterns for what must not leave Estate, each replaced with •••. */
       mask: optional(Schema.Array(Schema.String)),
+      /**
+       * The keys of a line's labels, or of its JSON, that name its trace and what wrote it, the first one present
+       * winning; by default `trace_id`, `traceId`, `traceID` and `logger`, `logger_name`, `class`.
+       */
+      fields: optional(
+        Schema.Struct({ trace: optional(Schema.Array(Schema.String)), logger: optional(Schema.Array(Schema.String)) }),
+      ),
       /** In Elasticsearch: the fields its lines carry, and the field its message is in. */
       elastic: optional(
         Schema.Struct({
