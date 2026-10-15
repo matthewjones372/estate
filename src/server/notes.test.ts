@@ -44,7 +44,7 @@ describe("notes in Postgres", () => {
     return Effect.runPromise(program.pipe(Effect.provide(postgresNotes(database(statements))))).then((all) => {
       expect(all).toEqual([note])
       expect(statements[0]?.[0]).toStartWith("create table if not exists estate_notes")
-      expect(statements[11]).toEqual([
+      expect(statements[12]).toEqual([
         "insert into estate_notes (id, environment, alert, at, by, text) values ($1, $2, $3, $4, $5, $6)",
         ["n1", "staging", "a1", "2026-10-03T11:50:00.000Z", "gil", "On it."],
       ])
@@ -126,6 +126,8 @@ describe("adding a note", () => {
             addEvent: () => Effect.void,
             incidentEvents: () => Effect.succeed([]),
             addIncidentEvent: () => Effect.void,
+            evidence: () => Effect.succeed([]),
+            keepEvidence: () => Effect.void,
             incidents: () => Effect.succeed([]),
             keepIncident: () => Effect.void,
           }),
@@ -218,6 +220,8 @@ describe("taking a note back", () => {
             addEvent: () => Effect.void,
             incidentEvents: () => Effect.succeed([]),
             addIncidentEvent: () => Effect.void,
+            evidence: () => Effect.succeed([]),
+            keepEvidence: () => Effect.void,
             incidents: () => Effect.succeed([]),
             keepIncident: () => Effect.void,
           }),
@@ -261,7 +265,7 @@ describe("old notes", () => {
         yield* notes.removeBefore("2026-09-03T00:00:00.000Z")
       }).pipe(Effect.provide(postgresNotes(database(statements)))),
     ).then(() => {
-      expect(statements.slice(11)).toEqual([
+      expect(statements.slice(12)).toEqual([
         ["delete from estate_notes where id = $1", ["n1"]],
         ["delete from estate_notes where at < $1", ["2026-09-03T00:00:00.000Z"]],
       ])

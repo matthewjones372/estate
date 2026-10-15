@@ -138,6 +138,8 @@ describe("running", () => {
                   addEvent: () => Effect.void,
                   incidentEvents: () => Effect.succeed([]),
                   addIncidentEvent: () => Effect.void,
+                  evidence: () => Effect.succeed([]),
+                  keepEvidence: () => Effect.void,
                   incidents: () => Effect.succeed([]),
                   keepIncident: () => Effect.void,
                 }),

@@ -15,7 +15,8 @@ import { isoNow } from "./time"
 import { incidentServices, incidentWindow } from "./views/incident-scope"
 
 /** The environments of its firings, in order: the first is where a build, which is no environment's, is told. */
-const environmentsOf = (incident: Incident) => [...new Set(incident.firings.map((firing) => firing.environment))].sort()
+export const environmentsOf = (incident: Incident) =>
+  [...new Set(incident.firings.map((firing) => firing.environment))].sort()
 
 type Rebuilt = Change & { readonly at: string; readonly service: string }
 

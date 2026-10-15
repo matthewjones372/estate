@@ -3,6 +3,7 @@
  * by `notes-dynamodb.ts`); in memory when no database is set, for trying Estate out.
  */
 import { Context, Data, Effect, Layer, Ref } from "effect"
+import type { EvidenceSet } from "../shared/evidence"
 import type { Incident } from "../shared/incidents"
 import type { Note } from "../shared/note"
 import {
@@ -14,6 +15,8 @@ import {
   type StoredIncidentEvent,
   sweepMemoryEvents,
 } from "./notes-events"
+import { createEvidence, type KeptEvidence, memoryEvidence, postgresEvidence } from "./notes-evidence"
+import { firingOf, instant } from "./notes-firings"
 import {
   createIncidents,
   type KeptIncidents,
@@ -40,7 +43,7 @@ export interface StoredImpact {
 }
 
 /** Notes, impacts, firings and their threads, each firing's events (`notes-events.ts`) and incidents. */
-export interface Notes extends FiringEvents, KeptIncidents {
+export interface Notes extends FiringEvents, KeptIncidents, KeptEvidence {
   readonly all: Effect.Effect<ReadonlyArray<StoredNote>, Failure>
   readonly add: (note: StoredNote) => Effect.Effect<void, Failure>
   readonly remove: (id: string) => Effect.Effect<void, Failure>
@@ -113,25 +116,6 @@ const createThreads = `create table if not exists estate_threads (
   primary key (environment, alert, starts_at)
 )`
 
-const instant = (value: unknown) => iso(value instanceof Date ? value : String(value))
-
-const firingOf = (row: Record<string, unknown>): StoredFiring => ({
-  environment: String(row["environment"]),
-  alert: String(row["alert"]),
-  name: String(row["name"]),
-  ...(row["service"] === null || row["service"] === undefined ? {} : { service: String(row["service"]) }),
-  startsAt: instant(row["starts_at"]),
-  ...(row["ends_at"] === null || row["ends_at"] === undefined ? {} : { endsAt: instant(row["ends_at"]) }),
-  ...(row["silenced_by"] === null || row["silenced_by"] === undefined
-    ? {}
-    : { silence: { by: String(row["silenced_by"]), reason: String(row["silence_reason"] ?? "") } }),
-  ...Object.fromEntries(
-    (["severity", "summary", "runbook", "store"] as const).flatMap((key) =>
-      row[key] === null || row[key] === undefined ? [] : [[key, String(row[key])]],
-    ),
-  ),
-})
-
 /** The statement, run each time the effect is, not once as it is made. */
 const run = (query: Query, statement: string, parameters: ReadonlyArray<unknown> = []) =>
   Effect.suspend(() => query(statement, parameters))
@@ -157,6 +141,7 @@ export const postgresNotes = (query: Query) => {
       Effect.andThen(run(query, createThreads)),
       Effect.andThen(Effect.forEach(createEvents, (statement) => run(query, statement), { discard: true })),
       Effect.andThen(run(query, createIncidents)),
+      Effect.andThen(run(query, createEvidence)),
       Effect.mapError((failure) => new NotesError(failure)),
       Effect.as({
         all: run(
@@ -222,6 +207,7 @@ export const postgresNotes = (query: Query) => {
           ),
         ...events,
         ...incidents,
+        ...postgresEvidence(query),
         threads: (since: string) =>
           run(
             query,
@@ -267,8 +253,10 @@ export const memoryNotes = Layer.effect(Notes)(
       Ref.make<ReadonlyArray<StoredEvent>>([]),
       Ref.make<ReadonlyArray<Incident>>([]),
       Ref.make<ReadonlyArray<StoredIncidentEvent>>([]),
+      Ref.make<ReadonlyMap<string, ReadonlyArray<EvidenceSet>>>(new Map()),
     ]),
-    ([notes, impacts, firings, threads, kept, incidents, own]) => ({
+    ([notes, impacts, firings, threads, kept, incidents, own, evidence]) => ({
+      ...memoryEvidence(evidence),
       ...memoryEvents(kept, own),
       ...memoryIncidents(incidents),
       all: Effect.map(Ref.get(notes), (kept) => [...kept].reverse()),

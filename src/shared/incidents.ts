@@ -1,5 +1,6 @@
 /** An incident: firings a person linked as one problem, who opened it and when, and how it ended once closed. */
 import { Schema } from "effect"
+import { EvidenceSet } from "./evidence"
 import { ServiceVersions } from "./incident-versions"
 import { Note } from "./note"
 import { FiringEvent } from "./timeline"
@@ -115,6 +116,8 @@ export const IncidentRecord = Schema.Struct({
   services: optional(Schema.Array(Schema.String)),
   /** *What changed*: each service's version at its start, during it and at its close. */
   versions: optional(Schema.Array(ServiceVersions)),
+  /** Its charts as kept, a set each keep, oldest first; none until it closes or an operator keeps them. */
+  evidence: optional(Schema.Array(EvidenceSet)),
   /** From its lead before its first firing, or its opening if earlier, to its close; to now while open. */
   window: optional(Schema.Struct({ from: Instant, to: Instant })),
   suggested: optional(Schema.Array(MayBelong)),

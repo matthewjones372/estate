@@ -12,6 +12,7 @@ import { onIncident } from "../../shared/timeline"
 import { useEstate } from "../context"
 import { day, duration, since } from "../format"
 import { A } from "../parts/A"
+import { IncidentEvidence } from "../parts/IncidentEvidence"
 import { IncidentFirings } from "../parts/IncidentFirings"
 import { IncidentHappened } from "../parts/IncidentHappened"
 import { IncidentInTool } from "../parts/IncidentInTool"
@@ -134,6 +135,7 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
       <IncidentServices record={props.record} changed={props.changed} />
       <IncidentVersions versions={props.record.versions ?? []} closed={incident().closedAt !== undefined} />
       <IncidentMayBelong record={props.record} changed={props.changed} />
+      <IncidentEvidence record={props.record} changed={props.changed} />
       <IncidentNotes incident={incident()} changed={props.changed} />
       <section aria-labelledby="incident-timeline" class="panel section-box stack">
         <div class="section-head">

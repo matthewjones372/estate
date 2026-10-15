@@ -10,9 +10,10 @@ import { versionsOf } from "../../shared/incident-versions"
 import type { Incident } from "../../shared/incidents"
 import { longestNote } from "../../shared/note"
 import { seenBy } from "../../shared/timeline"
+import { keepEvidence } from "../evidence"
 import { happened, happenedOnEach } from "../happened"
 import { incidentTimeline } from "../incident-timeline"
-import { sameFiring } from "../notes"
+import { Notes, sameFiring } from "../notes"
 import type { FiringKey } from "../notes-events"
 import { keepAtClose, keepRunUp } from "../rebuilt"
 import { Configured } from "../settings"
@@ -22,6 +23,7 @@ import { isoNow, sameInstant } from "../time"
 import { incidentServices, incidentWindow } from "../views/incident-scope"
 import { mayBelongTo } from "../views/suggested"
 import { incidentDismissedRoute } from "./incident-dismissed"
+import { incidentEvidenceRoute } from "./incident-evidence"
 import { incidentHappenedRoute } from "./incident-happened"
 import { incidentNoteRoutes } from "./incident-notes"
 import { incidentRaiseRoute } from "./incident-raise"
@@ -170,6 +172,9 @@ const closeRoute = HttpRouter.add(
     )
     yield* happenedOnEach(now.firings.map(keyOf), person.name, "incident-closed", how)
     yield* keepAtClose(now)
+    yield* keepEvidence(now, "Estate").pipe(
+      Effect.catch((failure) => Effect.logWarning(`an incident's evidence could not be kept: ${failure.message}`)),
+    )
     return json(now)
   }).pipe(answered),
 )
@@ -194,7 +199,10 @@ const readRoute = HttpRouter.add(
     const services = incidentServices(estate, incident)
     const window = incidentWindow(incident, leadMinutes(settings.incidents), yield* isoNow)
     const versions = versionsOf(events, services, estate.catalog.services)
-    return json(compact({ incident, events: seen, services, versions, window, suggested, inTool: estate.inTool?.[id] }))
+    const evidence = yield* (yield* Notes).evidence(id)
+    return json(
+      compact({ incident, events: seen, services, versions, evidence, window, suggested, inTool: estate.inTool?.[id] }),
+    )
   }).pipe(answered),
 )
 
@@ -223,4 +231,5 @@ export const incidentRoutes = Layer.mergeAll(
   incidentRaiseRoute,
   incidentServicesRoute,
   incidentHappenedRoute,
+  incidentEvidenceRoute,
 )
