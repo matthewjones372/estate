@@ -200,9 +200,9 @@ const readRoute = HttpRouter.add(
     const services = incidentServices(estate, incident)
     const window = incidentWindow(incident, leadMinutes(settings.incidents), yield* isoNow)
     const versions = versionsOf(events, services, estate.catalog.services)
-    // Logs kept as evidence are logs still, so a reader who may not read them here reads the sets without them.
-    const evidence = (yield* (yield* Notes).evidence(id)).map(({ logs, ...set }) =>
-      reads && logs !== undefined ? { ...set, logs } : set,
+    // Logs and traces kept as evidence are logs still, so a reader who may not read them here reads sets without.
+    const evidence = (yield* (yield* Notes).evidence(id)).map(({ logs, traces, ...set }) =>
+      reads ? { ...set, ...(logs === undefined ? {} : { logs }), ...(traces === undefined ? {} : { traces }) } : set,
     )
     return json(
       compact({ incident, events: seen, services, versions, evidence, window, suggested, inTool: estate.inTool?.[id] }),

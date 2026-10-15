@@ -239,7 +239,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
 - [x] **`spec-0047-evidence-logs`** — errors grouped and lines kept, masked, within the limits.
       Done when: a service's errors and lines are kept and shown with Loki stopped; past `evidence.lines` the rest is
       named as left out.
-- [ ] **`spec-0047-evidence-traces`** — journeys' slowest and failed traces and the traces named in kept lines, kept
+- [x] **`spec-0047-evidence-traces`** — journeys' slowest and failed traces and the traces named in kept lines, kept
       whole.
       Done when: against a stub Tempo, an incident on a journey's service keeps its slowest and failed traces and
       the ones its lines name, and they open on the trace page with Tempo stopped.

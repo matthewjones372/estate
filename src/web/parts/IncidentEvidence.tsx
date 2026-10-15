@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 /**
- * *Evidence*: the charts and logs last kept for an incident, drawn from its record and not its sources, so they read
+ * *Evidence*: the charts, logs and traces last kept for an incident, drawn from its record and not its sources, so they read
  * the same once the sources are gone; its span shaded and its events marked. An operator keeps them again while open.
  */
 import { createSignal, For, Show } from "solid-js"
@@ -8,6 +8,7 @@ import type { IncidentRecord } from "../../shared/incidents"
 import { useEstate } from "../context"
 import { day } from "../format"
 import { EvidenceLogs } from "./EvidenceLogs"
+import { EvidenceTraces } from "./EvidenceTraces"
 import { canKeepIncidents } from "./IncidentLink"
 import { Plot } from "./Plot"
 
@@ -95,6 +96,7 @@ export const IncidentEvidence = (props: { readonly record: IncidentRecord; reado
               </For>
             </div>
             <For each={set().logs ?? []}>{(logs) => <EvidenceLogs logs={logs} />}</For>
+            <EvidenceTraces traces={set().traces ?? []} />
           </>
         )}
       </Show>

@@ -104,6 +104,31 @@ describe("an incident's evidence, on its page", () => {
     ).toEqual([false, false, true])
   })
 
+  test("lists the traces kept, each opening on the trace page, slowest and failed first", async () => {
+    const span = { id: "a", service: "storefront", name: "place order", kind: "server" as const, failed: false }
+    const kept = (id: string, why: "slowest" | "failed" | "named", took: number, journey?: string) => ({
+      id,
+      environment: "production",
+      why,
+      ...(journey === undefined ? {} : { journey }),
+      spans: [{ ...span, start: 0, end: took, failed: why === "failed" }],
+    })
+    const traces = [kept("t2", "slowest", 900, "order"), kept("t3", "failed", 40, "order"), kept("t9", "named", 60)]
+    const page = withEvidence([{ ...set("Estate", 9), traces }])
+    await page.settle()
+    const links = [...page.container.querySelectorAll(".kept-traces a")]
+    expect(links.map((each) => [each.textContent, each.getAttribute("href")])).toEqual([
+      ["t2", "/journeys/order/t2"],
+      ["t3", "/journeys/order/t3"],
+      ["t9", "/traces/t9"],
+    ])
+    expect([...page.container.querySelectorAll(".kept-traces li")].map((each) => each.textContent)).toEqual([
+      "t2 order, slowest, 900 ms",
+      "t3 order, failed, 40 ms",
+      "t9 named in a kept line, 60 ms",
+    ])
+  })
+
   test("says nothing is kept yet before it is", async () => {
     const page = withEvidence([])
     await page.settle()

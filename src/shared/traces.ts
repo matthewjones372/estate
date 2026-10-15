@@ -24,6 +24,10 @@ export interface Trace {
   readonly spans: ReadonlyArray<TraceSpan>
 }
 
+/** How long a trace took, from its first span's start to its last span's end, in milliseconds. */
+export const tookOf = (trace: Pick<Trace, "spans">): number =>
+  Math.max(...trace.spans.map((span) => span.end)) - Math.min(...trace.spans.map((span) => span.start))
+
 /** Where a stage or span is drawn: a node of the map, a service or a store, by its id and the title the page shows. */
 export const Lane = Schema.Struct({ id: Schema.String, title: Schema.String })
 export type Lane = typeof Lane.Type
