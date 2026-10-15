@@ -8,9 +8,10 @@ import { HttpRouter, HttpServerRequest } from "effect/http"
 import { compact } from "../../shared/compact"
 import type { Incident } from "../../shared/incidents"
 import { longestNote } from "../../shared/note"
-import { mergedOnce, seenBy } from "../../shared/timeline"
+import { seenBy } from "../../shared/timeline"
 import { happened, happenedOnEach } from "../happened"
-import { Notes, sameFiring } from "../notes"
+import { incidentTimeline } from "../incident-timeline"
+import { sameFiring } from "../notes"
 import type { FiringKey } from "../notes-events"
 import { Configured } from "../settings"
 import { suggestWithin } from "../settings-incidents"
@@ -165,7 +166,7 @@ const closeRoute = HttpRouter.add(
   }).pipe(answered),
 )
 
-/** An incident, with every event of its firings merged in time order, each saying which firing it was on. */
+/** An incident, with its own events and every event of its firings merged in time order, each saying where it was. */
 const readRoute = HttpRouter.add(
   "GET",
   "/api/incidents/:id",
@@ -173,17 +174,14 @@ const readRoute = HttpRouter.add(
     const person = yield* withRole
     const { id = "" } = yield* HttpRouter.params
     const incident = yield* named(id)
-    const notes = yield* Notes
-    const events = yield* Effect.forEach(incident.firings, (firing) =>
-      Effect.map(notes.events(keyOf(firing)), (all) => all.map(({ startsAt: _, ...event }) => event)),
-    )
+    const events = yield* incidentTimeline(incident)
     const settings = yield* Configured
     // Suggestions are offers to link, so only someone who may link reads them.
     const suggested =
       person.role === "operator" && settings.readOnly !== true
         ? mayBelongTo(yield* SubscriptionRef.get(yield* Estate), id, suggestWithin(settings.incidents))
         : undefined
-    const seen = seenBy(mergedOnce(events.flat()), yield* readsLogs(person.role))
+    const seen = seenBy(events, yield* readsLogs(person.role))
     const inTool = (yield* SubscriptionRef.get(yield* Estate)).inTool?.[id]
     return json(compact({ incident, events: seen, suggested, inTool }))
   }).pipe(answered),

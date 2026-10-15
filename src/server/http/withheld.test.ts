@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Context, Effect } from "effect"
 import type { Incident } from "../../shared/incidents"
+import { allSeenLive } from "../../shared/timeline"
 import { ask, environment, estate, type Server, serverFor, settings } from "../fixture"
 import { Notes, type StoredEvent } from "../notes"
 import type { Settings } from "../settings"
@@ -32,10 +33,10 @@ const cause = "lock timeout on orders_items for customer 4411 (medium)"
 const withheld = "AI answered from logs only operators read"
 
 const on = { environment: "staging", alert: "a1", startsAt: live.startsAt }
-const events: ReadonlyArray<StoredEvent> = [
+const events: ReadonlyArray<StoredEvent> = allSeenLive([
   { ...on, id: "e1", at: "2026-10-12T16:49:10Z", by: "matt", kind: "ai-asked", text: "claude-haiku-4-5" },
   { ...on, id: "e2", at: "2026-10-12T16:49:52Z", by: "Estate", kind: "ai-answered", text: cause, readLogs: true },
-]
+])
 
 const as = (role: "viewer" | "operator", logs?: "operator"): Settings =>
   settings({ anonymous: { name: role === "viewer" ? "vi" : "gil", role }, ...(logs === undefined ? {} : { logs }) })

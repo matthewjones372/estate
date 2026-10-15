@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Context, Effect, Layer, Schema } from "effect"
 import type { Incident } from "../../shared/incidents"
+import { seenLive } from "../../shared/timeline"
 import { TimelineExport } from "../../shared/timeline-export"
 import { ask, environment, estate, type Server, serverFor, settings } from "../fixture"
 import { memoryNotes, Notes, type StoredEvent } from "../notes"
@@ -70,7 +71,10 @@ const viewer = settings({ anonymous: { name: "vi", role: "viewer" }, logs: "oper
 
 const event =
   (on: { environment: string; alert: string; startsAt: string }, id: string, at: string) =>
-  (more: Partial<StoredEvent>): StoredEvent => ({ ...on, id, at, by: "gil", kind: "noted", text: id, ...more })
+  (more: Partial<StoredEvent>): StoredEvent => ({
+    ...seenLive({ ...on, id, at, by: "gil", kind: "noted", text: id }),
+    ...more,
+  })
 const orders = { environment: "staging", alert: "a1", startsAt: live.startsAt }
 const payments = { environment: "production", alert: "a9", startsAt: past.startsAt }
 

@@ -1,5 +1,6 @@
 /** Incidents as the server sends them, and actions that answer as the server would, for the incidents' tests. */
 import type { Incident, IncidentRecord } from "../shared/incidents"
+import { allSeenLive } from "../shared/timeline"
 import type { Actions } from "./context"
 
 /** Open, with the fixture's live OrdersSlow and a staging firing that has since resolved. */
@@ -67,7 +68,7 @@ const incidentRecords: ReadonlyMap<string, IncidentRecord> = new Map([
     "i1",
     {
       incident: ordersSlow,
-      events: [
+      events: allSeenLive([
         {
           id: "e1",
           environment: "staging",
@@ -122,7 +123,7 @@ const incidentRecords: ReadonlyMap<string, IncidentRecord> = new Map([
           kind: "resolved",
           text: "after 15 min",
         },
-      ],
+      ]),
       suggested: [
         {
           environment: "production",

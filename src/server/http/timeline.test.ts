@@ -20,6 +20,8 @@ const event = (id: string, at: string, more: Partial<StoredEvent> = {}): StoredE
   environment: "staging",
   alert: "a1",
   startsAt: alert.startsAt,
+  recordedAt: at,
+  source: "seen",
   id,
   at,
   by: "gil",

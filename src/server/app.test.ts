@@ -136,6 +136,8 @@ describe("running", () => {
                   keepThread: () => Effect.void,
                   events: () => Effect.succeed([]),
                   addEvent: () => Effect.void,
+                  incidentEvents: () => Effect.succeed([]),
+                  addIncidentEvent: () => Effect.void,
                   incidents: () => Effect.succeed([]),
                   keepIncident: () => Effect.void,
                 }),

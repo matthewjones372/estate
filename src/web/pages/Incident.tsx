@@ -30,7 +30,8 @@ const lede = (incident: Incident, now: number) => {
 /** The alert an event was on, by the name its firing was linked with. */
 const alertOf = (incident: Incident, event: IncidentEvent) =>
   incident.firings.find((each) => each.environment === event.environment && each.alert === event.alert)?.name ??
-  event.alert
+  event.alert ??
+  "(incident)"
 
 const Closing = (props: { readonly incident: Incident; readonly done: () => void }) => {
   const { actions } = useEstate()

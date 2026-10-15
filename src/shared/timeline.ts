@@ -25,10 +25,19 @@ export const EventKind = Schema.Literals([
 ])
 export type EventKind = typeof EventKind.Type
 
+/** Seen live while it happened, rebuilt from what Estate held when an incident opened, or written by a person later. */
+export const EventSource = Schema.Literals(["seen", "rebuilt", "written"])
+export type EventSource = typeof EventSource.Type
+
 export const FiringEvent = Schema.Struct({
   id: Schema.String,
   /** When it happened, to the second, in UTC. */
   at: Schema.String,
+  /** When Estate kept it: the same as `at` for what it saw live. */
+  recordedAt: Schema.String,
+  source: EventSource,
+  /** The service or store it is about, where there is one. */
+  service: Schema.optionalKey(Schema.String),
   /** The signed-in person's name, or Estate for what it saw. */
   by: Schema.String,
   kind: EventKind,
@@ -41,6 +50,14 @@ export const FiringEvent = Schema.Struct({
   withheld: Schema.optionalKey(Schema.Boolean),
 })
 export type FiringEvent = typeof FiringEvent.Type
+
+/** An event as Estate saw it happen, kept when it happened. */
+export const seenLive = <A extends Omit<FiringEvent, "recordedAt" | "source">>(event: A) =>
+  ({ ...event, recordedAt: event.at, source: "seen" }) as const
+
+/** Events as Estate saw them happen, each kept when it happened. */
+export const allSeenLive = <A extends Omit<FiringEvent, "recordedAt" | "source">>(events: ReadonlyArray<A>) =>
+  events.map(seenLive)
 
 /**
  * The events as this reader may see them: an answer drawn from logs they may not read keeps only that it was. An

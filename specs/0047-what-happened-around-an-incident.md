@@ -208,7 +208,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
 - [ ] **`spec-0047`** — this spec, the README's row, and pointers from 0021's and 0025's *Not doing* to 0039 and
       this one.
       Done when: they are committed.
-- [ ] **`spec-0047-incident-events`** — events on an incident itself, `recordedAt`, `source` and `service` on every
+- [x] **`spec-0047-incident-events`** — events on an incident itself, `recordedAt`, `source` and `service` on every
       event, in each notes store, merged into the incident's timeline; older events read as `seen`.
       Done when: each store's test keeps and reads an incident's own events beside its firings', in order by `at`; an
       event kept before this decodes with `source: seen` and `recordedAt` equal to `at`.
