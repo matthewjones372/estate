@@ -88,7 +88,10 @@ adds itself: notes, what an alert means, and each alert's past firings.
 - compare what's deployed in each environment
 - open an alert's own page to share: what's happening, what is around it, who owns it
 - ask AI about an alert, when a model is set in `estate.yaml`
-- raise an incident in PagerDuty, Opsgenie or your own tool from the alert, when the catalog names its link
+- raise an incident in PagerDuty or incident.io from its page or an alert's card, when `incidentTool` is set in
+  `estate.yaml`; the incident then links to it there, its timeline says who raised it, and its page says what the tool
+  says of it: its status, its priority or severity, and who is on it
+- otherwise, open your incident tool's own form from the alert, when the catalog names its link
 - tell the team that owns an alert in its Slack channel, once a firing; the card then links to the thread
 - jump to any service, store, job or agent by name from the header, or with ⌘K (Ctrl K)
 - see a service's version in every environment at once, and switch to one
@@ -111,17 +114,25 @@ lanes or, when the estate is long to scroll, as a grid of compact cards; the cho
 
 ### Around this alert, and Ask AI
 
-![An alert's own page: what's happening, what is around it, who owns it, and Ask AI](docs/alert.png)
+![An alert's own page: what's happening, what is around it, and who owns it](docs/alert.png)
 
 An alert's own page collects related information without using AI: the deploys and builds of its service and of what
 it calls or what calls it, from the hour before it fired; how those neighbours are, with their stats; its errors from
 ten minutes before it fired, grouped by message; its earlier firings and what was written then; and its runbook's
 text, where the runbook is a page Estate can read.
 
-If a model is configured, Ask AI gives that brief to the model, which may call the same read tools agents use over
-`/mcp` for what the brief does not say, and answers with the likely cause, the evidence for it, and what to do next.
-The answer lists what it read and called, so the reader can check it. You can keep the answer as a note for
-everyone to see. The model is sent only what the person asking could see on the page. There is at most one answer
+If a model is configured, every alert's card has Ask AI, on the overview, on Alerts and on the alert's own page. It
+gives that brief to the model, which may call the same read tools agents use over `/mcp` for what the brief does
+not say, and answers on the card with the likely cause, the evidence for it, and what to do next. A bar shows it is
+reading until the answer comes.
+
+![Ask AI's answer on an alert's card in the petshop demo: the likely cause, the evidence for it, and what to do next](docs/ask-ai.png)
+
+The answer lists what it read and called, so the reader can check it, and what it took in tokens, with an estimate
+of its cost where `prices` names the model. You can keep the answer as a note for
+everyone to see. The model is sent only what the person asking could see on the page. Where `auth.logs: operator`
+keeps logs to operators, an answer that read them shows on a viewer's timeline only as having answered, and keeping
+it as a note says that everyone will see it. There is at most one answer
 per alert per minute, within a daily token budget.
 
 ```yaml
@@ -129,6 +140,9 @@ per alert per minute, within a daily token budget.
 ai: { provider: anthropic, apiKey: "${ANTHROPIC_API_KEY}", model: claude-opus-5-5, budget: { tokensPerDay: 500000 } }
 # or provider: openai, xai or gemini with their key, or a self-hosted server that speaks OpenAI's API:
 # ai: { provider: openai-compatible, url: http://vllm.internal:8000/v1, model: my-model }
+# What an ask may spend: how hard the model thinks (unset unless given; low is cheapest, and a model that does not
+# take it is asked without), rounds of read tools (2), and how much of one tool's result it reads (4000).
+#   effort: low, toolRounds: 2, toolResultChars: 4000
 
 # Credentials for reading runbooks' text, by the host their links name
 runbooks:
@@ -186,6 +200,12 @@ in Docker Compose against a real Prometheus and Alertmanager watching a small Ko
 chip registry fires an alert, which appears at the top of the page and resolves once the registry is back. Its
 `estate/` folder is a working `estate.yaml` and `catalog.yaml` to start from.
 
+For a bigger example on Kubernetes, [tweet-street](https://github.com/matthewjones372/tweet-street) runs Estate on a
+local kind cluster beside four services and their databases, reading Prometheus, Alertmanager and the cluster itself,
+with Estate running as a cluster of its own. `scripts/up.sh` in its `lark-bank/` folder brings it all up, and its
+[`deploy/k8s/estate/`](https://github.com/matthewjones372/tweet-street/tree/main/lark-bank/deploy/k8s/estate) folder
+has the settings and catalog.
+
 To try it against your team's real tools, set `readOnly: true` in `estate.yaml` so Estate writes nothing (no
 silences, no debug switching, notes only in memory), then run the `doctor` command:
 
@@ -225,7 +245,7 @@ services:
     links:
       logs: "https://grafana.example.com/explore?var-env={env}&var-service={service}"
       traces: "https://grafana.example.com/explore?var-service={service}"
-      # Raise incident on its alerts' cards; Estate opens the tool, it does not create the incident
+      # Raise incident on its alerts' cards, where estate.yaml sets no incidentTool: Estate opens the tool's own form
       incident: "https://example.pagerduty.com/incidents/create?service={service}&title={alert}"
 
 alerts:

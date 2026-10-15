@@ -5,6 +5,8 @@ import type { Alert, Load as Read, Series } from "../../shared/events"
 import { reading, whole, type Zoom } from "../chart"
 import { type Range, useEstate } from "../context"
 import { clock, measured } from "../format"
+import { firingPath, pathOf } from "../route"
+import { A } from "./A"
 import { Plot } from "./Plot"
 
 const ranges: ReadonlyArray<Range> = ["1h", "6h", "24h", "7d"]
@@ -18,17 +20,25 @@ const spans: Readonly<Record<Range, number>> = {
 
 const at = (ms: number) => clock(new Date(ms).toISOString())
 
-/** What the charts of one range share: when they end, the moment marked, and the span zoomed to. */
-interface Reading {
-  readonly range: () => Range
+/**
+ * What the charts of one window share: how long it is and how to say so, when it ends, the moment marked, the span
+ * zoomed to, and a span to shade.
+ */
+export interface Reading {
+  readonly span: () => number
+  /** The window as the chart's label says it, "1h" or "the firing", and as its axis's ends do. */
+  readonly over: () => string
+  readonly starts: () => string
+  readonly ends: () => string
   readonly end: () => number
   readonly mark: () => number | undefined
   readonly onMark: (at: number | undefined) => void
   readonly zoom: () => Zoom
   readonly onZoom: (zoom: Zoom) => void
+  readonly shade?: () => { readonly from: number; readonly to: number } | undefined
 }
 
-const Chart = (props: {
+export const Chart = (props: {
   readonly label: string
   readonly unit: string
   readonly series: Series | undefined
@@ -36,7 +46,7 @@ const Chart = (props: {
   readonly reading: Reading
 }) => {
   const shared = props.reading
-  const span = () => spans[shared.range()]
+  const span = () => shared.span()
   const points = () => props.series?.points ?? []
   const alarm = () => props.limit !== undefined && (props.series?.now ?? 0) > props.limit
   const ink = () => (alarm() ? "#F5A524" : "#8FB0FF")
@@ -53,7 +63,7 @@ const Chart = (props: {
         </span>
       </figcaption>
       <Plot
-        label={`${props.label} over ${shared.range()}, now ${now()}. Arrow keys read each point.`}
+        label={`${props.label} over ${shared.over()}, now ${now()}. Arrow keys read each point.`}
         points={points()}
         end={shared.end()}
         span={span()}
@@ -69,13 +79,14 @@ const Chart = (props: {
         onMark={shared.onMark}
         zoom={shared.zoom()}
         onZoom={shared.onZoom}
+        shade={shared.shade?.()}
       />
       <div class="chart-axis mono" style={{ color: "var(--ink-3)" }}>
-        <span>{zoomed() ? edge(shared.zoom().from) : `${shared.range()} ago`}</span>
+        <span>{zoomed() ? edge(shared.zoom().from) : shared.starts()}</span>
         <Show when={props.limit !== undefined}>
           <span>threshold {measured(props.limit, props.unit)}</span>
         </Show>
-        <span>{zoomed() && shared.zoom().to < 1 ? edge(shared.zoom().to) : "now"}</span>
+        <span>{zoomed() && shared.zoom().to < 1 ? edge(shared.zoom().to) : shared.ends()}</span>
       </div>
     </figure>
   )
@@ -124,7 +135,17 @@ export const Load = (props: {
     setZoom(whole)
     setMark(undefined)
   }
-  const shared: Reading = { range, end, mark, onMark: setMark, zoom, onZoom: setZoom }
+  const shared: Reading = {
+    span: () => spans[range()],
+    over: range,
+    starts: () => `${range()} ago`,
+    ends: () => "now",
+    end,
+    mark,
+    onMark: setMark,
+    zoom,
+    onZoom: setZoom,
+  }
   return (
     <section aria-labelledby="load" class="panel section-box">
       <div class="spread">
@@ -179,7 +200,12 @@ export const Load = (props: {
 const day = 24 * 3_600_000
 
 export const Timeline = (props: {
-  readonly alerts: ReadonlyArray<{ readonly name: string; readonly startsAt: string; readonly endsAt?: string }>
+  readonly alerts: ReadonlyArray<{
+    readonly id: string
+    readonly name: string
+    readonly startsAt: string
+    readonly endsAt?: string
+  }>
   readonly now: number
 }) => {
   const place = (iso: string) => Math.max(0, Math.min(100, ((Date.parse(iso) - (props.now - day)) / day) * 100))
@@ -193,9 +219,17 @@ export const Timeline = (props: {
       <For each={props.alerts}>
         {(alert) => (
           <div class="timeline-row">
-            <span class="mono" style={{ "font-size": "12px" }}>
+            <A
+              to={
+                alert.endsAt === undefined
+                  ? pathOf({ page: "alert", id: alert.id })
+                  : firingPath(alert.id, alert.startsAt)
+              }
+              class="mono"
+              style={{ "font-size": "12px" }}
+            >
               {alert.name}
-            </span>
+            </A>
             <div class="timeline-track">
               <span
                 class={`timeline-bar ${alert.endsAt === undefined ? "live" : ""}`}

@@ -2,7 +2,7 @@
  * The read tools Ask AI's model may call: the same handlers `/mcp` serves, run as the person asking, so the model
  * reads what that person could read on the page and nothing more. Each answer goes back to the model as JSON text.
  */
-import { Effect, Layer, Stream } from "effect"
+import { Effect, Layer, Ref, Stream } from "effect"
 import { Tool, Toolkit } from "effect/ai"
 import type { Tools } from "../model"
 import type { ToolCall } from "../model-apis"
@@ -28,9 +28,11 @@ const offers = offered.map((name) => {
 const inEnvironment = (input: unknown, environment: string): unknown =>
   typeof input === "object" && input !== null && !Array.isArray(input) ? { environment, ...input } : input
 
-/** The read tools, run as `asker` about the alert's `environment`, for one ask. */
+/** The read tools, run as `asker` about the alert's `environment`, for one ask, and whether `errors` answered it. */
 export const askTools = (asker: McpCaller, environment: string) =>
-  Effect.map(Effect.provide(toolkit, handlers), (kit): Tools => {
+  Effect.gen(function* () {
+    const kit = yield* Effect.provide(toolkit, handlers)
+    const answeredErrors = yield* Ref.make(false)
     const run = (call: ToolCall): Effect.Effect<string> => {
       if (!isOffered(call.name)) return Effect.succeed(`there is no tool ${call.name}`)
       // `handle` decodes the parameters against the tool's own schema, so the model's input needs no shape here.
@@ -38,6 +40,14 @@ export const askTools = (asker: McpCaller, environment: string) =>
         Effect.flatMap(Stream.runLast),
         Effect.provideService(McpCaller, asker),
         Effect.result,
+        Effect.tap((read) =>
+          call.name === "errors" &&
+          read._tag === "Success" &&
+          read.success._tag === "Some" &&
+          !read.success.value.isFailure
+            ? Ref.set(answeredErrors, true)
+            : Effect.void,
+        ),
         Effect.map((read) =>
           read._tag === "Failure"
             ? `${call.name} failed: ${read.failure.message}`
@@ -47,5 +57,6 @@ export const askTools = (asker: McpCaller, environment: string) =>
         ),
       )
     }
-    return { offers, run }
+    const tools: Tools = { offers, run }
+    return { tools, readLogs: Ref.get(answeredErrors) }
   })

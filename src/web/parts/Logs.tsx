@@ -1,27 +1,14 @@
 /** @jsxImportSource solid-js */
 /** A service's logs: its lines as they arrive, and its errors grouped by message. */
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
-import type { ErrorGroups, LogLine } from "../../shared/log-events"
-import { type ErrorWindow, useEstate } from "../context"
-import { clock, since } from "../format"
+import type { LogLine } from "../../shared/log-events"
+import { useEstate, useSnapshot } from "../context"
+import { asText, copy, fileName, save } from "../log-copy"
+import { searchOf, shows } from "../log-search"
+import { Errors } from "./LogErrors"
+import { type Kind, kindOf, kinds, LineRow } from "./LogLine"
 
 const kept = 500
-const severity: Readonly<Record<string, number>> = {
-  TRACE: 0,
-  DEBUG: 1,
-  INFO: 2,
-  WARN: 3,
-  ERROR: 4,
-  FATAL: 5,
-  PANIC: 5,
-}
-const levels = [
-  { value: "all", label: "All", least: 0 },
-  { value: "warn", label: "Warnings", least: 3 },
-  { value: "error", label: "Errors", least: 4 },
-] as const
-type Level = (typeof levels)[number]["value"]
-
 const keyOf = (line: LogLine) => `${line.at}|${line.pod ?? ""}|${line.text}`
 
 /** New lines on the end, the same line never twice, the newest `kept`. */
@@ -30,16 +17,9 @@ const joined = (before: ReadonlyArray<LogLine>, arrived: ReadonlyArray<LogLine>)
   return [...before, ...arrived.filter((line) => !seen.has(keyOf(line)))].slice(-kept)
 }
 
-const LineRow = (props: { readonly line: LogLine }) => (
-  <li class={`log-line ${(props.line.level ?? "").toLowerCase()}`}>
-    <span class="log-at">{clock(props.line.at)}</span>
-    <span class="log-pod">{props.line.pod ?? ""}</span>
-    <span class="log-text">{props.line.text}</span>
-  </li>
-)
-
 const Live = (props: { readonly service: string }) => {
   const { actions } = useEstate()
+  const snapshot = useSnapshot()
   const [lines, setLines] = createSignal<ReadonlyArray<LogLine>>([])
   const [waiting, setWaiting] = createSignal<ReadonlyArray<LogLine>>([])
   const [from, setFrom] = createSignal<string | undefined>(undefined)
@@ -47,8 +27,11 @@ const Live = (props: { readonly service: string }) => {
   const [paused, setPaused] = createSignal(false)
   const [skipped, setSkipped] = createSignal(false)
   const [failed, setFailed] = createSignal<string | undefined>(undefined)
-  const [level, setLevel] = createSignal<Level>("all")
+  const [hidden, setHidden] = createSignal<ReadonlySet<Kind>>(new Set())
   const [text, setText] = createSignal("")
+  const [picked, setPicked] = createSignal<ReadonlySet<string>>(new Set())
+  const [anchor, setAnchor] = createSignal<string | undefined>(undefined)
+  const [told, setTold] = createSignal("")
   const [box, setBox] = createSignal<HTMLOListElement | undefined>(undefined)
   const toEnd = () => queueMicrotask(() => box()?.scrollTo({ top: box()?.scrollHeight ?? 0 }))
   createEffect(
@@ -57,6 +40,7 @@ const Live = (props: { readonly service: string }) => {
       (service) => {
         setLines([])
         setWaiting([])
+        setPicked(new Set<string>())
         setMissing(false)
         const stop = actions.watchLogs(service, {
           from: setFrom,
@@ -75,13 +59,51 @@ const Live = (props: { readonly service: string }) => {
       },
     ),
   )
-  const least = () => levels.find((each) => each.value === level())?.least ?? 0
-  const shown = () =>
-    lines().filter(
-      (line) =>
-        (least() === 0 || (severity[line.level ?? ""] ?? 0) >= least()) &&
-        (text() === "" || line.text.toLowerCase().includes(text().toLowerCase())),
-    )
+  const toggle = (kind: Kind) =>
+    setHidden((before) => {
+      const after = new Set(before)
+      if (!after.delete(kind)) after.add(kind)
+      return after
+    })
+  const count = (kind: Kind) => lines().filter((line) => kindOf(line) === kind).length
+  const search = () => searchOf(text())
+  const shown = () => lines().filter((line) => !hidden().has(kindOf(line)) && shows(search(), line.text))
+  const pick = (line: LogLine, range: boolean) => {
+    const key = keyOf(line)
+    const keys = shown().map(keyOf)
+    const from = keys.indexOf(anchor() ?? "")
+    setPicked((before) => {
+      const after = new Set(before)
+      if (range && from !== -1) {
+        const to = keys.indexOf(key)
+        for (const each of keys.slice(Math.min(from, to), Math.max(from, to) + 1)) after.add(each)
+      } else if (!after.delete(key)) after.add(key)
+      return after
+    })
+    setAnchor(key)
+    setPaused(true)
+  }
+  const chosen = () => {
+    const some = shown().filter((line) => picked().has(keyOf(line)))
+    return some.length > 0 ? some : shown()
+  }
+  const lineCount = (count: number) => `${count} line${count === 1 ? "" : "s"}`
+  const copyChosen = () => {
+    const count = chosen().length
+    void copy(asText(chosen())).then(() => setTold(`Copied ${lineCount(count)}`))
+  }
+  const clear = (event: KeyboardEvent) => {
+    if (event.key === "Escape") setPicked(new Set<string>())
+  }
+  document.addEventListener("keydown", clear)
+  onCleanup(() => document.removeEventListener("keydown", clear))
+  createEffect(
+    on(told, (said) => {
+      if (said === "") return
+      const timer = setTimeout(() => setTold(""), 2000)
+      onCleanup(() => clearTimeout(timer))
+    }),
+  )
   const resume = () => {
     setLines((before) => joined(before, waiting()))
     setWaiting([])
@@ -103,16 +125,16 @@ const Live = (props: { readonly service: string }) => {
     >
       <div class="log-controls">
         <fieldset class="choices bare">
-          <legend class="visually-hidden">Level</legend>
-          <For each={levels}>
-            {(each) => (
+          <legend class="visually-hidden">Levels shown</legend>
+          <For each={kinds}>
+            {(kind) => (
               <button
                 type="button"
-                class="filter"
-                aria-pressed={level() === each.value}
-                onClick={() => setLevel(each.value)}
+                class={`filter level-${kind.value}`}
+                aria-pressed={!hidden().has(kind.value)}
+                onClick={() => toggle(kind.value)}
               >
-                {each.label}
+                {kind.label} {count(kind.value)}
               </button>
             )}
           </For>
@@ -122,133 +144,66 @@ const Live = (props: { readonly service: string }) => {
           <input
             type="search"
             class="select"
-            placeholder="Lines containing…"
+            placeholder="Search, a*b or /regex/"
             value={text()}
             onInput={(event) => setText(event.currentTarget.value)}
           />
         </label>
+        <Show when={search()._tag === "Invalid"}>
+          <span class="log-invalid" role="status">
+            Not a valid pattern
+          </span>
+        </Show>
+        <button type="button" class="plain-button push-right" onClick={copyChosen}>
+          Copy {lineCount(chosen().length)}
+        </button>
+        <button
+          type="button"
+          class="plain-button"
+          onClick={() => save(fileName(props.service, snapshot.environment, Date.now()), asText(chosen()))}
+        >
+          Save
+        </button>
+        <span class="log-told" role="status">
+          {told()}
+        </span>
         <Show
           when={paused()}
           fallback={
-            <button type="button" class="plain-button push-right" onClick={() => setPaused(true)}>
+            <button type="button" class="plain-button" onClick={() => setPaused(true)}>
               Pause
             </button>
           }
         >
-          <button type="button" class="primary-button push-right log-resume" onClick={resume}>
+          <button type="button" class="primary-button log-resume" onClick={resume}>
             {waiting().length === 0 ? "Resume" : `${waiting().length} new line${waiting().length === 1 ? "" : "s"}`}
           </button>
         </Show>
       </div>
       <Show when={failed()}>{(message) => <div class="notice">The logs did not answer: {message()}</div>}</Show>
       <ol class="log-lines" ref={setBox} onScroll={scrolled} aria-live={paused() ? "off" : "polite"}>
-        <For each={shown()}>{(line) => <LineRow line={line} />}</For>
-      </ol>
-      <p class="muted log-foot">
-        {shown().length === 0 ? "No lines yet." : `${shown().length} of the last ${lines().length} lines`}
-        {from() === undefined ? "" : ` · from ${from()}`}
-        {skipped() ? " · busy: older lines were skipped" : ""}
-      </p>
-    </Show>
-  )
-}
-
-const ranges = ["1h", "6h", "24h"] as const
-
-/** The errors in a window, grouped: the commonest first, each opening to its newest examples. */
-export const ErrorList = (props: {
-  readonly service: string
-  readonly window: ErrorWindow
-  readonly most?: number
-}) => {
-  const { actions, now } = useEstate()
-  const [groups, setGroups] = createSignal<ErrorGroups | "none" | "loading" | undefined>("loading")
-  const [open, setOpen] = createSignal<string | undefined>(undefined)
-  createEffect(
-    on([() => props.service, () => JSON.stringify(props.window)], ([service]) => {
-      let current = true
-      setGroups("loading")
-      void actions.errors(service, props.window).then((read) => {
-        if (current) setGroups(read)
-      })
-      onCleanup(() => {
-        current = false
-      })
-    }),
-  )
-  const read = () => {
-    const value = groups()
-    return typeof value === "object" ? value : undefined
-  }
-  return (
-    <Show
-      when={read()}
-      fallback={
-        <p class="muted" style={{ margin: 0 }}>
-          {groups() === "loading"
-            ? "Reading the errors…"
-            : groups() === "none"
-              ? `No logs are read for ${props.service} here, or they are kept to operators.`
-              : "The logs did not answer."}
-        </p>
-      }
-    >
-      {(found) => (
-        <Show
-          when={found().groups.length > 0}
-          fallback={
-            <p class="muted" style={{ margin: 0 }}>
-              No errors.
-            </p>
-          }
-        >
-          <ol class="error-groups">
-            <For each={found().groups.slice(0, props.most ?? 50)}>
-              {(group) => (
-                <li class="error-group">
-                  <button
-                    type="button"
-                    class="error-head"
-                    aria-expanded={open() === group.shape}
-                    onClick={() => setOpen(open() === group.shape ? undefined : group.shape)}
-                  >
-                    <span class="error-count">{group.count}×</span>
-                    <span class="mono error-shape">{group.shape}</span>
-                    <span class="muted error-when">
-                      last {since(group.lastSeen, now())} ago · {group.pods.join(", ")}
-                    </span>
-                  </button>
-                  <Show when={open() === group.shape}>
-                    <ol class="log-lines examples">
-                      <For each={group.examples}>{(line) => <LineRow line={line} />}</For>
-                    </ol>
-                  </Show>
-                </li>
-              )}
-            </For>
-          </ol>
-        </Show>
-      )}
-    </Show>
-  )
-}
-
-const Errors = (props: { readonly service: string }) => {
-  const [range, setRange] = createSignal<(typeof ranges)[number]>("1h")
-  return (
-    <div class="stack">
-      <fieldset class="choices bare">
-        <legend class="visually-hidden">Over</legend>
-        <For each={ranges}>
-          {(each) => (
-            <button type="button" class="filter" aria-pressed={range() === each} onClick={() => setRange(each)}>
-              {each}
-            </button>
+        <For each={shown()}>
+          {(line) => (
+            <LineRow
+              line={line}
+              search={search()}
+              picked={picked().has(keyOf(line))}
+              onPick={(range) => pick(line, range)}
+            />
           )}
         </For>
-      </fieldset>
-      <ErrorList service={props.service} window={{ range: range() }} />
-    </div>
+      </ol>
+      <p class="muted log-foot">
+        {search()._tag === "Pattern"
+          ? `${shown().length} of the last ${lines().length} lines match`
+          : shown().length === 0
+            ? "No lines yet."
+            : `${shown().length} of the last ${lines().length} lines`}
+        {from() === undefined ? "" : ` · from ${from()}`}
+        {skipped() ? " · busy: older lines were skipped" : ""}
+        {" · Copy and Save take the lines held here, at most 500, or those picked"}
+      </p>
+    </Show>
   )
 }
 

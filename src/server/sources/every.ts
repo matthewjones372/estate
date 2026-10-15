@@ -1,6 +1,7 @@
 /** How often each part of an environment is read: its usual interval, unless its sources set another. */
 import { Duration } from "effect"
-import { type Settings, type Sources, secondsIn } from "../settings"
+import type { Settings, Sources } from "../settings"
+import { secondsIn } from "../settings-every"
 
 const usual = { alerts: "20s", metrics: "30s", cluster: "15s", deploys: "30s", costs: "6h" } as const
 type Part = keyof typeof usual

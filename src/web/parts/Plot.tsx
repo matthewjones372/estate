@@ -3,7 +3,7 @@
  * A hand-drawn chart that can be read: pointing at it, or stepping with the keys, marks the nearest point; dragging
  * across it zooms to that span. The mark is a moment, not an index, so charts of one range can share it.
  */
-import { createMemo, createSignal, type JSX, Show } from "solid-js"
+import { createMemo, createSignal, For, type JSX, Show } from "solid-js"
 import { indexAt, shape, timeOf, visible, whole, type Zoom } from "../chart"
 
 export interface PlotProps {
@@ -28,6 +28,10 @@ export interface PlotProps {
   readonly keys?: boolean
   readonly zoom?: Zoom
   readonly onZoom?: (zoom: Zoom) => void
+  /** A span of time to shade, such as when an alert fired, as times like `end`. */
+  readonly shade?: { readonly from: number; readonly to: number } | undefined
+  /** Moments to mark across it, such as a timeline's events, as times like `end`. */
+  readonly marks?: ReadonlyArray<number>
   readonly style?: JSX.CSSProperties
 }
 
@@ -61,6 +65,11 @@ export const Plot = (props: PlotProps) => {
     return at === undefined ? undefined : (view().shown[at] ?? undefined)
   }
   const x = () => (inView() ?? 0) * step()
+  /** Where a time falls across the chart as zoomed, from 0 to 1, held to its edges. */
+  const placed = (time: number) => {
+    const share = (time - (props.end - props.span)) / props.span
+    return Math.max(0, Math.min(1, (share - zoom().from) / (zoom().to - zoom().from)))
+  }
 
   const move = (event: Pointer) => {
     const fraction = across(event)
@@ -119,6 +128,29 @@ export const Plot = (props: PlotProps) => {
             stroke="#232836"
             vector-effect="non-scaling-stroke"
           />
+        </Show>
+        <For each={props.marks ?? []}>
+          {(time) => (
+            <line
+              class="plot-mark"
+              x1={placed(time) * props.width}
+              y1="0"
+              x2={placed(time) * props.width}
+              y2={props.height}
+              vector-effect="non-scaling-stroke"
+            />
+          )}
+        </For>
+        <Show when={props.shade}>
+          {(shade) => (
+            <rect
+              class="plot-firing"
+              x={placed(shade().from) * props.width}
+              y="0"
+              width={(placed(shade().to) - placed(shade().from)) * props.width}
+              height={props.height}
+            />
+          )}
         </Show>
         <Show when={drawn().area !== ""}>
           <polygon points={drawn().area} fill={props.ink} fill-opacity={props.fill ?? 0.14} />

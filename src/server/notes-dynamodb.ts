@@ -2,9 +2,15 @@
  * Notes kept in a DynamoDB table, for an estate on AWS with no database of its own: the environment and alert as the
  * partition key, the time as the sort key. The table is made, paid per request, if it is not there and the role may.
  */
-import { Effect, Layer, Option, Schedule, Schema, Stream } from "effect"
-import { type AwsCallError, type AwsJson, makeAwsJson } from "./aws/json"
+import { Effect, Layer, Option, Schedule, Schema } from "effect"
+import { makeAwsJson } from "./aws/json"
 import { Notes, NotesError, type StoredFiring, type StoredImpact, type StoredNote, type StoredThread } from "./notes"
+import { dynamoEvents, sweepDynamoEvents } from "./notes-dynamodb-events"
+import { dynamoEvidence } from "./notes-dynamodb-evidence"
+import { dynamoIncidents, sweepDynamoIncidents } from "./notes-dynamodb-incidents"
+import { type Dynamo, dynamoDb, dynamoFailure, type Item, removeItems, scanItems } from "./notes-dynamodb-items"
+import type { FiringKey } from "./notes-events"
+import { keptBy } from "./notes-sweep"
 import { SourceFailure } from "./sources/run"
 
 export interface DynamoNotes {
@@ -16,22 +22,6 @@ export interface DynamoNotes {
 
 const kept = 200
 
-const Text = Schema.Struct({ S: Schema.String })
-const Item = Schema.Struct({
-  pk: Text,
-  sk: Text,
-  id: Text,
-  environment: Text,
-  alert: Text,
-  time: Text,
-  by: Text,
-  text: Text,
-})
-const Page = Schema.Struct({
-  Items: Schema.Array(Item),
-  LastEvaluatedKey: Schema.optionalKey(Schema.Unknown),
-})
-const decodePage = Schema.decodeUnknownEffect(Page)
 const Described = Schema.Struct({ Table: Schema.Struct({ TableStatus: Schema.String }) })
 const decodeDescribed = Schema.decodeUnknownEffect(Described)
 
@@ -55,29 +45,29 @@ const firingKey = (firing: StoredFiring) => ({
   sk: { S: firing.startsAt },
 })
 
-/** A firing's end and silence reason, which the item has no field for, are kept as JSON in its text. */
-const Rest = Schema.fromJsonString(
-  Schema.Struct({
-    endsAt: Schema.optionalKey(Schema.String),
-    reason: Schema.optionalKey(Schema.String),
-    service: Schema.optionalKey(Schema.String),
-  }),
-)
+/** What of a firing the item has no field for, its end, silence reason and what it said, kept as JSON in its text. */
+const Said = Schema.Struct({
+  endsAt: Schema.optionalKey(Schema.String),
+  reason: Schema.optionalKey(Schema.String),
+  service: Schema.optionalKey(Schema.String),
+  severity: Schema.optionalKey(Schema.String),
+  summary: Schema.optionalKey(Schema.String),
+  runbook: Schema.optionalKey(Schema.String),
+  store: Schema.optionalKey(Schema.String),
+})
+const Rest = Schema.fromJsonString(Said)
 const decodeRest = Schema.decodeUnknownOption(Rest)
 
 const firingOf = (item: typeof Item.Type): StoredFiring => {
-  const rest = Option.getOrElse(
-    decodeRest(item.text.S),
-    () => ({}) as { endsAt?: string; reason?: string; service?: string },
-  )
+  const { endsAt, reason, ...said } = Option.getOrElse(decodeRest(item.text.S), (): typeof Said.Type => ({}))
   return {
     environment: item.environment.S,
     alert: item.alert.S,
     name: item.id.S,
-    ...(rest.service === undefined ? {} : { service: rest.service }),
+    ...said,
     startsAt: item.time.S,
-    ...(rest.endsAt === undefined ? {} : { endsAt: rest.endsAt }),
-    ...(item.by.S === "" ? {} : { silence: { by: item.by.S, reason: rest.reason ?? "" } }),
+    ...(endsAt === undefined ? {} : { endsAt }),
+    ...(item.by.S === "" ? {} : { silence: { by: item.by.S, reason: reason ?? "" } }),
   }
 }
 
@@ -90,31 +80,9 @@ const noteOf = (item: typeof Item.Type): StoredNote => ({
   text: item.text.S,
 })
 
-type Dynamo = AwsJson
-
-const dynamoDb = { service: "dynamodb", target: "DynamoDB_20120810", version: "1.0", name: "DynamoDB" } as const
-
-const failure = (error: AwsCallError | Schema.SchemaError) =>
-  new SourceFailure({ message: `the notes table: ${error.message}` })
-
-/** Every item that `filter` keeps, page by page. */
-const scan = (
-  dynamo: Dynamo,
-  table: string,
-  filter: object,
-): Effect.Effect<ReadonlyArray<typeof Item.Type>, AwsCallError | Schema.SchemaError> =>
-  Stream.paginate(undefined as unknown, (from) =>
-    dynamo("Scan", { TableName: table, ...filter, ...(from === undefined ? {} : { ExclusiveStartKey: from }) }).pipe(
-      Effect.flatMap(decodePage),
-      Effect.map((page) => [page.Items, Option.fromUndefinedOr(page.LastEvaluatedKey)] as const),
-    ),
-  ).pipe(Stream.runCollect)
-
-const remove = (dynamo: Dynamo, table: string, items: ReadonlyArray<typeof Item.Type>) =>
-  Effect.forEach(items, (item) => dynamo("DeleteItem", { TableName: table, Key: { pk: item.pk, sk: item.sk } }), {
-    concurrency: 4,
-    discard: true,
-  })
+/** Whether an item of a firing is of one in `keep`. */
+const firingKept = (keep: ReadonlyArray<FiringKey>, item: typeof Item.Type) =>
+  keptBy(keep)({ environment: item.environment.S, alert: item.alert.S, startsAt: item.time.S })
 
 /** The table, made and waited for when it is not there. */
 const ensureTable = (dynamo: Dynamo, table: string) =>
@@ -165,7 +133,10 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
       const { table } = settings
       yield* ensureTable(dynamo, table)
       return {
-        all: scan(dynamo, table, {}).pipe(
+        ...dynamoEvents(dynamo, table),
+        ...dynamoIncidents(dynamo, table),
+        ...dynamoEvidence(dynamo, table),
+        all: scanItems(dynamo, table, {}).pipe(
           Effect.map((items) =>
             items
               .filter(isNote)
@@ -173,32 +144,38 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
               .sort((a, b) => b.at.localeCompare(a.at))
               .slice(0, kept),
           ),
-          Effect.mapError(failure),
+          Effect.mapError(dynamoFailure),
         ),
         add: (note: StoredNote) =>
-          dynamo("PutItem", { TableName: table, Item: itemOf(note) }).pipe(Effect.asVoid, Effect.mapError(failure)),
+          dynamo("PutItem", { TableName: table, Item: itemOf(note) }).pipe(
+            Effect.asVoid,
+            Effect.mapError(dynamoFailure),
+          ),
         remove: (id: string) =>
-          scan(dynamo, table, { FilterExpression: "id = :id", ExpressionAttributeValues: { ":id": { S: id } } }).pipe(
-            Effect.flatMap((items) => remove(dynamo, table, items.filter(isNote))),
-            Effect.mapError(failure),
+          scanItems(dynamo, table, {
+            FilterExpression: "id = :id",
+            ExpressionAttributeValues: { ":id": { S: id } },
+          }).pipe(
+            Effect.flatMap((items) => removeItems(dynamo, table, items.filter(isNote))),
+            Effect.mapError(dynamoFailure),
           ),
         removeBefore: (at: string) =>
-          scan(dynamo, table, {
+          scanItems(dynamo, table, {
             FilterExpression: "#time < :at",
             ExpressionAttributeNames: { "#time": "time" },
             ExpressionAttributeValues: { ":at": { S: at } },
           }).pipe(
-            Effect.flatMap((items) => remove(dynamo, table, items.filter(isNote))),
-            Effect.mapError(failure),
+            Effect.flatMap((items) => removeItems(dynamo, table, items.filter(isNote))),
+            Effect.mapError(dynamoFailure),
           ),
-        impacts: scan(dynamo, table, {
+        impacts: scanItems(dynamo, table, {
           FilterExpression: "begins_with(pk, :impact)",
           ExpressionAttributeValues: { ":impact": { S: `${other}impact#` } },
         }).pipe(
           Effect.map((items) =>
             items.map((item) => ({ alert: item.alert.S, text: item.text.S, by: item.by.S, at: item.time.S })),
           ),
-          Effect.mapError(failure),
+          Effect.mapError(dynamoFailure),
         ),
         setImpact: (impact: StoredImpact) =>
           (impact.text === ""
@@ -215,15 +192,15 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
                   text: { S: impact.text },
                 },
               })
-          ).pipe(Effect.asVoid, Effect.mapError(failure)),
+          ).pipe(Effect.asVoid, Effect.mapError(dynamoFailure)),
         firings: (since: string) =>
-          scan(dynamo, table, {
+          scanItems(dynamo, table, {
             FilterExpression: "begins_with(pk, :firing) AND #time >= :since",
             ExpressionAttributeNames: { "#time": "time" },
             ExpressionAttributeValues: { ":firing": { S: `${other}firing#` }, ":since": { S: since } },
           }).pipe(
             Effect.map((items) => items.map(firingOf).toSorted((a, b) => b.startsAt.localeCompare(a.startsAt))),
-            Effect.mapError(failure),
+            Effect.mapError(dynamoFailure),
           ),
         keepFiring: (firing: StoredFiring) =>
           dynamo("PutItem", {
@@ -236,22 +213,38 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
               time: { S: firing.startsAt },
               by: { S: firing.silence?.by ?? "" },
               text: {
-                S: JSON.stringify({ endsAt: firing.endsAt, reason: firing.silence?.reason, service: firing.service }),
+                S: JSON.stringify({
+                  endsAt: firing.endsAt,
+                  reason: firing.silence?.reason,
+                  service: firing.service,
+                  severity: firing.severity,
+                  summary: firing.summary,
+                  runbook: firing.runbook,
+                  store: firing.store,
+                }),
               },
             },
-          }).pipe(Effect.asVoid, Effect.mapError(failure)),
-        removeFiringsBefore: (at: string) =>
-          scan(dynamo, table, {
+          }).pipe(Effect.asVoid, Effect.mapError(dynamoFailure)),
+        removeFiringsBefore: (at: string, keep: ReadonlyArray<FiringKey> = []) =>
+          scanItems(dynamo, table, {
             FilterExpression: "begins_with(pk, :firing) AND #time < :at",
             ExpressionAttributeNames: { "#time": "time" },
             ExpressionAttributeValues: { ":firing": { S: `${other}firing#` }, ":at": { S: at } },
           }).pipe(
-            Effect.flatMap((items) => remove(dynamo, table, items)),
-            Effect.mapError(failure),
+            Effect.flatMap((items) =>
+              removeItems(
+                dynamo,
+                table,
+                items.filter((item) => !firingKept(keep, item)),
+              ),
+            ),
+            Effect.mapError(dynamoFailure),
+            Effect.andThen(sweepDynamoEvents(dynamo, table, at, keep)),
           ),
+        removeIncidentsBefore: (at: string) => sweepDynamoIncidents(dynamo, table, at),
         // A thread's channel and URL ride in the item's `by` and `text`, its timestamp in `id`.
         threads: (since: string) =>
-          scan(dynamo, table, {
+          scanItems(dynamo, table, {
             FilterExpression: "begins_with(pk, :thread) AND #time >= :since",
             ExpressionAttributeNames: { "#time": "time" },
             ExpressionAttributeValues: { ":thread": { S: `${other}thread#` }, ":since": { S: since } },
@@ -266,7 +259,7 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
                 url: item.text.S,
               })),
             ),
-            Effect.mapError(failure),
+            Effect.mapError(dynamoFailure),
           ),
         keepThread: (thread: StoredThread) =>
           dynamo("PutItem", {
@@ -281,7 +274,7 @@ export const dynamodbNotes = (settings: DynamoNotes) =>
               by: { S: thread.channel },
               text: { S: thread.url },
             },
-          }).pipe(Effect.asVoid, Effect.mapError(failure)),
+          }).pipe(Effect.asVoid, Effect.mapError(dynamoFailure)),
       }
     }),
   )

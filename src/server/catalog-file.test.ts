@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Effect, Fiber, Layer, Result, SubscriptionRef } from "effect"
+import { Effect, Fiber, Layer, Redacted, Result, SubscriptionRef } from "effect"
 import { TestClock } from "effect/testing"
 import { configuredKinds, crossCheck, parseCatalog, reloadCatalog, shownBy, withCatalog } from "./catalog-file"
 import { catalog, estate, settings } from "./fixture"
@@ -46,6 +46,15 @@ describe("the catalog file", () => {
         { ...catalog, discover: [{ backstage: {} }] },
       ),
     ).toEqual([])
+  })
+
+  test("names a team's service on an incident tool the settings do not set", () => {
+    const teams = [{ name: "payments", incidentTool: { pagerduty: "PDEF456" } }, { name: "platform" }]
+    expect(crossCheck(settings(), { ...catalog, teams })).toEqual([
+      { at: "teams[0] (payments).incidentTool.pagerduty", message: "needs incidentTool.pagerduty in estate.yaml" },
+    ])
+    const pagerduty = { token: Redacted.make("pd"), from: "estate@example.com", service: "PABC123" }
+    expect(crossCheck({ ...settings(), incidentTool: { pagerduty } }, { ...catalog, teams })).toEqual([])
   })
 
   test("knows which sources an environment has from its section", () => {

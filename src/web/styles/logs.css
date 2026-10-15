@@ -32,23 +32,53 @@
 }
 .log-line {
   display: grid;
-  grid-template-columns: 44px minmax(0, 9em) minmax(0, 1fr);
+  grid-template-columns: 44px minmax(0, 9em) 5ch minmax(0, 1fr) 20px;
   gap: 10px;
-  padding: 0 12px;
+  padding: 0 12px 0 10px;
+  border-left: 2px solid transparent;
   color: var(--ink-soft);
 }
-.log-line.debug,
-.log-line.trace {
+.log-line.debug {
   color: var(--ink-3);
 }
 .log-line.warn {
-  color: var(--amber-muted);
+  border-left-color: var(--amber);
 }
-.log-line.error,
-.log-line.fatal,
-.log-line.panic {
-  color: var(--amber-text);
-  background: var(--amber-panel);
+.log-line.error {
+  border-left-color: var(--critical);
+  background: var(--critical-panel);
+}
+.log-level {
+  font-weight: 700;
+  font-size: 11px;
+}
+.log-line.error .log-level {
+  color: var(--critical);
+}
+.log-line.warn .log-level {
+  color: var(--amber);
+}
+.log-line.info .log-level {
+  color: var(--healthy);
+}
+.log-line.debug .log-level {
+  color: var(--debug);
+}
+/* The level toggles wear their level's colour, so they are the key. */
+.filter.level-error[aria-pressed="true"] {
+  color: var(--critical);
+  border-color: var(--critical-line);
+}
+.filter.level-warn[aria-pressed="true"] {
+  color: var(--amber);
+  border-color: var(--amber-line);
+}
+.filter.level-info[aria-pressed="true"] {
+  color: var(--healthy);
+}
+.filter.level-debug[aria-pressed="true"] {
+  color: var(--debug);
+  border-color: var(--debug-panel);
 }
 .log-at,
 .log-pod {
@@ -60,6 +90,21 @@
 .log-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+.log-body {
+  min-width: 0;
+}
+.log-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+.log-logger {
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+.log-trace {
+  color: var(--link);
 }
 .log-foot {
   margin: 0;
@@ -99,4 +144,53 @@
 }
 .error-when {
   font-size: 12px;
+}
+.log-lines mark {
+  background: var(--link);
+  color: var(--ground);
+  border-radius: 2px;
+}
+.log-invalid {
+  font-size: 12px;
+  color: var(--critical);
+}
+.log-line.picked {
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.log-pick {
+  font: inherit;
+  text-align: left;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.log-pick:hover,
+.log-pick[aria-pressed="true"] {
+  color: var(--ink);
+  text-decoration: underline;
+}
+/* A line's own Copy shows on hover or focus, so a page of lines stays quiet. */
+.log-copy-one {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  opacity: 0;
+}
+.log-line:hover .log-copy-one,
+.log-copy-one:focus-visible {
+  opacity: 1;
+}
+.log-copy-one:hover {
+  color: var(--ink);
+}
+.log-told {
+  font-size: 12px;
+  color: var(--healthy);
+}
+.log-copy-examples {
+  margin-top: 8px;
 }

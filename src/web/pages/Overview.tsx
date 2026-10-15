@@ -7,8 +7,10 @@ import { For, Show } from "solid-js"
 import type { Alert, Events } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock, counted, measured } from "../format"
-import { AlertCard } from "../parts/AlertCard"
+import { A } from "../parts/A"
+import { alertsLayout, LayoutChoice } from "../parts/AlertsLayout"
 import { Feed } from "../parts/Feed"
+import { FiringAlerts } from "../parts/FiringAlerts"
 import { Icon } from "../parts/icons"
 import { Lanes } from "../parts/Lanes"
 import { EstateMap } from "../parts/Map"
@@ -183,6 +185,7 @@ export const Overview = () => {
   const alerts = () => events().alerts?.alerts ?? []
   const firing = () => alerts().filter((alert) => alert.state === "firing")
   const silenced = () => alerts().filter((alert) => alert.state === "silenced")
+  const { layout, choose, rows } = alertsLayout()
   const canSilence = () => me.role === "operator" && events().alerts?.silences === true
   const waiting = () =>
     events().services === undefined || (events().services?.sources ?? []).some((source) => source.state === "waiting")
@@ -209,19 +212,31 @@ export const Overview = () => {
         </div>
       </section>
       <section aria-labelledby="needs" class="stack">
-        <h2 id="needs" class="section-title">
-          Needs you now
-        </h2>
+        <div class="spread">
+          <h2 id="needs" class="section-title">
+            Needs you now{firing().length === 0 ? "" : ` · ${firing().length} firing`}
+          </h2>
+          <Show when={firing().length > 0}>
+            <div class="choices" style={{ "align-items": "center" }}>
+              <LayoutChoice layout={layout()} choose={choose} />
+              <Show when={rows(firing())}>
+                <A to="/alerts">All on Alerts →</A>
+              </Show>
+            </div>
+          </Show>
+        </div>
         <Show when={firing().length === 0}>
           <p class="muted" style={{ margin: 0 }}>
             Nothing. When something does, it appears here first.
           </p>
         </Show>
-        <div class="cards">
-          <For each={firing()}>
-            {(alert) => <AlertCard alert={alert} catalog={events().catalog} canSilence={canSilence()} />}
-          </For>
-        </div>
+        <FiringAlerts
+          alerts={firing()}
+          catalog={events().catalog}
+          canSilence={canSilence()}
+          by="incident and service"
+          rows={rows(firing())}
+        />
         <Silenced alerts={silenced()} canSilence={canSilence()} />
       </section>
       <section aria-label="Vitals and map" class="now">

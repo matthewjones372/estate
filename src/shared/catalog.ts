@@ -1,6 +1,7 @@
 /** The catalog: an estate's environments, services, vitals and map, as its owner writes it in `catalog.yaml`. */
 import { Schema } from "effect"
 import { Agent } from "./catalog-agent"
+import { Journey } from "./catalog-journey"
 import { Kubernetes } from "./catalog-parts"
 import { CostOf } from "./costs"
 import { CatalogMap } from "./map"
@@ -105,6 +106,13 @@ export const Service = Schema.Struct({
       errors: optional(Schema.String),
       /** Patterns for what must not leave Estate, each replaced with •••. */
       mask: optional(Schema.Array(Schema.String)),
+      /**
+       * The keys of a line's labels, or of its JSON, that name its trace and what wrote it, the first one present
+       * winning; by default `trace_id`, `traceId`, `traceID` and `logger`, `logger_name`, `class`.
+       */
+      fields: optional(
+        Schema.Struct({ trace: optional(Schema.Array(Schema.String)), logger: optional(Schema.Array(Schema.String)) }),
+      ),
       /** In Elasticsearch: the fields its lines carry, and the field its message is in. */
       elastic: optional(
         Schema.Struct({
@@ -207,13 +215,17 @@ export const Store = Schema.Struct({
 export type Store = typeof Store.Type
 
 export { Agent } from "./catalog-agent"
+export { Journey } from "./catalog-journey"
 
 /** A team, by the name an owner gives: where to reach it, its chat, its pages and its on-call. */
 const Team = Schema.Struct({
   name: Schema.String,
   title: optional(Schema.String),
   links: optional(Schema.Record(Schema.String, Schema.String)),
+  /** Where its incidents go in the incident tool, by the tool's kind: its own PagerDuty service. */
+  incidentTool: optional(Schema.Struct({ pagerduty: optional(Schema.String) })),
 })
+export type Team = typeof Team.Type
 
 /**
  * A job no service owns: a Kubernetes CronJob or Job by name in its namespace, or an ECS scheduled task by its task
@@ -261,6 +273,8 @@ export const Catalog = Schema.Struct({
   alerts: optional(Schema.Record(Schema.String, Schema.Struct({ impact: optional(Schema.String) }))),
   vitals: optional(Schema.Array(Vital)),
   map: optional(CatalogMap),
+  /** Requests that cross the estate, measured from their traces (spec 0046). */
+  journeys: optional(Schema.Array(Journey)),
   discover: optional(Schema.Array(DiscoverRule)),
 })
 export type Catalog = typeof Catalog.Type

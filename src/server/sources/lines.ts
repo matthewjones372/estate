@@ -9,8 +9,21 @@ export interface Line {
   readonly at: string
   readonly pod?: string
   readonly level?: string
+  /** What wrote it, such as a class or a file. */
+  readonly logger?: string
+  /** The trace it was written in. */
+  readonly trace?: string
   readonly text: string
 }
+
+/** Which keys of a line's labels or JSON name its trace and its logger, the first one present winning. */
+export interface FieldKeys {
+  readonly trace?: ReadonlyArray<string>
+  readonly logger?: ReadonlyArray<string>
+}
+
+const usualTrace = ["trace_id", "traceId", "traceID"]
+const usualLogger = ["logger", "logger_name", "class"]
 
 const levels = /\b(TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|PANIC)\b/i
 
@@ -32,6 +45,17 @@ export const levelOf = (text: string): string | undefined =>
 /** A line as read, with its level found. */
 export const lineOf = (at: string, text: string, pod?: string): Line =>
   compact({ at, pod, level: levelOf(text), text: text.trimEnd() })
+
+/** Fills in a line's logger and trace from its labels, such as Loki's stream, or else from its own JSON. */
+export const fieldsOf = (keys: FieldKeys | undefined) => {
+  const trace = keys?.trace ?? usualTrace
+  const logger = keys?.logger ?? usualLogger
+  return (line: Line, labels?: Readonly<Record<string, string>>): Line => {
+    const json = parsed(line.text)
+    const found = (names: ReadonlyArray<string>) => field(labels, ...names) ?? field(json, ...names)
+    return compact({ ...line, logger: line.logger ?? found(logger), trace: line.trace ?? found(trace) })
+  }
+}
 
 const defaultErrors = /\b(error|fatal|panic)\b|exception\b/i
 

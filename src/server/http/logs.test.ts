@@ -102,6 +102,24 @@ describe("a service's errors", () => {
       expect(start).toBe(`${Date.parse("2026-10-03T11:50:00Z")}000000`)
     }))
 
+  test("end where asked, so a past firing's window reads no line from after it", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const calls: Call[] = []
+        const server = yield* serverFor(withLoki("viewer"), undefined, loki(calls))
+        const window = "since=2026-10-06T08:50:00Z&until=2026-10-06T09:22:00Z"
+        const read = yield* ask(
+          server,
+          new Request(`http://estate/api/logs/errors?env=staging&service=storefront&${window}`),
+        )
+        return { read, asked: new URL(calls[0]?.url ?? "").searchParams }
+      }),
+    ).then(({ read, asked }) => {
+      expect(read.status).toBe(200)
+      expect(asked.get("start")).toBe(`${Date.parse("2026-10-06T08:50:00Z")}000000`)
+      expect(asked.get("end")).toBe(`${Date.parse("2026-10-06T09:22:00Z")}000000`)
+    }))
+
   test("are refused to a viewer where logs are for operators, and not there for a service without any", () =>
     Effect.runPromise(
       Effect.gen(function* () {

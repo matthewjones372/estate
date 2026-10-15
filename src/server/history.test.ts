@@ -26,6 +26,7 @@ const kept: StoredFiring = {
   alert: "a1",
   name: "OrdersSlow",
   service: "orders",
+  severity: "warning",
   startsAt: slow.startsAt,
 }
 
@@ -48,13 +49,22 @@ describe("an alert's firings", () => {
     expect(firingNow(withAlerts([{ ...slow, state: "pending" }])).firing.size).toBe(0)
   })
 
-  test("are recorded in the store and the state while Estate runs, from what it already kept", () =>
+  test("keep what the alert said as it fired: its severity, summary, runbook and store", () => {
+    const said = firingNow(
+      withAlerts([{ ...slow, severity: "critical", summary: "p99 over 2s", runbook: "https://wiki.example/orders" }]),
+    )
+    expect([...said.firing.values()]).toEqual([
+      { ...kept, severity: "critical", summary: "p99 over 2s", runbook: "https://wiki.example/orders" },
+    ])
+  })
+
+  test("are recorded in the store and the state while Estate runs, from what it already kept, with their events", () =>
     Effect.runPromise(
       Effect.gen(function* () {
         const notes = yield* Notes
         yield* notes.keepFiring({ ...kept, alert: "old", startsAt: "1970-01-01T09:00:00.000Z" })
         yield* TestClock.setTime(Date.parse("1970-01-02T11:00:00Z"))
-        yield* loadHistory(90)
+        yield* loadHistory(90, 400)
         const recording = yield* Effect.forkChild(recordFirings())
         yield* TestClock.adjust("1 second")
         yield* updateEstate((state) => ({ ...state, environments: { ...state.environments, staging: firing([slow]) } }))
@@ -63,7 +73,11 @@ describe("an alert's firings", () => {
         yield* TestClock.adjust("1 second")
         yield* Fiber.interrupt(recording)
         const shown = (yield* SubscriptionRef.get(yield* Estate)).firings ?? []
-        return { stored: yield* notes.firings("1970-01-01T00:00:00Z"), shown }
+        const events = [
+          ...(yield* notes.events({ environment: "staging", alert: "a1", startsAt: slow.startsAt })),
+          ...(yield* notes.events({ environment: "staging", alert: "old", startsAt: "1970-01-01T09:00:00.000Z" })),
+        ]
+        return { stored: yield* notes.firings("1970-01-01T00:00:00Z"), shown, events }
       }).pipe(
         Effect.provide(
           Layer.mergeAll(
@@ -74,7 +88,13 @@ describe("an alert's firings", () => {
           ),
         ),
       ),
-    ).then(({ stored, shown }) => {
+    ).then(({ stored, shown, events }) => {
+      // The one it saw begin fired; both it saw end resolved. Estate is who saw them.
+      expect(events.map((each) => [each.alert, each.by, each.kind, each.at, each.text])).toEqual([
+        ["a1", "Estate", "fired", slow.startsAt, "OrdersSlow, warning, orders"],
+        ["a1", "Estate", "resolved", "1970-01-02T11:00:02.000Z", "after 1 hour"],
+        ["old", "Estate", "resolved", "1970-01-02T11:00:00.000Z", "after 1 day"],
+      ])
       expect(stored.map((each) => [each.alert, each.endsAt])).toEqual([
         ["a1", "1970-01-02T11:00:02.000Z"],
         ["old", "1970-01-02T11:00:00.000Z"],
@@ -89,9 +109,9 @@ describe("an alert's firings", () => {
         yield* notes.keepFiring({ ...kept, endsAt: "1970-03-31T09:00:00.000Z", startsAt: "1970-03-31T08:00:00.000Z" })
         yield* notes.keepFiring({ ...kept, startsAt: "1970-01-01T08:00:00.000Z", endsAt: "1970-01-01T09:00:00.000Z" })
         yield* TestClock.setTime(Date.parse("1970-03-31T12:00:00Z"))
-        yield* loadHistory(30)
+        yield* loadHistory(30, 400)
         const resolved = (yield* SubscriptionRef.get(yield* Estate)).environments["staging"]?.resolved
-        const sweeping = yield* Effect.forkChild(sweepHistory(30))
+        const sweeping = yield* Effect.forkChild(sweepHistory(30, 400))
         yield* TestClock.adjust("1 second")
         yield* Fiber.interrupt(sweeping)
         return { resolved, left: yield* notes.firings("1970-01-01T00:00:00Z") }
@@ -99,6 +119,7 @@ describe("an alert's firings", () => {
     ).then(({ resolved, left }) => {
       expect(resolved).toEqual([
         {
+          alert: "a1",
           name: "OrdersSlow",
           labels: { service: "orders" },
           startsAt: "1970-03-31T08:00:00.000Z",
@@ -120,6 +141,10 @@ describe("an alert's firings", () => {
         ends_at: null,
         silenced_by: "ada",
         silence_reason: "vacuum",
+        severity: "critical",
+        summary: "p99 over 2s",
+        runbook: null,
+        store: "orders-db",
       },
     ]
     const query: Query = (statement, parameters) => {
@@ -141,10 +166,14 @@ describe("an alert's firings", () => {
           name: "OrdersSlow",
           startsAt: slow.startsAt,
           silence: { by: "ada", reason: "vacuum" },
+          severity: "critical",
+          summary: "p99 over 2s",
+          store: "orders-db",
         },
       ])
-      expect(statements[4]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
-      expect(statements[4]?.[1]).toEqual([
+      expect(statements[3]?.[0]).toContain("add column if not exists summary text")
+      expect(statements[12]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
+      expect(statements[12]?.[1]).toEqual([
         "staging",
         "a1",
         "OrdersSlow",
@@ -153,8 +182,19 @@ describe("an alert's firings", () => {
         null,
         null,
         "orders",
+        "warning",
+        null,
+        null,
+        null,
       ])
-      expect(statements[5]).toEqual(["delete from estate_firings where starts_at < $1", ["1970-01-01T00:00:00.000Z"]])
+      // Firings an incident holds are spared, as three arrays of their keys; incidents are swept on their own.
+      const at = "1970-01-01T00:00:00.000Z"
+      expect(
+        statements.slice(13, 15).map(([statement, parameters]) => [statement.split(" and ")[0], parameters]),
+      ).toEqual([
+        ["delete from estate_firings where starts_at < $1", [at, [], [], []]],
+        ["delete from estate_events where starts_at < $1", [at, [], [], []]],
+      ])
     })
   })
 

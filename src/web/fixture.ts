@@ -167,7 +167,13 @@ export const events: Events = {
       },
     ],
     resolved: [
-      { name: "Restarted", service: "orders", startsAt: "2026-10-03T08:00:00Z", endsAt: "2026-10-03T08:08:00Z" },
+      {
+        alert: "a7",
+        name: "Restarted",
+        service: "orders",
+        startsAt: "2026-10-03T08:00:00Z",
+        endsAt: "2026-10-03T08:08:00Z",
+      },
     ],
     silences: true,
   },

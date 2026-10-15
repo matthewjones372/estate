@@ -26,15 +26,103 @@ describe("a service's live lines", () => {
     })
     expect(texts(page.container)).toHaveLength(4)
     expect(page.container.textContent).toContain("older lines were skipped")
-    page.click(page.button("Errors", 1))
+    page.click(page.button(/^Warn/))
+    page.click(page.button(/^Info/))
     expect(texts(page.container)).toEqual(["ERROR order 41 lost", "ERROR disk full"])
-    page.click(page.button("Warnings"))
-    expect(texts(page.container)).toHaveLength(3)
-    page.click(page.button("All"))
+    page.click(page.button(/^Info/))
+    expect(texts(page.container)).toEqual(["INFO started", "ERROR order 41 lost", "ERROR disk full"])
+    page.click(page.button(/^Warn/))
     const search = page.container.querySelector<HTMLInputElement>(".log-search input")
     if (search === null) throw new Error("no search")
     page.type(search, "DISK")
     expect(texts(page.container)).toEqual(["ERROR disk full"])
+  })
+
+  test("are searched with a star or a pattern, the matches marked and counted", () => {
+    const page = mount(() => <LogsPanel service="storefront" />)
+    const search = page.container.querySelector<HTMLInputElement>(".log-search input")
+    if (search === null) throw new Error("no search")
+    page.type(search, "order*lost")
+    expect(texts(page.container)).toEqual(["ERROR order 41 lost"])
+    const marks = [...page.container.querySelectorAll(".log-lines mark")].map((each) => each.textContent)
+    expect(marks).toEqual(["order 41 lost"])
+    expect(page.container.textContent).toContain("1 of the last 3 lines match")
+    page.type(search, "/(order/")
+    expect(texts(page.container)).toHaveLength(3)
+    expect(page.container.textContent).toContain("Not a valid pattern")
+  })
+
+  test("are copied as text, one, a shift-clicked range or every shown line, and saved to a file", async () => {
+    const copied: Array<string> = []
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => void copied.push(text) },
+    })
+    const saved: Array<string> = []
+    const click = HTMLAnchorElement.prototype.click
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+      saved.push(this.download)
+    }
+    const page = mount(() => <LogsPanel service="storefront" />)
+    page.click(page.button("Copy 3 lines"))
+    await page.settle()
+    expect(copied[0]?.split("\n")).toHaveLength(3)
+    expect(copied[0]).toContain("\tstorefront-1\tERROR\tERROR order 41 lost")
+    const picks = [...page.container.querySelectorAll<HTMLButtonElement>(".log-pick")]
+    page.click(picks[1] as HTMLButtonElement)
+    expect(page.button("Resume")).toBeDefined()
+    page.click(picks[2] as HTMLButtonElement, { shiftKey: true })
+    page.click(page.button("Copy 2 lines"))
+    await page.settle()
+    expect(copied[1]?.split("\n").map((each) => each.split("\t")[3])).toEqual(["ERROR order 41 lost", "WARN slow"])
+    page.click(page.button("Save"))
+    expect(saved).toEqual([expect.stringMatching(/^storefront-production-\d{4}-\d\d-\d\dT\d{4}\.log$/)])
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
+    expect(page.button("Copy 3 lines")).toBeDefined()
+    page.click(page.button(/Copy this line/))
+    await page.settle()
+    expect(copied[2]).toEndWith("\tINFO\tINFO started")
+    HTMLAnchorElement.prototype.click = click
+  })
+
+  test("wear their level, and each level's toggle counts its lines", () => {
+    const page = mount(() => <LogsPanel service="storefront" />)
+    page.sendLines({
+      lines: [line(57, "fatal", "FATAL gone"), line(58, "TRACE", "TRACE step"), line(59, "", "plain")],
+      skipped: false,
+    })
+    const badges = [...page.container.querySelectorAll(".log-lines .log-level")].map((each) => each.textContent)
+    expect(badges).toEqual(["INFO", "ERROR", "WARN", "FATAL", "TRACE", ""])
+    const kinds = [...page.container.querySelectorAll(".log-lines .log-line")].map((each) => each.className)
+    expect(kinds).toEqual([
+      "log-line info",
+      "log-line error",
+      "log-line warn",
+      "log-line error",
+      "log-line debug",
+      "log-line other",
+    ])
+    expect(["Error 2", "Warn 1", "Info 1", "Debug 1", "Other 1"].map((name) => page.button(name))).toHaveLength(5)
+    page.click(page.button("Other 1"))
+    expect(texts(page.container)).not.toContain("plain")
+  })
+
+  test("say which logger wrote them and link their trace to its page, and a line with neither is as it was", () => {
+    const page = mount(() => <LogsPanel service="storefront" />)
+    const trace = "9406a5bf06714196d42a68207f4a4bde"
+    page.sendLines({
+      lines: [{ ...line(58, "WARN", "WARN order 41 paid twice"), logger: "shop.orders.Checkout", trace }],
+      skipped: false,
+    })
+    const rows = [...page.container.querySelectorAll(".log-lines .log-line")]
+    const written = rows.at(-1)
+    expect(written?.querySelector(".log-logger")?.textContent).toBe("shop.orders.Checkout")
+    const link = written?.querySelector<HTMLAnchorElement>("a.log-trace")
+    expect(link?.getAttribute("href")).toBe(`/traces/${trace}`)
+    expect(link?.textContent).toBe("trace 9406a5bf")
+    expect(link?.getAttribute("title")).toContain(trace)
+    expect(written?.querySelector(".log-text")?.textContent).toBe("WARN order 41 paid twice")
+    expect(rows[0]?.querySelector(".log-fields")).toBeNull()
   })
 
   test("pause, holding what arrives until resumed, and pause by themselves when scrolled up", () => {
@@ -74,6 +162,14 @@ describe("a service's errors", () => {
     expect(page.container.textContent).toContain("ERROR order ‹n› lost")
     page.click(page.button(/^2×/))
     expect(texts(page.container)).toEqual(["ERROR order 41 lost", "ERROR order 7 lost"])
+    const copied: Array<string> = []
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => void copied.push(text) },
+    })
+    page.click(page.button("Copy these lines"))
+    await page.settle()
+    expect(copied[0]?.split("\n")).toHaveLength(2)
     page.click(page.button("6h"))
     await page.settle()
     expect(page.calls).toContainEqual(["errors", "storefront", { range: "6h" }])

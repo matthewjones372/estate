@@ -84,11 +84,19 @@ describe("alerts", () => {
     })
     const before = environment({
       alerts: { state: "ok", value: [alert("Gone"), alert("Stays"), alert("Waited", "pending")] },
-      resolved: [{ name: "Old", labels: {}, startsAt: "2026-10-01T00:00:00Z", endsAt: "2026-10-02T00:00:00Z" }],
+      resolved: [
+        { alert: "old", name: "Old", labels: {}, startsAt: "2026-10-01T00:00:00Z", endsAt: "2026-10-02T00:00:00Z" },
+      ],
     })
     const after = withResolved(before, before, [alert("Stays")], "2026-10-03T12:00:00Z")
     expect(after.resolved).toEqual([
-      { name: "Gone", labels: {}, startsAt: "2026-10-03T10:00:00Z", endsAt: "2026-10-03T12:00:00Z" },
+      {
+        alert: alert("Gone").id,
+        name: "Gone",
+        labels: {},
+        startsAt: "2026-10-03T10:00:00Z",
+        endsAt: "2026-10-03T12:00:00Z",
+      },
     ])
   })
 })
@@ -124,6 +132,7 @@ describe("the cluster", () => {
             phase: "Running",
             ready: false,
             restarts: 3,
+            lastTermination: "OOMKilled",
             image: "registry.example/storefront:v2",
             node: "one",
             startedAt: "2026-10-03T10:00:00Z",

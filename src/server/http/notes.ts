@@ -1,6 +1,8 @@
 /** `POST /api/notes`: anyone who may see the estate adds a note to an alert, under their own name. */
 import { Clock, Duration, Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
+import { longestNote } from "../../shared/note"
+import { firingNow, happened } from "../happened"
 import { Notes } from "../notes"
 import { noteWritten } from "../observed"
 import { forEver } from "../schedule"
@@ -11,9 +13,13 @@ import { before, iso, isoNow } from "../time"
 import { written } from "../writes"
 import { json, Refusal, refused, writer } from "./routes"
 
-const Asked = Schema.Struct({ environment: Schema.String, alert: Schema.String, text: Schema.String })
-
-const longest = 2000
+const Asked = Schema.Struct({
+  environment: Schema.String,
+  alert: Schema.String,
+  text: Schema.String,
+  /** Where the note came from: an Ask AI answer kept, which its firing's timeline says. */
+  from: Schema.optionalKey(Schema.Literals(["ask-ai"])),
+})
 
 export const notesRoute = HttpRouter.add(
   "POST",
@@ -26,7 +32,8 @@ export const notesRoute = HttpRouter.add(
       ),
     )
     const text = asked.text.trim()
-    if (text === "" || text.length > longest) return json({ message: `a note is 1 to ${longest} characters` }, 400)
+    if (text === "" || text.length > longestNote)
+      return json({ message: `a note is 1 to ${longestNote} characters` }, 400)
     const { catalog } = yield* SubscriptionRef.get(yield* Estate)
     if (!catalog.environments.some((each) => each.name === asked.environment))
       return json({ message: `${asked.environment} is not an environment` }, 404)
@@ -43,6 +50,12 @@ export const notesRoute = HttpRouter.add(
     if (added._tag === "Failure") return json({ message: added.failure.message }, 503)
     yield* noteWritten
     yield* written({ _tag: "NoteAdded", note })
+    yield* happened(
+      yield* firingNow(asked.environment, asked.alert),
+      person.name,
+      asked.from === "ask-ai" ? "ai-kept" : "noted",
+      text,
+    )
     yield* replyInThread((yield* Configured).slack, asked, `${person.name}: ${text}`)
     return json(note, 201)
   }).pipe(Effect.catchTag("Refusal", refused)),
@@ -64,6 +77,13 @@ export const removeNoteRoute = HttpRouter.add(
     const removed = yield* Effect.result(notes.remove(id))
     if (removed._tag === "Failure") return json({ message: removed.failure.message }, 503)
     yield* written({ _tag: "NoteRemoved", id })
+    // The removal is an event, and keeps what the note said: the timeline is a record, not what was left.
+    yield* happened(
+      yield* firingNow(note.environment, note.alert),
+      person.name,
+      "note-removed",
+      `a note by ${note.by}: ${note.text}`,
+    )
     return json({ id })
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

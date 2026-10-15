@@ -182,13 +182,41 @@ describe("load over a longer range", () => {
         )
         expect([missing.status, missing.json()]).toEqual([
           400,
-          { message: "load is asked for by env, service and a range of 1h, 6h, 24h or 7d" },
+          { message: "load is asked for by env, service and a range of 1h, 6h, 24h or 7d, or a from and a later to" },
         ])
         const none = yield* ask(
           server,
           new Request("http://estate/api/load?env=production&service=storefront&range=6h"),
         )
         expect(none.json()).toEqual({ message: "production has no metrics to read" })
+      }),
+    )
+  })
+
+  test("is read over a window in the past, from its start to its end, when asked so", () => {
+    const calls: Call[] = []
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(configured, estate({ catalog: withMetrics }), prometheus(calls))
+        const window = "from=2026-10-06T08:00:00Z&to=2026-10-06T10:22:00Z"
+        const answered = yield* ask(
+          server,
+          new Request(`http://estate/api/load?env=staging&service=storefront&${window}`),
+        )
+        expect(answered.status).toBe(200)
+        const asked = new URL(calls[0]?.url ?? "").searchParams
+        expect([asked.get("start"), asked.get("end"), asked.get("step")]).toEqual([
+          String(Date.parse("2026-10-06T08:00:00Z") / 1000),
+          String(Date.parse("2026-10-06T10:22:00Z") / 1000),
+          "120",
+        ])
+        const backwards = yield* ask(
+          server,
+          new Request(
+            "http://estate/api/load?env=staging&service=storefront&from=2026-10-06T10:00:00Z&to=2026-10-06T08:00:00Z",
+          ),
+        )
+        expect(backwards.status).toBe(400)
       }),
     )
   })

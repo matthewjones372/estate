@@ -79,6 +79,8 @@ describe("POST /api/alerts/:id/ask", () => {
           model: "fake-model",
           read: ["Changed", "Depends"],
           called: [],
+          usage: { input: 400, cached: 0, output: 0 },
+          readLogs: false,
         },
       ])
       expect(calls.find((call) => call.url.endsWith("/chat/completions"))?.body).toContain(
@@ -111,25 +113,72 @@ describe("POST /api/alerts/:id/ask", () => {
       ]),
     ))
 
-  test("answers an alert once a minute, and nothing once the day's tokens are spent", () =>
+  test("shares an alert's answer within the minute rather than refusing, and nothing once the day's tokens are spent", () => {
+    let called = 0
+    const counting = (call: Call) => {
+      if (call.url.includes("/chat/completions")) called += 1
+      return modelReply(call)
+    }
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(withAi(500), withAlert, counting)
+        const [first, together] = yield* Effect.all([ask(server, asked("a1")), ask(server, asked("a1"))], {
+          concurrency: "unbounded",
+        })
+        const after = yield* ask(server, asked("a1"))
+        const spent = yield* ask(server, asked("a2"))
+        const refused = yield* ask(server, asked("a2"))
+        return {
+          called,
+          answers: [first, together, after, spent, refused].map((answer) => ({
+            status: answer.status,
+            body: answer.json(),
+          })),
+        }
+      }),
+    ).then(({ called, answers }) => {
+      expect(called).toBe(2)
+      expect(answers[1]).toEqual(answers[0])
+      expect(answers[2]).toEqual(answers[0])
+      expect(answers[0]?.status).toBe(200)
+      expect(answers[3]?.status).toBe(200)
+      // a2's own answer is shared too, though the day's tokens are spent: sharing costs none.
+      expect(answers[4]).toEqual(answers[3])
+    })
+  })
+
+  test("refuses a new ask once the day's tokens are spent", () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        const server = yield* serverFor(withAi(500), withAlert, modelReply)
-        return [
-          yield* ask(server, asked("a1")),
-          yield* ask(server, asked("a1")),
-          yield* ask(server, asked("a2")),
-          yield* ask(server, asked("a1")),
-        ].map((answer) => [answer.status, (answer.json() as { message?: string }).message])
+        const server = yield* serverFor(withAi(300), withAlert, modelReply)
+        return [yield* ask(server, asked("a1")), yield* ask(server, asked("a2"))].map((answer) => [
+          answer.status,
+          (answer.json() as { message?: string }).message,
+        ])
       }),
     ).then((answers) =>
       expect(answers).toEqual([
         [200, undefined],
-        [429, "this alert was asked about less than a minute ago"],
-        [200, undefined],
-        [429, "Ask AI has used today's 500 tokens"],
+        [429, "Ask AI has used today's 300 tokens"],
       ]),
     ))
+
+  test("says what the answer took, and what it cost where the model has a price", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const priced = { ...withAi(), prices: { "fake-model": { input: 3, output: 15 } } }
+        const unpriced = yield* serverFor(withAi(), withAlert, modelReply)
+        const server = yield* serverFor(priced, withAlert, modelReply)
+        return [(yield* ask(server, asked("a1"))).json(), (yield* ask(unpriced, asked("a1"))).json()] as const
+      }),
+    ).then(([withPrice, without]) => {
+      expect(withPrice).toMatchObject({
+        usage: { input: 400, cached: 0, output: 0 },
+        cost: { amount: 0.0012, currency: "USD" },
+      })
+      expect(without).toMatchObject({ usage: { input: 400, cached: 0, output: 0 } })
+      expect(without).not.toHaveProperty("cost")
+    }))
 
   test("lets the model call Estate's read tools as the person asking, and says which it called", () => {
     const sent: Array<string> = []

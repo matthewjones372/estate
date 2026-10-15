@@ -1,12 +1,13 @@
 /** The overview in Chromium: how long until every lane is drawn, and the page's heap after a collection. */
 import { chromium } from "@playwright/test"
+import { againIfClosed } from "./again"
 
 export interface PageMeasured {
   readonly drawnMs: number
   readonly heapMB: number
 }
 
-export const measurePage = async (url: string, lanes: number): Promise<PageMeasured> => {
+const measureOnce = async (url: string, lanes: number): Promise<PageMeasured> => {
   const executablePath = process.env["CHROMIUM"]
   const browser = await chromium.launch({
     ...(executablePath === undefined ? {} : { executablePath }),
@@ -32,3 +33,9 @@ export const measurePage = async (url: string, lanes: number): Promise<PageMeasu
     await browser.close()
   }
 }
+
+export const measurePage = (url: string, lanes: number): Promise<PageMeasured> =>
+  againIfClosed(
+    () => measureOnce(url, lanes),
+    (line) => process.stderr.write(`${line}\n`),
+  )

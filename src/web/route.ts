@@ -8,6 +8,12 @@ export type Page =
   | { readonly page: "deploys" }
   | { readonly page: "alerts" }
   | { readonly page: "alert"; readonly id: string }
+  /** One past firing of an alert: its id, and when the firing started. */
+  | { readonly page: "firing"; readonly id: string; readonly at: string }
+  /** An incident: the firings a person linked as one problem. */
+  | { readonly page: "incident"; readonly id: string }
+  /** One trace, measured as the journey it was opened from, where there is one (spec 0046). */
+  | { readonly page: "trace"; readonly id: string; readonly journey?: string }
   | { readonly page: "kiosk"; readonly team?: string; readonly category?: string }
   | { readonly page: "missing" }
 
@@ -18,6 +24,8 @@ const pagesNamed: ReadonlyMap<string, (name: string) => Page> = new Map<string, 
   ["stores", (name) => ({ page: "store", name })],
   ["jobs", (name) => ({ page: "job", name })],
   ["agents", (name) => ({ page: "agent", name })],
+  ["incidents", (id) => ({ page: "incident", id })],
+  ["traces", (id) => ({ page: "trace", id })],
 ])
 
 /** A path's part as it was before it was escaped; one that was never validly escaped names no page. */
@@ -38,6 +46,20 @@ export const pageOf = (pathname: string, search = ""): Page => {
     const team = params.get("team")
     const category = params.get("category")
     return { page: "kiosk", ...(team === null ? {} : { team }), ...(category === null ? {} : { category }) }
+  }
+  const [, id = "", at = ""] = /^\/alerts\/([^/]+)\/([^/]+)$/.exec(pathname) ?? []
+  if (id !== "") {
+    const [decodedId, decodedAt] = [decodedOf(id), decodedOf(at)]
+    return decodedId === undefined || decodedAt === undefined
+      ? { page: "missing" }
+      : { page: "firing", id: decodedId, at: decodedAt }
+  }
+  const [, journey = "", trace = ""] = /^\/journeys\/([^/]+)\/([^/]+)$/.exec(pathname) ?? []
+  if (journey !== "") {
+    const [decodedJourney, decodedTrace] = [decodedOf(journey), decodedOf(trace)]
+    return decodedJourney === undefined || decodedTrace === undefined
+      ? { page: "missing" }
+      : { page: "trace", id: decodedTrace, journey: decodedJourney }
   }
   const [, kind = "", name] = /^\/(\w+)\/([^/]+)$/.exec(pathname) ?? []
   const named = pagesNamed.get(kind)
@@ -63,6 +85,15 @@ export const pathOf = (page: Page): string => {
       return "/alerts"
     case "alert":
       return `/alerts/${encodeURIComponent(page.id)}`
+    case "firing":
+      // A time's colons are left as they are, so a link pasted into a review reads as the time it is.
+      return `/alerts/${encodeURIComponent(page.id)}/${encodeURIComponent(page.at).replaceAll("%3A", ":")}`
+    case "incident":
+      return `/incidents/${encodeURIComponent(page.id)}`
+    case "trace":
+      return page.journey === undefined
+        ? `/traces/${encodeURIComponent(page.id)}`
+        : `/journeys/${encodeURIComponent(page.journey)}/${encodeURIComponent(page.id)}`
     case "kiosk":
       return "/kiosk"
     case "missing":
@@ -81,3 +112,6 @@ export const chooseEnvironment = (
   }
   return known[0]
 }
+
+/** Where a past firing's page is: its alert's id and when it started. */
+export const firingPath = (id: string, at: string) => pathOf({ page: "firing", id, at })

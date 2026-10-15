@@ -60,7 +60,13 @@ const withStores: Events = {
       },
     ],
     resolved: [
-      { name: "ReplicaLag", store: "orders-db", startsAt: "2026-10-03T08:00:00Z", endsAt: "2026-10-03T08:30:00Z" },
+      {
+        alert: "a8",
+        name: "ReplicaLag",
+        store: "orders-db",
+        startsAt: "2026-10-03T08:00:00Z",
+        endsAt: "2026-10-03T08:30:00Z",
+      },
     ],
   },
 }

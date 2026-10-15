@@ -186,7 +186,13 @@ export const withResolved = (
     ...after,
     resolved: [
       ...after.resolved.filter((each) => each.endsAt >= since),
-      ...gone.map((alert) => ({ name: alert.name, labels: alert.labels, startsAt: alert.startsAt, endsAt: at })),
+      ...gone.map((alert) => ({
+        alert: alert.id,
+        name: alert.name,
+        labels: alert.labels,
+        startsAt: alert.startsAt,
+        endsAt: at,
+      })),
     ],
   }
 }

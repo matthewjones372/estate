@@ -91,5 +91,29 @@ describe("real notes", () => {
       )
       expect(after.map((each) => each.id)).toEqual(["n3"])
     })
+
+    test(`in ${name}: a firing keeps what its alert said across a restart, and one kept without it reads without`, async () => {
+      const said = {
+        environment: "production",
+        alert: "a1",
+        name: "OrdersSlow",
+        service: "orders",
+        severity: "critical",
+        summary: "p99 over 2s",
+        runbook: "https://wiki.example/orders",
+        store: "orders-db",
+        startsAt: "2026-10-06T09:00:00.000Z",
+      }
+      const bare = { environment: "production", alert: "a2", name: "QueueDeep", startsAt: "2026-10-06T10:00:00.000Z" }
+      await withNotes(layer(), (notes) =>
+        Effect.all([
+          notes.keepFiring(said),
+          notes.keepFiring({ ...said, endsAt: "2026-10-06T09:22:00.000Z" }),
+          notes.keepFiring(bare),
+        ]),
+      )
+      const read = await withNotes(layer(), (notes) => notes.firings("2026-10-01T00:00:00.000Z"))
+      expect(read).toEqual([bare, { ...said, endsAt: "2026-10-06T09:22:00.000Z" }])
+    })
   }
 })

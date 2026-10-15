@@ -1,94 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import { ConfigProvider, Effect, Layer, Result } from "effect"
-import { Notes, type Notes as NotesService, type StoredNote } from "./notes"
-import { dynamodbNotes } from "./notes-dynamodb"
-import { platform } from "./platform"
-import { type Call, liveRemote, Remote, RemoteError, type Reply, reply, stubRemote } from "./remote"
+import { fakeDynamo, note, usingNotes } from "./dynamo-fake"
+import { type Call, liveRemote, Remote, RemoteError, reply, stubRemote } from "./remote"
 
-type Item = Record<string, { readonly S: string }>
-
-/** The little of DynamoDB the notes use, in memory: tables made slowly, scans two items a page. */
-const fakeDynamo = (calls: Call[], refuse?: string) => {
-  const tables = new Map<string, { described: number; items: Map<string, Item> }>()
-  const refusal = (type: string, message: string) =>
-    reply({ __type: `com.amazonaws.dynamodb.v20120810#${type}`, message }, 400)
-  return (call: Call): Reply => {
-    calls.push(call)
-    const operation = call.headers?.["x-amz-target"]?.split(".")[1] ?? ""
-    const body = JSON.parse(call.body ?? "{}")
-    const table = tables.get(body.TableName)
-    if (operation === refuse) return refusal("AccessDeniedException", `not allowed to ${operation}`)
-    if (operation === "DescribeTable") {
-      if (table === undefined) return refusal("ResourceNotFoundException", "no such table")
-      table.described += 1
-      return reply({ Table: { TableStatus: table.described > 2 ? "ACTIVE" : "CREATING" } })
-    }
-    if (operation === "CreateTable") {
-      tables.set(body.TableName, { described: 0, items: new Map() })
-      return reply({})
-    }
-    if (table === undefined) return refusal("ResourceNotFoundException", "no such table")
-    const keyOf = (key: Item) => `${key["pk"]?.S}|${key["sk"]?.S}`
-    if (operation === "PutItem") table.items.set(keyOf(body.Item), body.Item)
-    if (operation === "DeleteItem") table.items.delete(keyOf(body.Key))
-    if (operation === "Scan") {
-      const values = body.ExpressionAttributeValues ?? {}
-      const kept = [...table.items.values()].filter((item) =>
-        body.FilterExpression === "id = :id"
-          ? item["id"]?.S === values[":id"].S
-          : body.FilterExpression === "#time < :at"
-            ? (item["time"]?.S ?? "") < values[":at"].S
-            : body.FilterExpression === "begins_with(pk, :impact)"
-              ? (item["pk"]?.S ?? "").startsWith(values[":impact"].S)
-              : body.FilterExpression === "begins_with(pk, :firing) AND #time >= :since"
-                ? (item["pk"]?.S ?? "").startsWith(values[":firing"].S) && (item["time"]?.S ?? "") >= values[":since"].S
-                : body.FilterExpression === "begins_with(pk, :firing) AND #time < :at"
-                  ? (item["pk"]?.S ?? "").startsWith(values[":firing"].S) && (item["time"]?.S ?? "") < values[":at"].S
-                  : String(body.FilterExpression).startsWith("begins_with(pk, :thread)")
-                    ? (item["pk"]?.S ?? "").startsWith(values[":thread"].S)
-                    : true,
-      )
-      const from = Number(body.ExclusiveStartKey?.index ?? 0)
-      const next = from + 2 < kept.length ? { LastEvaluatedKey: { index: from + 2 } } : {}
-      return reply({ Items: kept.slice(from, from + 2), ...next })
-    }
-    return reply("")
-  }
-}
-
-const note = (id: string, at: string, environment = "production"): StoredNote => ({
-  id,
-  environment,
-  alert: "a1",
-  at,
-  by: "ada",
-  text: `note ${id}`,
-})
-
-const keys = ConfigProvider.fromUnknown({ AWS_ACCESS_KEY_ID: "test", AWS_SECRET_ACCESS_KEY: "secret" })
-
-const withNotes = <A>(
-  use: (notes: NotesService) => Effect.Effect<A, { readonly message: string }>,
-  remote: Layer.Layer<Remote> = liveRemote,
-  endpoint?: string,
-  environment = keys,
-) =>
-  Effect.runPromise(
-    Effect.result(
-      Effect.gen(function* () {
-        return yield* use(yield* Notes)
-      }).pipe(
-        Effect.provide(
-          dynamodbNotes({
-            table: "estate-notes",
-            region: "eu-west-2",
-            ...(endpoint === undefined ? {} : { endpoint }),
-          }).pipe(Layer.provide([remote, platform])),
-        ),
-        Effect.provideService(ConfigProvider.ConfigProvider, environment),
-      ),
-    ),
-  )
+const withNotes = <A>(...asked: Parameters<typeof usingNotes<A>>) => Effect.runPromise(usingNotes(...asked))
 
 describe("impacts in DynamoDB", () => {
   test("are kept beside the notes, one an alert, and neither read nor swept as notes", () => {
@@ -120,48 +35,6 @@ describe("impacts in DynamoDB", () => {
       ])
       expect(read?.notes).toEqual([])
       expect(read?.after.map((each) => each.alert)).toEqual(["SearchSlow"])
-    })
-  })
-})
-
-describe("firings in DynamoDB", () => {
-  test("are kept beside the notes, a firing's end and silence written over its start, and swept by their time", () => {
-    const calls: Call[] = []
-    const firing = {
-      environment: "production",
-      alert: "a1",
-      name: "OrdersSlow",
-      service: "orders",
-      startsAt: "2026-10-02T10:00:00Z",
-    }
-    return withNotes(
-      (notes) =>
-        Effect.gen(function* () {
-          yield* notes.add(note("n1", "2026-10-02T10:01:00Z"))
-          yield* notes.keepFiring(firing)
-          yield* notes.keepFiring({
-            ...firing,
-            endsAt: "2026-10-02T10:20:00Z",
-            silence: { by: "gil", reason: "deploy" },
-          })
-          yield* notes.keepFiring({ ...firing, startsAt: "2026-09-01T10:00:00Z" })
-          yield* notes.keepThread({ ...firing, channel: "C0ORDERS", ts: "1.2", url: "https://slack/p1" })
-          const threads = yield* notes.threads("2026-09-15T00:00:00Z")
-          const read = yield* notes.firings("2026-09-15T00:00:00Z")
-          yield* notes.removeFiringsBefore("2026-09-15T00:00:00Z")
-          return { read, threads, left: yield* notes.firings("2026-01-01T00:00:00Z"), notes: yield* notes.all }
-        }),
-      stubRemote(fakeDynamo(calls)),
-    ).then((result) => {
-      const done = Result.isSuccess(result) ? result.success : undefined
-      expect(done?.read).toEqual([
-        { ...firing, endsAt: "2026-10-02T10:20:00Z", silence: { by: "gil", reason: "deploy" } },
-      ])
-      expect(done?.left.map((each) => each.startsAt)).toEqual(["2026-10-02T10:00:00Z"])
-      expect(done?.threads.map((each) => `${each.alert} ${each.channel} ${each.ts} ${each.url}`)).toEqual([
-        "a1 C0ORDERS 1.2 https://slack/p1",
-      ])
-      expect(done?.notes.map((each) => each.id)).toEqual(["n1"])
     })
   })
 })

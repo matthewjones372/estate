@@ -86,9 +86,11 @@ test("an alert's own page gathers what is around it, and Ask AI reads it and is 
   await expect(around).toContainText("If p99 is high after a deploy, roll back.")
   await page.getByRole("button", { name: "Ask AI" }).click()
   await expect(page.getByText("orders' new version never rolled out")).toBeVisible()
-  await expect(page.getByText("e2e-model · read: Changed · Depends · Errors · Runbook")).toBeVisible()
+  await expect(
+    page.getByText("e2e-model · 1,200 in · 0 out · read: Changed · Depends · Errors · Runbook"),
+  ).toBeVisible()
   await page.getByRole("button", { name: "Keep as note" }).click()
-  await expect(page.getByText("Kept as a note.")).toBeVisible()
+  await expect(page.getByText("Kept as a note, under Notes above")).toBeVisible()
   await accessible(page)
 })
 
@@ -136,16 +138,15 @@ test("an alert is told to its team on Slack once, and its card then links to the
 test("a note added to an alert is there for everyone", async ({ page }) => {
   await page.goto("/?env=production")
   const card = page.getByRole("article").filter({ hasText: "Orders are slow to place" })
+  // Among other cards, notes are one line until opened.
+  await card.getByRole("button", { name: /Show notes|Add a note/ }).click()
   await card.getByRole("textbox", { name: /Add a note/ }).fill("Looking: the payment provider is slow")
   await card.getByRole("button", { name: "Add note" }).click()
-  await expect(card.getByText("Looking: the payment provider is slow")).toBeVisible()
+  await expect(card.locator(".note-body").getByText("Looking: the payment provider is slow")).toBeVisible()
   await page.reload()
-  await expect(
-    page
-      .getByRole("article")
-      .filter({ hasText: "Orders are slow to place" })
-      .getByText("Looking: the payment provider is slow"),
-  ).toBeVisible()
+  const again = page.getByRole("article").filter({ hasText: "Orders are slow to place" })
+  await again.getByRole("button", { name: "Show notes" }).click()
+  await expect(again.locator(".note-body").getByText("Looking: the payment provider is slow")).toBeVisible()
 })
 
 test("an alert silenced with a reason leaves the cards, and comes back when unsilenced", async ({ page }) => {
@@ -223,14 +224,47 @@ test("a service's lines arrive live, pause, filter to errors, and its errors gro
   await expect(logs.getByText("from the cluster", { exact: false })).toBeVisible()
   await logs.getByRole("button", { name: "Pause" }).click()
   await expect(logs.getByRole("button", { name: /new lines?|Resume/ })).toBeVisible()
-  await logs.getByRole("button", { name: "Errors" }).nth(1).click()
+  for (const name of [/^Warn \d/, /^Info \d/, /^Debug \d/, /^Other \d/])
+    await logs.getByRole("button", { name }).click()
   await expect(logs.getByText(/payment provider timed out/).first()).toBeVisible()
   await expect(logs.getByText(/served \/products/)).toHaveCount(0)
-  await logs.getByRole("button", { name: "Errors" }).first().click()
+  await logs.getByRole("button", { name: "Errors", exact: true }).click()
   const group = logs.getByRole("button", { name: /payment provider timed out after ‹n› ms for order ‹n›/ })
   await expect(group).toBeVisible({ timeout: 10_000 })
   await group.click()
   await expect(logs.locator(".examples .log-line").first()).toBeVisible()
+  await accessible(page)
+})
+
+test("a service's lines are searched, a range of them picked, and copied", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"])
+  await page.goto("/services/storefront?env=production")
+  const logs = page.getByRole("region", { name: "Logs" })
+  await logs.getByRole("searchbox").fill("served*ms")
+  const picks = logs.locator(".log-pick")
+  await expect.poll(() => picks.count(), { timeout: 20_000 }).toBeGreaterThanOrEqual(3)
+  await expect(logs.locator(".log-lines mark").first()).toHaveText(/^served .* ms$/)
+  await picks.nth(0).click()
+  await picks.nth(2).click({ modifiers: ["Shift"] })
+  await logs.getByRole("button", { name: "Copy 3 lines" }).click()
+  await expect(logs.getByText("Copied 3 lines")).toBeVisible()
+  const copied = await page.evaluate(() => navigator.clipboard.readText())
+  expect(copied.split("\n").every((line) => /^\S+\tstorefront-\S+\tINFO\t.*served .* ms$/.test(line))).toBe(true)
+  await accessible(page)
+})
+
+test("an alert's earlier firing opens from its History, and says what happened then", async ({ page }) => {
+  await page.goto("/?env=production")
+  const search = page.getByRole("article").filter({ hasText: "Search has not indexed" })
+  await search.getByRole("button", { name: "History" }).click({ timeout: 20_000 })
+  await search.getByRole("list", { name: "Earlier firings of SearchIndexStale" }).getByRole("link").click()
+  await expect(page).toHaveURL(/\/alerts\/[^/]+\/\d{4}-\d\d-\d\dT[\d:.]+Z\?env=production$/)
+  await expect(page.getByRole("heading", { name: "What happened" })).toBeVisible()
+  await expect(page.getByText(/fired .* for 20 min, ended .* · search · production/)).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Errors then" })).toBeVisible()
+  await expect(page.getByRole("img", { name: /^Requests over the firing/ })).toBeVisible()
+  await expect(page.locator(".plot-firing")).toHaveCount(3)
+  await shot(page, "firing")
   await accessible(page)
 })
 

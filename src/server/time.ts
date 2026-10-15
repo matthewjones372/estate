@@ -7,6 +7,9 @@ export const iso = (at: number | Date | string): string => DateTime.formatIso(Da
 /** An instant that may not be there, as ISO text. */
 export const isoOf = (at: Date | undefined): string | undefined => (at === undefined ? undefined : iso(at))
 
+/** Whether two times are the same instant, however each is written; text that is not a time matches only itself. */
+export const sameInstant = (one: string, other: string) => one === other || Date.parse(one) === Date.parse(other)
+
 /** Now, as ISO text. */
 export const isoNow: Effect.Effect<string> = Effect.map(Clock.currentTimeMillis, iso)
 

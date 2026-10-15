@@ -2,13 +2,15 @@
  * What runners send each other: the whole estate once, then the parts that changed, and the writes a runner has made
  * to its tools for the owner to apply. Each is a schema, so a runner decodes what another sent, never trusts it.
  */
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
 import { AgentUsage } from "../../shared/agents"
 import { Catalog } from "../../shared/catalog"
 import { CodeHealth } from "../../shared/code"
 import { Cost } from "../../shared/costs"
 import { Build } from "../../shared/deploys"
-import { Alert, Load, Note, SourceKind } from "../../shared/events"
+import { Alert, Load, SourceKind } from "../../shared/events"
+import { Incident, ReadBack } from "../../shared/incidents"
+import { Note } from "../../shared/note"
 import { Debug, Job, Pod, Series } from "../../shared/workloads"
 import type { EstateState } from "../state"
 import { Patch } from "./patch"
@@ -95,7 +97,14 @@ const Environment = Schema.Struct({
   costs: PartOf(Schema.Record(Schema.String, Cost)),
   tools: Schema.Record(SourceKind, Schema.optionalKey(Schema.String)),
   resolved: Schema.Array(
-    Schema.Struct({ name: Schema.String, labels: Strings, startsAt: Schema.String, endsAt: Schema.String }),
+    Schema.Struct({
+      // An owner older than the alert id on what resolved sends none; its page then links to no firing.
+      alert: Schema.String.pipe(Schema.withDecodingDefaultKey(Effect.succeed(""))),
+      name: Schema.String,
+      labels: Strings,
+      startsAt: Schema.String,
+      endsAt: Schema.String,
+    }),
   ),
   held: optional(Schema.Array(Held)),
 })
@@ -110,6 +119,10 @@ const Firing = Schema.Struct({
   startsAt: Schema.String,
   endsAt: optional(Schema.String),
   silence: optional(Schema.Struct({ by: Schema.String, reason: Schema.String })),
+  severity: optional(Schema.String),
+  summary: optional(Schema.String),
+  runbook: optional(Schema.String),
+  store: optional(Schema.String),
 })
 
 const Thread = Schema.Struct({
@@ -132,6 +145,8 @@ const estateFields = {
   code: optional(PartOf(Schema.Record(Schema.String, CodeHealth))),
   threads: optional(Schema.Array(Thread)),
   impacts: optional(Schema.Array(Impact)),
+  incidents: optional(Schema.Array(Incident)),
+  inTool: optional(Schema.Record(Schema.String, ReadBack)),
 }
 
 const WireEstate = Schema.Struct(estateFields)
@@ -184,6 +199,7 @@ export const Write = Schema.Union([
   Schema.TaggedStruct("ThreadKept", { thread: Thread }),
   Schema.TaggedStruct("DebugShown", { environment: Schema.String, service: Schema.String, debug: Debug }),
   Schema.TaggedStruct("FiringsKept", { firings: Schema.Array(Firing) }),
+  Schema.TaggedStruct("IncidentKept", { incident: Incident }),
 ])
 export type Write = typeof Write.Type
 

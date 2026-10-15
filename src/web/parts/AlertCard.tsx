@@ -1,18 +1,22 @@
 /** @jsxImportSource solid-js */
-/** An alert that needs someone: what fired against its threshold, its notes, Silence, and where to look. */
+/** An alert that needs someone: what fired against its threshold, its notes, Silence, Ask AI, and where to look. */
 import { createMemo, createSignal, For, on, Show } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import type { Alert, CatalogEvent } from "../../shared/events"
 import { reading } from "../chart"
 import { useEstate } from "../context"
-import { amount, clock, initials, since } from "../format"
+import { amount, clock, since } from "../format"
 import { chatOf, onSlack, teamOf } from "../teams"
 import { A, Out } from "./A"
 import { AroundLine } from "./Around"
+import { AskAiAnswer, AskAiButton } from "./AskAi"
 import { History } from "./History"
 import { Impact } from "./Impact"
+import { IncidentChooser, LinkToIncident, PartOf } from "./IncidentLink"
 import { Icon } from "./icons"
-import { ErrorList } from "./Logs"
+import { ErrorList } from "./LogErrors"
+import { MayBelong } from "./MayBelong"
+import { Notes } from "./Notes"
 import { Plot } from "./Plot"
 import { RaiseIncident } from "./RaiseIncident"
 import { TellTeam } from "./TellTeam"
@@ -72,71 +76,6 @@ const Chart = (props: { readonly name: string; readonly chart: AlertChart }) => 
             : `${clock(new Date(read()?.at ?? 0).toISOString())} ${amount(read()?.value)}`}
         </span>
       </div>
-    </div>
-  )
-}
-
-const Notes = (props: { readonly alert: Alert }) => {
-  const { actions, me } = useEstate()
-  const [draft, setDraft] = createSignal("")
-  const notes = () => props.alert.notes
-  const post = () => {
-    const text = draft().trim()
-    if (text === "") return
-    void actions.addNote(props.alert.id, text).then((added) => {
-      if (added) setDraft("")
-    })
-  }
-  return (
-    <div class="alert-notes">
-      <div class="spread">
-        <span class="alert-label">Notes</span>
-        <span class="alert-quiet">
-          {notes().length === 0 ? "none yet" : `${notes().length} note${notes().length > 1 ? "s" : ""}`}
-        </span>
-      </div>
-      <For each={notes()}>
-        {(note) => (
-          <div class="note">
-            <span class="note-avatar" aria-hidden="true">
-              {initials(note.by)}
-            </span>
-            <div style={{ "min-width": 0 }}>
-              <div class="alert-quiet">
-                <strong class="note-who">{note.by}</strong> · {clock(note.at)}
-                <Show when={note.by === me.name || me.role === "operator"}>
-                  {" · "}
-                  <button type="button" class="note-remove" onClick={() => void actions.removeNote(note.id)}>
-                    Remove<span class="visually-hidden"> the note by {note.by}</span>
-                  </button>
-                </Show>
-              </div>
-              <div class="note-text">{note.text}</div>
-            </div>
-          </div>
-        )}
-      </For>
-      <form
-        class="note-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          post()
-        }}
-      >
-        <label class="note-label">
-          <span class="visually-hidden">Add a note to {props.alert.name}</span>
-          <input
-            type="text"
-            value={draft()}
-            onInput={(event) => setDraft(event.currentTarget.value)}
-            placeholder="What you found, or that you are on it"
-            class="amber-input"
-          />
-        </label>
-        <button type="submit" class="amber-button">
-          Add note
-        </button>
-      </form>
     </div>
   )
 }
@@ -206,6 +145,7 @@ export const AlertCard = (props: {
   const { now } = useEstate()
   const [choosing, setChoosing] = createSignal(false)
   const [lines, setLines] = createSignal(false)
+  const [linking, setLinking] = createSignal(false)
   const service = () => props.catalog?.services.find((each) => each.name === props.alert.service)
   const link = (name: string) => service()?.links.find((each) => each.name === name)
   const chat = () => chatOf(teamOf(props.catalog, service()?.owner))
@@ -226,12 +166,21 @@ export const AlertCard = (props: {
         <Show when={props.alert.service}>{(name) => <p class="alert-detail">{name()}</p>}</Show>
       </div>
       <Impact alert={props.alert} />
+      <PartOf incident={props.alert.incident} />
+      <MayBelong
+        suggested={props.alert.suggested}
+        subject={props.alert.service ?? props.alert.store}
+        alert={props.alert.id}
+      />
       <History alert={props.alert} />
       <AroundLine alert={props.alert} />
       <Show when={props.alert.chart}>{(chart) => <Chart name={props.alert.name} chart={chart()} />}</Show>
-      <Notes alert={props.alert} />
+      <Notes alert={props.alert} folded={props.level !== 2} />
       <Show when={choosing()}>
         <Silencing alert={props.alert} close={() => setChoosing(false)} />
+      </Show>
+      <Show when={linking()}>
+        <IncidentChooser alert={props.alert} close={() => setLinking(false)} />
       </Show>
       <Show when={lines() ? props.alert.service : undefined}>
         {(name) => (
@@ -279,6 +228,10 @@ export const AlertCard = (props: {
             </Out>
           )}
         </Show>
+        <AskAiButton alert={props.alert} />
+        <Show when={!linking()}>
+          <LinkToIncident onOpen={() => setLinking(true)} />
+        </Show>
         <Show when={props.alert.service !== undefined}>
           <button type="button" class="amber-button ghost" aria-pressed={lines()} onClick={() => setLines(!lines())}>
             Lines from then
@@ -291,6 +244,7 @@ export const AlertCard = (props: {
           </button>
         </Show>
       </div>
+      <AskAiAnswer alert={props.alert} />
     </article>
   )
 }

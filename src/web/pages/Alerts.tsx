@@ -6,6 +6,8 @@ import { useEstate, useSnapshot } from "../context"
 import { clock, counted, duration, since } from "../format"
 import { A, Out } from "../parts/A"
 import { AlertCard } from "../parts/AlertCard"
+import { LatestNote, SeverityDot } from "../parts/AlertLine"
+import { firingPath } from "../route"
 
 type Filter = "all" | Alert["state"]
 
@@ -102,18 +104,25 @@ export const Alerts = () => {
             <For each={shown()}>
               {(alert) => {
                 const note = () => alert.notes[0]
+                const path = `/alerts/${encodeURIComponent(alert.id)}`
+                // The whole row opens the alert, for a pointer; the title is the link for a keyboard and a reader.
+                const openRow = (event: MouseEvent) => {
+                  const target = event.target
+                  if (target instanceof Element && target.closest("a, button, select, input")) return
+                  actions.navigate(path)
+                }
                 return (
-                  <tr class={alert.state === "silenced" ? "greyed" : ""}>
+                  <tr class={`row-link ${alert.state === "silenced" ? "greyed" : ""}`} onClick={openRow}>
                     <td>
                       <span class="cell-version">
-                        <span
-                          class={`dot ${alert.state === "firing" ? (alert.severity === "critical" ? "critical" : "attention") : "unknown"}`}
-                        />
+                        <SeverityDot alert={alert} />
                         {alert.state}
                       </span>
                     </td>
                     <td>
-                      <div style={{ "font-weight": 600 }}>{alert.summary ?? alert.name}</div>
+                      <A to={path} class="row-title">
+                        {alert.summary ?? alert.name}
+                      </A>
                       <Show when={alert.impact}>
                         {(impact) => <div class="cell-note">Impact: {impact().text}</div>}
                       </Show>
@@ -137,16 +146,8 @@ export const Alerts = () => {
                     </td>
                     <td class="mono">{since(alert.startsAt, now())}</td>
                     <td>
-                      <Show when={note()} fallback={<span class="muted">none</span>}>
-                        {(latest) => (
-                          <>
-                            {latest().text}
-                            <div class="cell-note">
-                              {latest().by} · {clock(latest().at)}
-                            </div>
-                          </>
-                        )}
-                      </Show>
+                      <LatestNote note={note()} />
+                      <Show when={note()}>{(latest) => <div class="cell-note">{clock(latest().at)}</div>}</Show>
                     </td>
                     <td>
                       <div class="choices" style={{ "justify-content": "flex-end" }}>
@@ -200,9 +201,18 @@ export const Alerts = () => {
         <For each={resolved()}>
           {(each) => (
             <div class="silenced-row">
-              <span class="mono" style={{ color: "var(--ink-soft)" }}>
-                {each.name}
-              </span>
+              <Show
+                when={each.alert !== ""}
+                fallback={
+                  <span class="mono" style={{ color: "var(--ink-soft)" }}>
+                    {each.name}
+                  </span>
+                }
+              >
+                <A to={firingPath(each.alert, each.startsAt)} class="mono">
+                  {each.name}
+                </A>
+              </Show>
               <span>{each.service ?? ""}</span>
               <span>
                 resolved at {clock(each.endsAt)} after {duration(Date.parse(each.endsAt) - Date.parse(each.startsAt))}

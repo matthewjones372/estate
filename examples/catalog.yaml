@@ -69,6 +69,8 @@ teams:
     links:
       teams: https://teams.microsoft.com/l/channel/payments
       confluence: https://example.atlassian.net/wiki/spaces/PAY
+    # Its own PagerDuty service for its incidents, where estate.yaml sets incidentTool.pagerduty.
+    # incidentTool: { pagerduty: PDEF456 }
 
 services:
   - name: storefront
@@ -187,6 +189,19 @@ vitals:
   - title: Basket to order
     query: sum(rate(orders_placed_total[1h])) / sum(rate(baskets_created_total[1h])) * 100
     unit: "%"
+
+# A request that crosses the estate, measured from its traces in Tempo: an order, from the storefront to the topic.
+journeys:
+  - name: checkout
+    title: Placing an order
+    environments: [ production ]
+    start: { service: storefront, span: place order }
+    stages:
+      - { title: Reaches orders, where: storefront, from: { start: place order }, to: { start: POST /orders, service: orders } }
+      - { title: Takes the order, where: orders, span: take order }
+      - { title: Written to the outbox, where: db, span: INSERT outbox }
+      - { title: Waits in the outbox, where: db, from: { end: INSERT outbox }, to: { start: publish } }
+      - { title: Published, where: events, span: publish }
 
 map:
   nodes:

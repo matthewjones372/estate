@@ -11,7 +11,7 @@ import { Frame, toWire } from "../src/server/cluster/wire"
 import { platform } from "../src/server/platform"
 import { liveRemote } from "../src/server/remote"
 import { lastHour } from "../src/server/sources/prometheus"
-import { Estate, type EstateState } from "../src/server/state"
+import { Estate, type EstateState, type Part } from "../src/server/state"
 import { stubWeb } from "../src/server/web"
 import { writeEstate } from "./estate"
 import { startTools } from "./tools"
@@ -23,23 +23,6 @@ const [count = 50] = process.argv
 const minute = 60_000
 const encode = Schema.encodeSync(Frame)
 const bytesOf = (frame: Frame) => new TextEncoder().encode(JSON.stringify(encode(frame))).byteLength
-
-const parts = ["metrics", "alerts", "cluster", "deploys", "costs"] as const
-
-/**
- * Done once Estate has no part still waiting for its first read. The tools' calls cannot say so: a read with one
- * slow answer leaves them quiet while it waits, and its first read, the whole part, then lands in the minute.
- */
-const firstReadsDone = (estate: Estate) =>
-  SubscriptionRef.changes(estate).pipe(
-    Stream.filter((state) =>
-      Object.values(state.environments).every((environment) =>
-        parts.every((part) => environment[part].state !== "waiting"),
-      ),
-    ),
-    Stream.take(1),
-    Stream.runDrain,
-  )
 
 /** Done once each environment's metrics have been read again since `then`, whether they answered or failed. */
 const metricsReadAgain = (estate: Estate, then: EstateState) =>
@@ -65,6 +48,23 @@ const intoNextStep = Effect.gen(function* () {
   yield* Effect.sleep((40_000 - (now % step) + step) % step)
 })
 
+const answered = (part: Part<unknown>) => part.state === "off" || part.answeredAt !== undefined
+
+/**
+ * Every part answered once, so its first read, sent whole, is not a change. The tools going quiet does not say so:
+ * a call that hangs until its timeout leaves its part waiting after the tools have answered everything else.
+ */
+const everyPartAnswered = (state: EstateState) =>
+  answered(state.builds) &&
+  Object.values(state.environments).every(
+    (environment) =>
+      answered(environment.metrics) &&
+      answered(environment.alerts) &&
+      answered(environment.cluster) &&
+      answered(environment.deploys) &&
+      answered(environment.costs),
+  )
+
 export const measureFrames = async (size: number) => {
   const tools = startTools(size, 20)
   try {
@@ -84,7 +84,7 @@ export const measureFrames = async (size: number) => {
           }),
         ),
       )
-      yield* firstReadsDone(estate)
+      yield* SubscriptionRef.changes(estate).pipe(Stream.filter(everyPartAnswered), Stream.runHead)
       // A slow first read is old when it lands, so the reads after it are not 30 s apart until the next one.
       yield* metricsReadAgain(estate, yield* SubscriptionRef.get(estate))
       // Time for the frames of those reads to be counted before the minute starts.

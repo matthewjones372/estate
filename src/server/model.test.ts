@@ -94,6 +94,7 @@ describe("the model Ask AI asks", () => {
         model: "claude-opus-5-5",
         called: [],
         tokens: 900,
+        usage: { input: 700, cached: 0, output: 200 },
       })
       expect(results.map((result) => succeeded(result)?.tokens)).toEqual([900, 900, 900, 900, 900])
     })
@@ -191,6 +192,22 @@ describe("the model Ask AI asks", () => {
     })
   })
 
+  test("a refused call says what the provider said, cut short", () => {
+    const claude: Ai = { provider: "anthropic", model: "claude-opus-5-5", apiKey: Redacted.make("ak") }
+    const local: Ai = { provider: "openai-compatible", url: "http://vllm.test/v1", model: "local" }
+    const refusal = (message: string) =>
+      reply({ type: "error", error: { type: "invalid_request_error", message } }, 400)
+    return Promise.all([
+      asking(claude, () => refusal("messages.1.content.0.thinking.thinking: Field required")),
+      asking(local, () => refusal("x".repeat(300))),
+    ]).then((results) =>
+      expect(results.map(failed)).toEqual([
+        "Anthropic answered 400: messages.1.content.0.thinking.thinking: Field required",
+        `the model answered 400: ${"x".repeat(200)}`,
+      ]),
+    )
+  })
+
   test("is told to answer with what it has once its rounds of tools are spent", () => {
     let offered = 0
     const tools: Tools = {
@@ -218,8 +235,8 @@ describe("the model Ask AI asks", () => {
         Effect.provide(liveModel(local).pipe(Layer.provide(stubRemote(insistent)))),
       ),
     ).then((asked) => {
-      expect(offered).toBe(4)
-      expect(asked.called).toEqual(["changes", "changes", "changes", "changes"])
+      expect(offered).toBe(2)
+      expect(asked.called).toEqual(["changes", "changes"])
     })
   })
 })

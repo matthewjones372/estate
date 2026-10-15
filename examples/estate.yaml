@@ -21,6 +21,16 @@ auth:
 # database: { dynamodb: { table: estate-notes, region: eu-west-2 } }
 # notes: { keepDays: 30 }
 
+# How far apart two related firings may start for one to be suggested as part of the other's incident: 30m unless set.
+# incidents: { suggestWithin: 30m }
+
+# The incident tool an operator raises an incident in from its page, one of them: PagerDuty's REST API key, the
+# PagerDuty user it raises as, the service an incident goes to unless its team names its own, and how often it is read
+# back; or incident.io's API key, the severity it raises at by name, and `mode: test` to raise without announcing.
+# incidentTool:
+#   pagerduty: { token: ${PAGERDUTY_TOKEN}, from: estate@example.com, service: PABC123, every: 1m }
+#   incidentio: { token: ${INCIDENTIO_TOKEN}, severity: Minor, mode: standard }
+
 # Backstage, for the catalog's rule that discovers services from it, with a static token that may read its catalog.
 backstage: { url: https://backstage.invalid }
 # backstage: { url: https://backstage.example.com, token: ${BACKSTAGE_TOKEN} }
@@ -78,8 +88,9 @@ builds:
 #     anthropic: { adminKey: ${ANTHROPIC_ADMIN_KEY} }         # an agent's spend, by the workspace its entry names
 #     openai: { adminKey: ${OPENAI_ADMIN_KEY} }               # or by its OpenAI project
 #   every: { costs: 6h }                                      # Cost Explorer charges a call; 6h unless set
-# and what models' tokens cost, per million, for the estimate of an agent's spend between its provider's reports:
-# prices: { claude-sonnet-5-5: { input: 3, output: 15 } }
+# and what models' tokens cost, per million, for the estimate of an agent's spend between its provider's reports and
+# of each Ask AI answer; cachedInput is input read from the provider's cache, at input's price unless set:
+# prices: { claude-sonnet-5-5: { input: 3, output: 15, cachedInput: 0.3 } }
 
 # Ask AI on an alert (optional): one model. The model is named, never chosen for you; Claude Opus 5.5 reads an
 # alert's brief best, Claude Sonnet 5.5 where cost matters. One answer an alert a minute, within a budget of tokens a
@@ -88,6 +99,10 @@ builds:
 # Or OpenAI, xAI or Gemini with their keys (provider: openai, xai or gemini), or a model on your own hardware behind
 # an OpenAI-compatible server, such as vLLM, Ollama or LiteLLM:
 # ai: { provider: openai-compatible, url: http://vllm.internal:8000/v1, model: my-model }
+# What an ask may spend: how hard the model thinks (sent only when set; low is cheapest; a model that does not take it,
+# such as Claude Haiku, is asked without it), the rounds of read tools before it must answer (2 unless set), and how
+# much of one tool's result it reads (4,000 characters unless set).
+#   effort: low, toolRounds: 2, toolResultChars: 4000
 
 # A Slack bot with chat:write, invited to the teams' channels, so an alert's card can tell its team (optional).
 # slack: { token: ${SLACK_BOT_TOKEN} }

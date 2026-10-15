@@ -1,6 +1,6 @@
 /**
  * A service's lines, read from its environment's Loki or Elasticsearch, or else from its pods' own logs through the
- * cluster's API, masked as the catalog says before they go anywhere.
+ * cluster's API, each with what wrote it and its trace, masked as the catalog says before they go anywhere.
  */
 import { Effect, type FileSystem, Schema } from "effect"
 import { kubernetesOf, type Service } from "../../shared/catalog"
@@ -12,7 +12,7 @@ import { datadogLines } from "./datadog-logs"
 import { elasticLines } from "./elastic"
 import { lokiOf, type Reach } from "./grafana"
 import { type Cluster, clusterOf } from "./kubernetes"
-import { errorTest, type Line, lineOf, masking } from "./lines"
+import { errorTest, fieldsOf, type Line, lineOf, masking } from "./lines"
 import { type Failure, SourceFailure } from "./run"
 
 const LokiStreams = Schema.Struct({
@@ -33,6 +33,7 @@ const nanos = (millis: number) => `${Math.floor(millis)}000000`
 const lokiLines = (
   loki: Reach,
   selector: string,
+  fields: ReturnType<typeof fieldsOf>,
   from: number,
   to: number,
   limit: number,
@@ -61,7 +62,10 @@ const lokiLines = (
     return streams.data.result
       .flatMap((stream) =>
         stream.values.map(([at, text]) =>
-          lineOf(iso(Number(at.slice(0, -6))), text, stream.stream["pod"] ?? stream.stream["instance"]),
+          fields(
+            lineOf(iso(Number(at.slice(0, -6))), text, stream.stream["pod"] ?? stream.stream["instance"]),
+            stream.stream,
+          ),
         ),
       )
       .sort((a, b) => a.at.localeCompare(b.at))
@@ -116,7 +120,10 @@ export interface ServiceLogs {
 
 /** A service's lines in an environment: from Loki, Datadog or Elasticsearch, or else its pods in the cluster. */
 export const logsFor = (section: Sources, service: Service): ServiceLogs | undefined => {
-  const mask = masking(service.logs?.mask)
+  const fields = fieldsOf(service.logs?.fields)
+  // Found before masking, so that a mask over the text cannot hide which trace a line is in.
+  const masked = masking(service.logs?.mask)
+  const finished = (line: Line) => masked(fields(line))
   const isError = errorTest(service.logs?.errors)
   const namespace = kubernetesOf(service)?.namespace
   const { datadog, elasticsearch, kubernetes } = section
@@ -128,7 +135,8 @@ export const logsFor = (section: Sources, service: Service): ServiceLogs | undef
     return {
       from: "Loki",
       isError,
-      read: (from, to, limit) => Effect.map(lokiLines(loki, selector, from, to, limit), (lines) => lines.map(mask)),
+      read: (from, to, limit) =>
+        Effect.map(lokiLines(loki, selector, fields, from, to, limit), (lines) => lines.map(finished)),
     }
   }
   if (datadog !== undefined)
@@ -136,14 +144,14 @@ export const logsFor = (section: Sources, service: Service): ServiceLogs | undef
       from: "Datadog",
       isError,
       read: (from, to, limit) =>
-        Effect.map(datadogLines(datadog, service, from, to, limit), (lines) => lines.map(mask)),
+        Effect.map(datadogLines(datadog, service, from, to, limit), (lines) => lines.map(finished)),
     }
   if (elasticsearch !== undefined)
     return {
       from: "Elasticsearch",
       isError,
       read: (from, to, limit) =>
-        Effect.map(elasticLines(elasticsearch, service, from, to, limit), (lines) => lines.map(mask)),
+        Effect.map(elasticLines(elasticsearch, service, from, to, limit), (lines) => lines.map(finished)),
     }
   if (kubernetes === undefined || namespace === undefined) return undefined
   return {
@@ -161,7 +169,7 @@ export const logsFor = (section: Sources, service: Service): ServiceLogs | undef
           .filter((line) => line.at <= iso(to))
           .sort((a, b) => a.at.localeCompare(b.at))
           .slice(-limit)
-          .map(mask)
+          .map(finished)
       }),
   }
 }

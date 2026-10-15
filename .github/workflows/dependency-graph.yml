@@ -1,0 +1,90 @@
+name: dependency-graph
+
+# Hands GitHub the versions bun.lock resolves, so Dependabot's alerts cover every installed package. GitHub's own
+# scan reads only package.json's ranges, so it sees no transitive package and no resolved version. See spec 0045.
+on:
+  push:
+    branches: [main]
+    paths: [bun.lock, .github/workflows/dependency-graph.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Snapshot bun.lock
+        run: |
+          python3 - > snapshot.json <<'PY'
+          import json, os, re, time
+          lock = json.loads(re.sub(r",(\s*[}\]])", r"\1", open("bun.lock").read()))
+          packages = lock["packages"]
+          root = lock["workspaces"][""]
+
+          def names(key):
+              # A key is a path of package names, "parent/child", where a scoped name is two segments.
+              parts, out = key.split("/"), []
+              while parts:
+                  out.append("/".join(parts[:2]) if parts[0].startswith("@") else parts[0])
+                  parts = parts[2:] if parts[0].startswith("@") else parts[1:]
+              return out
+
+          def resolve(parent, name):
+              # Bun keys a nested copy under its parent's path; the nearest one up the path wins.
+              path = names(parent)
+              while path:
+                  key = "/".join(path + [name])
+                  if key in packages:
+                      return key
+                  path = path[:-1]
+              return name if name in packages else None
+
+          def purl(key):
+              name, version = packages[key][0].rsplit("@", 1)
+              return f"pkg:npm/{name.replace('@', '%40')}@{version}"
+
+          def deps(key):
+              meta = packages[key][2] if len(packages[key]) > 2 and isinstance(packages[key][2], dict) else {}
+              names = {**meta.get("dependencies", {}), **meta.get("optionalDependencies", {})}
+              return [k for k in (resolve(key, n) for n in names) if k]
+
+          runtime = set()
+          todo = [k for k in root.get("dependencies", {}) if k in packages]
+          while todo:
+              key = todo.pop()
+              if key not in runtime:
+                  runtime.add(key)
+                  todo += deps(key)
+
+          direct = set(root.get("dependencies", {})) | set(root.get("devDependencies", {}))
+          resolved = {}
+          for key, entry in packages.items():
+              version = entry[0].rsplit("@", 1)[1]
+              if not version[:1].isdigit():
+                  continue
+              # A nested copy of a direct dependency at the same version is still that dependency.
+              seen = resolved.get(purl(key), {}).get("relationship") == "direct"
+              resolved[purl(key)] = {
+                  "package_url": purl(key),
+                  "relationship": "direct" if key in direct or seen else "indirect",
+                  "scope": "runtime" if key in runtime else "development",
+                  "dependencies": [purl(d) for d in deps(key) if packages[d][0].rsplit("@", 1)[1][:1].isdigit()],
+              }
+
+          print(json.dumps({
+              "version": 0,
+              "sha": os.environ["GITHUB_SHA"],
+              "ref": os.environ["GITHUB_REF"],
+              "job": {"correlator": "dependency-graph bun.lock", "id": os.environ["GITHUB_RUN_ID"]},
+              "detector": {"name": "estate bun.lock", "version": "1", "url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}"},
+              "scanned": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+              "manifests": {"bun.lock": {"name": "bun.lock", "file": {"source_location": "bun.lock"}, "resolved": resolved}},
+          }))
+          PY
+      - name: Submit it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api "repos/$GITHUB_REPOSITORY/dependency-graph/snapshots" --input snapshot.json

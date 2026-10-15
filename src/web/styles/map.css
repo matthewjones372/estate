@@ -102,3 +102,53 @@ line.dead {
   stroke-dasharray: none;
   animation: none;
 }
+
+/* A journey on the map (spec 0046): its route over the dimmed map, the nodes it passes through numbered. */
+.map-journeys {
+  flex-wrap: wrap;
+}
+.map-journeying .map-lines line:not(.map-route),
+.map-journeying .map-label {
+  opacity: 0.3;
+}
+.map-route {
+  stroke: var(--link);
+  stroke-dasharray: 8 4;
+  animation: flow 1.1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-route {
+    animation: none;
+  }
+}
+.map-node.map-off-route {
+  opacity: 0.35;
+}
+.map-node.map-on-route {
+  border-color: var(--link);
+  box-shadow: 0 0 0 1px var(--link);
+}
+.map-step {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--link);
+  color: var(--ground);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.map-route-note {
+  margin: 12px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  font-size: 13px;
+}
