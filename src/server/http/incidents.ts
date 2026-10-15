@@ -194,12 +194,16 @@ const readRoute = HttpRouter.add(
       person.role === "operator" && settings.readOnly !== true
         ? mayBelongTo(yield* SubscriptionRef.get(yield* Estate), id, suggestWithin(settings.incidents))
         : undefined
-    const seen = seenBy(events, yield* readsLogs(person.role))
+    const reads = yield* readsLogs(person.role)
+    const seen = seenBy(events, reads)
     const estate = yield* SubscriptionRef.get(yield* Estate)
     const services = incidentServices(estate, incident)
     const window = incidentWindow(incident, leadMinutes(settings.incidents), yield* isoNow)
     const versions = versionsOf(events, services, estate.catalog.services)
-    const evidence = yield* (yield* Notes).evidence(id)
+    // Logs kept as evidence are logs still, so a reader who may not read them here reads the sets without them.
+    const evidence = (yield* (yield* Notes).evidence(id)).map(({ logs, ...set }) =>
+      reads && logs !== undefined ? { ...set, logs } : set,
+    )
     return json(
       compact({ incident, events: seen, services, versions, evidence, window, suggested, inTool: estate.inTool?.[id] }),
     )

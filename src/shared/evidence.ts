@@ -3,6 +3,7 @@
  * and its export can draw them once the metrics are gone. Each keep is a set of its own, beside the earlier ones.
  */
 import { Schema } from "effect"
+import { ErrorGroups, LogLine } from "./log-events"
 
 const optional = Schema.optionalKey
 
@@ -19,6 +20,20 @@ export const KeptChart = Schema.Struct({
 })
 export type KeptChart = typeof KeptChart.Type
 
+export const KeptLogs = Schema.Struct({
+  service: Schema.String,
+  environment: Schema.String,
+  /** Where the lines came from, as the page names it. */
+  from: Schema.String,
+  /** Its errors over the window, grouped by message. */
+  errors: ErrorGroups.fields.groups,
+  /** Its lines, errors first then the newest, up to `incidents.evidence.lines`, oldest first, masked. */
+  lines: Schema.Array(LogLine),
+  /** The lines read and not kept, past `incidents.evidence.lines`. */
+  leftOut: Schema.Number,
+})
+export type KeptLogs = typeof KeptLogs.Type
+
 export const EvidenceSet = Schema.Struct({
   id: Schema.String,
   keptAt: Schema.String,
@@ -26,5 +41,7 @@ export const EvidenceSet = Schema.Struct({
   /** The window the charts cover, in seconds since the epoch, and the step between points. */
   window: Schema.Struct({ start: Schema.Number, end: Schema.Number, step: Schema.Number }),
   charts: Schema.Array(KeptChart),
+  /** Each service's logs; none for a reader who may not read logs. */
+  logs: optional(Schema.Array(KeptLogs)),
 })
 export type EvidenceSet = typeof EvidenceSet.Type
