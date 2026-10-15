@@ -1,6 +1,7 @@
 /**
  * An incident's traces kept as evidence (spec 0047): for each journey through one of its services, the ten slowest and
- * the ten failed in its window; then up to twenty more that its kept log lines name. Each read whole from Tempo.
+ * the ten failed in its window; then up to twenty more that its kept log lines name. Each read whole from Tempo; a
+ * search Tempo does not answer is named.
  */
 import { Effect, SubscriptionRef } from "effect"
 import type { Catalog } from "../shared/catalog"
@@ -34,7 +35,7 @@ export const tracesOf = (
 ) =>
   Effect.gen(function* () {
     const tempo = tempoOf(sources)
-    if (tempo === undefined) return []
+    if (tempo === undefined) return { traces: [], missing: [] }
     const journeys = journeysIn(catalog, environment).filter((journey) =>
       servicesOf(catalog, journey).some((service) => services.includes(service)),
     )
@@ -54,10 +55,16 @@ export const tracesOf = (
             ...kept("failed", slowestFirst.filter(failed)),
           ]
         }),
-        Effect.orElseSucceed(() => []),
+        Effect.map((traces) => ({ traces, missing: [] })),
+        Effect.catch((failure) =>
+          Effect.succeed({
+            traces: [],
+            missing: [`the traces of journey ${journey.name} in ${environment}: ${failure.message}`],
+          }),
+        ),
       ),
     )
-    const journeyed = [...new Map(sampledOf.flat().map((trace) => [trace.id, trace])).values()]
+    const journeyed = [...new Map(sampledOf.flatMap((each) => each.traces).map((trace) => [trace.id, trace])).values()]
     const ids = new Set(journeyed.map((trace) => trace.id))
     const mentioned = [
       ...new Set(
@@ -69,7 +76,10 @@ export const tracesOf = (
       .filter((id) => !ids.has(id))
       .slice(0, named)
     const read = yield* Effect.forEach(mentioned, (id) => whole(tempo, id), { concurrency: 4 })
-    return [...journeyed, ...read.flat().map((trace): KeptTrace => ({ ...trace, environment, why: "named" }))]
+    return {
+      traces: [...journeyed, ...read.flat().map((trace): KeptTrace => ({ ...trace, environment, why: "named" }))],
+      missing: sampledOf.flatMap((each) => each.missing),
+    }
   })
 
 /** A trace an incident kept as evidence, from the newest set that holds it; none where no incident kept it. */

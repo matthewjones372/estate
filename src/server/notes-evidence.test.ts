@@ -62,6 +62,34 @@ describe("an incident's evidence", () => {
       expectations,
     ))
 
+  test("is kept in DynamoDB whole, however much larger it is than an item may hold", () => {
+    const large: EvidenceSet = {
+      ...set("large", "2026-10-12T16:00:00.000Z"),
+      logs: [
+        {
+          service: "orders",
+          environment: "staging",
+          from: "Loki",
+          errors: [],
+          // About a megabyte of lines that do not compress to nothing.
+          lines: Array.from({ length: 2000 }, (_, index) => ({
+            at: "2026-10-12T15:00:00.000Z",
+            text: `${index} ${crypto.randomUUID()} ${"order written to the outbox ".repeat(12)}${crypto.randomUUID()}`,
+          })),
+          leftOut: 0,
+        },
+      ],
+    }
+    return Effect.runPromise(
+      usingNotes(
+        (notes) => Effect.andThen(notes.keepEvidence("i1", large), notes.evidence("i1")),
+        stubRemote(fakeDynamo([])),
+      ),
+    ).then((result) => {
+      expect(Result.isSuccess(result) ? result.success : []).toEqual([large])
+    })
+  })
+
   test("is kept in DynamoDB beside the notes, a set at a time, read oldest first", () =>
     Effect.runPromise(usingNotes(keepAndRead, stubRemote(fakeDynamo([])))).then((result) => {
       expect(Result.isSuccess(result)).toBe(true)
