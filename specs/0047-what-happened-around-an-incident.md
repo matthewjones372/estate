@@ -250,7 +250,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
       the server; *Everything (zip)*; an `exported` event.
       Done when: the zip of an incident holds each file, `incident.json` decodes as the shared schema, each SVG has
       the window and an event mark, and the CSV opens with one row an event.
-- [ ] **`spec-0047-export-readers`** — a viewer's page and zip leave out what `auth.logs` and 0041 keep from them,
+- [x] **`spec-0047-export-readers`** — a viewer's page and zip leave out what `auth.logs` and 0041 keep from them,
       and say so; a live export says it is live.
       Done when: a viewer's zip has no `logs/` or `traces/` where logs are for operators, and its manifest says why;
       an export before evidence is kept has `"live": true`.

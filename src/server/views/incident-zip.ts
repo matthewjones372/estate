@@ -17,6 +17,8 @@ export interface Exporting {
   /** Whether this reader may read logs here: if not, the logs and traces are left out, and the manifest says so. */
   readonly readsLogs: boolean
   readonly catalog: string
+  /** Its evidence was read from the sources as it was exported, none having been kept. */
+  readonly live: boolean
 }
 
 const safe = (name: string) => name.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "incident"
@@ -167,7 +169,7 @@ export const incidentZip = (exporting: Exporting): ReadonlyArray<readonly [strin
     estate: estateVersion,
     catalog: exporting.catalog,
     window: record.window,
-    live: false,
+    live: exporting.live,
     ...(set === undefined ? {} : { keptBy: set.keptBy, keptAt: set.keptAt }),
     sources: [
       ...(set?.charts ?? []).map((chart) => ({ source: "metrics", asked: chart.query })),
