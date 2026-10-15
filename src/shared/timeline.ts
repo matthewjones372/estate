@@ -34,6 +34,7 @@ export const EventKind = Schema.Literals([
   "version-seen",
   "happened",
   "evidence-kept",
+  "exported",
 ])
 export type EventKind = typeof EventKind.Type
 
@@ -139,6 +140,7 @@ export const said = (event: FiringEvent): string => {
     case "version-seen":
     case "happened":
     case "evidence-kept":
+    case "exported":
       return event.text
   }
 }

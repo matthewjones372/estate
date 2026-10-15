@@ -8,11 +8,11 @@ import { Effect, Layer, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerResponse } from "effect/http"
 import { seenBy } from "../../shared/timeline"
 import type { ExportedFiring, TimelineExport } from "../../shared/timeline-export"
-import { incidentTimeline } from "../incident-timeline"
 import { Notes } from "../notes"
 import { Estate } from "../state"
-import { exportedFiring, incidentFirings } from "../views/timeline-export"
+import { exportedFiring } from "../views/timeline-export"
 import { fileName, markdownOf } from "../views/timeline-markdown"
+import { timelineFor } from "./incident-read"
 import { json, readsLogs, refused, searchParams, withRole } from "./routes"
 
 const Format = Schema.optionalKey(Schema.Literals(["md", "json"]))
@@ -72,15 +72,7 @@ const incidentRoute = HttpRouter.add(
     const estate = yield* SubscriptionRef.get(yield* Estate)
     const incident = (estate.incidents ?? []).find((each) => each.id === id)
     if (incident === undefined) return yield* missing("there is no such incident")
-    const firings = incidentFirings(estate, incident)
-    // Each event on a firing names its alert; one on the incident itself names none.
-    const events = (yield* incidentTimeline(incident)).map(({ environment, alert, ...event }) => {
-      const name = firings.find((each) => each.environment === environment && each.alert === alert)?.name
-      return name === undefined ? event : { ...event, alert: name }
-    })
-    const seen = seenBy(events, yield* readsLogs(person.role))
-    const { title, firings: _, ...kept } = incident
-    return exported({ title, incident: kept, firings, events: seen }, incident.openedAt, format)
+    return exported(yield* timelineFor(incident, yield* readsLogs(person.role)), incident.openedAt, format)
   }).pipe(
     Effect.catchTag("SourceFailure", (failure) => Effect.succeed(json({ message: failure.message }, 503))),
     Effect.catchTag("Refusal", refused),
