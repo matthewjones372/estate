@@ -7,7 +7,9 @@ import { createEffect, createSignal, For, on, Show } from "solid-js"
 import type { JourneySample } from "../../shared/traces"
 import { useEstate, useSnapshot } from "../context"
 import { took } from "../format"
+import { pathOf } from "../route"
 import { ExampleLanes } from "./ExampleLanes"
+import { Icon } from "./icons"
 
 type Percentile = "p50" | "p99"
 
@@ -37,17 +39,20 @@ const Read = (props: { readonly sample: JourneySample }) => {
   const total = () => spreadAt(props.sample.total, at()) ?? 0
   const answered = () => spreadAt(props.sample.answered, at()) ?? 0
   const largest = () => largestOf(props.sample, at())
+  // A share of the stages' time, as the bar draws it: a stage's p99 can be longer than the whole journey's p99, when
+  // the traces slow in that stage are not the ones slow overall.
   const share = () => {
     const stage = props.sample.stages[largest()]
-    return stage === undefined || total() === 0 ? 0 : Math.round((100 * (spreadAt(stage, at()) ?? 0)) / total())
+    const all = props.sample.stages.reduce((sum, each) => sum + (spreadAt(each, at()) ?? 0), 0)
+    return stage === undefined || all === 0 ? 0 : Math.round((100 * (spreadAt(stage, at()) ?? 0)) / all)
   }
   return (
     <>
       <div class="journey-top">
         <div class="stack" style={{ gap: "6px" }}>
           <p class="journey-headline">
-            It reaches its end in {took(total())} at {at()}. {share()}% of that is{" "}
-            {props.sample.stages[largest()]?.title}.
+            It reaches its end in {took(total())} at {at()}. {props.sample.stages[largest()]?.title} is {share()}% of
+            the time its stages take.
           </p>
           <p class="muted">
             The caller has an answer in {took(answered())}. {props.sample.sampled} traces from the last{" "}
@@ -137,6 +142,40 @@ const Read = (props: { readonly sample: JourneySample }) => {
   )
 }
 
+/** The journey someone asked to see from a link, for its panel to open itself and come into view. */
+const [asked, setAsked] = createSignal<string | undefined>()
+
+/** A journey a service is part of, among its links: to its page, with the journey's panel open. */
+export const JourneyLinks = (props: { readonly service: string }) => {
+  const { actions } = useEstate()
+  const snapshot = useSnapshot()
+  const journeys = () =>
+    (snapshot.events.catalog?.journeys ?? []).filter((journey) => journey.services.includes(props.service))
+  const to = () => pathOf({ page: "service", name: props.service })
+  return (
+    <For each={journeys()}>
+      {(journey) => (
+        <a
+          href={to()}
+          class="link-chip"
+          title="Where its time goes, from its recent traces"
+          onClick={(event) => {
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
+            event.preventDefault()
+            setAsked(journey.name)
+            if (window.location.pathname !== to()) actions.navigate(to())
+            // The service's page draws as it is navigated to, so its panel has seen the ask by now.
+            setTimeout(() => setAsked(undefined), 0)
+          }}
+        >
+          <Icon name="traces" />
+          {journey.title}
+        </a>
+      )}
+    </For>
+  )
+}
+
 /** Closed until asked: a sample is many reads of Tempo, and a lot to take in beside the rest of the page. */
 const JourneyPanel = (props: { readonly name: string; readonly title: string }) => {
   const { actions } = useEstate()
@@ -151,8 +190,15 @@ const JourneyPanel = (props: { readonly name: string; readonly title: string }) 
     }),
   )
   const id = () => `journey-${props.name}`
+  let section: HTMLElement | undefined
+  createEffect(() => {
+    if (asked() !== props.name) return
+    setOpen(true)
+    // After the page has drawn, so the panel is where it will stay.
+    setTimeout(() => section?.scrollIntoView({ behavior: "smooth", block: "start" }), 0)
+  })
   return (
-    <section aria-labelledby={id()} class="panel section-box">
+    <section aria-labelledby={id()} class="panel section-box" ref={section}>
       <div class="journey-head">
         <div class="stack" style={{ gap: "4px" }}>
           <h2 id={id()} class="section-title">

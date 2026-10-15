@@ -112,7 +112,7 @@ describe("a trace", () => {
         answered: 20,
         total: 319,
         lanes: [{ id: "storefront" }, { id: "orders" }, { id: "db", title: "Orders DB" }],
-        cut: { from: 18, to: 318 },
+        cut: { from: 20, to: 318 },
       })
       expect(gone).toEqual([502, { message: "Tempo answered 404: not found" }])
     }))

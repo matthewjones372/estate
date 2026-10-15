@@ -10,6 +10,7 @@ import { CodeLine } from "./CodeLine"
 import { CostLine } from "./CostLine"
 import { FoundMark } from "./Found"
 import { Icon } from "./icons"
+import { JourneyLinks } from "./Journey"
 import { pipelineOf, Rail } from "./Rail"
 import { Spark } from "./Sparkline"
 
@@ -54,6 +55,7 @@ export const Links = (props: { readonly service: Pick<Described, "name" | "links
         </Out>
       )}
     </For>
+    <JourneyLinks service={props.service.name} />
   </nav>
 )
 

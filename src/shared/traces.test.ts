@@ -156,7 +156,19 @@ describe("a trace's view", () => {
       "bus → shop",
       "shop → web",
     ])
-    expect(view.cut).toEqual({ from: 47, to: 1012 })
+    expect(view.cut).toEqual({ from: 49, to: 1012 })
+  })
+
+  test("cuts only the part of the long wait where nothing else runs", () => {
+    const busy: Trace = {
+      id: "t1",
+      spans: [
+        ...adoption("t1").spans,
+        // The shop calls the registry again after writing the outbox, while the event waits for the relay.
+        span("k", "shop", "POST /keeper", 50, 80, { kind: "client", parent: "c" }),
+      ],
+    }
+    expect(traceView(busy, lanes, journey).cut).toEqual({ from: 80, to: 1012 })
   })
 
   test("draws a trace that is no journey's by its services, from its earliest span", () => {
