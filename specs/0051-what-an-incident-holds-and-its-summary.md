@@ -146,8 +146,8 @@ the 300-line limit, so the incident actions move out of it first.
 - [x] **`spec-0051-connect-split`** — the incident actions out of `connect.ts` into `connect-incidents.ts`, no change
       in behaviour.
       Done when: the gate passes and `connect.ts` is well under 300 lines.
-- [ ] **`spec-0051-included`** — `POST /api/incidents/:id/included` for chart, lines, errors and trace; kept as a
-      one-item set; `included` and `evidence-removed` events; `DELETE` to remove; the limit and the logs rule held.
+- [x] **`spec-0051-included`** — `POST /api/incidents/:id/included` for chart, lines and errors (traces with
+      `spec-0051-include-traces`); kept as a one-item set; `included` and `evidence-removed` events; `DELETE` to remove; the limit and the logs rule held.
       Done when: each kind is kept and read back in each notes store; a chart's query comes from the catalog; a viewer
       where logs are for operators is refused lines; past the limit is refused with the room left; a removal hides
       the item and keeps the event.

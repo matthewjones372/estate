@@ -29,7 +29,14 @@ import { incidentServices, incidentWindow } from "./views/incident-scope"
 const loadKinds = ["requests", "errors", "p99"] as const
 
 /** The charts of one service or store in one environment, each with its query. */
-const chartsOf = (catalog: Catalog, ranges: Ranges, name: string, environment: string, span: Span, end: number) => {
+export const chartsOf = (
+  catalog: Catalog,
+  ranges: Ranges,
+  name: string,
+  environment: string,
+  span: Span,
+  end: number,
+) => {
   const service = catalog.services.find((each) => each.name === name)
   if (service !== undefined)
     return Effect.map(

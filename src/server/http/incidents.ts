@@ -22,6 +22,7 @@ import { incidentDismissedRoute } from "./incident-dismissed"
 import { incidentEvidenceRoute } from "./incident-evidence"
 import { incidentExportRoute } from "./incident-export"
 import { incidentHappenedRoute } from "./incident-happened"
+import { incidentIncludedRoutes } from "./incident-included"
 import { incidentNoteRoutes } from "./incident-notes"
 import { incidentRaiseRoute } from "./incident-raise"
 import { recordFor } from "./incident-read"
@@ -226,5 +227,6 @@ export const incidentRoutes = Layer.mergeAll(
   incidentServicesRoute,
   incidentHappenedRoute,
   incidentEvidenceRoute,
+  incidentIncludedRoutes,
   incidentExportRoute,
 )

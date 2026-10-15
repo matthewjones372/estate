@@ -38,8 +38,8 @@ export type KeptLogs = typeof KeptLogs.Type
 export const KeptTrace = Schema.Struct({
   id: Schema.String,
   environment: Schema.String,
-  /** Among its journey's slowest or failed in the window, or named by a kept log line. */
-  why: Schema.Literals(["slowest", "failed", "named"]),
+  /** Among its journey's slowest or failed in the window, named by a kept log line, or included by a person. */
+  why: Schema.Literals(["slowest", "failed", "named", "included"]),
   journey: optional(Schema.String),
   spans: Schema.Array(TraceSpan),
 })
@@ -58,5 +58,13 @@ export const EvidenceSet = Schema.Struct({
   traces: optional(Schema.Array(KeptTrace)),
   /** What was not kept, past a limit or from a source that did not answer, each said in a line. */
   leftOut: optional(Schema.Array(Schema.String)),
+  /** Included by a person from where they found it (spec 0051), one item, rather than kept whole by Estate. */
+  from: optional(Schema.Literals(["included"])),
+  /** Why it was included, in their words. */
+  why: optional(Schema.String),
 })
 export type EvidenceSet = typeof EvidenceSet.Type
+
+/** The sets Estate kept whole, on close or when an operator kept them, without what people included one at a time. */
+export const keptByEstate = (sets: ReadonlyArray<EvidenceSet> | undefined) =>
+  (sets ?? []).filter((set) => set.from === undefined)
