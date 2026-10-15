@@ -45,13 +45,20 @@ const incidentLines = (incident: NonNullable<TimelineExport["incident"]>) => [
   ...line("Incident tool", incident.link),
 ]
 
-const table = (record: TimelineExport) => {
+const table = (record: TimelineExport, sources: boolean) => {
   const many = record.incident !== undefined
-  const head = many ? ["At (UTC)", "Who", "Alert", "What"] : ["At (UTC)", "Who", "What"]
+  const head = [
+    ...(many ? ["At (UTC)", "Who", "Alert", "What"] : ["At (UTC)", "Who", "What"]),
+    ...(sources ? ["Source"] : []),
+  ]
   const rows = record.events.map((event) => {
     const what = event.link === undefined ? said(event) : `${said(event)} (<${event.link}>)`
     const on = onIncident(event) || event.alert === undefined ? "(incident)" : event.alert
-    const cells = many ? [utc(event.at), event.by, on, what] : [utc(event.at), event.by, what]
+    const kept = event.source === "seen" ? "seen" : `${event.source}, kept ${utc(event.recordedAt)}`
+    const cells = [
+      ...(many ? [utc(event.at), event.by, on, what] : [utc(event.at), event.by, what]),
+      ...(sources ? [kept] : []),
+    ]
     return `| ${cells.map(cell).join(" | ")} |`
   })
   return rows.length === 0
@@ -80,7 +87,8 @@ const notes = (record: TimelineExport) => {
   return sections.length === 0 ? ["No notes were kept.", ""] : sections
 }
 
-export const markdownOf = (record: TimelineExport): string => {
+/** The timeline as Markdown; with `sources`, each event says how it was kept, and `more` follows the notes. */
+export const markdownOf = (record: TimelineExport, sources = false, more: ReadonlyArray<string> = []): string => {
   const head =
     record.incident === undefined
       ? record.firings.flatMap(about)
@@ -97,11 +105,12 @@ export const markdownOf = (record: TimelineExport): string => {
     "",
     "## Timeline",
     "",
-    ...table(record),
+    ...table(record, sources),
     "",
     "## Notes",
     "",
     ...notes(record),
+    ...more,
   ]
     .join("\n")
     .replace(/\n+$/, "\n")

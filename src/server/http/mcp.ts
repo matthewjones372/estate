@@ -1,13 +1,14 @@
 /** `/mcp` over streamable HTTP: Effect's McpServer with Estate's read tools, gated by bearer tokens. */
 import { Layer } from "effect"
 import { McpProtocol, McpServer } from "effect/ai"
+import { estateVersion } from "../version"
 import { alertHandlers, alertToolkit } from "./mcp-alerts"
 import { mcpAuth } from "./mcp-auth"
 import { mcpHandlers, mcpToolkit } from "./mcp-tools"
 
 const server = McpServer.layerHttp({
   name: "estate",
-  version: "0.1.0",
+  version: estateVersion,
   description: "Ask Estate: the same estate a person sees on the page.",
   path: "/mcp",
   protocols: [McpProtocol.v2025_03_26, McpProtocol.v2025_06_18, McpProtocol.v2025_11_25],

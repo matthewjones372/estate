@@ -56,7 +56,7 @@ describe("a timeline to take away", () => {
     expect(said(page.container)).toBe("Copied")
   })
 
-  test("is on an incident's page, whose routes take no environment", async () => {
+  test("is on an incident's page, whose routes take no environment, with everything kept as a zip", async () => {
     clipboard()
     const page = mount(() => <IncidentPage id="i1" />)
     await page.settle()
@@ -66,6 +66,7 @@ describe("a timeline to take away", () => {
     expect(downloads(page.container)).toEqual([
       ["Markdown", "/api/incidents/i1/timeline?format=md", true],
       ["JSON", "/api/incidents/i1/timeline?format=json", true],
+      ["Everything (zip)", "/api/incidents/i1/export?format=zip", true],
     ])
     page.click(page.button("Copy as Markdown"))
     await page.settle()

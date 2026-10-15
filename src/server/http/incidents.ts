@@ -6,27 +6,25 @@
 import { Effect, Layer, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { compact } from "../../shared/compact"
-import { versionsOf } from "../../shared/incident-versions"
 import type { Incident } from "../../shared/incidents"
 import { longestNote } from "../../shared/note"
-import { seenBy } from "../../shared/timeline"
 import { keepEvidence } from "../evidence"
 import { happened, happenedOnEach } from "../happened"
-import { incidentTimeline } from "../incident-timeline"
-import { Notes, sameFiring } from "../notes"
+import { sameFiring } from "../notes"
 import type { FiringKey } from "../notes-events"
 import { keepAtClose, keepRunUp } from "../rebuilt"
 import { Configured } from "../settings"
-import { leadMinutes, suggestWithin } from "../settings-incidents"
+import { suggestWithin } from "../settings-incidents"
 import { Estate } from "../state"
 import { isoNow, sameInstant } from "../time"
-import { incidentServices, incidentWindow } from "../views/incident-scope"
 import { mayBelongTo } from "../views/suggested"
 import { incidentDismissedRoute } from "./incident-dismissed"
 import { incidentEvidenceRoute } from "./incident-evidence"
+import { incidentExportRoute } from "./incident-export"
 import { incidentHappenedRoute } from "./incident-happened"
 import { incidentNoteRoutes } from "./incident-notes"
 import { incidentRaiseRoute } from "./incident-raise"
+import { recordFor } from "./incident-read"
 import {
   answered,
   keep,
@@ -187,26 +185,15 @@ const readRoute = HttpRouter.add(
     const person = yield* withRole
     const { id = "" } = yield* HttpRouter.params
     const incident = yield* named(id)
-    const events = yield* incidentTimeline(incident)
     const settings = yield* Configured
+    const estate = yield* SubscriptionRef.get(yield* Estate)
     // Suggestions are offers to link, so only someone who may link reads them.
     const suggested =
       person.role === "operator" && settings.readOnly !== true
-        ? mayBelongTo(yield* SubscriptionRef.get(yield* Estate), id, suggestWithin(settings.incidents))
+        ? mayBelongTo(estate, id, suggestWithin(settings.incidents))
         : undefined
-    const reads = yield* readsLogs(person.role)
-    const seen = seenBy(events, reads)
-    const estate = yield* SubscriptionRef.get(yield* Estate)
-    const services = incidentServices(estate, incident)
-    const window = incidentWindow(incident, leadMinutes(settings.incidents), yield* isoNow)
-    const versions = versionsOf(events, services, estate.catalog.services)
-    // Logs and traces kept as evidence are logs still, so a reader who may not read them here reads sets without.
-    const evidence = (yield* (yield* Notes).evidence(id)).map(({ logs, traces, ...set }) =>
-      reads ? { ...set, ...(logs === undefined ? {} : { logs }), ...(traces === undefined ? {} : { traces }) } : set,
-    )
-    return json(
-      compact({ incident, events: seen, services, versions, evidence, window, suggested, inTool: estate.inTool?.[id] }),
-    )
+    const record = yield* recordFor(incident, yield* readsLogs(person.role))
+    return json(compact({ ...record, suggested, inTool: estate.inTool?.[id] }))
   }).pipe(answered),
 )
 
@@ -236,4 +223,5 @@ export const incidentRoutes = Layer.mergeAll(
   incidentServicesRoute,
   incidentHappenedRoute,
   incidentEvidenceRoute,
+  incidentExportRoute,
 )

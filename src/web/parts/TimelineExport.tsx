@@ -1,6 +1,9 @@
 /** @jsxImportSource solid-js */
-/** Beside a timeline's heading: Copy as Markdown, saying whether it was copied, and Download as Markdown or JSON. */
-import { createSignal } from "solid-js"
+/**
+ * Beside a timeline's heading: Copy as Markdown, saying whether it was copied, and Download as Markdown or JSON; an
+ * incident's also as a zip of everything kept of it.
+ */
+import { createSignal, Show } from "solid-js"
 import { useEstate, useSnapshot } from "../context"
 import { type Exported, timelinePath } from "../timeline-path"
 
@@ -42,6 +45,17 @@ export const TimelineExport = (props: { readonly of: Exported }) => {
       <a href={href("json")} download="" aria-label="Download the timeline as JSON">
         JSON
       </a>
+      <Show when={"incident" in props.of ? props.of.incident : undefined}>
+        {(incident) => (
+          <a
+            href={`/api/incidents/${encodeURIComponent(incident())}/export?format=zip`}
+            download=""
+            aria-label="Download everything kept of the incident as a zip"
+          >
+            Everything (zip)
+          </a>
+        )}
+      </Show>
       {/* There before it says anything: a status that appears with its words is not read out. */}
       <span class="muted" role="status">
         {outcome() ?? ""}
