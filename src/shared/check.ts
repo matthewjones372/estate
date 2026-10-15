@@ -5,6 +5,7 @@
 import { Result } from "effect"
 import { Catalog, ecsOf, kubernetesOf } from "./catalog"
 import { discoverMistakes } from "./check-discover"
+import { journeyMistakes } from "./check-journeys"
 import { checkShape, type Mistake } from "./shape"
 import { statsOf } from "./stats"
 import { rulesOf } from "./stores"
@@ -220,6 +221,6 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
 export const checkCatalog = (input: unknown): Result.Result<Catalog, ReadonlyArray<Mistake>> => {
   const shaped = checkShape(Catalog, input)
   if (Result.isFailure(shaped)) return shaped
-  const mistakes = [...sense(shaped.success), ...discoverMistakes(shaped.success)]
+  const mistakes = [...sense(shaped.success), ...discoverMistakes(shaped.success), ...journeyMistakes(shaped.success)]
   return mistakes.length === 0 ? Result.succeed(shaped.success) : Result.fail(mistakes)
 }

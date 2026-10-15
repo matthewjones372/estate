@@ -12,6 +12,7 @@ import { CostLine } from "../parts/CostLine"
 import { DebugPanel } from "../parts/Debug"
 import { FoundEntry } from "../parts/Found"
 import { Jobs } from "../parts/Jobs"
+import { Journeys } from "../parts/Journey"
 import { HealthLine, Links } from "../parts/Lane"
 import { LogsPanel } from "../parts/Logs"
 import { ServiceAlerts } from "../parts/ServiceAlerts"
@@ -74,6 +75,7 @@ export const ServicePage = (props: { readonly name: string }) => {
         <div class="row">
           <div class="stack" style={{ flex: "999 1 640px", "min-width": 0, gap: "24px" }}>
             <Load name={props.name} hour={state()?.load} read={actions.load} alerts={alerts()} />
+            <Journeys service={props.name} />
             <LogsPanel service={props.name} />
             <ServicePods pods={state()?.pods ?? []} />
             <section aria-labelledby="jobs" class="stack">

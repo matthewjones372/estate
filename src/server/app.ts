@@ -21,6 +21,7 @@ import { debugOffRoute, debugOnRoute } from "./http/debug"
 import { firingEventsRoute, firingRoute } from "./http/firings"
 import { impactRoute } from "./http/impacts"
 import { incidentRoutes } from "./http/incidents"
+import { journeyRoute, traceRoute } from "./http/journeys"
 import { kioskRoute } from "./http/kiosk"
 import { loadRoute, storeLoadRoute } from "./http/load"
 import { errorsRoute, logsRoute } from "./http/logs"
@@ -120,6 +121,8 @@ export const application = Layer.mergeAll(
   logsRoute,
   errorsRoute,
   agentRunsRoute,
+  journeyRoute,
+  traceRoute,
   aroundRoute,
   firingRoute,
   firingEventsRoute,

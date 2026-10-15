@@ -2,7 +2,7 @@
 import { Config, Effect, type FileSystem, Option, Redacted, Schema } from "effect"
 import { readText } from "../platform"
 import { callJson, type Remote, type RemoteError } from "../remote"
-import type { Kubernetes } from "../settings"
+import type { Kubernetes } from "../settings-kubernetes"
 import { type Failure, SourceFailure } from "./run"
 
 export interface Cluster {

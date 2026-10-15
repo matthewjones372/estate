@@ -7,6 +7,7 @@ import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
 import { incidentActions } from "./fixture-incidents"
 import { groups, lines } from "./fixture-logs"
+import { journeySample, orderTrace, refusedTrace } from "./fixture-traces"
 
 /** Two runs of the triage agent, as Langfuse would give them: one failed, one through. */
 const runs = [
@@ -194,6 +195,16 @@ export const recording = (): Recorded => {
       errors: (service, window) => {
         calls.push(["errors", service, window])
         return Promise.resolve(service === "storefront" ? groups : "none")
+      },
+      journey: (journey) => {
+        calls.push(["journey", journey])
+        return Promise.resolve(journey === "order" ? journeySample : journey === "broken" ? undefined : "none")
+      },
+      trace: (id, journey) => {
+        calls.push(["trace", id, journey])
+        return Promise.resolve(
+          id === "t4" ? refusedTrace : id === "t3" ? undefined : ["t1", "t2"].includes(id) ? orderTrace : "none",
+        )
       },
       runs: (agent) => {
         calls.push(["runs", agent])

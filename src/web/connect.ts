@@ -8,6 +8,8 @@ import { PastFiring } from "../shared/firing"
 import { Incident, IncidentRecord } from "../shared/incidents"
 import { ErrorGroups, LogBatch } from "../shared/log-events"
 import { FiringEvent } from "../shared/timeline"
+import { TraceView } from "../shared/trace-view"
+import { JourneySample } from "../shared/traces"
 import type { Actions, ErrorWindow, LogHandlers, Range } from "./context"
 import type { Open } from "./live"
 import { timelinePath } from "./timeline-path"
@@ -22,6 +24,18 @@ const decodeThread = Schema.decodeUnknownOption(Schema.Struct({ url: Schema.Stri
 const decodeIncident = Schema.decodeUnknownOption(Incident)
 const decodeIncidents = Schema.decodeUnknownOption(Schema.Struct({ incidents: Schema.Array(Incident) }))
 const decodeRecord = Schema.decodeUnknownOption(IncidentRecord)
+const decodeJourney = Schema.decodeUnknownOption(JourneySample)
+const decodeTrace = Schema.decodeUnknownOption(TraceView)
+
+/** A read that answers a 404 or 403 as "none", any other failure as undefined, and the body decoded. */
+const readOrNone = <A>(path: string, decode: (body: unknown) => Option.Option<A>): Promise<A | "none" | undefined> =>
+  fetch(path)
+    .then((response): Promise<A | "none" | undefined> => {
+      if (response.status === 404 || response.status === 403) return Promise.resolve("none")
+      if (!response.ok) return Promise.resolve(undefined)
+      return response.json().then((body) => Option.getOrUndefined(decode(body)))
+    })
+    .catch(() => undefined)
 
 const names: ReadonlyArray<EventName> = ["catalog", "services", "alerts", "deploys", "feed"]
 
@@ -103,6 +117,18 @@ export const serverActions = (
         return response.json().then((body) => Option.getOrUndefined(decodeRuns(body)))
       })
       .catch(() => undefined),
+  journey: (journey) =>
+    readOrNone(
+      `/api/journeys?env=${encodeURIComponent(environment())}&journey=${encodeURIComponent(journey)}`,
+      decodeJourney,
+    ),
+  trace: (id, journey) =>
+    readOrNone(
+      `/api/traces/${encodeURIComponent(id)}?env=${encodeURIComponent(environment())}${
+        journey === undefined ? "" : `&journey=${encodeURIComponent(journey)}`
+      }`,
+      decodeTrace,
+    ),
   errors: (service, window) =>
     fetch(
       `/api/logs/errors?env=${encodeURIComponent(environment())}&service=${encodeURIComponent(service)}&${windowQuery(window)}`,
