@@ -176,7 +176,8 @@ export const incidentZip = (exporting: Exporting): ReadonlyArray<readonly [strin
     ["incident.json", json({ ...record, evidence: set === undefined ? [] : [set] })],
     ["timeline.csv", `${csvOf(timeline)}\n`],
     ["timeline.jsonl", `${timeline.events.map((event) => JSON.stringify(event)).join("\n")}\n`],
-    ["versions.json", json(record.versions ?? [])],
+    // A start no version is known for is null, so a reader sees it is not known rather than missing.
+    ["versions.json", json((record.versions ?? []).map((row) => ({ ...row, start: row.start ?? null })))],
     ...evidence,
   ]
   const manifest = {

@@ -71,7 +71,8 @@ export const IncidentEvidence = (props: { readonly record: IncidentRecord; reado
         {(set) => (
           <>
             <p class="muted">
-              Kept by {set().keptBy}, {day(set().keptAt)}. {props.record.evidence?.length ?? 0} sets kept.
+              Kept by {set().keptBy}, {day(set().keptAt)}. {props.record.evidence?.length ?? 0}{" "}
+              {props.record.evidence?.length === 1 ? "set" : "sets"} kept.
             </p>
             <div class="charts">
               <For each={set().charts}>
