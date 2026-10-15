@@ -216,7 +216,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
       from `incidents.leadMinutes`.
       Done when: an incident with a petshop firing has petshop as a service; adding registry is an event; its window
       starts 30 minutes before its first firing.
-- [ ] **`spec-0047-seen`** — while open, changes to its services kept: deployed and rolled back, chosen, builds,
+- [x] **`spec-0047-seen`** — while open, changes to its services kept: deployed and rolled back, chosen, builds,
       restarted, scaled, health changed, debug, jobs.
       Done when: against stub sources, a version change, a restart with OOMKilled, a scale to zero and a health change
       on an incident's service each become one event; the same change on a service outside it does not; in a cluster

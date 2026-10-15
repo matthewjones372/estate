@@ -16,6 +16,8 @@ export const Pod = Schema.Struct({
   phase: Schema.String,
   ready: Schema.Boolean,
   restarts: Schema.Number,
+  /** Why a container of it last stopped, as Kubernetes says: OOMKilled, Error. */
+  lastTermination: optional(Schema.String),
   image: optional(Schema.String),
   node: optional(Schema.String),
   startedAt: optional(Instant),

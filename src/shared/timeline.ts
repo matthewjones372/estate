@@ -23,6 +23,14 @@ export const EventKind = Schema.Literals([
   "incident-dismissed",
   "incident-raised",
   "service-added",
+  "deployed",
+  "chosen",
+  "build",
+  "restarted",
+  "scaled",
+  "health-changed",
+  "debug",
+  "job",
 ])
 export type EventKind = typeof EventKind.Type
 
@@ -116,6 +124,16 @@ export const said = (event: FiringEvent): string => {
       return `raised in ${event.text}`
     case "service-added":
       return `added ${event.text} to the incident`
+    // What Estate saw change around an incident says it whole.
+    case "deployed":
+    case "chosen":
+    case "build":
+    case "restarted":
+    case "scaled":
+    case "health-changed":
+    case "debug":
+    case "job":
+      return event.text
   }
 }
 

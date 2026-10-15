@@ -16,7 +16,9 @@ const pod = (name: string, ready: boolean, restarts = 0, app = "storefront") => 
     phase: "Running",
     startTime: "2026-10-03T10:00:00Z",
     conditions: [condition("Ready", ready ? "True" : "False")],
-    containerStatuses: [{ restartCount: restarts }],
+    containerStatuses: [
+      { restartCount: restarts, ...(restarts === 0 ? {} : { lastState: { terminated: { reason: "OOMKilled" } } }) },
+    ],
   },
 })
 
