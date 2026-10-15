@@ -3,14 +3,17 @@
  * chart read again from the catalog's query over the range they had on screen, or lines and an error group as shown.
  */
 import { Effect, SubscriptionRef } from "effect"
-import type { EvidenceSet } from "../../shared/evidence"
+import type { EvidenceSet, KeptTrace } from "../../shared/evidence"
 import type { Included } from "../../shared/included"
 import { windowOf } from "../../shared/window"
 import { chartsOf } from "../evidence"
 import { Configured } from "../settings"
+import { tempoOf } from "../sources/grafana"
 import { rangesIn } from "../sources/ranges"
+import { readTrace } from "../sources/tempo"
 import { Estate } from "../state"
 import { refuse } from "./incident-record"
+import { Refusal } from "./routes"
 
 const mostLines = 500
 
@@ -36,6 +39,8 @@ export const named = (included: Included) => {
       return `${included.lines.length} ${included.lines.length === 1 ? "line" : "lines"} of ${included.service}`
     case "errors":
       return `${included.service}'s error "${included.group.shape}"`
+    case "trace":
+      return `trace ${included.id}${included.journey === undefined ? "" : ` of ${included.journey}`}`
   }
 }
 
@@ -66,10 +71,31 @@ const chartOf = (included: Extract<Included, { readonly kind: "chart" }>) =>
     return { window, charts: [chart] }
   })
 
-/** The set it is kept as, by `by`, read from the sources now where it is a chart. */
+const traceOf = (included: Extract<Included, { readonly kind: "trace" }>) =>
+  Effect.gen(function* () {
+    const estate = yield* SubscriptionRef.get(yield* Estate)
+    const place = estate.catalog.environments.find((each) => each.name === included.environment)
+    const tempo = tempoOf((yield* Configured).sources[place?.sources ?? ""] ?? {})
+    const missing = `trace ${included.id} is not in ${included.environment}'s Tempo`
+    if (tempo === undefined) return yield* refuse(404, missing)
+    const read = yield* readTrace(tempo, included.id).pipe(
+      Effect.mapError(() => new Refusal({ status: 502, body: { message: `Tempo did not answer for ${included.id}` } })),
+    )
+    if (read.spans.length === 0) return yield* refuse(404, missing)
+    const journey = included.journey === undefined ? {} : { journey: included.journey }
+    const kept: KeptTrace = {
+      id: read.id,
+      environment: included.environment,
+      why: "included",
+      ...journey,
+      spans: read.spans,
+    }
+    return kept
+  })
+
+/** The set it is kept as, by `by`, read from the sources now where it is a chart or a trace. */
 export const includedSet = (included: Included, by: string, keptAt: string) =>
   Effect.gen(function* () {
-    const { environment, service } = included
     const now = Date.parse(keptAt)
     const empty = { window: windowOf(now, now + 1), charts: [] }
     const read =
@@ -78,13 +104,14 @@ export const includedSet = (included: Included, by: string, keptAt: string) =>
         : included.kind === "lines" && included.lines.length > mostLines
           ? yield* refuse(400, `at most ${mostLines} lines are included at once`)
           : empty
+    const traces = included.kind === "trace" ? [yield* traceOf(included)] : undefined
     const logs =
-      included.kind === "chart"
+      included.kind === "chart" || included.kind === "trace"
         ? undefined
         : [
             {
-              service,
-              environment,
+              service: included.service,
+              environment: included.environment,
               from: "included",
               errors: included.kind === "errors" ? [included.group] : [],
               lines: included.kind === "lines" ? included.lines : [],
@@ -97,6 +124,7 @@ export const includedSet = (included: Included, by: string, keptAt: string) =>
       keptBy: by,
       ...read,
       ...(logs === undefined ? {} : { logs }),
+      ...(traces === undefined ? {} : { traces }),
       from: "included",
       ...(included.why === undefined || included.why.trim() === "" ? {} : { why: included.why.trim() }),
     }
