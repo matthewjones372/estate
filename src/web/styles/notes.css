@@ -105,3 +105,10 @@
   padding: 2px 10px;
   font-size: 13px;
 }
+
+/* What a person wrote later, or Estate rebuilt, beside what it says. */
+.timeline-source {
+  color: var(--ink-3);
+  font-size: 12px;
+  white-space: nowrap;
+}

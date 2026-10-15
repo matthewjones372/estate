@@ -13,7 +13,8 @@ import { json, writer } from "./routes"
 
 const Asked = Schema.Struct({ text: Schema.String })
 
-const noteWriter = Effect.gen(function* () {
+/** Anyone who may write, where Estate keeps incidents. */
+export const noteWriter = Effect.gen(function* () {
   const person = yield* writer
   if ((yield* Configured).readOnly === true)
     return yield* refuse(403, "Estate is read-only here: it keeps no incidents")

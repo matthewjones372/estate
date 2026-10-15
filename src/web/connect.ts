@@ -198,6 +198,14 @@ export const serverActions = (
     ),
   closeIncident: (id, how) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/close`, { how }),
   addIncidentNote: (id, text) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/notes`, { text }),
+  addIncidentHappened: (id, text, at) =>
+    fetch(`/api/incidents/${encodeURIComponent(id)}/happened`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(at === undefined ? { text } : { text, at }),
+    })
+      .then<true | string>((response) => (response.ok ? true : refusalOf(response, "What happened could not be kept")))
+      .catch(() => "Estate could not be reached."),
   addIncidentService: (id, service) =>
     incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/services`, { service }),
   removeIncidentNote: (id, note) =>
@@ -258,13 +266,13 @@ const incidentWrite = (method: "POST" | "DELETE", path: string, body?: unknown):
     )
     .catch(() => "Estate could not be reached.")
 
-/** Why an ask got no answer, in the server's words where it gave them. */
-const refusalOf = (response: Response): Promise<string> =>
+/** Why a call was refused, in the server's words where it gave them, else `what` and its status. */
+const refusalOf = (response: Response, what = "Ask AI could not answer"): Promise<string> =>
   response
     .json()
     .then((body) => Option.getOrUndefined(decodeMessage(body))?.message)
     .catch(() => undefined)
-    .then((message) => message ?? `Ask AI could not answer (${response.status}).`)
+    .then((message) => message ?? `${what} (${response.status}).`)
 
 const askAlert = (environment: string, alert: string, signal: AbortSignal): Promise<AskAnswer | string> =>
   fetch(`/api/alerts/${encodeURIComponent(alert)}/ask?env=${encodeURIComponent(environment)}`, {

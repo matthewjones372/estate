@@ -167,6 +167,7 @@ export const incidentActions = (
   | "closeIncident"
   | "addIncidentNote"
   | "addIncidentService"
+  | "addIncidentHappened"
   | "removeIncidentNote"
   | "dismissIncident"
   | "raiseIncident"
@@ -251,6 +252,10 @@ export const incidentActions = (
       calls.push(["addIncidentNote", id, text])
       const note = { id: `n${calls.length}`, at: "2026-10-03T12:00:00Z", by: "ada lovelace", text }
       return noted(id, (incident) => [...(incident.notes ?? []), note])
+    },
+    addIncidentHappened: (id, text, at) => {
+      calls.push(at === undefined ? ["addIncidentHappened", id, text] : ["addIncidentHappened", id, text, at])
+      return Promise.resolve(records.has(id) ? true : "there is no such incident")
     },
     addIncidentService: (id, service) => {
       calls.push(["addIncidentService", id, service])
