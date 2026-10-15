@@ -13,6 +13,7 @@ import { happened, happenedOnEach } from "../happened"
 import { incidentTimeline } from "../incident-timeline"
 import { sameFiring } from "../notes"
 import type { FiringKey } from "../notes-events"
+import { keepRunUp } from "../rebuilt"
 import { Configured } from "../settings"
 import { leadMinutes, suggestWithin } from "../settings-incidents"
 import { Estate } from "../state"
@@ -90,6 +91,7 @@ const openRoute = HttpRouter.add(
       ),
     )
     yield* happened(firing, person.name, "incident-opened", title)
+    yield* keepRunUp(undefined, incident)
     return json(incident, 201)
   }).pipe(answered),
 )
@@ -107,11 +109,12 @@ const linkRoute = HttpRouter.add(
     const now = yield* oneAtATime(
       Effect.gen(function* () {
         const incident = yield* open(id)
-        if (incident.firings.some((one) => sameFiring(one, firing))) return { incident, linked: false }
-        return { incident: yield* linked(incident, firing, person.name), linked: true }
+        if (incident.firings.some((one) => sameFiring(one, firing))) return { incident, was: incident, linked: false }
+        return { incident: yield* linked(incident, firing, person.name), was: incident, linked: true }
       }),
     )
     if (now.linked) yield* happened(firing, person.name, "incident-linked", now.incident.title)
+    yield* keepRunUp(now.was, now.incident)
     return json(now.incident)
   }).pipe(answered),
 )

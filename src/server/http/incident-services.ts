@@ -2,6 +2,7 @@
 import { Effect, Schema, SubscriptionRef } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { happenedOnIncident } from "../happened"
+import { keepRunUp } from "../rebuilt"
 import { Estate } from "../state"
 import { isoNow } from "../time"
 import { incidentServices } from "../views/incident-scope"
@@ -25,17 +26,18 @@ export const incidentServicesRoute = HttpRouter.add(
     if (![...services, ...stores].some((each) => each.name === service))
       return yield* refuse(400, `the catalog names no service or store ${service}`)
     const at = yield* isoNow
-    const now = yield* oneAtATime(
+    const { was, now } = yield* oneAtATime(
       Effect.gen(function* () {
         const incident = yield* open(id)
         if (incidentServices(yield* SubscriptionRef.get(yield* Estate), incident).includes(service))
           return yield* refuse(400, `"${incident.title}" already has ${service}`)
         const now = { ...incident, added: [...(incident.added ?? []), { service, by: person.name, at }] }
         yield* keep(now)
-        return now
+        return { was: incident, now }
       }),
     )
     yield* happenedOnIncident(id, person.name, "service-added", service, service)
+    yield* keepRunUp(was, now)
     return json(now, 201)
   }).pipe(answered),
 )
