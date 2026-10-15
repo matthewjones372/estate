@@ -39,6 +39,7 @@ import { platform, readText } from "./platform"
 import type { Remote } from "./remote"
 import { type Role, roleLayer } from "./role"
 import { backOff } from "./schedule"
+import { recordSeen } from "./seen"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
 import { readBackEvery } from "./settings-incident-tool"
 import { backfillHistory } from "./sources/backfill"
@@ -189,7 +190,7 @@ const firingsLoaded = Effect.gen(function* () {
 
 /**
  * One environment's work, or every environment's: its sources read, its debug reverted, its earlier firings
- * backfilled and its firings recorded. `shown` puts the firings where the estate's are.
+ * backfilled, its firings recorded, and what changes around its open incidents kept. `shown` puts the firings where the estate's are.
  */
 export const environmentWork = <R = never>(
   started: Started,
@@ -199,6 +200,7 @@ export const environmentWork = <R = never>(
   Effect.all(
     [
       startSources(started.settings, { environments: (name) => only === undefined || name === only, builds: false }),
+      recordSeen(only),
       firingsLoaded.pipe(
         Effect.andThen(backfillHistory(started.settings, only, shown)),
         Effect.andThen(recordFirings(started.settings.slack, shown)),
