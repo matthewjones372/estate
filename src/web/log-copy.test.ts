@@ -13,6 +13,12 @@ describe("copying a service's lines", () => {
     )
   })
 
+  test("a line whose text begins with its level names it once", () => {
+    expect(asText([{ at: "2026-10-07T10:31:02.123Z", level: "INFO", text: "INFO  petshop.app -- arrived" }])).toBe(
+      "2026-10-07T10:31:02.123Z\t\tINFO\tpetshop.app -- arrived",
+    )
+  })
+
   test("a saved file is named for the service, the environment and the minute", () => {
     expect(fileName("orders", "production", Date.parse("2026-10-07T10:31:59Z"))).toBe(
       "orders-production-2026-10-07T1031.log",

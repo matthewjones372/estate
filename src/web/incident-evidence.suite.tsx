@@ -93,6 +93,7 @@ describe("an incident's evidence, on its page", () => {
     }
     const page = withEvidence([{ ...set("Estate", 9), logs: [logs] }])
     await page.settle()
+    expect(page.container.querySelector(".incident-evidence .muted")?.textContent).toEndWith(". 1 set kept.")
     const kept = page.container.querySelector(".kept-logs")
     expect(kept?.querySelector("h3")?.textContent).toBe(
       "storefront logs, production, from Loki: 3 lines kept, 7 left out past incidents.evidence.lines",
@@ -114,7 +115,11 @@ describe("an incident's evidence, on its page", () => {
       ...(journey === undefined ? {} : { journey }),
       spans: [{ ...span, start: 0, end: took, failed: why === "failed" }],
     })
-    const traces = [kept("t2", "slowest", 900, "order"), kept("t3", "failed", 40, "order"), kept("t9", "named", 60)]
+    const traces = [
+      kept("t2", "slowest", 900.028076171875, "order"),
+      kept("t3", "failed", 40, "order"),
+      kept("t9", "named", 1509.5),
+    ]
     const page = withEvidence([{ ...set("Estate", 9), traces }])
     await page.settle()
     const links = [...page.container.querySelectorAll(".kept-traces a")]
@@ -126,7 +131,7 @@ describe("an incident's evidence, on its page", () => {
     expect([...page.container.querySelectorAll(".kept-traces li")].map((each) => each.textContent)).toEqual([
       "t2 order, slowest, 900 ms",
       "t3 order, failed, 40 ms",
-      "t9 named in a kept line, 60 ms",
+      "t9 named in a kept line, 1.51 s",
     ])
   })
 

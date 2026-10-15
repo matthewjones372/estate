@@ -3,6 +3,7 @@
 import { For, Show } from "solid-js"
 import type { KeptTrace } from "../../shared/evidence"
 import { tookOf } from "../../shared/traces"
+import { took } from "../format"
 import { pathOf } from "../route"
 import { A } from "./A"
 
@@ -26,7 +27,7 @@ export const EvidenceTraces = (props: { readonly traces: ReadonlyArray<KeptTrace
               >
                 {trace.id}
               </A>{" "}
-              {why(trace)}, {tookOf(trace)} ms
+              {why(trace)}, {took(tookOf(trace))}
             </li>
           )}
         </For>
