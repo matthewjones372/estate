@@ -6,7 +6,7 @@ import { App } from "./App"
 import { events, heard, now, operator } from "./fixture"
 import { mount } from "./harness"
 import { TracePage } from "./pages/Trace"
-import { Journeys } from "./parts/Journey"
+import { JourneyLinks, Journeys } from "./parts/Journey"
 import { recording } from "./recording"
 import { pageOf } from "./route"
 
@@ -48,8 +48,7 @@ describe("a journey on a service's page", () => {
 
   test("says where its time goes, with a segment per stage and the largest stage marked", async () => {
     const page = await opened("storefront", "order")
-    expect(text(page.container)).toContain("It reaches its end in 341 ms at p50. 88% of that is Waits in the outbox.")
-    expect(text(page.container)).toContain("of that is Waits in the outbox.")
+    expect(text(page.container)).toContain("It reaches its end in 341 ms at p50. Waits in the outbox is 87% of the time its stages take.")
     expect(text(page.container)).toContain("The caller has an answer in 40 ms. 4 traces from the last 15 min")
     expect(page.container.querySelectorAll(".journey-segment")).toHaveLength(5)
     expect(page.container.querySelector(".journey-largest th")?.textContent).toBe("Waits in the outbox")
@@ -99,6 +98,26 @@ describe("a journey on a service's page", () => {
     page.click(page.button("Fastest · 61 ms"))
     await page.settle()
     expect(text(page.container)).toContain("The trace could not be read.")
+  })
+
+  test("is linked from the service's links, and the link opens it on the service's page", async () => {
+    const page = mount(
+      () => (
+        <>
+          <JourneyLinks service="orders" />
+          <Journeys service="orders" />
+        </>
+      ),
+      { sent: withJourney("order") },
+    )
+    const link = page.container.querySelector<HTMLAnchorElement>("a.link-chip")
+    expect([link?.textContent, link?.getAttribute("href")]).toEqual(["Placing an order", "/services/orders"])
+    if (link === null) throw new Error("no link to the journey")
+    page.click(link)
+    await page.settle()
+    expect(page.calls).toContainEqual(["navigate", "/services/orders"])
+    expect(page.button("Hide").getAttribute("aria-expanded")).toBe("true")
+    expect(page.calls).toContainEqual(["journey", "order"])
   })
 
   test("says why when there is no Tempo, or its traces could not be read, and is absent from other services", async () => {

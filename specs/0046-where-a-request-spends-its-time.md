@@ -75,6 +75,10 @@ sources:
     grafana: { url: …, token: …, tempo: <data source uid> }
 ```
 
+**A link among each such service's links**, on its lane on the overview and on its page, named for the journey and
+marked with the traces icon: it opens the service's page with the journey's panel open and in view, so traces are
+found from where people already look.
+
 **On the page of each service a journey's stages are in**, closed until someone asks: its title, a line saying what it
 shows, and *Show where its time goes*. Tempo is read only then, so a page nobody opens it on costs no reads, and the
 rest of the page stays as quiet as it was. Opened, nothing on it is live:
@@ -82,7 +86,7 @@ rest of the page stays as quiet as it was. Opened, nothing on it is live:
 ```text
 ADOPTION, CLICK TO SCREEN                                              [ p50 | p99 ]
 An adoption reaches everyone's screen in 589 ms at p50.                50 traces · last 15 min · Tempo
-87% of that is Waits in the outbox.
+Waits in the outbox is 87% of the time its stages take.
 The caller has their answer in 41 ms.
 
 [█▌|██|█▌|▏|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|▏|▒|▏|▒]             ← one bar, a segment per stage

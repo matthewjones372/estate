@@ -32,7 +32,9 @@ export const kindWords: Readonly<Record<Row["kind"], string>> = {
 export const labelOf = (view: TraceView, row: Row) =>
   `${row.title}, ${view.lanes[row.lane]?.title ?? ""}, ${took(row.to - row.from)}${row.failed ? ", failed" : ""}`
 
-export const hot = (view: TraceView, row: Row) => row.kind === "wait" && row.from === view.cut?.from
+/** The wait the cut is in: the longest, where most of the time goes. */
+export const hot = (view: TraceView, row: Row) =>
+  row.kind === "wait" && view.cut !== undefined && row.from <= view.cut.from && row.to >= view.cut.to
 
 export const CutBand = (props: Drawn) => (
   <Show when={props.scale === "cut" ? props.view.cut : undefined}>

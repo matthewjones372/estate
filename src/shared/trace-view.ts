@@ -47,6 +47,17 @@ const depthOf = (byId: ReadonlyMap<string, TraceSpan>, span: TraceSpan): number 
   return depth
 }
 
+/**
+ * The part of a wait where no span is running: the work that goes on while an event waits, such as a call made after
+ * the write it waits behind, is drawn at its true scale, and only the idle time around none of it is cut.
+ */
+const idleIn = (wait: Row, rows: ReadonlyArray<Row>) => {
+  const working = rows.filter((row) => row.kind !== "wait" && row.from < wait.to && row.to > wait.from)
+  const from = Math.max(wait.from, ...working.filter((row) => row.to < wait.to).map((row) => row.to))
+  const to = Math.min(wait.to, ...working.filter((row) => row.from > from).map((row) => row.from))
+  return { from, to }
+}
+
 export const traceView = (trace: Trace, lanes: Lanes, journey?: Journey): TraceView => {
   const measured = journey === undefined ? undefined : measure(journey, trace)
   const first = journey === undefined ? undefined : found(trace, journey.start.span, journey.start.service)
@@ -130,6 +141,7 @@ export const traceView = (trace: Trace, lanes: Lanes, journey?: Journey): TraceV
       (most, row) => (most === undefined || row.to - row.from > most.to - most.from ? row : most),
       undefined,
     )
+  const cut = longest === undefined ? undefined : idleIn(longest, rows)
   return {
     id: trace.id,
     startedAt: new Date(origin).toISOString(),
@@ -139,9 +151,7 @@ export const traceView = (trace: Trace, lanes: Lanes, journey?: Journey): TraceV
     total,
     lanes: order,
     rows,
-    ...(longest !== undefined && longest.to - longest.from > total / 2
-      ? { cut: { from: longest.from, to: longest.to } }
-      : {}),
+    ...(cut !== undefined && cut.to - cut.from > total / 2 ? { cut } : {}),
   }
 }
 
