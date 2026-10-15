@@ -53,7 +53,7 @@ timeline by time. Every event, old kinds and new, gains two fields:
 ```text
 at           when it happened, to the second, UTC
 recordedAt   when Estate kept it; the same as `at` for what Estate saw live
-source       seen      Estate saw it on a read while the incident was open
+source       seen      Estate saw it live: as a firing began or ended, or on a read while the incident was open
              rebuilt   rebuilt on open or link from what Estate held then
              written   a person wrote it, with a time of their choosing
 service      the service or store it is about, where there is one
@@ -77,8 +77,10 @@ New kinds, all on the incident:
 | `evidence-kept` | `kept 3 services' charts, 4,120 lines, 34 traces (6.1 MB)` | the person, or Estate on close |
 | `exported` | `exported as zip` | the person |
 
-**Seen.** While an incident is open, each read of its services' state is compared with the last, and each change is
-kept as an event. In a cluster the runner that owns the environment (specs 0026, 0032) does it, so it is kept once.
+**Seen.** A firing's `fired` and `resolved` are seen as they happen, so a firing that began before the incident
+opened keeps its `fired` as seen, kept when it fired: it was not rebuilt. While an incident is open, each read of its
+services' state is compared with the last, and each change is kept as an event. In a cluster the runner that owns
+the environment (specs 0026, 0032) does it, so it is kept once.
 
 **Rebuilt.** When an incident opens, or a service joins it, the window's run-up so far is rebuilt from what Estate
 holds: firings, the feed, the latest deploy and builds, pod restart counts and their last termination reason. Each
@@ -264,7 +266,7 @@ sharp, is small, opens in anything, and the series beside it can be charted agai
 
 ```bash
 bun run gate
-bun run integration -t "Notes"
+bun run integration -t "real notes"
 ```
 
 Then, in the petshop's demo: `./chaos.sh registry-slow`; open an incident from ChipRegistryUnreachable, add
