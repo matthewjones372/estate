@@ -136,6 +136,15 @@ const whatChanged = (record: IncidentRecord) => [
 
 const withoutLogs = ({ logs: _, traces: __, ...set }: EvidenceSet): EvidenceSet => set
 
+/** The newest summary kept as a note (spec 0051), to head the account; none while none is kept. */
+const summaryOf = (record: IncidentRecord): ReadonlyArray<string> => {
+  const kept = record.events
+    .filter((event) => event.kind === "ai-kept" && event.link !== undefined)
+    .flatMap((event) => record.incident.notes?.filter((note) => note.id === event.link) ?? [])
+    .at(-1)
+  return kept === undefined ? [] : ["## Summary", "", kept.text, ""]
+}
+
 /** Each file of the zip, by its path under the incident's folder, and its text. */
 export const incidentZip = (exporting: Exporting): ReadonlyArray<readonly [string, string]> => {
   const { record, timeline } = exporting
@@ -184,13 +193,12 @@ export const incidentZip = (exporting: Exporting): ReadonlyArray<readonly [strin
   const files: ReadonlyArray<readonly [string, string]> = [
     [
       "incident.md",
-      markdownOf(timeline, true, [
-        ...whatChanged(record),
-        "",
-        "## Files",
-        "",
-        ...tables.map((path) => `- [${path}](${path})`),
-      ]),
+      markdownOf(
+        timeline,
+        true,
+        [...whatChanged(record), "", "## Files", "", ...tables.map((path) => `- [${path}](${path})`)],
+        summaryOf(record),
+      ),
     ],
     [
       "incident.json",

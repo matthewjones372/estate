@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Context, Effect, Layer, Redacted } from "effect"
+import { strFromU8, unzipSync } from "fflate"
 import type { Incident, IncidentRecord } from "../../shared/incidents"
 import type { SummaryAnswer } from "../../shared/summary"
 import { ask, environment, estate, type Server, serverFor, settings } from "../fixture"
@@ -140,5 +141,32 @@ describe("summarising an incident", () => {
       expect(first).toEqual([502, { message: "the model answered 529: overloaded" }])
       expect(again[0]).toBe(502)
       expect(failed).toBe(2)
+    }))
+
+  test("kept as a note, it heads the export's account, and the timeline says it was kept", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(as("gil", "operator"), state, model)
+        yield* ask(server, post("/api/incidents/i1/notes", { text: "an earlier note" }))
+        yield* ask(server, post("/api/incidents/i1/notes", { text: "Summary: the registry slowed.", from: "summary" }))
+        const zip = yield* Effect.promise(() =>
+          server.handler(new Request("http://estate/api/incidents/i1/export?format=zip")),
+        )
+        const files = unzipSync(new Uint8Array(yield* Effect.promise(() => zip.arrayBuffer())))
+        const markdown = Object.entries(files).find(([path]) => path.endsWith("/incident.md"))?.[1]
+        const record = (yield* ask(server, new Request("http://estate/api/incidents/i1"))).json() as IncidentRecord
+        return { markdown: strFromU8(markdown ?? new Uint8Array()), record }
+      }),
+    ).then(({ markdown, record }) => {
+      expect(markdown.split("\n").slice(0, 5)).toEqual([
+        "# Chip registry slow",
+        "",
+        "## Summary",
+        "",
+        "Summary: the registry slowed.",
+      ])
+      expect(record.events.filter((each) => each.kind === "ai-kept")).toEqual([
+        expect.objectContaining({ by: "gil", text: "the summary" }),
+      ])
     }))
 })

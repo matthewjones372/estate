@@ -6,7 +6,7 @@ import { allSeenLive, type FiringEvent } from "../shared/timeline"
 import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
 import { incidentActions, keptIncidents } from "./fixture-incidents"
-import { includedAs } from "./fixture-included"
+import { includedAs, summarised } from "./fixture-included"
 import { groups, lines } from "./fixture-logs"
 import { journeySample, orderTrace, refusedTrace } from "./fixture-traces"
 
@@ -257,6 +257,10 @@ export const recording = (): Recorded => {
       allIncidents: () => {
         calls.push(["allIncidents"])
         return Promise.resolve(keptIncidents)
+      },
+      summarise: (incident) => {
+        calls.push(["summarise", incident])
+        return Promise.resolve(summarised)
       },
       removeIncluded: (incident, set) => {
         calls.push(["removeIncluded", incident, set])
