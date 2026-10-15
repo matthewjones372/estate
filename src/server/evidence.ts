@@ -97,8 +97,8 @@ const logsOf = (environment: string, service: string, from: number, to: number, 
 
 const many = (count: number, one: string, more: string) => `${count} ${count === 1 ? one : more}`
 
-/** Its charts over its window, read now and kept as a new set, by `by`; the set kept, or none when none was read. */
-export const keepEvidence = (incident: Incident, by: string) =>
+/** Its evidence over its window, read from the sources now, as `by` would keep it; none when nothing was read. */
+export const readEvidence = (incident: Incident, by: string) =>
   Effect.gen(function* () {
     const estate = yield* SubscriptionRef.get(yield* Estate)
     const settings = yield* Configured
@@ -140,7 +140,14 @@ export const keepEvidence = (incident: Incident, by: string) =>
       ...(missing.length === 0 ? {} : { leftOut: missing }),
     }
     if (found.charts.length + found.logs.length + found.traces.length + missing.length === 0) return undefined
-    const set = withinLimit(found, evidenceBytes(settings.incidents))
+    return withinLimit(found, evidenceBytes(settings.incidents))
+  })
+
+/** Its evidence read now and kept as a new set by `by`, an event that says what it holds; none when nothing was read. */
+export const keepEvidence = (incident: Incident, by: string) =>
+  Effect.gen(function* () {
+    const set = yield* readEvidence(incident, by)
+    if (set === undefined) return undefined
     yield* (yield* Notes).keepEvidence(incident.id, set)
     const kept = new Set([...set.charts, ...(set.logs ?? [])].map((each) => each.service)).size
     const sum = (of: (logs: KeptLogs) => number) => (set.logs ?? []).reduce((total, logs) => total + of(logs), 0)

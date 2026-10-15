@@ -55,6 +55,11 @@ export const IncidentEvidence = (props: { readonly record: IncidentRecord; reado
           </button>
         </Show>
       </div>
+      <Show when={me.logsForOperators === true && me.role !== "operator"}>
+        <p class="muted withheld">
+          Logs and the traces drawn from them are for operators here, so they are left out of what you read and export.
+        </p>
+      </Show>
       <Show
         when={latest()}
         fallback={

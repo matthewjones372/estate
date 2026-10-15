@@ -3,6 +3,7 @@
 import { describe, expect, test } from "bun:test"
 import type { EvidenceSet } from "../shared/evidence"
 import { seenLive } from "../shared/timeline"
+import { operator } from "./fixture"
 import { mount } from "./harness"
 import { IncidentPage } from "./pages/Incident"
 import { recording } from "./recording"
@@ -127,6 +128,24 @@ describe("an incident's evidence, on its page", () => {
       "t3 order, failed, 40 ms",
       "t9 named in a kept line, 60 ms",
     ])
+  })
+
+  test("tells a reader who may not read logs here that they and its traces are left out", async () => {
+    const { actions } = recording()
+    const page = mount(() => <IncidentPage id="i1" />, {
+      me: { ...operator, role: "viewer", logsForOperators: true },
+      actions: {
+        ...actions,
+        incident: (id) =>
+          actions
+            .incident(id)
+            .then((found) => (typeof found === "object" ? { ...found, evidence: [set("Estate", 9)] } : found)),
+      },
+    })
+    await page.settle()
+    expect(page.container.querySelector(".incident-evidence .withheld")?.textContent).toBe(
+      "Logs and the traces drawn from them are for operators here, so they are left out of what you read and export.",
+    )
   })
 
   test("says nothing is kept yet before it is", async () => {
