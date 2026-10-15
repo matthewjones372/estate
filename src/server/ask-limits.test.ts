@@ -52,7 +52,7 @@ describe("Ask AI's limits", () => {
         return [waited, later, failed, yield* limits.shared("a1")]
       }).pipe(Effect.provide(liveAskLimits()), Effect.provide(TestClock.layer())),
     ).then(([waited, later, failed, passed]) => {
-      expect(waited?.likelyCause).toBe("a deploy")
+      expect(waited).toMatchObject({ likelyCause: "a deploy" })
       expect(later).toEqual(waited)
       expect([failed, passed]).toEqual([undefined, undefined])
     }))

@@ -167,7 +167,7 @@ the 300-line limit, so the incident actions move out of it first.
 - [x] **`spec-0051-model-shape`** — the model port takes its instructions and answer schema from the caller; Ask AI
       passes the alert's, unchanged.
       Done when: Ask AI's tests pass unchanged and a test asks the port for a second shape against a stub provider.
-- [ ] **`spec-0051-summary`** — the incident's brief, `POST /api/incidents/:id/summary`, the shared budget and turn,
+- [x] **`spec-0051-summary`** — the incident's brief, `POST /api/incidents/:id/summary`, the shared budget and turn,
       the events with `readLogs`.
       Done when: against a stub model, a summary decodes as `IncidentSummary`; a second within a minute shares it; it
       spends from `tokensPerDay`; a viewer's brief has no lines and their timeline withholds an answer drawn from them.

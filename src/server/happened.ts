@@ -67,7 +67,7 @@ export const happenedOnIncident = (
   kind: EventKind,
   text: string,
   service?: string,
-  link?: string,
+  more: More = {},
 ): Effect.Effect<void, never, Notes> =>
   Effect.gen(function* () {
     const at = yield* isoNow
@@ -75,6 +75,7 @@ export const happenedOnIncident = (
       incident,
       ...seenLive({ id: crypto.randomUUID(), at, by, kind, text }),
       ...(service === undefined ? {} : { service }),
-      ...(link === undefined ? {} : { link }),
+      ...(more.link === undefined ? {} : { link: more.link }),
+      ...(more.readLogs === undefined ? {} : { readLogs: more.readLogs }),
     })
   }).pipe(Effect.catch((failure) => Effect.logWarning(`an incident's event could not be kept: ${failure.message}`)))
