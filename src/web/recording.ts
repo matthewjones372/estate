@@ -5,7 +5,7 @@ import type { LogBatch } from "../shared/log-events"
 import { allSeenLive, type FiringEvent } from "../shared/timeline"
 import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
-import { incidentActions } from "./fixture-incidents"
+import { incidentActions, keptIncidents } from "./fixture-incidents"
 import { groups, lines } from "./fixture-logs"
 import { journeySample, orderTrace, refusedTrace } from "./fixture-traces"
 
@@ -253,6 +253,10 @@ export const recording = (): Recorded => {
         return Promise.resolve(alert === "a1" ? brief : undefined)
       },
       ...incidentActions(calls),
+      allIncidents: () => {
+        calls.push(["allIncidents"])
+        return Promise.resolve(keptIncidents)
+      },
       timelineMarkdown: (of) => {
         calls.push(["timelineMarkdown", of])
         const broken = "incident" in of && of.incident === "broken"

@@ -197,14 +197,17 @@ const readRoute = HttpRouter.add(
   }).pipe(answered),
 )
 
-/** The incidents open now, newest first, for a card to offer to link to. */
+const Listed = Schema.Struct({ closed: Schema.optionalKey(Schema.Literals(["true", "false"])) })
+
+/** The incidents open now, newest first, for a card to offer to link to; with `?closed=true`, every one kept. */
 const listRoute = HttpRouter.add(
   "GET",
   "/api/incidents",
   Effect.gen(function* () {
     yield* withRole
+    const { closed } = yield* searchParams(Listed, "closed is true or false")
     const incidents = (yield* kept)
-      .filter((each) => each.closedAt === undefined)
+      .filter((each) => closed === "true" || each.closedAt === undefined)
       .toSorted((a, b) => b.openedAt.localeCompare(a.openedAt))
     return json({ incidents })
   }).pipe(Effect.catchTag("Refusal", refused)),

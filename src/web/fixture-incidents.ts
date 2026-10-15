@@ -59,6 +59,7 @@ const searchSlow: Incident = {
 }
 
 const openIncidents: ReadonlyArray<Incident> = [ordersSlow, checkoutDown]
+export const keptIncidents: ReadonlyArray<Incident> = [...openIncidents, searchSlow]
 
 /** The firing of Orders slow that the firings that may belong to it are like. */
 const inOrdersSlow = { environment: "production", alert: "a1", name: "OrdersSlow", about: "storefront" }

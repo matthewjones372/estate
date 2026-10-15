@@ -10,6 +10,8 @@ export type Page =
   | { readonly page: "alert"; readonly id: string }
   /** One past firing of an alert: its id, and when the firing started. */
   | { readonly page: "firing"; readonly id: string; readonly at: string }
+  /** Every incident kept, open and closed. */
+  | { readonly page: "incidents" }
   /** An incident: the firings a person linked as one problem. */
   | { readonly page: "incident"; readonly id: string }
   /** One trace, measured as the journey it was opened from, where there is one (spec 0046). */
@@ -41,6 +43,7 @@ export const pageOf = (pathname: string, search = ""): Page => {
   if (pathname === "/" || pathname === "") return { page: "overview" }
   if (pathname === "/deploys") return { page: "deploys" }
   if (pathname === "/alerts") return { page: "alerts" }
+  if (pathname === "/incidents") return { page: "incidents" }
   if (pathname === "/kiosk") {
     const params = new URLSearchParams(search)
     const team = params.get("team")
@@ -88,6 +91,8 @@ export const pathOf = (page: Page): string => {
     case "firing":
       // A time's colons are left as they are, so a link pasted into a review reads as the time it is.
       return `/alerts/${encodeURIComponent(page.id)}/${encodeURIComponent(page.at).replaceAll("%3A", ":")}`
+    case "incidents":
+      return "/incidents"
     case "incident":
       return `/incidents/${encodeURIComponent(page.id)}`
     case "trace":

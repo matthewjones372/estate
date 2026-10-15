@@ -26,6 +26,11 @@ const decodeIncidents = Schema.decodeUnknownOption(Schema.Struct({ incidents: Sc
 const decodeRecord = Schema.decodeUnknownOption(IncidentRecord)
 const decodeJourney = Schema.decodeUnknownOption(JourneySample)
 const decodeTrace = Schema.decodeUnknownOption(TraceView)
+const listed = (path: string) =>
+  fetch(path)
+    .then((response) => (response.ok ? response.json() : undefined))
+    .then((body) => (body === undefined ? undefined : Option.getOrUndefined(decodeIncidents(body))?.incidents))
+    .catch(() => undefined)
 
 /** A read that answers a 404 or 403 as "none", any other failure as undefined, and the body decoded. */
 const readOrNone = <A>(path: string, decode: (body: unknown) => Option.Option<A>): Promise<A | "none" | undefined> =>
@@ -175,11 +180,8 @@ export const serverActions = (
       )
       .catch(() => undefined),
   askAlert: (alert, signal) => askAlert(environment(), alert, signal),
-  incidents: () =>
-    fetch("/api/incidents")
-      .then((response) => (response.ok ? response.json() : undefined))
-      .then((body) => (body === undefined ? undefined : Option.getOrUndefined(decodeIncidents(body))?.incidents))
-      .catch(() => undefined),
+  incidents: () => listed("/api/incidents"),
+  allIncidents: () => listed("/api/incidents?closed=true"),
   incident: (id) =>
     fetch(`/api/incidents/${encodeURIComponent(id)}`)
       .then((response): Promise<IncidentRecord | "none" | undefined> => {
