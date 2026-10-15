@@ -48,7 +48,7 @@ export interface Shape<A, I> {
 }
 
 export interface Model {
-  /** Ask AI about an alert, in `alertAnswer`'s shape. */
+  /** Ask AI about an alert, in the alert's shape. */
   readonly ask: (brief: string, question: string, tools?: Tools) => Effect.Effect<Asked<ModelAnswer>, ModelError>
   /** Any other question, answered in `shape`. */
   readonly answer: <A, I>(
@@ -86,7 +86,7 @@ const safely = (answer: ModelAnswer): ModelAnswer => ({
   ),
 })
 
-export const alertAnswer: Shape<ModelAnswer, typeof ModelAnswer.Encoded> = {
+const alertAnswer: Shape<ModelAnswer, typeof ModelAnswer.Encoded> = {
   system,
   answer: ModelAnswer,
   tidy: safely,
