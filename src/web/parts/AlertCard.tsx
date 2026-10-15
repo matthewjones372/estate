@@ -12,8 +12,10 @@ import { AroundLine } from "./Around"
 import { AskAiAnswer, AskAiButton } from "./AskAi"
 import { History } from "./History"
 import { Impact } from "./Impact"
+import { IncidentChooser, LinkToIncident, PartOf } from "./IncidentLink"
 import { Icon } from "./icons"
 import { ErrorList } from "./LogErrors"
+import { MayBelong } from "./MayBelong"
 import { Notes } from "./Notes"
 import { Plot } from "./Plot"
 import { RaiseIncident } from "./RaiseIncident"
@@ -143,6 +145,7 @@ export const AlertCard = (props: {
   const { now } = useEstate()
   const [choosing, setChoosing] = createSignal(false)
   const [lines, setLines] = createSignal(false)
+  const [linking, setLinking] = createSignal(false)
   const service = () => props.catalog?.services.find((each) => each.name === props.alert.service)
   const link = (name: string) => service()?.links.find((each) => each.name === name)
   const chat = () => chatOf(teamOf(props.catalog, service()?.owner))
@@ -163,12 +166,21 @@ export const AlertCard = (props: {
         <Show when={props.alert.service}>{(name) => <p class="alert-detail">{name()}</p>}</Show>
       </div>
       <Impact alert={props.alert} />
+      <PartOf incident={props.alert.incident} />
+      <MayBelong
+        suggested={props.alert.suggested}
+        subject={props.alert.service ?? props.alert.store}
+        alert={props.alert.id}
+      />
       <History alert={props.alert} />
       <AroundLine alert={props.alert} />
       <Show when={props.alert.chart}>{(chart) => <Chart name={props.alert.name} chart={chart()} />}</Show>
-      <Notes alert={props.alert} />
+      <Notes alert={props.alert} folded={props.level !== 2} />
       <Show when={choosing()}>
         <Silencing alert={props.alert} close={() => setChoosing(false)} />
+      </Show>
+      <Show when={linking()}>
+        <IncidentChooser alert={props.alert} close={() => setLinking(false)} />
       </Show>
       <Show when={lines() ? props.alert.service : undefined}>
         {(name) => (
@@ -217,6 +229,9 @@ export const AlertCard = (props: {
           )}
         </Show>
         <AskAiButton alert={props.alert} />
+        <Show when={!linking()}>
+          <LinkToIncident onOpen={() => setLinking(true)} />
+        </Show>
         <Show when={props.alert.service !== undefined}>
           <button type="button" class="amber-button ghost" aria-pressed={lines()} onClick={() => setLines(!lines())}>
             Lines from then

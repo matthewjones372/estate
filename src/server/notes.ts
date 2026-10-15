@@ -3,19 +3,27 @@
  * by `notes-dynamodb.ts`); in memory when no database is set, for trying Estate out.
  */
 import { Context, Data, Effect, Layer, Ref } from "effect"
-import type { Note } from "../shared/events"
+import type { EvidenceSet } from "../shared/evidence"
+import type { Incident } from "../shared/incidents"
+import type { Note } from "../shared/note"
 import {
   createEvents,
   type FiringEvents,
+  type FiringKey,
   memoryEvents,
   postgresEvents,
   type StoredEvent,
+  type StoredIncidentEvent,
   sweepMemoryEvents,
 } from "./notes-events"
+import { createEvidence, type KeptEvidence, memoryEvidence, postgresEvidence } from "./notes-evidence"
+import { firingOf, instant } from "./notes-firings"
+import { createIncidents, type KeptIncidents, memoryIncidents, postgresIncidents } from "./notes-incidents"
+import { keptBy, postgresSweeps, type Sweeps, sweepMemoryIncidents } from "./notes-sweep"
 import type { Query } from "./query"
 import type { Failure } from "./sources/run"
 import type { StoredFiring, StoredThread } from "./state"
-import { iso } from "./time"
+import { iso, sameInstant } from "./time"
 
 export type { StoredEvent } from "./notes-events"
 export type { StoredFiring, StoredThread } from "./state"
@@ -30,8 +38,8 @@ export interface StoredImpact {
   readonly at: string
 }
 
-/** Notes, impacts, firings and their threads, and each firing's events (`notes-events.ts`). */
-export interface Notes extends FiringEvents {
+/** Notes, impacts, firings and their threads, each firing's events (`notes-events.ts`) and incidents. */
+export interface Notes extends FiringEvents, KeptIncidents, KeptEvidence, Sweeps {
   readonly all: Effect.Effect<ReadonlyArray<StoredNote>, Failure>
   readonly add: (note: StoredNote) => Effect.Effect<void, Failure>
   readonly remove: (id: string) => Effect.Effect<void, Failure>
@@ -44,8 +52,6 @@ export interface Notes extends FiringEvents {
   readonly firings: (since: string) => Effect.Effect<ReadonlyArray<StoredFiring>, Failure>
   /** Keeps a firing in place of the one with its environment, alert and start, if there is one. */
   readonly keepFiring: (firing: StoredFiring) => Effect.Effect<void, Failure>
-  /** Removes the firings begun before `at`, and their events. */
-  readonly removeFiringsBefore: (at: string) => Effect.Effect<void, Failure>
   /** The Slack threads of firings that started at `since` or later. */
   readonly threads: (since: string) => Effect.Effect<ReadonlyArray<StoredThread>, Failure>
   readonly keepThread: (thread: StoredThread) => Effect.Effect<void, Failure>
@@ -104,25 +110,6 @@ const createThreads = `create table if not exists estate_threads (
   primary key (environment, alert, starts_at)
 )`
 
-const instant = (value: unknown) => iso(value instanceof Date ? value : String(value))
-
-const firingOf = (row: Record<string, unknown>): StoredFiring => ({
-  environment: String(row["environment"]),
-  alert: String(row["alert"]),
-  name: String(row["name"]),
-  ...(row["service"] === null || row["service"] === undefined ? {} : { service: String(row["service"]) }),
-  startsAt: instant(row["starts_at"]),
-  ...(row["ends_at"] === null || row["ends_at"] === undefined ? {} : { endsAt: instant(row["ends_at"]) }),
-  ...(row["silenced_by"] === null || row["silenced_by"] === undefined
-    ? {}
-    : { silence: { by: String(row["silenced_by"]), reason: String(row["silence_reason"] ?? "") } }),
-  ...Object.fromEntries(
-    (["severity", "summary", "runbook", "store"] as const).flatMap((key) =>
-      row[key] === null || row[key] === undefined ? [] : [[key, String(row[key])]],
-    ),
-  ),
-})
-
 /** The statement, run each time the effect is, not once as it is made. */
 const run = (query: Query, statement: string, parameters: ReadonlyArray<unknown> = []) =>
   Effect.suspend(() => query(statement, parameters))
@@ -139,6 +126,7 @@ const asNote = ({ id, environment, alert, at, by, text }: Record<string, unknown
 /** Notes in Postgres, its table made if it is not there. */
 export const postgresNotes = (query: Query) => {
   const events = postgresEvents(query)
+  const incidents = postgresIncidents(query)
   return Layer.effect(Notes)(
     run(query, create).pipe(
       Effect.andThen(run(query, createImpacts)),
@@ -146,6 +134,8 @@ export const postgresNotes = (query: Query) => {
       Effect.andThen(run(query, addFiringSaid)),
       Effect.andThen(run(query, createThreads)),
       Effect.andThen(Effect.forEach(createEvents, (statement) => run(query, statement), { discard: true })),
+      Effect.andThen(run(query, createIncidents)),
+      Effect.andThen(run(query, createEvidence)),
       Effect.mapError((failure) => new NotesError(failure)),
       Effect.as({
         all: run(
@@ -204,10 +194,10 @@ export const postgresNotes = (query: Query) => {
               firing.store ?? null,
             ],
           ).pipe(Effect.asVoid),
-        removeFiringsBefore: (at: string) =>
-          run(query, "delete from estate_firings where starts_at < $1", [at]).pipe(Effect.andThen(events.sweep(at))),
-        events: events.events,
-        addEvent: events.addEvent,
+        ...postgresSweeps(query),
+        ...events,
+        ...incidents,
+        ...postgresEvidence(query),
         threads: (since: string) =>
           run(
             query,
@@ -236,10 +226,11 @@ export const postgresNotes = (query: Query) => {
   )
 }
 
+/** The same firing, however each start is written: a source's own form, or a store's read back with milliseconds. */
 export const sameFiring = (
   a: Pick<StoredFiring, "environment" | "alert" | "startsAt">,
   b: Pick<StoredFiring, "environment" | "alert" | "startsAt">,
-) => a.environment === b.environment && a.alert === b.alert && a.startsAt === b.startsAt
+) => a.environment === b.environment && a.alert === b.alert && sameInstant(a.startsAt, b.startsAt)
 
 /** Notes, impacts and firings for as long as Estate runs. */
 export const memoryNotes = Layer.effect(Notes)(
@@ -250,9 +241,14 @@ export const memoryNotes = Layer.effect(Notes)(
       Ref.make<ReadonlyArray<StoredFiring>>([]),
       Ref.make<ReadonlyArray<StoredThread>>([]),
       Ref.make<ReadonlyArray<StoredEvent>>([]),
+      Ref.make<ReadonlyArray<Incident>>([]),
+      Ref.make<ReadonlyArray<StoredIncidentEvent>>([]),
+      Ref.make<ReadonlyMap<string, ReadonlyArray<EvidenceSet>>>(new Map()),
     ]),
-    ([notes, impacts, firings, threads, kept]) => ({
-      ...memoryEvents(kept),
+    ([notes, impacts, firings, threads, kept, incidents, own, evidence]) => ({
+      ...memoryEvidence(evidence),
+      ...memoryEvents(kept, own),
+      ...memoryIncidents(incidents),
       all: Effect.map(Ref.get(notes), (kept) => [...kept].reverse()),
       add: (note: StoredNote) => Ref.update(notes, (kept) => [...kept, note]),
       remove: (id: string) => Ref.update(notes, (kept) => kept.filter((note) => note.id !== id)),
@@ -269,10 +265,11 @@ export const memoryNotes = Layer.effect(Notes)(
         ),
       keepFiring: (firing: StoredFiring) =>
         Ref.update(firings, (kept) => [...kept.filter((each) => !sameFiring(each, firing)), firing]),
-      removeFiringsBefore: (at: string) =>
-        Ref.update(firings, (all) => all.filter((firing) => firing.startsAt >= at)).pipe(
-          Effect.andThen(sweepMemoryEvents(kept, at)),
+      removeFiringsBefore: (at: string, keep: ReadonlyArray<FiringKey> = []) =>
+        Ref.update(firings, (all) => all.filter((firing) => firing.startsAt >= at || keptBy(keep)(firing))).pipe(
+          Effect.andThen(sweepMemoryEvents(kept, at, keptBy(keep))),
         ),
+      removeIncidentsBefore: (at: string) => sweepMemoryIncidents(incidents, own, evidence, at),
       threads: (since: string) => Effect.map(Ref.get(threads), (kept) => kept.filter((each) => each.startsAt >= since)),
       keepThread: (thread: StoredThread) =>
         Ref.update(threads, (kept) => (kept.some((each) => sameFiring(each, thread)) ? kept : [...kept, thread])),

@@ -33,7 +33,18 @@ const Pods = Schema.Struct({
         phase: Schema.optionalKey(Schema.String),
         startTime: Schema.optionalKey(Schema.String),
         conditions: Schema.optionalKey(Schema.Array(Condition)),
-        containerStatuses: Schema.optionalKey(Schema.Array(Schema.Struct({ restartCount: Schema.Number }))),
+        containerStatuses: Schema.optionalKey(
+          Schema.Array(
+            Schema.Struct({
+              restartCount: Schema.Number,
+              lastState: Schema.optionalKey(
+                Schema.Struct({
+                  terminated: Schema.optionalKey(Schema.Struct({ reason: Schema.optionalKey(Schema.String) })),
+                }),
+              ),
+            }),
+          ),
+        ),
       }),
     }),
   ),
@@ -84,6 +95,8 @@ const podOf = (pod: PodItem): Pod =>
     phase: pod.status.phase ?? "Unknown",
     ready: (pod.status.conditions ?? []).some((condition) => condition.type === "Ready" && condition.status === "True"),
     restarts: (pod.status.containerStatuses ?? []).reduce((total, container) => total + container.restartCount, 0),
+    lastTermination: pod.status.containerStatuses?.find((container) => container.lastState?.terminated?.reason)
+      ?.lastState?.terminated?.reason,
     image: pod.spec.containers[0]?.image,
     node: pod.spec.nodeName,
     startedAt: pod.status.startTime,

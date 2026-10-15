@@ -11,6 +11,10 @@ import { ClusterSettings, clusterMistakes } from "./settings-cluster"
 import { Code } from "./settings-code"
 import { Costs, Prices } from "./settings-costs"
 import { Database, databaseMistakes, misplacedDatabase } from "./settings-database"
+import { notADuration, secondsIn } from "./settings-every"
+import { IncidentTool, incidentToolMistakes } from "./settings-incident-tool"
+import { Incidents, incidentsMistakes } from "./settings-incidents"
+import { Kubernetes } from "./settings-kubernetes"
 
 const optional = Schema.optionalKey
 
@@ -47,14 +51,6 @@ const Harness = Schema.Struct({ url: optional(Schema.String), account: Schema.St
 /** How often a part is read, as `30s`, `2m` or `1h`. */
 const Every = Schema.String
 
-const units: Readonly<Record<string, number>> = { s: 1, m: 60, h: 3600 }
-
-/** The seconds in `30s`, `2m` or `1h`, or nothing if it is not written so. */
-export const secondsIn = (text: string): number | undefined => {
-  const match = /^(\d+)(s|m|h)$/.exec(text)
-  return match === null ? undefined : Number(match[1]) * (units[match[2] ?? ""] ?? 0)
-}
-
 const shortest = 5
 
 /** Each interval that is not a duration, or is shorter than Estate will read anything. */
@@ -69,7 +65,7 @@ const everyMistakes = (settings: Settings): ReadonlyArray<Mistake> => {
   ]
   return set.flatMap(([at, text]) => {
     const seconds = secondsIn(text ?? "")
-    if (seconds === undefined) return [{ at, message: `"${text}" is not a duration: write 30s, 2m or 1h` }]
+    if (seconds === undefined) return [{ at, message: notADuration(text) }]
     return seconds < shortest ? [{ at, message: `"${text}" is under ${shortest}s, the most often Estate reads` }] : []
   })
 }
@@ -86,20 +82,12 @@ const askMistakes = (settings: Settings): ReadonlyArray<Mistake> => [
   ),
 ]
 
-export const Kubernetes = Schema.Struct({
-  url: optional(Schema.String),
-  token: optional(Secret),
-  caFile: optional(Schema.String),
-  inCluster: optional(Schema.Boolean),
-  impersonate: optional(Schema.Boolean),
-  /** Put before the person's name and each group when impersonating, as the cluster's own sign-in names them. */
-  impersonationPrefix: optional(Schema.String),
-})
-
 const Sources = Schema.Struct({
   prometheus: optional(Url),
   /** Loki, for services' lines; without it, the cluster's own pod logs. */
   loki: optional(Schema.Struct({ url: Schema.String, tenant: optional(Schema.String) })),
+  /** Tempo, for the traces of the catalog's journeys; a tenant is sent as its own header. */
+  tempo: optional(Schema.Struct({ url: Schema.String, tenant: optional(Schema.String) })),
   /** Elasticsearch or OpenSearch, for services' lines in place of Loki: an index pattern, and an API key or a user. */
   elasticsearch: optional(
     Schema.Struct({
@@ -112,8 +100,8 @@ const Sources = Schema.Struct({
   ),
   alertmanager: optional(Url),
   /**
-   * Grafana's alerting, in place of Alertmanager: its URL and a service account's token. Naming a Prometheus or Loki
-   * data source's uid reaches it through Grafana, in place of `prometheus` or `loki`.
+   * Grafana's alerting, in place of Alertmanager: its URL and a service account's token. Naming a Prometheus, Loki or
+   * Tempo data source's uid reaches it through Grafana, in place of `prometheus`, `loki` or `tempo`.
    */
   grafana: optional(
     Schema.Struct({
@@ -121,6 +109,7 @@ const Sources = Schema.Struct({
       token: optional(Secret),
       prometheus: optional(Schema.String),
       loki: optional(Schema.String),
+      tempo: optional(Schema.String),
     }),
   ),
   kubernetes: optional(Kubernetes),
@@ -157,7 +146,6 @@ const Sources = Schema.Struct({
   ),
 })
 
-export type Kubernetes = typeof Kubernetes.Type
 export type Sources = typeof Sources.Type
 
 export const Settings = Schema.Struct({
@@ -175,6 +163,10 @@ export const Settings = Schema.Struct({
   database: optional(Database),
   /** How many days notes are kept: 30 unless set. */
   notes: optional(Schema.Struct({ keepDays: optional(Schema.Number) })),
+  /** How far apart two firings may start and still be suggested as one incident: `30m` unless set. */
+  incidents: optional(Incidents),
+  /** The incident tool an operator raises an incident in from its page (spec 0043). Without it, the page links out. */
+  incidentTool: optional(IncidentTool),
   sources: Schema.Record(Schema.String, Sources),
   /** A screen on the wall: the token it signs in with once, the environments it shows in turn, and how long each. */
   kiosk: optional(
@@ -290,6 +282,8 @@ export const readSettings = (text: string): Effect.Effect<Settings, SettingsErro
       ...askMistakes(settings),
       ...databaseMistakes(settings.database),
       ...clusterMistakes(settings),
+      ...incidentsMistakes(settings.incidents),
+      ...incidentToolMistakes(settings.incidentTool),
     )
     return sense.length === 0 ? settings : yield* new SettingsError({ mistakes: sense })
   })

@@ -7,11 +7,13 @@ import { AlertPage } from "./pages/Alert"
 import { Alerts } from "./pages/Alerts"
 import { Deploys } from "./pages/Deploys"
 import { FiringPage } from "./pages/Firing"
+import { IncidentPage } from "./pages/Incident"
 import { JobPage } from "./pages/Job"
 import { Kiosk } from "./pages/Kiosk"
 import { Overview } from "./pages/Overview"
 import { ServicePage } from "./pages/Service"
 import { StorePage } from "./pages/Store"
+import { TracePage } from "./pages/Trace"
 import { A } from "./parts/A"
 import { Header } from "./parts/Header"
 
@@ -48,6 +50,14 @@ const Page = (props: { readonly estate: Estate }) => {
     const now = page()
     return now.page === "firing" ? now : undefined
   }
+  const incident = () => {
+    const now = page()
+    return now.page === "incident" ? now.id : undefined
+  }
+  const trace = () => {
+    const now = page()
+    return now.page === "trace" ? now : undefined
+  }
   return (
     <Switch fallback={<Missing />}>
       <Match when={page().page === "overview"}>
@@ -59,6 +69,8 @@ const Page = (props: { readonly estate: Estate }) => {
       <Match when={agent()}>{(name) => <AgentPage name={name()} />}</Match>
       <Match when={alert()}>{(id) => <AlertPage id={id()} />}</Match>
       <Match when={firing()}>{(firing) => <FiringPage id={firing().id} at={firing().at} />}</Match>
+      <Match when={incident()}>{(id) => <IncidentPage id={id()} />}</Match>
+      <Match when={trace()}>{(trace) => <TracePage id={trace().id} journey={trace().journey} />}</Match>
       <Match when={page().page === "deploys"}>
         <Deploys />
       </Match>

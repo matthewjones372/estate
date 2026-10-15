@@ -1,5 +1,5 @@
 /** Estate assembled: settings and catalog read and checked, the routes, the catalog's reload and the sources. */
-import { Data, Effect, type FileSystem, Layer, Result, Stream, SubscriptionRef } from "effect"
+import { Data, Duration, Effect, type FileSystem, Layer, Result, Stream, SubscriptionRef } from "effect"
 import type { Mistake } from "../shared/shape"
 import { liveAskLimits } from "./ask-limits"
 import { providerLayer } from "./auth/oidc"
@@ -20,6 +20,8 @@ import { askRoute } from "./http/ask"
 import { debugOffRoute, debugOnRoute } from "./http/debug"
 import { firingEventsRoute, firingRoute } from "./http/firings"
 import { impactRoute } from "./http/impacts"
+import { incidentRoutes } from "./http/incidents"
+import { journeyRoute, traceRoute } from "./http/journeys"
 import { kioskRoute } from "./http/kiosk"
 import { loadRoute, storeLoadRoute } from "./http/load"
 import { errorsRoute, logsRoute } from "./http/logs"
@@ -29,6 +31,7 @@ import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
 import { silenceRoute, unsilenceRoute } from "./http/silences"
 import { tellRoute } from "./http/tell"
+import { timelineExportRoutes } from "./http/timeline-export"
 import { logHubLayer } from "./log-hub"
 import { liveModel } from "./model"
 import { memoryNotes, type Notes, type StoredFiring } from "./notes"
@@ -36,11 +39,16 @@ import { platform, readText } from "./platform"
 import type { Remote } from "./remote"
 import { type Role, roleLayer } from "./role"
 import { backOff } from "./schedule"
+import { recordSeen } from "./seen"
 import { Configured, readSettings, type Settings, type SettingsError } from "./settings"
+import { readBackEvery } from "./settings-incident-tool"
+import { keepDays } from "./settings-incidents"
 import { backfillHistory } from "./sources/backfill"
 import { runCode } from "./sources/code"
 import { codeEvery } from "./sources/every"
+import { incidentToolOf } from "./sources/incident-tool-of"
 import { toolsOf } from "./sources/ports"
+import { readBack } from "./sources/read-back"
 import { startSources } from "./sources/start"
 import { Estate, type EstateState, emptyEnvironment, estateLayer, off, waiting } from "./state"
 import { sharedViewsLayer } from "./stream"
@@ -115,15 +123,25 @@ export const application = Layer.mergeAll(
   logsRoute,
   errorsRoute,
   agentRunsRoute,
+  journeyRoute,
+  traceRoute,
   aroundRoute,
   firingRoute,
   firingEventsRoute,
   askRoute,
   tellRoute,
+  incidentRoutes,
+  timelineExportRoutes,
   mcpRoute,
 )
 
 const historyDays = (settings: Started["settings"]) => settings.alerts?.historyDays ?? 90
+
+/** The incident tool's reading back, where one is set. */
+const readBackOf = (settings: Started["settings"]) => {
+  const tool = incidentToolOf(settings)
+  return tool === undefined ? [] : [readBack(tool, Duration.seconds(readBackEvery(settings.incidentTool)))]
+}
 
 /** The estate's own work: its notes and firings loaded and swept, its catalog reloaded and discovered, its builds. */
 export const estateWork = (
@@ -132,14 +150,14 @@ export const estateWork = (
   Effect.all(
     [
       loadNotes.pipe(
-        Effect.andThen(loadHistory(historyDays(started.settings))),
+        Effect.andThen(loadHistory(historyDays(started.settings), keepDays(started.settings.incidents))),
         Effect.tapError((failure) => Effect.logWarning(`notes cannot be read yet: ${failure.message}`)),
         Effect.retry(backOff),
         Effect.orDie,
         Effect.andThen(Effect.never),
       ),
       sweepNotes(started.settings.notes?.keepDays ?? 30),
-      sweepHistory(historyDays(started.settings)),
+      sweepHistory(historyDays(started.settings), keepDays(started.settings.incidents)),
       Effect.flatMap(makeCatalogs(started.initial.catalog), (catalogs) =>
         Effect.all(
           [
@@ -158,6 +176,7 @@ export const estateWork = (
       ...(started.settings.code === undefined
         ? []
         : [runCode(started.settings.code, codeEvery(started.settings.code))]),
+      ...readBackOf(started.settings),
     ],
     { concurrency: "unbounded" },
   ).pipe(Effect.andThen(Effect.never))
@@ -172,7 +191,7 @@ const firingsLoaded = Effect.gen(function* () {
 
 /**
  * One environment's work, or every environment's: its sources read, its debug reverted, its earlier firings
- * backfilled and its firings recorded. `shown` puts the firings where the estate's are.
+ * backfilled, its firings recorded, and what changes around its open incidents kept. `shown` puts the firings where the estate's are.
  */
 export const environmentWork = <R = never>(
   started: Started,
@@ -182,6 +201,7 @@ export const environmentWork = <R = never>(
   Effect.all(
     [
       startSources(started.settings, { environments: (name) => only === undefined || name === only, builds: false }),
+      recordSeen(only),
       firingsLoaded.pipe(
         Effect.andThen(backfillHistory(started.settings, only, shown)),
         Effect.andThen(recordFirings(started.settings.slack, shown)),

@@ -18,7 +18,8 @@ followed.
   only.
 - **GitHub repo topics.** Left alone.
 - **Owning or creating incidents.** A catalog `incident` link opens PagerDuty / Opsgenie / etc.; Estate does
-  not call their APIs or keep an incident model.
+  not call their APIs or keep an incident model. Amended: spec 0039 keeps incidents as a grouping and a record, 0043
+  raises them in the incident tool, and 0047 keeps what happened around them and their evidence.
 
 ## Shape
 

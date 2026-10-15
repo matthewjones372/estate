@@ -8,7 +8,9 @@ import { Catalog } from "../../shared/catalog"
 import { CodeHealth } from "../../shared/code"
 import { Cost } from "../../shared/costs"
 import { Build } from "../../shared/deploys"
-import { Alert, Load, Note, SourceKind } from "../../shared/events"
+import { Alert, Load, SourceKind } from "../../shared/events"
+import { Incident, ReadBack } from "../../shared/incidents"
+import { Note } from "../../shared/note"
 import { Debug, Job, Pod, Series } from "../../shared/workloads"
 import type { EstateState } from "../state"
 import { Patch } from "./patch"
@@ -143,6 +145,8 @@ const estateFields = {
   code: optional(PartOf(Schema.Record(Schema.String, CodeHealth))),
   threads: optional(Schema.Array(Thread)),
   impacts: optional(Schema.Array(Impact)),
+  incidents: optional(Schema.Array(Incident)),
+  inTool: optional(Schema.Record(Schema.String, ReadBack)),
 }
 
 const WireEstate = Schema.Struct(estateFields)
@@ -195,6 +199,7 @@ export const Write = Schema.Union([
   Schema.TaggedStruct("ThreadKept", { thread: Thread }),
   Schema.TaggedStruct("DebugShown", { environment: Schema.String, service: Schema.String, debug: Debug }),
   Schema.TaggedStruct("FiringsKept", { firings: Schema.Array(Firing) }),
+  Schema.TaggedStruct("IncidentKept", { incident: Incident }),
 ])
 export type Write = typeof Write.Type
 

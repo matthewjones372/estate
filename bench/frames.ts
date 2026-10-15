@@ -10,7 +10,7 @@ import { framesOf } from "../src/server/cluster/owner"
 import { Frame, toWire } from "../src/server/cluster/wire"
 import { platform } from "../src/server/platform"
 import { liveRemote } from "../src/server/remote"
-import { Estate } from "../src/server/state"
+import { Estate, type EstateState, type Part } from "../src/server/state"
 import { stubWeb } from "../src/server/web"
 import { writeEstate } from "./estate"
 import { startTools } from "./tools"
@@ -32,6 +32,23 @@ const firstReadsDone = async (calls: () => number, size: number) => {
   }
 }
 
+const answered = (part: Part<unknown>) => part.state === "off" || part.answeredAt !== undefined
+
+/**
+ * Every part answered once, so its first read, sent whole, is not a change. The tools going quiet does not say so:
+ * a call that hangs until its timeout leaves its part waiting after the tools have answered everything else.
+ */
+const everyPartAnswered = (state: EstateState) =>
+  answered(state.builds) &&
+  Object.values(state.environments).every(
+    (environment) =>
+      answered(environment.metrics) &&
+      answered(environment.alerts) &&
+      answered(environment.cluster) &&
+      answered(environment.deploys) &&
+      answered(environment.costs),
+  )
+
 export const measureFrames = async (size: number) => {
   const tools = startTools(size, 20)
   try {
@@ -51,6 +68,7 @@ export const measureFrames = async (size: number) => {
           }),
         ),
       )
+      yield* SubscriptionRef.changes(estate).pipe(Stream.filter(everyPartAnswered), Stream.runHead)
       yield* Effect.promise(() => firstReadsDone(tools.calls, size))
       const before = { ...counted }
       // The largest change once read, not the first reads, when every part goes from waiting to read whole.

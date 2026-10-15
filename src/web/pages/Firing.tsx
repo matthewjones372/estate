@@ -10,9 +10,11 @@ import { clock, day, duration } from "../format"
 import { A, Out } from "../parts/A"
 import { AroundThen } from "../parts/AroundThen"
 import { FiringTimeline } from "../parts/FiringTimeline"
+import { PartOf } from "../parts/IncidentLink"
 import { LoadThen } from "../parts/LoadThen"
 import { ErrorList } from "../parts/LogErrors"
-import { firingPath } from "../route"
+import { TimelineExport } from "../parts/TimelineExport"
+import { firingPath, pathOf } from "../route"
 
 const lede = (firing: PastFiring) =>
   [
@@ -62,13 +64,25 @@ const WhatHappened = (props: { readonly firing: PastFiring }) => (
         </p>
       )}
     </Show>
+    <PartOf incident={props.firing.incident} />
     <Show when={props.firing.notes.length > 0}>
       <div class="alert-notes">
         <span class="alert-label">Notes</span>
         <For each={props.firing.notes}>
           {(note) => (
             <p class="alert-detail">
-              “{note.text}” — {note.by}, {clock(note.at)}
+              “{note.text}”
+              <Show when={note.incident}>
+                {(incident) => (
+                  <>
+                    {" on "}
+                    <em>
+                      <A to={pathOf({ page: "incident", id: incident().id })}>{incident().title}</A>
+                    </em>
+                  </>
+                )}
+              </Show>{" "}
+              — {note.by}, {clock(note.at)}
             </p>
           )}
         </For>
@@ -137,9 +151,12 @@ export const FiringPage = (props: { readonly id: string; readonly at: string }) 
           </nav>
           <WhatHappened firing={firing()} />
           <section aria-labelledby="firing-timeline" class="panel section-box stack">
-            <h2 id="firing-timeline" class="section-title">
-              Timeline
-            </h2>
+            <div class="section-head">
+              <h2 id="firing-timeline" class="section-title">
+                Timeline
+              </h2>
+              <TimelineExport of={{ alert: firing().alert, startsAt: firing().startsAt }} />
+            </div>
             <FiringTimeline alert={firing().alert} startsAt={firing().startsAt} />
           </section>
           <Show when={firing().around}>{(around) => <AroundThen around={around()} />}</Show>

@@ -4,6 +4,7 @@
  */
 import { Clock, Duration, Effect, Stream, SubscriptionRef } from "effect"
 import { Notes, type StoredEvent, type StoredFiring, sameFiring } from "./notes"
+import { keptBy } from "./notes-sweep"
 import { forEver } from "./schedule"
 import type { SlackSettings } from "./sources/slack"
 import { Estate, type EstateState, updateEstate } from "./state"
@@ -12,8 +13,11 @@ import { before, iso } from "./time"
 import { serviceOf } from "./views/health"
 import { storeOf, storesIn } from "./views/stores"
 
-const keyOf = (firing: Pick<StoredFiring, "environment" | "alert" | "startsAt">) =>
-  `${firing.environment}\u0000${firing.alert}\u0000${firing.startsAt}`
+// By the start's instant: a store reads a start back written its own way, and it is still the firing that fires.
+const keyOf = (firing: Pick<StoredFiring, "environment" | "alert" | "startsAt">) => {
+  const at = Date.parse(firing.startsAt)
+  return `${firing.environment}\u0000${firing.alert}\u0000${Number.isNaN(at) ? firing.startsAt : at}`
+}
 
 /** What fires now in each environment whose alerts have answered, by firing; and those environments. */
 export const firingNow = (estate: EstateState) => {
@@ -70,7 +74,8 @@ export const withFirings = (estate: EstateState, kept: ReadonlyArray<StoredFirin
 const seen = (firing: StoredFiring, begun: boolean): ReadonlyArray<StoredEvent> => {
   const at = begun ? firing.startsAt : firing.endsAt
   if (at === undefined) return []
-  const said = [firing.name, firing.severity, firing.service ?? firing.store].filter((each) => each !== undefined)
+  const about = firing.service ?? firing.store
+  const said = [firing.name, firing.severity, about].filter((each) => each !== undefined)
   return [
     {
       id: crypto.randomUUID(),
@@ -78,6 +83,9 @@ const seen = (firing: StoredFiring, begun: boolean): ReadonlyArray<StoredEvent> 
       alert: firing.alert,
       startsAt: firing.startsAt,
       at,
+      recordedAt: at,
+      source: "seen",
+      ...(about === undefined ? {} : { service: about }),
       by: "Estate",
       kind: begun ? "fired" : "resolved",
       text: begun ? said.join(", ") : `after ${lasting((Date.parse(at) - Date.parse(firing.startsAt)) / 60_000)}`,
@@ -134,19 +142,27 @@ export const recordFirings = <R = never>(
     )
   })
 
-/** The firings of the last `days`, into the state as Estate starts; those that ended today are what resolved. */
-export const loadHistory = (days: number) =>
+/**
+ * The firings of the last `days`, and the incidents of the last `keepDays` with their firings, into the state as Estate
+ * starts; those that ended today are what resolved.
+ */
+export const loadHistory = (days: number, keepDays: number) =>
   Effect.gen(function* () {
     const now = yield* Clock.currentTimeMillis
     const notes = yield* Notes
     const since = iso(before(now, Duration.days(days)))
-    const firings = yield* notes.firings(since)
+    const incidents = yield* notes.incidents(iso(before(now, Duration.days(Math.max(days, keepDays)))))
+    const inIncidents = keptBy(incidents.flatMap((incident) => incident.firings))
+    const firings = (yield* notes.firings(iso(before(now, Duration.days(Math.max(days, keepDays)))))).filter(
+      (firing) => firing.startsAt >= since || inIncidents(firing),
+    )
     const threads = yield* notes.threads(since)
     const today = iso(before(now, Duration.days(1)))
     yield* updateEstate((estate) => ({
       ...estate,
       firings,
       threads,
+      incidents,
       environments: Object.fromEntries(
         Object.entries(estate.environments).map(([name, state]) => [
           name,
@@ -172,14 +188,24 @@ export const loadHistory = (days: number) =>
     }))
   })
 
-/** Every hour, firings older than `days` removed, from the store and the page. */
-export const sweepHistory = (days: number) =>
+/**
+ * Every hour, from the store and the page: incidents older than `keepDays`, with all they hold; then firings older than
+ * `days`, but those an incident still holds.
+ */
+export const sweepHistory = (days: number, keepDays: number) =>
   Effect.gen(function* () {
-    const cutoff = iso(before(yield* Clock.currentTimeMillis, Duration.days(days)))
-    yield* (yield* Notes).removeFiringsBefore(cutoff)
+    const now = yield* Clock.currentTimeMillis
+    const [cutoff, kept] = [iso(before(now, Duration.days(days))), iso(before(now, Duration.days(keepDays)))]
+    const notes = yield* Notes
+    yield* notes.removeIncidentsBefore(kept)
+    const held = (yield* notes.incidents(kept)).flatMap((incident) => incident.firings)
+    yield* notes.removeFiringsBefore(cutoff, held)
     yield* updateEstate((estate) => ({
       ...estate,
-      firings: (estate.firings ?? []).filter((firing) => firing.startsAt >= cutoff),
+      firings: (estate.firings ?? []).filter((firing) => firing.startsAt >= cutoff || keptBy(held)(firing)),
+      ...(estate.incidents === undefined
+        ? {}
+        : { incidents: estate.incidents.filter((incident) => incident.openedAt >= kept) }),
     }))
   }).pipe(
     Effect.catch((failure) => Effect.logWarning(`old firings could not be removed: ${failure.message}`)),

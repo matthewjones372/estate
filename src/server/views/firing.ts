@@ -6,7 +6,9 @@ import type { PastFiring } from "../../shared/firing"
 import type { EstateState, StoredFiring } from "../state"
 import { before, iso } from "../time"
 import { impactOf } from "./alerts"
-import { changesOf, neighboursOf } from "./around"
+import { changesOf } from "./around"
+import { incidentOf, notesOn } from "./incident-of"
+import { neighboursOf } from "./neighbours"
 
 /** What changed in the hour before it fired, which deploys it may have followed are no longer held, and its neighbours. */
 const aroundThen = (estate: EstateState, firing: StoredFiring) => {
@@ -61,10 +63,19 @@ export const pastFiring = (
         (until === undefined || note.at < until),
     )
     .map(({ id, at, by, text }) => ({ id, at, by, text }))
-    .sort((a, b) => b.at.localeCompare(a.at))
+  const incident = incidentOf(estate, environment, { id, startsAt: firing.startsAt })
   return compact({
     ...firing,
-    notes,
+    notes: [...notes, ...notesOn(incident)].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)),
+    incident:
+      incident === undefined
+        ? undefined
+        : {
+            id: incident.id,
+            title: incident.title,
+            closed: incident.closedAt !== undefined,
+            openedAt: incident.openedAt,
+          },
     impact: impactOf(estate, firing.name),
     around: aroundThen(estate, firing),
     others: all.filter((each) => each !== firing).map((each) => each.startsAt),

@@ -47,6 +47,7 @@ describe("a screen", () => {
             send("POST", "/api/silences", cookie, { environment: "staging", alert: "a1", minutes: 60, reason: "x" }),
             send("POST", "/api/debug", cookie, { environment: "staging", service: "storefront", minutes: 15 }),
             send("GET", "/api/logs/errors?env=staging&service=storefront", cookie),
+            send("POST", "/api/incidents/i1/happened", cookie, { text: "rolled back by hand" }),
           ],
           (request) => ask(server, request),
         )
@@ -61,7 +62,7 @@ describe("a screen", () => {
         screen: { environments: ["staging", "production"], every: 45 },
       })
       expect(writes).toEqual(
-        Array.from({ length: 4 }, () => [403, { message: "a screen changes nothing and reads no lines" }]),
+        Array.from({ length: 5 }, () => [403, { message: "a screen changes nothing and reads no lines" }]),
       )
     }))
 })

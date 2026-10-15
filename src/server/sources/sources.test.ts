@@ -132,6 +132,7 @@ describe("the cluster", () => {
             phase: "Running",
             ready: false,
             restarts: 3,
+            lastTermination: "OOMKilled",
             image: "registry.example/storefront:v2",
             node: "one",
             startedAt: "2026-10-03T10:00:00Z",

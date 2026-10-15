@@ -3,7 +3,7 @@
  * A hand-drawn chart that can be read: pointing at it, or stepping with the keys, marks the nearest point; dragging
  * across it zooms to that span. The mark is a moment, not an index, so charts of one range can share it.
  */
-import { createMemo, createSignal, type JSX, Show } from "solid-js"
+import { createMemo, createSignal, For, type JSX, Show } from "solid-js"
 import { indexAt, shape, timeOf, visible, whole, type Zoom } from "../chart"
 
 export interface PlotProps {
@@ -30,6 +30,8 @@ export interface PlotProps {
   readonly onZoom?: (zoom: Zoom) => void
   /** A span of time to shade, such as when an alert fired, as times like `end`. */
   readonly shade?: { readonly from: number; readonly to: number } | undefined
+  /** Moments to mark across it, such as a timeline's events, as times like `end`. */
+  readonly marks?: ReadonlyArray<number>
   readonly style?: JSX.CSSProperties
 }
 
@@ -127,6 +129,18 @@ export const Plot = (props: PlotProps) => {
             vector-effect="non-scaling-stroke"
           />
         </Show>
+        <For each={props.marks ?? []}>
+          {(time) => (
+            <line
+              class="plot-mark"
+              x1={placed(time) * props.width}
+              y1="0"
+              x2={placed(time) * props.width}
+              y2={props.height}
+              vector-effect="non-scaling-stroke"
+            />
+          )}
+        </For>
         <Show when={props.shade}>
           {(shade) => (
             <rect

@@ -7,7 +7,22 @@ import { type Call, liveRemote, type Remote, type Reply, reply } from "./remote"
 
 type Item = Record<string, { readonly S: string }>
 
-/** The little of DynamoDB the notes use, in memory: tables made slowly, scans two items a page. */
+/**
+ * Whether an item passes a scan's filter, as the notes write them: `begins_with(pk, :x)`, `id = :x`, `#time < :x`
+ * and `#time >= :x`, joined by AND. A clause it does not know keeps every item.
+ */
+const passes = (item: Item, filter: string | undefined, values: Item): boolean =>
+  (filter ?? "").split(" AND ").every((clause) => {
+    const begins = /^begins_with\(pk, (:\w+)\)$/.exec(clause)
+    if (begins !== null) return (item["pk"]?.S ?? "").startsWith(values[begins[1] ?? ""]?.S ?? "")
+    const [, field, operator, name] = /^(id|#time) (=|<|>=) (:\w+)$/.exec(clause) ?? []
+    if (field === undefined || name === undefined) return true
+    const held = item[field === "#time" ? "time" : field]?.S ?? ""
+    const value = values[name]?.S ?? ""
+    return operator === "=" ? held === value : operator === "<" ? held < value : held >= value
+  })
+
+/** The little of DynamoDB the notes use, in memory: tables made slowly, scans two items a page, items of 400 KB at most. */
 export const fakeDynamo = (calls: Call[], refuse?: string) => {
   const tables = new Map<string, { described: number; items: Map<string, Item> }>()
   const refusal = (type: string, message: string) =>
@@ -29,25 +44,13 @@ export const fakeDynamo = (calls: Call[], refuse?: string) => {
     }
     if (table === undefined) return refusal("ResourceNotFoundException", "no such table")
     const keyOf = (key: Item) => `${key["pk"]?.S}|${key["sk"]?.S}`
+    if (operation === "PutItem" && JSON.stringify(body.Item).length > 400 * 1024)
+      return refusal("ValidationException", "Item size has exceeded the maximum allowed size")
     if (operation === "PutItem") table.items.set(keyOf(body.Item), body.Item)
     if (operation === "DeleteItem") table.items.delete(keyOf(body.Key))
     if (operation === "Scan") {
       const values = body.ExpressionAttributeValues ?? {}
-      const kept = [...table.items.values()].filter((item) =>
-        body.FilterExpression === "id = :id"
-          ? item["id"]?.S === values[":id"].S
-          : body.FilterExpression === "#time < :at"
-            ? (item["time"]?.S ?? "") < values[":at"].S
-            : body.FilterExpression === "begins_with(pk, :impact)"
-              ? (item["pk"]?.S ?? "").startsWith(values[":impact"].S)
-              : body.FilterExpression === "begins_with(pk, :firing) AND #time >= :since"
-                ? (item["pk"]?.S ?? "").startsWith(values[":firing"].S) && (item["time"]?.S ?? "") >= values[":since"].S
-                : body.FilterExpression === "begins_with(pk, :firing) AND #time < :at"
-                  ? (item["pk"]?.S ?? "").startsWith(values[":firing"].S) && (item["time"]?.S ?? "") < values[":at"].S
-                  : String(body.FilterExpression).startsWith("begins_with(pk, :thread)")
-                    ? (item["pk"]?.S ?? "").startsWith(values[":thread"].S)
-                    : true,
-      )
+      const kept = [...table.items.values()].filter((item) => passes(item, body.FilterExpression, values))
       const from = Number(body.ExclusiveStartKey?.index ?? 0)
       const next = from + 2 < kept.length ? { LastEvaluatedKey: { index: from + 2 } } : {}
       return reply({ Items: kept.slice(from, from + 2), ...next })

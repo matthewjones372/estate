@@ -86,9 +86,11 @@ test("an alert's own page gathers what is around it, and Ask AI reads it and is 
   await expect(around).toContainText("If p99 is high after a deploy, roll back.")
   await page.getByRole("button", { name: "Ask AI" }).click()
   await expect(page.getByText("orders' new version never rolled out")).toBeVisible()
-  await expect(page.getByText("e2e-model · read: Changed · Depends · Errors · Runbook")).toBeVisible()
+  await expect(
+    page.getByText("e2e-model · 1,200 in · 0 out · read: Changed · Depends · Errors · Runbook"),
+  ).toBeVisible()
   await page.getByRole("button", { name: "Keep as note" }).click()
-  await expect(page.getByText("Kept as a note.")).toBeVisible()
+  await expect(page.getByText("Kept as a note, under Notes above")).toBeVisible()
   await accessible(page)
 })
 
@@ -136,16 +138,15 @@ test("an alert is told to its team on Slack once, and its card then links to the
 test("a note added to an alert is there for everyone", async ({ page }) => {
   await page.goto("/?env=production")
   const card = page.getByRole("article").filter({ hasText: "Orders are slow to place" })
+  // Among other cards, notes are one line until opened.
+  await card.getByRole("button", { name: /Show notes|Add a note/ }).click()
   await card.getByRole("textbox", { name: /Add a note/ }).fill("Looking: the payment provider is slow")
   await card.getByRole("button", { name: "Add note" }).click()
-  await expect(card.getByText("Looking: the payment provider is slow")).toBeVisible()
+  await expect(card.locator(".note-body").getByText("Looking: the payment provider is slow")).toBeVisible()
   await page.reload()
-  await expect(
-    page
-      .getByRole("article")
-      .filter({ hasText: "Orders are slow to place" })
-      .getByText("Looking: the payment provider is slow"),
-  ).toBeVisible()
+  const again = page.getByRole("article").filter({ hasText: "Orders are slow to place" })
+  await again.getByRole("button", { name: "Show notes" }).click()
+  await expect(again.locator(".note-body").getByText("Looking: the payment provider is slow")).toBeVisible()
 })
 
 test("an alert silenced with a reason leaves the cards, and comes back when unsilenced", async ({ page }) => {

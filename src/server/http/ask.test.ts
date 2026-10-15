@@ -80,6 +80,7 @@ describe("POST /api/alerts/:id/ask", () => {
           read: ["Changed", "Depends"],
           called: [],
           usage: { input: 400, cached: 0, output: 0 },
+          readLogs: false,
         },
       ])
       expect(calls.find((call) => call.url.endsWith("/chat/completions"))?.body).toContain(

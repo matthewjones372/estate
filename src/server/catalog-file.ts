@@ -50,7 +50,8 @@ export const shownBy = (settings: Settings, catalog: Catalog): Catalog => {
 
 /**
  * Mistakes between the catalog and the settings: an environment the settings choose that the catalog lacks, one shown
- * whose sources are not configured, and a rule that discovers from a Backstage the settings do not name.
+ * whose sources are not configured, a rule that discovers from a Backstage the settings do not name, and a team's
+ * own service in an incident tool the settings do not set.
  */
 export const crossCheck = (settings: Settings, catalog: Catalog): ReadonlyArray<Mistake> => [
   ...(settings.environments ?? []).flatMap((name, index) =>
@@ -72,6 +73,18 @@ export const crossCheck = (settings: Settings, catalog: Catalog): ReadonlyArray<
     rule.backstage !== undefined && settings.backstage === undefined
       ? [{ at: `discover[${index}].backstage`, message: "needs backstage in estate.yaml" }]
       : [],
+  ),
+  ...(catalog.teams ?? []).flatMap((team, index) =>
+    Object.keys(team.incidentTool ?? {}).flatMap((kind) =>
+      settings.incidentTool?.[kind as keyof NonNullable<Settings["incidentTool"]>] === undefined
+        ? [
+            {
+              at: `teams[${index}] (${team.name}).incidentTool.${kind}`,
+              message: `needs incidentTool.${kind} in estate.yaml`,
+            },
+          ]
+        : [],
+    ),
   ),
 ]
 

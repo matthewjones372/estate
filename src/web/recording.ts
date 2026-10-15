@@ -2,10 +2,12 @@
 import type { AroundAlert } from "../shared/around"
 import type { PastFiring } from "../shared/firing"
 import type { LogBatch } from "../shared/log-events"
-import type { FiringEvent } from "../shared/timeline"
+import { allSeenLive, type FiringEvent } from "../shared/timeline"
 import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
+import { incidentActions } from "./fixture-incidents"
 import { groups, lines } from "./fixture-logs"
+import { journeySample, orderTrace, refusedTrace } from "./fixture-traces"
 
 /** Two runs of the triage agent, as Langfuse would give them: one failed, one through. */
 const runs = [
@@ -57,7 +59,7 @@ export const brief: AroundAlert = {
 }
 
 /** The fixture's OrdersSlow as it last fired, and once before Estate kept what an alert said. */
-const timeline: ReadonlyArray<FiringEvent> = [
+const timeline: ReadonlyArray<FiringEvent> = allSeenLive([
   { id: "e1", at: "2026-10-02T09:00:00Z", by: "Estate", kind: "fired", text: "OrdersSlow, critical, storefront" },
   { id: "e2", at: "2026-10-02T09:05:30Z", by: "gil", kind: "ai-asked", text: "claude-haiku-4-5" },
   { id: "e3", at: "2026-10-02T09:06:02Z", by: "Estate", kind: "ai-answered", text: "The pool is exhausted. (medium)" },
@@ -71,7 +73,15 @@ const timeline: ReadonlyArray<FiringEvent> = [
     link: "https://slack.example/p1",
   },
   { id: "e6", at: "2026-10-02T09:22:00Z", by: "Estate", kind: "resolved", text: "after 22 min" },
-]
+])
+
+/** A firing moved from one incident to another, which was then closed. */
+const incidents: ReadonlyArray<FiringEvent> = allSeenLive([
+  { id: "i1", at: "2026-10-02T09:01:00Z", by: "gil", kind: "incident-opened", text: "Orders slow" },
+  { id: "i2", at: "2026-10-02T09:02:00Z", by: "gil", kind: "incident-unlinked", text: "Orders slow" },
+  { id: "i3", at: "2026-10-02T09:02:00Z", by: "gil", kind: "incident-linked", text: "Checkout down" },
+  { id: "i4", at: "2026-10-02T09:30:00Z", by: "ada", kind: "incident-closed", text: "the pool was resized" },
+])
 
 const firings: ReadonlyArray<PastFiring> = [
   {
@@ -102,6 +112,25 @@ const firings: ReadonlyArray<PastFiring> = [
     endsAt: "2026-09-20T14:05:00Z",
     notes: [],
     others: ["2026-10-02T09:00:00Z"],
+  },
+  {
+    environment: "production",
+    alert: "a1",
+    name: "OrdersSlow",
+    startsAt: "2026-10-01T09:00:00Z",
+    endsAt: "2026-10-01T09:30:00Z",
+    notes: [
+      {
+        id: "n9",
+        at: "2026-10-01T09:20:00Z",
+        by: "ada",
+        text: "the pool was resized",
+        incident: { id: "i3", title: "Orders slow" },
+      },
+      { id: "n8", at: "2026-10-01T09:10:00Z", by: "gil", text: "on it" },
+    ],
+    incident: { id: "i3", title: "Orders slow", closed: true, openedAt: "2026-10-03T11:50:00Z" },
+    others: [],
   },
 ]
 
@@ -167,6 +196,16 @@ export const recording = (): Recorded => {
         calls.push(["errors", service, window])
         return Promise.resolve(service === "storefront" ? groups : "none")
       },
+      journey: (journey) => {
+        calls.push(["journey", journey])
+        return Promise.resolve(journey === "order" ? journeySample : journey === "broken" ? undefined : "none")
+      },
+      trace: (id, journey) => {
+        calls.push(["trace", id, journey])
+        return Promise.resolve(
+          id === "t4" ? refusedTrace : id === "t3" ? undefined : ["t1", "t2"].includes(id) ? orderTrace : "none",
+        )
+      },
       runs: (agent) => {
         calls.push(["runs", agent])
         return Promise.resolve(agent === "triage" ? runs : agent === "broken" ? undefined : "none")
@@ -185,6 +224,7 @@ export const recording = (): Recorded => {
                 called: ["service orders"],
                 usage: { input: 3_200, cached: 11_800, output: 1_100 },
                 cost: { amount: 0.0294, currency: "USD" },
+                readLogs: false,
               }
             : "this alert was asked about less than a minute ago",
         )
@@ -204,11 +244,19 @@ export const recording = (): Recorded => {
       },
       events: (alert, startsAt) => {
         calls.push(["events", alert, startsAt])
-        return Promise.resolve(alert === "a1" ? timeline : alert === "broken" ? undefined : [])
+        return Promise.resolve(
+          alert === "a1" ? timeline : alert === "a3" ? incidents : alert === "broken" ? undefined : [],
+        )
       },
       around: (alert) => {
         calls.push(["around", alert])
         return Promise.resolve(alert === "a1" ? brief : undefined)
+      },
+      ...incidentActions(calls),
+      timelineMarkdown: (of) => {
+        calls.push(["timelineMarkdown", of])
+        const broken = "incident" in of && of.incident === "broken"
+        return Promise.resolve(broken ? "The timeline could not be read (503)." : { text: "# OrdersSlow\n" })
       },
     },
     sendLines: (batch) => {

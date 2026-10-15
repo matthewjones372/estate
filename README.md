@@ -88,7 +88,10 @@ adds itself: notes, what an alert means, and each alert's past firings.
 - compare what's deployed in each environment
 - open an alert's own page to share: what's happening, what is around it, who owns it
 - ask AI about an alert, when a model is set in `estate.yaml`
-- raise an incident in PagerDuty, Opsgenie or your own tool from the alert, when the catalog names its link
+- raise an incident in PagerDuty or incident.io from its page or an alert's card, when `incidentTool` is set in
+  `estate.yaml`; the incident then links to it there, its timeline says who raised it, and its page says what the tool
+  says of it: its status, its priority or severity, and who is on it
+- otherwise, open your incident tool's own form from the alert, when the catalog names its link
 - tell the team that owns an alert in its Slack channel, once a firing; the card then links to the thread
 - jump to any service, store, job or agent by name from the header, or with ⌘K (Ctrl K)
 - see a service's version in every environment at once, and switch to one
@@ -127,7 +130,9 @@ reading until the answer comes.
 
 The answer lists what it read and called, so the reader can check it, and what it took in tokens, with an estimate
 of its cost where `prices` names the model. You can keep the answer as a note for
-everyone to see. The model is sent only what the person asking could see on the page. There is at most one answer
+everyone to see. The model is sent only what the person asking could see on the page. Where `auth.logs: operator`
+keeps logs to operators, an answer that read them shows on a viewer's timeline only as having answered, and keeping
+it as a note says that everyone will see it. There is at most one answer
 per alert per minute, within a daily token budget.
 
 ```yaml
@@ -242,7 +247,7 @@ services:
     links:
       logs: "https://grafana.example.com/explore?var-env={env}&var-service={service}"
       traces: "https://grafana.example.com/explore?var-service={service}"
-      # Raise incident on its alerts' cards; Estate opens the tool, it does not create the incident
+      # Raise incident on its alerts' cards, where estate.yaml sets no incidentTool: Estate opens the tool's own form
       incident: "https://example.pagerduty.com/incidents/create?service={service}&title={alert}"
 
 alerts:

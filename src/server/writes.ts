@@ -48,6 +48,11 @@ export const applied = (write: Write): ((estate: EstateState) => EstateState) =>
       return inEnvironment(write.environment, (state) => debugShown(state, write.service, write.debug))
     case "FiringsKept":
       return (estate) => withFirings(estate, write.firings)
+    case "IncidentKept":
+      return (estate) => ({
+        ...estate,
+        incidents: [...(estate.incidents ?? []).filter((each) => each.id !== write.incident.id), write.incident],
+      })
   }
 }
 

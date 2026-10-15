@@ -59,6 +59,14 @@ export const lokiOf = (sources: Sources): Reach | undefined => {
   return { url: trimmed(loki.url), headers: loki.tenant === undefined ? {} : { "x-scope-orgid": loki.tenant } }
 }
 
+/** The environment's Tempo, likewise. */
+export const tempoOf = (sources: Sources): Reach | undefined => {
+  const { grafana, tempo } = sources
+  if (grafana?.tempo !== undefined) return proxied(grafana, grafana.tempo)
+  if (tempo === undefined) return undefined
+  return { url: trimmed(tempo.url), headers: tempo.tenant === undefined ? {} : { "x-scope-orgid": tempo.tenant } }
+}
+
 const Evaluator = Schema.Struct({ type: Schema.String, params: Schema.Array(Schema.Number) })
 
 const Model = Schema.Struct({

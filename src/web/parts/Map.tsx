@@ -6,11 +6,12 @@
 import { createMemo, createSignal, For, Show } from "solid-js"
 import type { CatalogEvent, ServicesEvent } from "../../shared/events"
 import { type DrawnCategory, type DrawnEdge, type DrawnNode, drawnOf } from "../drawn"
-import { amount } from "../format"
+import { amount, took } from "../format"
 import { byName } from "../indexed"
 import { kept } from "../kept"
 import { layout } from "../layout"
 import { A } from "./A"
+import { JourneyChoices, journeyOnMap, RouteLines, RouteNote } from "./MapJourney"
 
 type MapNode = CatalogEvent["map"]["nodes"][number]
 
@@ -32,6 +33,7 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
     setOpened(next)
     opening.write([...next].join("\n"))
   }
+  const on = journeyOnMap(() => props.catalog)
   const drawn = createMemo(() => drawnOf(props.catalog, props.services, opened(), props.catalog.map.collapse))
   const placed = createMemo(() =>
     layout(
@@ -145,14 +147,27 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
         : shown.node.store === undefined
           ? undefined
           : `/stores/${encodeURIComponent(shown.node.store)}`
+    const steps = () => on.stepsAt(shown.node.id)
+    const here = () => on.hereAt(shown.node.id)
     const sub = () => {
+      const spent = here()
+      if (spent !== undefined) return `${took(spent)} here`
       const requests = state()?.load.requests?.now
       if (shown.node.store !== undefined) return store()?.reasons[0] ?? shown.node.kind
       if (shown.node.service === undefined) return shown.node.kind
       return requests === undefined || requests === null ? (state()?.version ?? "") : `${amount(requests)} req/s`
     }
+    const routed = () => (on.journey() === undefined ? "" : steps().length > 0 ? " map-on-route" : " map-off-route")
     const body = () => (
       <>
+        <Show when={steps().length > 0}>
+          <span class="map-step mono" aria-hidden="true">
+            {steps().join(" · ")}
+          </span>
+          <span class="visually-hidden">
+            Step {steps().join(" and ")} of {on.journey()?.title}:{" "}
+          </span>
+        </Show>
         <span class="map-node-name">
           <span class={`dot ${health()} ${hotOf(health())}`} style={{ width: "7px", height: "7px" }} />
           {shown.node.title}
@@ -166,13 +181,17 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
           <Show
             when={to()}
             fallback={
-              <span class={`map-node ${health()}`} style={{ left: `${at().x}%`, top: `${at().y}%` }}>
+              <span class={`map-node ${health()}${routed()}`} style={{ left: `${at().x}%`, top: `${at().y}%` }}>
                 {body()}
               </span>
             }
           >
             {(path) => (
-              <A to={path()} class={`map-node ${health()}`} style={{ left: `${at().x}%`, top: `${at().y}%` }}>
+              <A
+                to={path()}
+                class={`map-node ${health()}${routed()}`}
+                style={{ left: `${at().x}%`, top: `${at().y}%` }}
+              >
                 {body()}
               </A>
             )}
@@ -184,12 +203,17 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
 
   return (
     <Show when={props.catalog.map.nodes.length > 0}>
-      <figure aria-labelledby="map-title" class="panel map">
+      <figure
+        aria-labelledby="map-title"
+        class="panel map"
+        classList={{ "map-journeying": on.journey() !== undefined }}
+      >
         <figcaption class="spread">
           <span id="map-title" style={{ "font-weight": 600 }}>
             The estate, live
           </span>
           <span class="map-opened">
+            <JourneyChoices on={on} />
             <For each={drawn().opened}>
               {(category) => (
                 <button type="button" class="plain-button" aria-expanded="true" onClick={() => toggle(category)}>
@@ -212,6 +236,7 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
           >
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" class="map-lines">
               <For each={drawn().edges}>{(edge) => <Line edge={edge} />}</For>
+              <RouteLines journey={on.journey()} at={(node) => placed().at.get(node)} />
             </svg>
             <For each={drawn().edges}>{(edge) => <Label edge={edge} />}</For>
             <For each={drawn().nodes}>
@@ -219,6 +244,7 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
             </For>
           </div>
         </div>
+        <RouteNote on={on} />
       </figure>
     </Show>
   )

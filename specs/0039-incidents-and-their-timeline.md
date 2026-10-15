@@ -108,30 +108,45 @@ Nothing. The notes database gains events and incidents (a table each in Postgres
 
 ## Stack
 
-- [ ] **`spec-0039-events`** — events kept per firing in each notes store, read in order, swept with the firing;
+- [x] **`spec-0039-events`** — events kept per firing in each notes store, read in order, swept with the firing;
       Estate's own: fired and resolved, as it sees them.
       Done when: each store's test appends and reads a firing's events in order and sweeps them with it; a firing
       Estate sees begin and end has its fired and resolved events.
-- [ ] **`spec-0039-events-written`** — events written by notes (a removed note keeping its text), silences, impact,
+- [x] **`spec-0039-events-written`** — events written by notes (a removed note keeping its text), silences, impact,
       Tell the team and Ask AI.
       Done when: every writing route's test sees its event, with its person and time; a removed note leaves its
       noted event and a removal event.
-- [ ] **`spec-0039-timeline`** — *Timeline* on a firing's page, live and past, with dates, seconds and people.
+- [x] **`spec-0039-timeline`** — *Timeline* on a firing's page, live and past, with dates, seconds and people.
       Done when: `firing-timeline.suite.tsx` shows the events in order with each person and time, on the alert's
       page and a past firing's; `GET /api/firings/:id/events` reads them for viewers, however the start is written.
-- [ ] **`spec-0039-notes-fold`** — a card shows its newest three notes and *Show all*; a note's lines kept, a long
+- [x] **`spec-0039-notes-fold`** — a card shows its newest three notes and *Show all*; a note's lines kept, a long
       one folded to two; dates across midnight.
       Done when: a note's text keeps its line breaks; a card with five notes shows three and *Show all 5 notes*,
       which shows them all and is kept on moving away and back; a long note shows two lines and *more*, which opens
       it, on the card and in the feed; a note from yesterday shows its date.
-- [ ] **`spec-0039-incidents`** — incidents in each notes store; *Link to incident…* and *New incident* on a card;
-      `/incidents/:id` with its firings, notes and merged timeline; close and unlink as events.
-      Done when: linking two firings shows both on the incident's page with their events merged in order; each card
-      says which incident it is part of; a viewer cannot link, unlink or close.
-- [ ] **`spec-0039-export`** — the timeline routes as Markdown or JSON; *Copy as Markdown* and *Download* on both
+- [x] **`spec-0039-incidents`** — incidents kept in each notes store and shown in state; routes to open, link,
+      unlink, close and read them; their events on each firing; "part of" on the alert.
+      Done when: each store keeps, reads and sweeps an incident; opening, linking, moving, unlinking and closing
+      leave each record and each firing's events in order with their people; `GET /api/incidents/:id` merges its
+      firings' events in order; the alert says which incident it is part of; a viewer cannot open, link, unlink or
+      close.
+- [x] **`spec-0039-incidents-page`** — *Link to incident…* and *New incident* on a card; `/incidents/:id` with its
+      firings, notes and merged timeline.
+      Done when: linking two firings from their cards shows both on the incident's page with their events merged in
+      order; each card says "Part of" its incident and links to it; a viewer sees neither *Link to incident…* nor
+      *New incident*.
+- [x] **`spec-0039-export`** — the timeline routes as Markdown or JSON; *Copy as Markdown* and *Download* on both
       pages.
       Done when: a firing's and an incident's Markdown carry the header, the UTC table and the notes; the JSON
       decodes as the shared schema; a viewer's export leaves out what a viewer cannot see.
+- [x] **`spec-0039-incident-notes-everywhere`**: an incident's notes on a past firing's page, for the incident it was
+      in, and in *What changed today*, labelled with the incident's title and folded when long.
+      Done when: a past firing in an incident shows its notes, each naming the incident and linking to it; the feed
+      shows an incident's notes in each environment it has a firing in, with its title, a long one folded.
+- [x] **`spec-0039-feed-links`**: each change in *What changed today* opens what it is about: an alert's page while it
+      fires, else its past firing; an incident; a service, agent or job; a build's own page.
+      Done when: each kind's line links to its page, a note's who and what it is on rather than its *more*; the
+      links are reached by keyboard and named by what they open.
 
 ## Acceptance
 

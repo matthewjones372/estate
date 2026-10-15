@@ -1,4 +1,4 @@
-# 0041 — Runbooks on GitHub
+# 0049 — Runbooks on GitHub
 
 ## Problem
 
@@ -53,7 +53,7 @@ Nothing.
 
 ## Stack
 
-- [x] **`spec-0041-github-raw`**: a GitHub `blob` link read as its raw file, through the contents API with the
+- [x] **`spec-0049-github-raw`**: a GitHub `blob` link read as its raw file, through the contents API with the
       `runbooks:` token for `github.com` when there is one, and raw.githubusercontent.com otherwise; README's
       `runbooks:` example names `github.com`.
       Done when: against a stubbed Remote, a `blob` link with no token calls raw.githubusercontent.com with no

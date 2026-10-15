@@ -85,6 +85,61 @@ describe("a service's lines", () => {
       expect(logsFor(cluster, { name: "nowhere", environments: [] })).toBeUndefined()
     }))
 
+  test("carry the logger and trace from Loki's stream by the usual keys, or the catalog's", () => {
+    const labelled = (labels: Record<string, string>) => () =>
+      reply({
+        data: {
+          result: [
+            {
+              stream: { pod: "storefront-1", ...labels },
+              values: [[`${noon + 60_000}000000`, "WARN shop.orders.Checkout -- paid twice"]],
+            },
+            { stream: { pod: "storefront-2" }, values: [[`${noon + 120_000}000000`, "INFO plain"]] },
+          ],
+        },
+      })
+    const lines = (labels: Record<string, string>, service = storefront) =>
+      Effect.runPromise(
+        (logsFor(loki, service)?.read(noon, noon + 600_000, 10) ?? Effect.succeed([])).pipe(
+          Effect.provide(Layer.merge(stubRemote(labelled(labels)), platform)),
+        ),
+      ).then((read) => read.map((line) => [line.logger, line.trace, line.text]))
+    const keyed: Service = { ...storefront, logs: { fields: { trace: ["span_trace"], logger: ["origin"] } } }
+    return Promise.all([
+      lines({ logger: "shop.orders.Checkout", trace_id: "9406a5bf", thread: "main" }),
+      lines({ logger_name: "shop.orders.Checkout", traceId: "47431eab" }),
+      lines({ origin: "checkout.go", span_trace: "aa11", trace_id: "not this" }, keyed),
+    ]).then(([usual, other, catalogued]) => {
+      expect(usual).toEqual([
+        ["shop.orders.Checkout", "9406a5bf", "WARN shop.orders.Checkout -- paid twice"],
+        [undefined, undefined, "INFO plain"],
+      ])
+      expect(other[0]).toEqual(["shop.orders.Checkout", "47431eab", "WARN shop.orders.Checkout -- paid twice"])
+      expect(catalogued[0]?.slice(0, 2)).toEqual(["checkout.go", "aa11"])
+    })
+  })
+
+  test("carry the logger and trace a JSON line names, from the cluster too", () =>
+    Effect.runPromise(
+      (logsFor(cluster, storefront)?.read(noon, noon + 600_000, 10) ?? Effect.succeed([])).pipe(
+        Effect.provide(
+          Layer.merge(
+            stubRemote((call) => {
+              const pod = /\/pods\/(storefront-\d)\/log\?/.exec(call.url)?.[1]
+              if (pod === "storefront-1")
+                return reply(
+                  '2026-10-03T12:01:00Z {"level":"error","logger":"shop.Pay","trace_id":"c0ffee","msg":"declined"}\n',
+                )
+              return pod === undefined ? fromTable(call) : reply("")
+            }),
+            platform,
+          ),
+        ),
+      ),
+    ).then((lines) => {
+      expect(lines.map((line) => [line.level, line.logger, line.trace])).toEqual([["ERROR", "shop.Pay", "c0ffee"]])
+    }))
+
   test("that a tool does not give are a failure in its words", () => {
     const failing = (status: number, body: unknown) =>
       Effect.runPromise(

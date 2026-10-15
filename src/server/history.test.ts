@@ -64,7 +64,7 @@ describe("an alert's firings", () => {
         const notes = yield* Notes
         yield* notes.keepFiring({ ...kept, alert: "old", startsAt: "1970-01-01T09:00:00.000Z" })
         yield* TestClock.setTime(Date.parse("1970-01-02T11:00:00Z"))
-        yield* loadHistory(90)
+        yield* loadHistory(90, 400)
         const recording = yield* Effect.forkChild(recordFirings())
         yield* TestClock.adjust("1 second")
         yield* updateEstate((state) => ({ ...state, environments: { ...state.environments, staging: firing([slow]) } }))
@@ -109,9 +109,9 @@ describe("an alert's firings", () => {
         yield* notes.keepFiring({ ...kept, endsAt: "1970-03-31T09:00:00.000Z", startsAt: "1970-03-31T08:00:00.000Z" })
         yield* notes.keepFiring({ ...kept, startsAt: "1970-01-01T08:00:00.000Z", endsAt: "1970-01-01T09:00:00.000Z" })
         yield* TestClock.setTime(Date.parse("1970-03-31T12:00:00Z"))
-        yield* loadHistory(30)
+        yield* loadHistory(30, 400)
         const resolved = (yield* SubscriptionRef.get(yield* Estate)).environments["staging"]?.resolved
-        const sweeping = yield* Effect.forkChild(sweepHistory(30))
+        const sweeping = yield* Effect.forkChild(sweepHistory(30, 400))
         yield* TestClock.adjust("1 second")
         yield* Fiber.interrupt(sweeping)
         return { resolved, left: yield* notes.firings("1970-01-01T00:00:00Z") }
@@ -172,8 +172,8 @@ describe("an alert's firings", () => {
         },
       ])
       expect(statements[3]?.[0]).toContain("add column if not exists summary text")
-      expect(statements[7]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
-      expect(statements[7]?.[1]).toEqual([
+      expect(statements[12]?.[0]).toContain("on conflict (environment, alert, starts_at) do update")
+      expect(statements[12]?.[1]).toEqual([
         "staging",
         "a1",
         "OrdersSlow",
@@ -187,9 +187,13 @@ describe("an alert's firings", () => {
         null,
         null,
       ])
-      expect(statements.slice(8, 10)).toEqual([
-        ["delete from estate_firings where starts_at < $1", ["1970-01-01T00:00:00.000Z"]],
-        ["delete from estate_events where starts_at < $1", ["1970-01-01T00:00:00.000Z"]],
+      // Firings an incident holds are spared, as three arrays of their keys; incidents are swept on their own.
+      const at = "1970-01-01T00:00:00.000Z"
+      expect(
+        statements.slice(13, 15).map(([statement, parameters]) => [statement.split(" and ")[0], parameters]),
+      ).toEqual([
+        ["delete from estate_firings where starts_at < $1", [at, [], [], []]],
+        ["delete from estate_events where starts_at < $1", [at, [], [], []]],
       ])
     })
   })

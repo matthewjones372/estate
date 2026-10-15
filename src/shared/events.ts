@@ -7,9 +7,13 @@ import { AgentState, DescribedAgent } from "./agents"
 import { CodeHealth } from "./code"
 import { Cost } from "./costs"
 import { DeploysEvent } from "./deploys"
+import { FeedEvent } from "./feed"
+import { Suggested } from "./incidents"
+import { CardNote, Note } from "./note"
 
 export { type Build, DeploysEvent } from "./deploys"
 
+import { DescribedJourney } from "./traces"
 import { Debug, Job, Pod, Series } from "./workloads"
 
 const optional = Schema.optionalKey
@@ -67,6 +71,8 @@ export const CatalogEvent = Schema.Struct({
     Schema.Array(Schema.Struct({ name: Schema.String, title: Schema.String, links: Schema.Array(Link) })),
   ),
   agents: optional(Schema.Array(DescribedAgent)),
+  /** The catalog's journeys here (spec 0046). */
+  journeys: optional(Schema.Array(DescribedJourney)),
   jobs: optional(
     Schema.Array(
       Schema.Struct({
@@ -181,12 +187,6 @@ export const ServicesEvent = Schema.Struct({
 export type ServicesEvent = typeof ServicesEvent.Type
 export type ServiceState = ServicesEvent["services"][number]
 
-/** The longest note Estate keeps, in characters. */
-export const longestNote = 2000
-
-export const Note = Schema.Struct({ id: Schema.String, at: Instant, by: Schema.String, text: Schema.String })
-export type Note = typeof Note.Type
-
 export const Alert = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -201,7 +201,8 @@ export const Alert = Schema.Struct({
   silence: optional(
     Schema.Struct({ id: Schema.String, by: Schema.String, reason: Schema.String, startsAt: Instant, endsAt: Instant }),
   ),
-  notes: Schema.Array(Note),
+  /** Its own notes and its incident's, newest first. */
+  notes: Schema.Array(CardNote),
   /** Its earlier firings, newest first, as far back as they are kept: who silenced each and why, and its notes. */
   history: optional(
     Schema.Array(
@@ -225,6 +226,19 @@ export const Alert = Schema.Struct({
   chart: optional(Schema.Struct({ points: Schema.Array(Schema.NullOr(Schema.Number)), threshold: Schema.Number })),
   /** The thread in its team's Slack channel, once this firing was told there. */
   thread: optional(Schema.Struct({ url: Schema.String })),
+  /** The incident this firing is part of, if a person linked it to one, and when it was opened. */
+  incident: optional(
+    Schema.Struct({
+      id: Schema.String,
+      title: Schema.String,
+      closed: Schema.Boolean,
+      openedAt: Instant,
+      /** The same incident in the incident tool, once it is raised there. */
+      link: optional(Schema.String),
+    }),
+  ),
+  /** The open incident it may belong to, for someone who may link it, and why (spec 0042). */
+  suggested: optional(Suggested),
 })
 export type Alert = typeof Alert.Type
 
@@ -243,21 +257,6 @@ export const AlertsEvent = Schema.Struct({
   silences: Schema.Boolean,
 })
 export type AlertsEvent = typeof AlertsEvent.Type
-
-export const FeedItem = Schema.Struct({
-  at: Instant,
-  kind: Schema.Literals(["deploy", "build", "alert", "resolved", "silence", "note", "debug", "job"]),
-  service: optional(Schema.String),
-  text: Schema.String,
-  who: optional(Schema.String),
-  url: optional(Schema.String),
-  /** The firing a resolved item is about, so it opens that firing's page. */
-  firing: optional(Schema.Struct({ alert: Schema.String, startsAt: Instant })),
-})
-export type FeedItem = typeof FeedItem.Type
-
-export const FeedEvent = Schema.Struct({ items: Schema.Array(FeedItem) })
-export type FeedEvent = typeof FeedEvent.Type
 
 /** A partial services event: the services and other parts that changed, the rest as the page already has them. */
 export const ServicesPartEvent = Schema.Struct({
@@ -291,6 +290,10 @@ export const Me = Schema.Struct({
   ai: optional(Schema.Boolean),
   /** Estate may post to Slack: an alert's card may tell its team. */
   slack: optional(Schema.Boolean),
+  /** The incident tool an operator may raise an incident in, by its name: "PagerDuty". */
+  incidentTool: optional(Schema.String),
+  /** Logs are for operators here, so keeping an AI's answer that read them says who will see it. */
+  logsForOperators: optional(Schema.Boolean),
   /** What a screen shows, where the settings say: its environments in turn, each for `every` seconds. */
   screen: optional(Schema.Struct({ environments: Schema.Array(Schema.String), every: Schema.Number })),
 })

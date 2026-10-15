@@ -16,7 +16,8 @@ day's resolved alerts, in memory, so a restart forgets them, and a note is gone 
 
 - **Severity from impact.** The alert's severity stays what its rule says. Impact is words, for people.
 - **Incident management.** No status pages, timelines or paging. Estate shows the impact; incident tools can link to
-  it.
+  it. Amended: spec 0039 keeps a timeline of each firing and incident, and 0047 what changed around an incident;
+  status pages and paging stay in the incident tool.
 - **Impact per environment.** What an alert means for users is the same wherever it fires. Staging's alerts show it
   too, which is fine.
 

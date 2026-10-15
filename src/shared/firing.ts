@@ -1,7 +1,8 @@
 /** What `GET /api/firings/:id` answers: one past firing of an alert, as Estate kept it, for its page. */
 import { Schema } from "effect"
 import { Change } from "./around"
-import { Alert, Note } from "./events"
+import { Alert } from "./events"
+import { CardNote } from "./note"
 
 const optional = Schema.optionalKey
 const Instant = Schema.String
@@ -19,8 +20,10 @@ export const PastFiring = Schema.Struct({
   startsAt: Instant,
   endsAt: optional(Instant),
   silence: optional(Schema.Struct({ by: Schema.String, reason: Schema.String })),
-  /** The notes written while it fired, newest first. */
-  notes: Schema.Array(Note),
+  /** The notes written while it fired, and those on the incident it was in, which say so; newest first. */
+  notes: Schema.Array(CardNote),
+  /** The incident it was part of, if it was in one. */
+  incident: Alert.fields.incident,
   /** The alert's impact as it reads now, written on the page or in the catalog. */
   impact: Alert.fields.impact,
   /** When the same alert's other firings in this environment started, newest first. */

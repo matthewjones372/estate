@@ -10,6 +10,7 @@ import type { EstateState } from "../state"
 import { before, iso } from "../time"
 import { alertsView } from "./alerts"
 import { healthOf } from "./health"
+import { neighboursOf } from "./neighbours"
 import { storeHealthOf, storesIn } from "./stores"
 
 /** How long before it fired a change counts as near it. */
@@ -20,31 +21,6 @@ export interface Brief {
   readonly subject?: string
   readonly changed: ReadonlyArray<Change>
   readonly depends: ReadonlyArray<Neighbour>
-}
-
-/** The services and stores either side of `subject` on the map, and which side each is on. */
-export const neighboursOf = (estate: EstateState, subject: string) => {
-  const map = estate.catalog.map
-  if (map === undefined) return []
-  const named = (id: string) => {
-    const node = map.nodes.find((each) => each.id === id)
-    return node?.service !== undefined
-      ? { name: node.service, kind: "service" as const }
-      : node?.store !== undefined
-        ? { name: node.store, kind: "store" as const }
-        : undefined
-  }
-  const here = map.nodes.filter((node) => node.service === subject || node.store === subject).map((node) => node.id)
-  const found = map.edges.flatMap((edge) => {
-    const other = here.includes(edge.from)
-      ? { id: edge.to, side: "calls" as const }
-      : here.includes(edge.to)
-        ? { id: edge.from, side: "called by" as const }
-        : undefined
-    const node = other === undefined ? undefined : named(other.id)
-    return node === undefined || other === undefined || node.name === subject ? [] : [{ ...node, side: other.side }]
-  })
-  return found.filter((each, index) => found.findIndex((other) => other.name === each.name) === index)
 }
 
 /** The deploys and builds of `services` from `since`, and before `until` when a firing in the past is looked at. */

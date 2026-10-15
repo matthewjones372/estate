@@ -28,6 +28,17 @@ describe("a firing's timeline", () => {
     )
   })
 
+  test("says what was done to the incidents a firing was part of", async () => {
+    const page = mount(() => <FiringTimeline alert="a3" startsAt="2026-10-02T09:00:00Z" />)
+    await page.settle()
+    const shown = rows(page.container)
+    expect(shown).toHaveLength(4)
+    expect(shown[0]).toMatch(/:01:00 gil opened incident "Orders slow" with this firing$/)
+    expect(shown[1]).toMatch(/:02:00 gil unlinked from incident "Orders slow"$/)
+    expect(shown[2]).toMatch(/:02:00 gil linked to incident "Checkout down"$/)
+    expect(shown[3]).toMatch(/:30:00 ada closed the incident: the pool was resized$/)
+  })
+
   test("says when nothing is kept, and when it could not be read", async () => {
     const quiet = mount(() => <FiringTimeline alert="a2" startsAt="2026-10-02T09:00:00Z" />)
     await quiet.settle()
