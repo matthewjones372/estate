@@ -271,6 +271,31 @@ Then, in the petshop's demo: `./chaos.sh registry-slow`; open an incident from C
 the restart, the health changes and the written entry in order, its Evidence draws with Prometheus, Loki and Tempo
 stopped, and *Everything (zip)* opens to the files above.
 
+### Run on 2026-10-15, at 47810df
+
+Not yet passing.
+
+- `bun run gate` passes.
+- `bun run integration -t "Notes"` matches no test (`describe("real notes")`), so it exits 1. With `-t "notes"`, 4 pass.
+  No integration test reads an incident's events or evidence back from Postgres or DynamoDB.
+- In the demo, the written entry sits at 10:44 between the firing and the next build, marked `written`, and the
+  health change (`petshop attention → healthy`) follows the firing's `resolved`. There is no restart: the demo's
+  stand-in Kubernetes (`demo/tools/fake.ts`) always says `restartCount: 0`.
+- With Prometheus, Loki and Tempo stopped, the 14 kept charts draw, the 2,000 kept lines show and a kept trace opens.
+- *Everything (zip)* holds every kind of file above and keeps an `exported` event.
+
+What it found, for the next entries:
+
+1. `manifest.json`'s `leftOut` is empty while `evidence-kept` says 182 lines were left out past
+   `incidents.evidence.lines`.
+2. `manifest.json` says what each source was asked, not when.
+3. A trace's file has its trace ID in hex and its span IDs in base64, as Tempo's API gives them. OTLP JSON wants hex.
+4. The line limit keeps the newest lines, so the lines around the first firing are the ones left out.
+5. A trace ID Tempo gives without its leading zero (31 characters) names its file that way.
+6. The firing's `fired` event is `seen`, kept at the firing's start, before the incident was opened.
+7. Small: "1 sets kept.", trace durations unrounded (`509.028076171875 ms`), the zip's folder not lowercased,
+   `versions.json` without `start` when it is not known, and each line in `logs/<service>.log` naming its level twice.
+
 ## Open questions
 
 - **Does `AGENTS.md`'s "read, don't store" change?** Recommended: yes, one line: Estate keeps its own notes, who
