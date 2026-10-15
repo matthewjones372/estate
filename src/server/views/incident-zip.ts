@@ -60,6 +60,13 @@ const kinds = { internal: 1, server: 2, client: 3, producer: 4, consumer: 5 } as
 /** Milliseconds as OTLP's nanoseconds, written out so they keep their digits. */
 const nanos = (millis: number) => `${Math.floor(millis)}${String(Math.round((millis % 1) * 1e6)).padStart(6, "0")}`
 
+/**
+ * An id as OTLP JSON writes it, hex of `bytes` bytes: Tempo gives span ids in base64, and trace ids in hex without
+ * their leading zeros.
+ */
+const hexOf = (id: string, bytes: number) =>
+  (/^[0-9a-f]+$/i.test(id) ? id.toLowerCase() : Buffer.from(id, "base64").toString("hex")).padStart(bytes * 2, "0")
+
 /** A kept trace as OTLP JSON, a resource a service, so it opens in Tempo or Jaeger again. */
 const otlpOf = (trace: KeptTrace) => ({
   resourceSpans: [...new Set(trace.spans.map((span) => span.service))].map((service) => ({
@@ -69,9 +76,9 @@ const otlpOf = (trace: KeptTrace) => ({
         spans: trace.spans
           .filter((span) => span.service === service)
           .map((span) => ({
-            traceId: trace.id,
-            spanId: span.id,
-            ...(span.parent === undefined ? {} : { parentSpanId: span.parent }),
+            traceId: hexOf(trace.id, 16),
+            spanId: hexOf(span.id, 8),
+            ...(span.parent === undefined ? {} : { parentSpanId: hexOf(span.parent, 8) }),
             name: span.name,
             kind: kinds[span.kind],
             startTimeUnixNano: nanos(span.start),
@@ -107,7 +114,7 @@ const evidenceFiles = (record: IncidentRecord, set: EvidenceSet): ReadonlyArray<
       [`logs/${safe(logs.service)}.log`, `${asText(logs.lines)}\n`] as const,
       [`logs/${safe(logs.service)}-errors.json`, json(logs.errors)] as const,
     ]),
-    ...(set.traces ?? []).map((trace) => [`traces/${safe(trace.id)}.json`, json(otlpOf(trace))] as const),
+    ...(set.traces ?? []).map((trace) => [`traces/${hexOf(trace.id, 16)}.json`, json(otlpOf(trace))] as const),
   ]
 }
 

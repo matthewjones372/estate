@@ -46,6 +46,8 @@ const operator: Settings = {
   },
 }
 
+/** As Tempo gives them: a trace id with its leading zero dropped, and span ids in base64. */
+const shortId = "a39214a714bf7f8048e1a868f5ce1e3"
 const spanAt = (millis: number) => String((Date.parse("2026-10-12T16:50:00Z") + millis) * 1e6)
 /** Prometheus, Loki and Tempo as stubs: a series, two lines, and one trace. */
 const sources = (call: Call): Reply | undefined => {
@@ -80,15 +82,29 @@ const sources = (call: Call): Reply | undefined => {
         ],
       },
     })
-  if (url.pathname === "/api/search") return reply({ traces: [{ traceID: "t1" }] })
-  if (url.pathname === "/api/traces/t1")
+  if (url.pathname === "/api/search") return reply({ traces: [{ traceID: shortId }] })
+  if (url.pathname === `/api/traces/${shortId}`)
     return reply({
       batches: [
         {
           resource: { attributes: [{ key: "service.name", value: { stringValue: "orders" } }] },
           scopeSpans: [
             {
-              spans: [{ spanId: "a", name: "place order", startTimeUnixNano: spanAt(0), endTimeUnixNano: spanAt(90) }],
+              spans: [
+                {
+                  spanId: "AAECAwQFBgc=",
+                  name: "place order",
+                  startTimeUnixNano: spanAt(0),
+                  endTimeUnixNano: spanAt(90),
+                },
+                {
+                  spanId: "AQIDBAUGBwg=",
+                  parentSpanId: "AAECAwQFBgc=",
+                  name: "check chip",
+                  startTimeUnixNano: spanAt(10),
+                  endTimeUnixNano: spanAt(80),
+                },
+              ],
             },
           ],
         },
@@ -139,7 +155,7 @@ describe("an incident's export as a zip", () => {
           "charts/orders-requests.json",
           "logs/orders.log",
           "logs/orders-errors.json",
-          "traces/t1.json",
+          "traces/0a39214a714bf7f8048e1a868f5ce1e3.json",
           "manifest.json",
         ]
           .map((path) => `Chip-registry-slow-2026-10-12/${path}`)
@@ -159,9 +175,29 @@ describe("an incident's export as a zip", () => {
       expect(rows.some((row) => row.includes(',written,gil,happened,,,"Rolled back, by hand",'))).toBe(true)
       expect(read("timeline.jsonl").trimEnd().split("\n")).toHaveLength(events.length)
       expect(read("logs/orders.log")).toContain("\torders-1\tERROR\tERROR pool exhausted")
-      expect(JSON.parse(read("traces/t1.json")).resourceSpans[0].scopeSpans[0].spans[0].name).toBe("place order")
       expect(JSON.parse(read("manifest.json"))).toMatchObject({ live: false, keptBy: "Estate" })
       expect(read("incident.md")).toContain("](charts/orders-requests.svg)")
+    }))
+
+  test("writes each trace as OTLP JSON, its ids in hex of their full length, named for its trace id", () =>
+    Effect.runPromise(exported).then(({ files }) => {
+      const trace = "0a39214a714bf7f8048e1a868f5ce1e3"
+      const otlp = JSON.parse(
+        strFromU8(files[`Chip-registry-slow-2026-10-12/traces/${trace}.json`] ?? new Uint8Array()),
+      )
+      expect(
+        otlp.resourceSpans[0].scopeSpans[0].spans.map(
+          (span: { name: string; traceId: string; spanId: string; parentSpanId?: string }) => [
+            span.name,
+            span.traceId,
+            span.spanId,
+            span.parentSpanId,
+          ],
+        ),
+      ).toEqual([
+        ["place order", trace, "0001020304050607", undefined],
+        ["check chip", trace, "0102030405060708", "0001020304050607"],
+      ])
     }))
 
   test("draws each chart with the incident's window shaded and its events marked, and is itself an event", () =>
