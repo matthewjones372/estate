@@ -5,13 +5,14 @@
 import { Effect, Layer, Schema } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
 import { longestNote } from "../../shared/note"
-import { happenedOnEach } from "../happened"
+import { happenedOnEach, happenedOnIncident } from "../happened"
 import { Configured } from "../settings"
 import { isoNow } from "../time"
 import { answered, keep, keyOf, malformed, oneAtATime, open, refuse } from "./incident-record"
 import { json, writer } from "./routes"
 
-const Asked = Schema.Struct({ text: Schema.String })
+// A summary kept as a note (spec 0051) says so, so the export can head with the newest.
+const Asked = Schema.Struct({ text: Schema.String, from: Schema.optionalKey(Schema.Literal("summary")) })
 
 /** Anyone who may write, where Estate keeps incidents. */
 export const noteWriter = Effect.gen(function* () {
@@ -40,6 +41,8 @@ const addRoute = HttpRouter.add(
       }),
     )
     yield* happenedOnEach(now.firings.map(keyOf), person.name, "incident-noted", text)
+    if (asked.from === "summary")
+      yield* happenedOnIncident(id, person.name, "ai-kept", "the summary", undefined, { link: note.id })
     return json(now, 201)
   }).pipe(answered),
 )

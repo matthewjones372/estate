@@ -88,7 +88,12 @@ const notes = (record: TimelineExport) => {
 }
 
 /** The timeline as Markdown; with `sources`, each event says how it was kept, and `more` follows the notes. */
-export const markdownOf = (record: TimelineExport, sources = false, more: ReadonlyArray<string> = []): string => {
+export const markdownOf = (
+  record: TimelineExport,
+  sources = false,
+  more: ReadonlyArray<string> = [],
+  lead: ReadonlyArray<string> = [],
+): string => {
   const head =
     record.incident === undefined
       ? record.firings.flatMap(about)
@@ -101,6 +106,7 @@ export const markdownOf = (record: TimelineExport, sources = false, more: Readon
   return [
     `# ${oneLine(record.title)}`,
     "",
+    ...lead,
     ...head,
     "",
     "## Timeline",
