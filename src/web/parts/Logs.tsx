@@ -5,6 +5,7 @@ import type { LogLine } from "../../shared/log-events"
 import { useEstate, useSnapshot } from "../context"
 import { asText, copy, fileName, save } from "../log-copy"
 import { searchOf, shows } from "../log-search"
+import { IncludeInIncident } from "./IncludeInIncident"
 import { Errors } from "./LogErrors"
 import { type Kind, kindOf, kinds, LineRow } from "./LogLine"
 
@@ -164,6 +165,10 @@ const Live = (props: { readonly service: string }) => {
         >
           Save
         </button>
+        <IncludeInIncident
+          label={`Include ${lineCount(chosen().length)}…`}
+          what={() => ({ kind: "lines", environment: snapshot.environment, service: props.service, lines: chosen() })}
+        />
         <span class="log-told" role="status">
           {told()}
         </span>

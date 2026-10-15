@@ -5,6 +5,7 @@
  */
 import { Effect, Layer } from "effect"
 import { HttpRouter, HttpServerRequest } from "effect/http"
+import { Included } from "../../shared/included"
 import { sizeOf } from "../evidence-limit"
 import { happenedOnIncident } from "../happened"
 import { incidentTimeline } from "../incident-timeline"
@@ -14,7 +15,7 @@ import { evidenceBytes } from "../settings-incidents"
 import { isoNow } from "../time"
 import { noteWriter } from "./incident-notes"
 import { answered, named as incidentNamed, malformed, open, refuse } from "./incident-record"
-import { Included, includedSet, named } from "./included-set"
+import { includedSet, named } from "./included-set"
 import { json, readsLogs } from "./routes"
 
 const includeRoute = HttpRouter.add(

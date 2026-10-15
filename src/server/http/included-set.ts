@@ -2,9 +2,9 @@
  * What a person includes in an incident from where they found it (spec 0051), as a set of evidence with one item: a
  * chart read again from the catalog's query over the range they had on screen, or lines and an error group as shown.
  */
-import { Effect, Schema, SubscriptionRef } from "effect"
+import { Effect, SubscriptionRef } from "effect"
 import type { EvidenceSet } from "../../shared/evidence"
-import { ErrorGroup, LogLine } from "../../shared/log-events"
+import type { Included } from "../../shared/included"
 import { windowOf } from "../../shared/window"
 import { chartsOf } from "../evidence"
 import { Configured } from "../settings"
@@ -13,21 +13,6 @@ import { Estate } from "../state"
 import { refuse } from "./incident-record"
 
 const mostLines = 500
-
-const where = { environment: Schema.String, service: Schema.String, why: Schema.optionalKey(Schema.String) }
-
-export const Included = Schema.Union([
-  Schema.Struct({
-    kind: Schema.Literal("chart"),
-    ...where,
-    panel: Schema.String,
-    from: Schema.String,
-    to: Schema.String,
-  }),
-  Schema.Struct({ kind: Schema.Literal("lines"), ...where, lines: Schema.Array(LogLine) }),
-  Schema.Struct({ kind: Schema.Literal("errors"), ...where, group: ErrorGroup }),
-])
-export type Included = typeof Included.Type
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 

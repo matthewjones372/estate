@@ -2,9 +2,10 @@
 /** A service's errors over a window, grouped by message. */
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
 import type { ErrorGroups } from "../../shared/log-events"
-import { type ErrorWindow, useEstate } from "../context"
+import { type ErrorWindow, useEstate, useSnapshot } from "../context"
 import { since } from "../format"
 import { asText, copy } from "../log-copy"
+import { IncludeInIncident } from "./IncludeInIncident"
 import { LineRow } from "./LogLine"
 
 const ranges = ["1h", "6h", "24h"] as const
@@ -16,6 +17,7 @@ export const ErrorList = (props: {
   readonly most?: number
 }) => {
   const { actions, now } = useEstate()
+  const snapshot = useSnapshot()
   const [groups, setGroups] = createSignal<ErrorGroups | "none" | "loading" | undefined>("loading")
   const [open, setOpen] = createSignal<string | undefined>(undefined)
   createEffect(
@@ -89,6 +91,15 @@ export const ErrorList = (props: {
                       >
                         Copy these lines
                       </button>
+                      <IncludeInIncident
+                        label="Include this error…"
+                        what={() => ({
+                          kind: "errors",
+                          environment: snapshot.environment,
+                          service: props.service,
+                          group,
+                        })}
+                      />
                     </Show>
                   </li>
                 )}
