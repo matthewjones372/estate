@@ -11,7 +11,8 @@ import { day } from "../format"
 import { EvidenceLogs } from "./EvidenceLogs"
 import { EvidenceTraces } from "./EvidenceTraces"
 import { canKeepIncidents } from "./IncidentLink"
-import { Plot } from "./Plot"
+import { IncludedEvidence } from "./IncludedEvidence"
+import { KeptChartFigure, shadeOf } from "./KeptChart"
 
 export const IncidentEvidence = (props: { readonly record: IncidentRecord; readonly changed: () => void }) => {
   const { actions, me } = useEstate()
@@ -20,18 +21,9 @@ export const IncidentEvidence = (props: { readonly record: IncidentRecord; reado
   const [refused, setRefused] = createSignal<string | undefined>(undefined)
   const incident = () => props.record.incident
   const latest = () => keptByEstate(props.record.evidence).at(-1)
-  // From its first firing, or its opening if earlier, to its close or the last point kept.
   const shade = () => {
     const set = latest()
-    if (set === undefined) return undefined
-    const from = Math.min(
-      Date.parse(incident().openedAt),
-      ...incident().firings.map((each) => Date.parse(each.startsAt)),
-    )
-    return {
-      from,
-      to: incident().closedAt === undefined ? set.window.end * 1000 : Date.parse(incident().closedAt ?? ""),
-    }
+    return set === undefined ? undefined : shadeOf(incident(), set)
   }
   const marks = () => props.record.events.map((event) => Date.parse(event.at))
   const keep = () => {
@@ -61,6 +53,7 @@ export const IncidentEvidence = (props: { readonly record: IncidentRecord; reado
           Logs and the traces drawn from them are for operators here, so they are left out of what you read and export.
         </p>
       </Show>
+      <IncludedEvidence record={props.record} changed={props.changed} />
       <Show
         when={latest()}
         fallback={
@@ -78,27 +71,14 @@ export const IncidentEvidence = (props: { readonly record: IncidentRecord; reado
             <div class="charts">
               <For each={set().charts}>
                 {(chart) => (
-                  <figure class="chart">
-                    <figcaption class="muted">
-                      {chart.service} {chart.panel}
-                      {chart.unit === undefined ? "" : ` (${chart.unit})`}, {chart.environment}
-                    </figcaption>
-                    <Plot
-                      label={`${chart.service} ${chart.panel} in ${chart.environment}, as kept`}
-                      points={chart.points}
-                      end={set().window.end * 1000}
-                      span={(set().window.end - set().window.start) * 1000}
-                      width={300}
-                      height={110}
-                      pad={4}
-                      ink="#8FB0FF"
-                      baseline
-                      mark={mark()}
-                      onMark={setMark}
-                      shade={shade()}
-                      marks={marks()}
-                    />
-                  </figure>
+                  <KeptChartFigure
+                    chart={chart}
+                    set={set()}
+                    shade={shade()}
+                    marks={marks()}
+                    mark={mark()}
+                    onMark={setMark}
+                  />
                 )}
               </For>
             </div>

@@ -3,7 +3,7 @@
  * and JSON lines; what changed; its last kept evidence as charts (SVG and their series), logs and traces; and a
  * manifest of where each came from and what was left out. Each file is under a folder named for the incident.
  */
-import { type EvidenceSet, type KeptChart, type KeptTrace, keptByEstate } from "../../shared/evidence"
+import { type EvidenceSet, includedIn, type KeptChart, type KeptTrace, keptByEstate } from "../../shared/evidence"
 import type { IncidentRecord } from "../../shared/incidents"
 import { asText } from "../../shared/log-text"
 import type { TimelineExport } from "../../shared/timeline-export"
@@ -141,7 +141,26 @@ export const incidentZip = (exporting: Exporting): ReadonlyArray<readonly [strin
   const { record, timeline } = exporting
   const kept = keptByEstate(record.evidence).at(-1)
   const set = kept === undefined || exporting.readsLogs ? kept : withoutLogs(kept)
-  const evidence = set === undefined ? [] : evidenceFiles(record, set)
+  const readable = (each: EvidenceSet) => (exporting.readsLogs ? each : withoutLogs(each))
+  const { shown, removed } = includedIn(record.evidence, record.events)
+  // What people included, each in a folder of its own with why; what was removed since, apart, as the record keeps it.
+  const by = (folder: string, sets: ReadonlyArray<EvidenceSet>) =>
+    sets
+      .toReversed()
+      .flatMap((each, index) => [
+        [
+          `${folder}/${index + 1}/included.json`,
+          json({ keptBy: each.keptBy, keptAt: each.keptAt, why: each.why }),
+        ] as const,
+        ...evidenceFiles(record, readable(each)).map(
+          ([path, text]) => [`${folder}/${index + 1}/${path}`, text] as const,
+        ),
+      ])
+  const evidence = [
+    ...(set === undefined ? [] : evidenceFiles(record, set)),
+    ...by("included", shown),
+    ...by("removed", removed),
+  ]
   const leftOut = [
     ...(set?.logs ?? []).flatMap((logs) =>
       logs.leftOut === 0
@@ -173,7 +192,10 @@ export const incidentZip = (exporting: Exporting): ReadonlyArray<readonly [strin
         ...tables.map((path) => `- [${path}](${path})`),
       ]),
     ],
-    ["incident.json", json({ ...record, evidence: set === undefined ? [] : [set] })],
+    [
+      "incident.json",
+      json({ ...record, evidence: [...(set === undefined ? [] : [set]), ...[...shown, ...removed].map(readable)] }),
+    ],
     ["timeline.csv", `${csvOf(timeline)}\n`],
     ["timeline.jsonl", `${timeline.events.map((event) => JSON.stringify(event)).join("\n")}\n`],
     // A start no version is known for is null, so a reader sees it is not known rather than missing.

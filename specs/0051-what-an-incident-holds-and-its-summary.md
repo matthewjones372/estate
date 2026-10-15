@@ -160,7 +160,7 @@ the 300-line limit, so the incident actions move out of it first.
       draws it.
 - [x] **`spec-0051-include-traces`** — *Include* on a trace's page.
       Done when: including a trace keeps it whole and the incident's page draws it in lanes linking to its page.
-- [ ] **`spec-0051-evidence-first`** — the page's sections reordered; *Included* listed newest first above Estate's
+- [x] **`spec-0051-evidence-first`** — the page's sections reordered; *Included* listed newest first above Estate's
       set, each drawn as where it was found, with *Remove*; the export's `included/` and `removed/`.
       Done when: an incident's page shows Summary and Evidence before Firings; included items show who, when and why;
       the zip holds them.

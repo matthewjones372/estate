@@ -64,6 +64,8 @@ export interface Actions {
   readonly allIncidents: () => Promise<ReadonlyArray<Incident> | undefined>
   /** Keeps what was found in an open incident (spec 0051): the set it was kept as, or why not. */
   readonly include: (incident: string, what: Included) => Promise<EvidenceSet | string>
+  /** Removes what was included, as an event; true, or why not. */
+  readonly removeIncluded: (incident: string, set: string) => Promise<true | string>
   /** An incident and its firings' events: "none" where there is no such incident, undefined on failure. */
   readonly incident: (id: string) => Promise<IncidentRecord | "none" | undefined>
   /** Each write answers with the incident as it now is, or why it could not. */

@@ -54,6 +54,7 @@ type IncidentActions = Pick<
   | "dismissIncident"
   | "raiseIncident"
   | "include"
+  | "removeIncluded"
 >
 
 export const incidentsOn = (environment: () => string): IncidentActions => ({
@@ -110,5 +111,9 @@ export const incidentsOn = (environment: () => string): IncidentActions => ({
                 .then((body) => Option.getOrUndefined(decodeSet(body)) ?? "What was kept came back unreadable.")
             : refusalOf(response, "It could not be included"),
       )
+      .catch(() => "Estate could not be reached."),
+  removeIncluded: (id, set) =>
+    fetch(`/api/incidents/${encodeURIComponent(id)}/included/${encodeURIComponent(set)}`, { method: "DELETE" })
+      .then<true | string>((response) => (response.ok ? true : refusalOf(response, "It could not be removed")))
       .catch(() => "Estate could not be reached."),
 })

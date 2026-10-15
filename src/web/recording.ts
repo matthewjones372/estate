@@ -258,6 +258,10 @@ export const recording = (): Recorded => {
         calls.push(["allIncidents"])
         return Promise.resolve(keptIncidents)
       },
+      removeIncluded: (incident, set) => {
+        calls.push(["removeIncluded", incident, set])
+        return Promise.resolve(true)
+      },
       include: (incident, what) => {
         calls.push(["include", incident, what])
         return Promise.resolve(includedAs(what))

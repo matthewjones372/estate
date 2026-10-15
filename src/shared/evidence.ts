@@ -68,3 +68,15 @@ export type EvidenceSet = typeof EvidenceSet.Type
 /** The sets Estate kept whole, on close or when an operator kept them, without what people included one at a time. */
 export const keptByEstate = (sets: ReadonlyArray<EvidenceSet> | undefined) =>
   (sets ?? []).filter((set) => set.from === undefined)
+
+/** What people included, newest first: shown, and removed since, which an `evidence-removed` event names (spec 0051). */
+export const includedIn = (
+  sets: ReadonlyArray<EvidenceSet> | undefined,
+  events: ReadonlyArray<{ readonly kind: string; readonly link?: string }>,
+) => {
+  const removed = new Set(events.flatMap((each) => (each.kind === "evidence-removed" ? [each.link ?? ""] : [])))
+  const all = (sets ?? [])
+    .filter((set) => set.from === "included")
+    .toSorted((a, b) => Date.parse(b.keptAt) - Date.parse(a.keptAt))
+  return { shown: all.filter((set) => !removed.has(set.id)), removed: all.filter((set) => removed.has(set.id)) }
+}
