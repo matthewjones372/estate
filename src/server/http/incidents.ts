@@ -40,6 +40,7 @@ import {
   refuse,
 } from "./incident-record"
 import { incidentServicesRoute } from "./incident-services"
+import { incidentSummaryRoute } from "./incident-summary"
 import { json, readsLogs, refused, searchParams, withRole } from "./routes"
 
 const longestTitle = 200
@@ -228,5 +229,6 @@ export const incidentRoutes = Layer.mergeAll(
   incidentHappenedRoute,
   incidentEvidenceRoute,
   incidentIncludedRoutes,
+  incidentSummaryRoute,
   incidentExportRoute,
 )

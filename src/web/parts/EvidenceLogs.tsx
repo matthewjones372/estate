@@ -7,7 +7,8 @@ import { instant } from "../format"
 export const EvidenceLogs = (props: { readonly logs: KeptLogs }) => (
   <div class="kept-logs stack">
     <h3 class="section-title">
-      {props.logs.service} logs, {props.logs.environment}, from {props.logs.from}: {props.logs.lines.length} lines kept
+      {props.logs.service} logs, {props.logs.environment}
+      {props.logs.from === "included" ? "" : `, from ${props.logs.from}`}: {props.logs.lines.length} lines kept
       {props.logs.leftOut === 0 ? "" : `, ${props.logs.leftOut} left out past incidents.evidence.lines`}
     </h3>
     <Show when={props.logs.errors.length > 0} fallback={<p class="muted">No errors among them.</p>}>

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Context, Effect, Layer } from "effect"
+import { unzipSync } from "fflate"
 import type { EvidenceSet } from "../../shared/evidence"
 import type { Incident, IncidentRecord } from "../../shared/incidents"
 import { ask, catalog, environment, estate, type Server, serverFor, settings } from "../fixture"
@@ -183,5 +184,25 @@ describe("including something in an incident", () => {
       expect(record.events.filter((each) => each.kind === "evidence-removed")).toEqual([
         expect.objectContaining({ by: "vi", link: kept.id, text: "removed orders errors, included by vi" }),
       ])
+    }))
+
+  test("is exported in the zip, each item in a folder of its own with why, and what was removed apart", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(as("gil", "operator"), firing, prometheus)
+        const [, [, lined]] = (yield* sent(server, [including(chart), including(lines)])) as unknown as [
+          unknown,
+          [number, EvidenceSet],
+        ]
+        yield* sent(server, [removing(lined.id)])
+        const zip = yield* Effect.promise(() => server.handler(sending("GET", "/api/incidents/i1/export?format=zip")))
+        return Object.keys(unzipSync(new Uint8Array(yield* Effect.promise(() => zip.arrayBuffer()))))
+      }),
+    ).then((paths) => {
+      const inside = paths.map((path) => path.split("/").slice(1).join("/"))
+      expect(inside).toContain("included/1/included.json")
+      expect(inside).toContain("included/1/charts/orders-errors.svg")
+      expect(inside).toContain("removed/1/logs/orders.log")
+      expect(inside.filter((path) => path.startsWith("charts/"))).toEqual([])
     }))
 })

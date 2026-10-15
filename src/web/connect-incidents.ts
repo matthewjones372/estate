@@ -2,6 +2,7 @@
 import { Option, Schema } from "effect"
 import { EvidenceSet } from "../shared/evidence"
 import { Incident, IncidentRecord } from "../shared/incidents"
+import { SummaryAnswer } from "../shared/summary"
 import type { Actions } from "./context"
 import { decodeMessage, refusalOf } from "./refusal"
 
@@ -9,6 +10,7 @@ const decodeIncident = Schema.decodeUnknownOption(Incident)
 const decodeIncidents = Schema.decodeUnknownOption(Schema.Struct({ incidents: Schema.Array(Incident) }))
 const decodeRecord = Schema.decodeUnknownOption(IncidentRecord)
 const decodeSet = Schema.decodeUnknownOption(EvidenceSet)
+const decodeSummary = Schema.decodeUnknownOption(SummaryAnswer)
 
 const listed = (path: string) =>
   fetch(path)
@@ -54,6 +56,8 @@ type IncidentActions = Pick<
   | "dismissIncident"
   | "raiseIncident"
   | "include"
+  | "removeIncluded"
+  | "summarise"
 >
 
 export const incidentsOn = (environment: () => string): IncidentActions => ({
@@ -76,7 +80,12 @@ export const incidentsOn = (environment: () => string): IncidentActions => ({
       `/api/incidents/${encodeURIComponent(id)}/firings?env=${encodeURIComponent(env)}&alert=${encodeURIComponent(alert)}&at=${encodeURIComponent(startsAt)}`,
     ),
   closeIncident: (id, how) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/close`, { how }),
-  addIncidentNote: (id, text) => incidentWrite("POST", `/api/incidents/${encodeURIComponent(id)}/notes`, { text }),
+  addIncidentNote: (id, text, from) =>
+    incidentWrite(
+      "POST",
+      `/api/incidents/${encodeURIComponent(id)}/notes`,
+      from === undefined ? { text } : { text, from },
+    ),
   addIncidentHappened: (id, text, at) =>
     fetch(`/api/incidents/${encodeURIComponent(id)}/happened`, {
       method: "POST",
@@ -111,4 +120,23 @@ export const incidentsOn = (environment: () => string): IncidentActions => ({
             : refusalOf(response, "It could not be included"),
       )
       .catch(() => "Estate could not be reached."),
+  removeIncluded: (id, set) =>
+    fetch(`/api/incidents/${encodeURIComponent(id)}/included/${encodeURIComponent(set)}`, { method: "DELETE" })
+      .then<true | string>((response) => (response.ok ? true : refusalOf(response, "It could not be removed")))
+      .catch(() => "Estate could not be reached."),
+  summarise: (id) =>
+    fetch(`/api/incidents/${encodeURIComponent(id)}/summary`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    })
+      .then(
+        (response): Promise<SummaryAnswer | string> =>
+          response.ok
+            ? response
+                .json()
+                .then((body) => Option.getOrUndefined(decodeSummary(body)) ?? "The summary came back unreadable.")
+            : refusalOf(response, "The summary could not be written"),
+      )
+      .catch(() => "Ask AI could not be reached."),
 })

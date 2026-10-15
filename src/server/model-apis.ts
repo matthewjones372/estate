@@ -43,9 +43,10 @@ export interface Turn {
   readonly kept: unknown
 }
 
-/** What the model is told to be, and the messages so far, in the API's own shape. */
+/** What the model is told to be, the JSON Schema its answer is held to, and the messages so far, in the API's shape. */
 export interface Conversation {
   readonly system: string
+  readonly format: unknown
   readonly messages: ReadonlyArray<unknown>
 }
 
@@ -62,9 +63,10 @@ export interface Api {
   ) => Conversation
 }
 
-/** A conversation's start: the system prompt, and the question asked. */
-export const started = (system: string, user: string): Conversation => ({
+/** A conversation's start: the system prompt, the answer's JSON Schema, and the question asked. */
+export const started = (system: string, format: unknown, user: string): Conversation => ({
   system,
+  format,
   messages: [{ role: "user", content: user }],
 })
 

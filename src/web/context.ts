@@ -10,6 +10,7 @@ import type { PastFiring } from "../shared/firing"
 import type { Incident, IncidentRecord } from "../shared/incidents"
 import type { Included } from "../shared/included"
 import type { ErrorGroups, LogBatch } from "../shared/log-events"
+import type { SummaryAnswer } from "../shared/summary"
 import type { FiringEvent } from "../shared/timeline"
 import type { TraceView } from "../shared/trace-view"
 import type { JourneySample } from "../shared/traces"
@@ -64,6 +65,8 @@ export interface Actions {
   readonly allIncidents: () => Promise<ReadonlyArray<Incident> | undefined>
   /** Keeps what was found in an open incident (spec 0051): the set it was kept as, or why not. */
   readonly include: (incident: string, what: Included) => Promise<EvidenceSet | string>
+  /** Removes what was included, as an event; true, or why not. */
+  readonly removeIncluded: (incident: string, set: string) => Promise<true | string>
   /** An incident and its firings' events: "none" where there is no such incident, undefined on failure. */
   readonly incident: (id: string) => Promise<IncidentRecord | "none" | undefined>
   /** Each write answers with the incident as it now is, or why it could not. */
@@ -78,7 +81,10 @@ export interface Actions {
     startsAt: string,
   ) => Promise<Incident | string>
   readonly closeIncident: (id: string, how: string) => Promise<Incident | string>
-  readonly addIncidentNote: (id: string, text: string) => Promise<Incident | string>
+  /** A note on the incident; `from: "summary"` where it keeps a summary, which then heads the export. */
+  readonly addIncidentNote: (id: string, text: string, from?: "summary") => Promise<Incident | string>
+  /** Summarise an incident (spec 0051): the account, or why there is none. */
+  readonly summarise: (id: string) => Promise<SummaryAnswer | string>
   readonly removeIncidentNote: (id: string, note: string) => Promise<Incident | string>
   /** *Add what happened*: a line kept at the time it happened, now without one; true once kept, or why not. */
   readonly addIncidentHappened: (id: string, text: string, at?: string) => Promise<true | string>

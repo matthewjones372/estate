@@ -20,6 +20,7 @@ import { canKeepIncidents } from "../parts/IncidentLink"
 import { IncidentMayBelong } from "../parts/IncidentMayBelong"
 import { IncidentNotes } from "../parts/IncidentNotes"
 import { IncidentServices } from "../parts/IncidentServices"
+import { IncidentSummary } from "../parts/IncidentSummary"
 import { IncidentVersions } from "../parts/IncidentVersions"
 import { TimelineExport } from "../parts/TimelineExport"
 import { TimelineRow } from "../parts/TimelineRow"
@@ -131,11 +132,12 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
           <Closing incident={incident()} done={props.changed} />
         </Show>
       </section>
+      <IncidentSummary incident={incident()} changed={props.changed} />
+      <IncidentEvidence record={props.record} changed={props.changed} />
       <IncidentFirings record={props.record} changed={props.changed} />
       <IncidentServices record={props.record} changed={props.changed} />
       <IncidentVersions versions={props.record.versions ?? []} closed={incident().closedAt !== undefined} />
       <IncidentMayBelong record={props.record} changed={props.changed} />
-      <IncidentEvidence record={props.record} changed={props.changed} />
       <IncidentNotes incident={incident()} changed={props.changed} />
       <section aria-labelledby="incident-timeline" class="panel section-box stack">
         <div class="section-head">
