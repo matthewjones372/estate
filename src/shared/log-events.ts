@@ -9,6 +9,8 @@ export const LogLine = Schema.Struct({
   at: Instant,
   pod: optional(Schema.String),
   level: optional(Schema.String),
+  logger: optional(Schema.String),
+  trace: optional(Schema.String),
   text: Schema.String,
 })
 

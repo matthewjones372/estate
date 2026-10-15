@@ -107,6 +107,24 @@ describe("a service's live lines", () => {
     expect(texts(page.container)).not.toContain("plain")
   })
 
+  test("say which logger wrote them and link their trace to its page, and a line with neither is as it was", () => {
+    const page = mount(() => <LogsPanel service="storefront" />)
+    const trace = "9406a5bf06714196d42a68207f4a4bde"
+    page.sendLines({
+      lines: [{ ...line(58, "WARN", "WARN order 41 paid twice"), logger: "shop.orders.Checkout", trace }],
+      skipped: false,
+    })
+    const rows = [...page.container.querySelectorAll(".log-lines .log-line")]
+    const written = rows.at(-1)
+    expect(written?.querySelector(".log-logger")?.textContent).toBe("shop.orders.Checkout")
+    const link = written?.querySelector<HTMLAnchorElement>("a.log-trace")
+    expect(link?.getAttribute("href")).toBe(`/traces/${trace}`)
+    expect(link?.textContent).toBe("trace 9406a5bf")
+    expect(link?.getAttribute("title")).toContain(trace)
+    expect(written?.querySelector(".log-text")?.textContent).toBe("WARN order 41 paid twice")
+    expect(rows[0]?.querySelector(".log-fields")).toBeNull()
+  })
+
   test("pause, holding what arrives until resumed, and pause by themselves when scrolled up", () => {
     const page = mount(() => <LogsPanel service="storefront" />)
     page.click(page.button("Pause"))

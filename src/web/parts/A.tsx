@@ -9,6 +9,7 @@ export const A = (props: {
   readonly class?: string
   readonly current?: boolean
   readonly style?: JSX.CSSProperties
+  readonly title?: string
 }) => {
   const { actions } = useEstate()
   const follow = (event: MouseEvent) => {
@@ -22,6 +23,7 @@ export const A = (props: {
       onClick={follow}
       class={props.class}
       style={props.style}
+      title={props.title}
       aria-current={props.current ? "page" : undefined}
     >
       {props.children}
