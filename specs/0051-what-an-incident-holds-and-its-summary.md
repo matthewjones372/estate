@@ -141,9 +141,9 @@ the 300-line limit, so the incident actions move out of it first.
 
 ## Stack
 
-- [ ] **`spec-0051`** — this spec and its row in the README.
+- [x] **`spec-0051`** — this spec and its row in the README.
       Done when: they are committed.
-- [ ] **`spec-0051-connect-split`** — the incident actions out of `connect.ts` into `connect-incidents.ts`, no change
+- [x] **`spec-0051-connect-split`** — the incident actions out of `connect.ts` into `connect-incidents.ts`, no change
       in behaviour.
       Done when: the gate passes and `connect.ts` is well under 300 lines.
 - [ ] **`spec-0051-included`** — `POST /api/incidents/:id/included` for chart, lines, errors and trace; kept as a
