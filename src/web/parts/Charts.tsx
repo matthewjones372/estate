@@ -10,6 +10,7 @@ import { spikeBands } from "../spike"
 import { A } from "./A"
 import { IncludeInIncident } from "./IncludeInIncident"
 import { Plot } from "./Plot"
+import { TrafficSpike } from "./Signals"
 
 const ranges: ReadonlyArray<Range> = ["1h", "6h", "24h", "7d"]
 
@@ -196,6 +197,7 @@ export const Load = (props: {
         </fieldset>
       </div>
       <Show when={props.title === undefined}>
+        <TrafficSpike points={shown()?.requests?.points} span={spans[range()]} />
         <div class="charts">
           <For each={loadPanels}>
             {(panel) => (

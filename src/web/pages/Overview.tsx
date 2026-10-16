@@ -14,6 +14,7 @@ import { FiringAlerts } from "../parts/FiringAlerts"
 import { Icon } from "../parts/icons"
 import { Lanes } from "../parts/Lanes"
 import { EstateMap } from "../parts/Map"
+import { Signals } from "../parts/Signals"
 import { Reading, SourceNotices } from "./States"
 
 export interface Headline {
@@ -239,6 +240,7 @@ export const Overview = () => {
         />
         <Silenced alerts={silenced()} canSilence={canSilence()} />
       </section>
+      <Signals services={events().services?.services} />
       <section aria-label="Vitals and map" class="now">
         <div class="vitals">
           <For each={tilesOf(events())}>

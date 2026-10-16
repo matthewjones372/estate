@@ -3,7 +3,10 @@
 import { describe, expect, test } from "bun:test"
 import type { Series } from "../shared/events"
 import { whole } from "./chart"
+import { events } from "./fixture"
 import { mount } from "./harness"
+import { Overview } from "./pages/Overview"
+import { ServicePage } from "./pages/Service"
 import { Chart, type Reading } from "./parts/Charts"
 import { Spark } from "./parts/Sparkline"
 
@@ -44,5 +47,41 @@ describe("a spike on the load", () => {
     expect(requests.container.querySelector("polyline")?.getAttribute("stroke")).toBe("#8FB0FF")
     const errors = mount(() => <Chart label="Errors" unit="/s" series={jumped} limit={undefined} reading={reading()} />)
     expect(errors.container.querySelector(".plot-spike")).toBeNull()
+  })
+
+  test("the overview says there was an unusual spike, and All quiet and Needs you now stay as they are", () => {
+    const quiet = mount(() => <Overview />)
+    expect(quiet.container.querySelector("#signals")).toBeNull()
+    const services = events.services.services.map((service, index) =>
+      index === 0
+        ? {
+            ...service,
+            health: "healthy" as const,
+            reasons: [],
+            load: { ...service.load, requests: { now: 25_000, points: jumped.points } },
+          }
+        : { ...service, health: "healthy" as const, reasons: [] },
+    )
+    const sent = {
+      ...events,
+      alerts: { ...events.alerts, alerts: [] },
+      services: { ...events.services, services },
+    }
+    const page = mount(() => <Overview />, { sent })
+    expect(page.container.querySelector("h1")?.textContent).toContain("All quiet")
+    expect(page.container.querySelector("#needs")?.textContent).toContain("Needs you now")
+    expect(page.container.textContent).toContain("Nothing. When something does, it appears here first.")
+    const named = page.container.querySelector("#signals")?.closest("section")
+    expect(named?.textContent).toContain("Interesting signals")
+    expect(named?.textContent).toContain("Unusual spike in traffic to storefront")
+    expect(named?.querySelectorAll(".plot-spike")).toHaveLength(1)
+    expect(named?.querySelector(".spark-now")?.getAttribute("style") ?? "").not.toContain("amber")
+    const service = mount(() => <ServicePage name="storefront" />, { sent })
+    const load = service.container.querySelector("#load")?.closest("section")
+    expect(load?.textContent).toContain("Unusual spike in traffic.")
+    expect(load?.querySelectorAll(".plot-spike").length).toBeGreaterThan(0)
+    expect(mount(() => <ServicePage name="storefront" />).container.textContent).not.toContain(
+      "Unusual spike in traffic.",
+    )
   })
 })

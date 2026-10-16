@@ -158,15 +158,12 @@ export const Plot = (props: PlotProps) => {
           <polygon points={drawn().area} fill={props.ink} fill-opacity={props.fill ?? 0.14} />
         </Show>
         <For each={props.bands ?? []}>
-          {(band) => (
-            <rect
-              class="plot-spike"
-              x={placed(band.from) * props.width}
-              y="0"
-              width={Math.max(0, (placed(band.to) - placed(band.from)) * props.width)}
-              height={props.height}
-            />
-          )}
+          {(band) => {
+            const span = Math.max(0, (placed(band.to) - placed(band.from)) * props.width)
+            const bandWidth = Math.max(span, Math.min(12, props.width))
+            const x = Math.min(placed(band.from) * props.width, Math.max(0, props.width - bandWidth))
+            return <rect class="plot-spike" x={x} y="0" width={bandWidth} height={props.height} />
+          }}
         </For>
         <Show when={props.limit}>
           {(limit) => (

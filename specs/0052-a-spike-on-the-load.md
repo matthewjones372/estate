@@ -24,6 +24,7 @@ spikes(points, span) // fractions of the span, each { from, to }
 ```
 
 The Requests spark and the Requests chart draw each band with `.plot-spike`, behind the line. Other charts do not.
+The overview's Interesting signals says so in a sentence, with that spark, and leaves All quiet and Needs you now unchanged. The service page says the same above its Load charts.
 
 ## Why this shape
 
