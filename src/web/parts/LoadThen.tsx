@@ -51,7 +51,7 @@ export const LoadThen = (props: { readonly service: string; readonly firing: Pas
         Load then
       </h2>
       <div class="charts">
-        <Chart label="Requests" unit="/s" series={load()?.requests} limit={undefined} reading={shared} />
+        <Chart label="Requests" unit="/s" series={load()?.requests} limit={undefined} reading={shared} spike />
         <Chart label="Errors" unit="/s" series={load()?.errors} limit={undefined} reading={shared} />
         <Chart label="p99" unit="s" series={load()?.p99} limit={undefined} reading={shared} />
       </div>

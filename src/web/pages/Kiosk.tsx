@@ -74,7 +74,7 @@ const Tile = (props: { readonly service: ServiceState }) => (
       {words[props.service.health]}
       <Show when={props.service.reasons[0]}>{(reason) => <span class="kiosk-reason"> · {reason()}</span>}</Show>
     </div>
-    <Spark label="Requests" unit="/s" series={props.service.load.requests} />
+    <Spark label="Requests" unit="/s" series={props.service.load.requests} spike />
   </article>
 )
 

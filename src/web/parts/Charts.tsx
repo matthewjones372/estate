@@ -6,6 +6,7 @@ import { reading, whole, type Zoom } from "../chart"
 import { type Range, useEstate, useSnapshot } from "../context"
 import { clock, measured } from "../format"
 import { firingPath, pathOf } from "../route"
+import { spikeBands } from "../spike"
 import { A } from "./A"
 import { IncludeInIncident } from "./IncludeInIncident"
 import { Plot } from "./Plot"
@@ -53,6 +54,8 @@ export const Chart = (props: {
   readonly reading: Reading
   /** The service and panel it is, for *Include in incident* over the range on screen (spec 0051). */
   readonly of?: { readonly service: string; readonly panel: string }
+  /** Shade jumps in this request rate. The number and the line stay as they are. */
+  readonly spike?: boolean
 }) => {
   const snapshot = useSnapshot()
   const shared = props.reading
@@ -90,6 +93,7 @@ export const Chart = (props: {
         zoom={shared.zoom()}
         onZoom={shared.onZoom}
         shade={shared.shade?.()}
+        bands={props.spike === true ? spikeBands(points(), shared.end(), span()) : undefined}
       />
       <div class="chart-axis mono" style={{ color: "var(--ink-3)" }}>
         <span>{zoomed() ? edge(shared.zoom().from) : shared.starts()}</span>
@@ -202,6 +206,7 @@ export const Load = (props: {
                 limit={panel.key === "p99" ? limit() : undefined}
                 reading={shared}
                 of={{ service: props.name, panel: panel.key }}
+                spike={panel.key === "requests"}
               />
             )}
           </For>

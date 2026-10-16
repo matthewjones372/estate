@@ -122,7 +122,7 @@ export const Lane = (props: {
       </div>
       <Rail pipeline={pipeline()} version={props.state?.version} />
       <div class="sparks">
-        <Spark label="Requests" unit="/s" series={props.state?.load.requests} />
+        <Spark label="Requests" unit="/s" series={props.state?.load.requests} spike />
         <Spark
           label="Errors"
           unit="/s"

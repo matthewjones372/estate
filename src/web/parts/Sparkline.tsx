@@ -5,6 +5,7 @@ import type { Series } from "../../shared/events"
 import { reading } from "../chart"
 import { useEstate } from "../context"
 import { clock, measured } from "../format"
+import { spikeBands } from "../spike"
 import { Plot } from "./Plot"
 
 const hour = 3_600_000
@@ -14,6 +15,8 @@ export const Spark = (props: {
   readonly series: Series | undefined
   readonly unit?: string
   readonly alarm?: boolean
+  /** Shade jumps in this request rate. The number and the line stay as they are. */
+  readonly spike?: boolean
 }) => {
   const { now } = useEstate()
   const [mark, setMark] = createSignal<number | undefined>(undefined)
@@ -42,6 +45,7 @@ export const Spark = (props: {
         stroke={1.5}
         mark={mark()}
         onMark={setMark}
+        bands={props.spike === true ? spikeBands(points(), end(), hour) : undefined}
       />
     </div>
   )
