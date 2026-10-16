@@ -7,7 +7,7 @@ on:
 
 jobs:
   gate:
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER || 'namespace-profile-mattjones372' }}
     steps:
       - uses: actions/checkout@v7
         with:
