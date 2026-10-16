@@ -148,7 +148,7 @@ export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
 const hour = 3_600_000
 
 /** Services whose request rate jumped in the hour. Not an alert: the headline and Needs you now stay as they are. */
-export const jumpsOf = (
+const signalsOf = (
   services: ReadonlyArray<{ readonly name: string; readonly load: { readonly requests?: Series } }>,
 ): ReadonlyArray<string> =>
   services
@@ -199,7 +199,7 @@ export const Overview = () => {
   const silenced = () => alerts().filter((alert) => alert.state === "silenced")
   const { layout, choose, rows } = alertsLayout()
   const canSilence = () => me.role === "operator" && events().alerts?.silences === true
-  const jumps = () => jumpsOf(events().services?.services ?? [])
+  const signals = () => signalsOf(events().services?.services ?? [])
   const waiting = () =>
     events().services === undefined || (events().services?.sources ?? []).some((source) => source.state === "waiting")
   return (
@@ -252,18 +252,18 @@ export const Overview = () => {
         />
         <Silenced alerts={silenced()} canSilence={canSilence()} />
       </section>
-      <Show when={jumps().length > 0}>
-        <section aria-labelledby="jumps" class="stack">
-          <h2 id="jumps" class="section-title">
-            Request rate jumped
+      <Show when={signals().length > 0}>
+        <section aria-labelledby="signals" class="stack">
+          <h2 id="signals" class="section-title">
+            Interesting signals
           </h2>
-          <div class="jump-rows">
-            <For each={jumps()}>
+          <div class="signal-rows">
+            <For each={signals()}>
               {(name) => {
                 const service = () => events().services?.services.find((each) => each.name === name)
                 return (
-                  <div class="jump-row">
-                    <A to={`/services/${encodeURIComponent(name)}`}>{name}</A>
+                  <div class="signal-row">
+                    <A to={`/services/${encodeURIComponent(name)}`}>Unusual spike in traffic to {name}</A>
                     <Spark label="Requests" unit="/s" series={service()?.load.requests} spike />
                   </div>
                 )

@@ -29,15 +29,15 @@
   font-weight: 600;
   color: var(--ink);
 }
-/* A request rate that jumped, named on the overview. Not a thing that needs someone. */
-.jump-rows {
+/* A request rate that jumped, said on the overview. Not a thing that needs someone. */
+.signal-rows {
   display: grid;
   gap: 12px;
 }
-.jump-row {
+.signal-row {
   display: grid;
-  grid-template-columns: minmax(8em, 14em) minmax(0, 280px);
-  align-items: end;
+  grid-template-columns: minmax(16em, 1fr) minmax(0, 280px);
+  align-items: center;
   gap: 16px;
 }
 .rail-box {

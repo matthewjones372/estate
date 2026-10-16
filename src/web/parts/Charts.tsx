@@ -6,7 +6,7 @@ import { reading, whole, type Zoom } from "../chart"
 import { type Range, useEstate, useSnapshot } from "../context"
 import { clock, measured } from "../format"
 import { firingPath, pathOf } from "../route"
-import { spikeBands } from "../spike"
+import { spikeBands, spikes } from "../spike"
 import { A } from "./A"
 import { IncludeInIncident } from "./IncludeInIncident"
 import { Plot } from "./Plot"
@@ -151,6 +151,8 @@ export const Load = (props: {
     }),
   )
   const shown = () => (range() === "1h" ? props.hour : load())
+  const trafficSpike = () =>
+    props.title === undefined && spikes(shown()?.requests?.points ?? [], spans[range()]).length > 0
   // The last hour ends when its event came; a longer range when it was read.
   const heard = createMemo(on(() => props.hour, now))
   const end = () => (range() === "1h" ? heard() : readAt())
@@ -195,6 +197,11 @@ export const Load = (props: {
           </For>
         </fieldset>
       </div>
+      <Show when={trafficSpike()}>
+        <p class="muted" style={{ margin: 0 }}>
+          Unusual spike in traffic.
+        </p>
+      </Show>
       <Show when={props.title === undefined}>
         <div class="charts">
           <For each={loadPanels}>
