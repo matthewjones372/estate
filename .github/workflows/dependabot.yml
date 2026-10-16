@@ -17,7 +17,7 @@ jobs:
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.actor.login == 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-mattjones372
     steps:
       - run: gh pr merge "$BRANCH" --repo "$REPOSITORY" --squash --match-head-commit "$SHA"
         env:
