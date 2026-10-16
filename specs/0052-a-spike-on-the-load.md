@@ -18,8 +18,9 @@ should say where the rate jumped.
 
 ```ts
 spikes(points, span) // fractions of the span, each { from, to }
-// a point joins a band when it is above 100/s and more than ten times the point about five minutes earlier,
-// and the band continues while later points stay above 100/s
+// a point joins a band when it is above 100/s and more than ten times the rate about five minutes earlier.
+// When that minute was not scraped, the latest known rate in those five minutes is the comparison.
+// A missing stretch is not read as zero. The band continues while later points stay above 100/s.
 ```
 
 The Requests spark and the Requests chart draw each band with `.plot-spike`, behind the line. Other charts do not.

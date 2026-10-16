@@ -1,6 +1,7 @@
 /**
  * Where a request rate jumped, as fractions of `span`. A jump clears 100 a second and is more than ten times the rate
- * about five minutes earlier. The band then follows it while it stays above 100 a second.
+ * about five minutes earlier, or the latest known rate in that stretch when a minute was not scraped. A missing
+ * stretch is not read as zero. The band then follows the jump while the rate stays above 100 a second.
  */
 const floor = 100
 const times = 10
@@ -14,10 +15,21 @@ export const spikes = (
   if (count < 2 || !(span > 0)) return []
   const step = span / (count - 1)
   const back = Math.max(1, Math.round(earlierMs / step))
+  const baseline = (index: number): number | undefined => {
+    const earliest = index - back
+    if (earliest < 0) return undefined
+    const exact = points[earliest]
+    if (typeof exact === "number") return exact
+    for (let earlier = index - 1; earlier > earliest; earlier--) {
+      const value = points[earlier]
+      if (typeof value === "number") return value
+    }
+    return undefined
+  }
   const jumped = (index: number) => {
     const value = points[index]
-    const earlier = points[index - back]
-    return typeof value === "number" && value > floor && typeof earlier === "number" && value > times * earlier
+    const earlier = baseline(index)
+    return typeof value === "number" && value > floor && earlier !== undefined && value > times * earlier
   }
   const runs: Array<{ from: number; to: number }> = []
   let start: number | undefined

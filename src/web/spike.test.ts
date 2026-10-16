@@ -43,6 +43,20 @@ describe("a spike on a request rate", () => {
     ).toEqual([])
   })
 
+  test("a jump uses the last known rate in the five minutes when that minute was not scraped", () => {
+    const points = minutes((minute) => {
+      if (minute === 55) return 174
+      if (minute === 56) return 23_574
+      if (minute === 57) return 20_473
+      if (minute > 57) return 0.9
+      return null
+    })
+    const [band] = spikes(points, hour)
+    expect(spikes(points, hour)).toHaveLength(1)
+    expect(band?.from).toBeCloseTo(56 / 60, 5)
+    expect(band?.to).toBeCloseTo(58 / 60, 5)
+  })
+
   test("a missing earlier point is not read as zero, and the band ends when the rate falls to 100", () => {
     const gap = minutes((minute) => (minute < 10 ? null : 25_000))
     expect(spikes(gap, hour)).toEqual([])
