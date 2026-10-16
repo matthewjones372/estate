@@ -4,7 +4,7 @@
  * stores, and what changed. Alert → context, not vitals-first.
  */
 import { For, Show } from "solid-js"
-import type { Alert, Events, Series } from "../../shared/events"
+import type { Alert, Events } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock, counted, measured } from "../format"
 import { A } from "../parts/A"
@@ -14,8 +14,7 @@ import { FiringAlerts } from "../parts/FiringAlerts"
 import { Icon } from "../parts/icons"
 import { Lanes } from "../parts/Lanes"
 import { EstateMap } from "../parts/Map"
-import { Spark } from "../parts/Sparkline"
-import { spikes } from "../spike"
+import { Signals } from "../parts/Signals"
 import { Reading, SourceNotices } from "./States"
 
 export interface Headline {
@@ -145,16 +144,6 @@ export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
   return [...own, ...always].slice(0, Math.max(4, own.length))
 }
 
-const hour = 3_600_000
-
-/** Services whose request rate jumped in the hour. Not an alert: the headline and Needs you now stay as they are. */
-const signalsOf = (
-  services: ReadonlyArray<{ readonly name: string; readonly load: { readonly requests?: Series } }>,
-): ReadonlyArray<string> =>
-  services
-    .filter((service) => spikes(service.load.requests?.points ?? [], hour).length > 0)
-    .map((service) => service.name)
-
 const Silenced = (props: { readonly alerts: ReadonlyArray<Alert>; readonly canSilence: boolean }) => {
   const { actions } = useEstate()
   return (
@@ -199,7 +188,6 @@ export const Overview = () => {
   const silenced = () => alerts().filter((alert) => alert.state === "silenced")
   const { layout, choose, rows } = alertsLayout()
   const canSilence = () => me.role === "operator" && events().alerts?.silences === true
-  const signals = () => signalsOf(events().services?.services ?? [])
   const waiting = () =>
     events().services === undefined || (events().services?.sources ?? []).some((source) => source.state === "waiting")
   return (
@@ -252,26 +240,7 @@ export const Overview = () => {
         />
         <Silenced alerts={silenced()} canSilence={canSilence()} />
       </section>
-      <Show when={signals().length > 0}>
-        <section aria-labelledby="signals" class="stack">
-          <h2 id="signals" class="section-title">
-            Interesting signals
-          </h2>
-          <div class="signal-rows">
-            <For each={signals()}>
-              {(name) => {
-                const service = () => events().services?.services.find((each) => each.name === name)
-                return (
-                  <div class="signal-row">
-                    <A to={`/services/${encodeURIComponent(name)}`}>Unusual spike in traffic to {name}</A>
-                    <Spark label="Requests" unit="/s" series={service()?.load.requests} spike />
-                  </div>
-                )
-              }}
-            </For>
-          </div>
-        </section>
-      </Show>
+      <Signals services={events().services?.services} />
       <section aria-label="Vitals and map" class="now">
         <div class="vitals">
           <For each={tilesOf(events())}>
