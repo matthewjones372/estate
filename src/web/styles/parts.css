@@ -111,6 +111,11 @@
   fill: var(--amber);
   fill-opacity: 0.12;
 }
+/* A jump in request rate, behind the ordinary line. Not something that needs someone. */
+.plot-spike {
+  fill: var(--amber);
+  fill-opacity: 0.16;
+}
 /* A timeline's event, marked where it fell on a kept chart. */
 .plot-mark {
   stroke: var(--ink-3);

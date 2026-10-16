@@ -30,6 +30,8 @@ export interface PlotProps {
   readonly onZoom?: (zoom: Zoom) => void
   /** A span of time to shade, such as when an alert fired, as times like `end`. */
   readonly shade?: { readonly from: number; readonly to: number } | undefined
+  /** Spans where the request rate jumped, as times like `end`. Not an alert. */
+  readonly bands?: ReadonlyArray<{ readonly from: number; readonly to: number }> | undefined
   /** Moments to mark across it, such as a timeline's events, as times like `end`. */
   readonly marks?: ReadonlyArray<number>
   readonly style?: JSX.CSSProperties
@@ -152,6 +154,17 @@ export const Plot = (props: PlotProps) => {
             />
           )}
         </Show>
+        <For each={props.bands ?? []}>
+          {(band) => (
+            <rect
+              class="plot-spike"
+              x={placed(band.from) * props.width}
+              y="0"
+              width={Math.max(0, (placed(band.to) - placed(band.from)) * props.width)}
+              height={props.height}
+            />
+          )}
+        </For>
         <Show when={drawn().area !== ""}>
           <polygon points={drawn().area} fill={props.ink} fill-opacity={props.fill ?? 0.14} />
         </Show>
