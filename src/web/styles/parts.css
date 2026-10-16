@@ -29,6 +29,17 @@
   font-weight: 600;
   color: var(--ink);
 }
+/* A request rate that jumped, named on the overview. Not a thing that needs someone. */
+.jump-rows {
+  display: grid;
+  gap: 12px;
+}
+.jump-row {
+  display: grid;
+  grid-template-columns: minmax(8em, 14em) minmax(0, 280px);
+  align-items: end;
+  gap: 16px;
+}
 .rail-box {
   flex: 1 1 250px;
   min-width: 0;

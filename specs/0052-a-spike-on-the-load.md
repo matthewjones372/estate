@@ -24,6 +24,7 @@ spikes(points, span) // fractions of the span, each { from, to }
 ```
 
 The Requests spark and the Requests chart draw each band with `.plot-spike`, behind the line. Other charts do not.
+The overview names each service whose rate jumped, with that spark, and leaves All quiet and Needs you now unchanged.
 
 ## Why this shape
 
