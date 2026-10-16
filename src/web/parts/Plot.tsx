@@ -154,6 +154,9 @@ export const Plot = (props: PlotProps) => {
             />
           )}
         </Show>
+        <Show when={drawn().area !== ""}>
+          <polygon points={drawn().area} fill={props.ink} fill-opacity={props.fill ?? 0.14} />
+        </Show>
         <For each={props.bands ?? []}>
           {(band) => (
             <rect
@@ -165,9 +168,6 @@ export const Plot = (props: PlotProps) => {
             />
           )}
         </For>
-        <Show when={drawn().area !== ""}>
-          <polygon points={drawn().area} fill={props.ink} fill-opacity={props.fill ?? 0.14} />
-        </Show>
         <Show when={props.limit}>
           {(limit) => (
             <line
