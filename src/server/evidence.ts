@@ -7,7 +7,7 @@ import { Effect, SubscriptionRef } from "effect"
 import type { Catalog } from "../shared/catalog"
 import type { KeptChart, KeptLogs } from "../shared/evidence"
 import type { Incident } from "../shared/incidents"
-import { statsOf } from "../shared/stats"
+import { loadPanels, statsOf } from "../shared/stats"
 import { storeStatsOf } from "../shared/stores"
 import { windowOf } from "../shared/window"
 import { withinLimit } from "./evidence-limit"
@@ -26,8 +26,6 @@ import { Estate } from "./state"
 import { isoNow } from "./time"
 import { incidentServices, incidentWindow } from "./views/incident-scope"
 
-const loadKinds = ["requests", "errors", "p99"] as const
-
 /** The charts of one service or store in one environment, each with its query. */
 export const chartsOf = (
   catalog: Catalog,
@@ -42,11 +40,11 @@ export const chartsOf = (
     return Effect.map(
       loadOf(ranges, service, span, end),
       (load): ReadonlyArray<KeptChart> => [
-        ...loadKinds.flatMap((panel) => {
+        ...loadPanels.flatMap(({ key: panel, unit }) => {
           const [query, series] = [service.load?.[panel], load[panel]]
           return query === undefined || series === undefined
             ? []
-            : [{ service: name, environment, panel, query, points: series.points }]
+            : [{ service: name, environment, panel, unit, query, points: series.points }]
         }),
         // A service's stats come back in the order it names them.
         ...statsOf(service).flatMap((stat, index) => {

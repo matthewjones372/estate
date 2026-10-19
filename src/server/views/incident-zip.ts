@@ -3,7 +3,15 @@
  * and JSON lines; what changed; its last kept evidence as charts (SVG and their series), logs and traces; and a
  * manifest of where each came from and what was left out. Each file is under a folder named for the incident.
  */
-import { type EvidenceSet, includedIn, type KeptChart, type KeptTrace, keptByEstate } from "../../shared/evidence"
+import {
+  type EvidenceSet,
+  includedIn,
+  type KeptChart,
+  type KeptTrace,
+  keptByEstate,
+  pointsAt,
+  unitOf,
+} from "../../shared/evidence"
 import type { IncidentRecord } from "../../shared/incidents"
 import { asText } from "../../shared/log-text"
 import type { TimelineExport } from "../../shared/timeline-export"
@@ -95,6 +103,10 @@ const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`
 const chartName = (chart: KeptChart, environments: number) =>
   safe([chart.service, chart.panel, ...(environments > 1 ? [chart.environment] : [])].join("-"))
 
+/** Its points each with the time it was read, in UTC, so the JSON reads without working out the grid. */
+const seriesOf = (chart: KeptChart, window: EvidenceSet["window"]) =>
+  pointsAt(chart, window).map(({ at, value }) => ({ at: new Date(at).toISOString(), value }))
+
 /** The evidence's files: each chart drawn and its series, each service's lines and errors, each trace. */
 const evidenceFiles = (record: IncidentRecord, set: EvidenceSet): ReadonlyArray<readonly [string, string]> => {
   const { incident } = record
@@ -108,7 +120,10 @@ const evidenceFiles = (record: IncidentRecord, set: EvidenceSet): ReadonlyArray<
   return [
     ...set.charts.flatMap((chart) => [
       [`charts/${chartName(chart, environments)}.svg`, chartSvg(chart, set.window, shaded, marks)] as const,
-      [`charts/${chartName(chart, environments)}.json`, json({ ...chart, window: set.window })] as const,
+      [
+        `charts/${chartName(chart, environments)}.json`,
+        json({ ...chart, unit: unitOf(chart), window: set.window, series: seriesOf(chart, set.window) }),
+      ] as const,
     ]),
     ...(set.logs ?? []).flatMap((logs) => [
       [`logs/${safe(logs.service)}.log`, `${asText(logs.lines)}\n`] as const,

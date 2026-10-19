@@ -2,6 +2,7 @@
 /** A service's load and stats, or a store's stats, over a chosen range; and alerts over the day. */
 import { createEffect, createMemo, createSignal, For, on, onCleanup, Show } from "solid-js"
 import type { Alert, Load as Read, Series } from "../../shared/events"
+import { loadPanels } from "../../shared/stats"
 import { reading, whole, type Zoom } from "../chart"
 import { type Range, useEstate, useSnapshot } from "../context"
 import { clock, measured } from "../format"
@@ -22,12 +23,6 @@ const spans: Readonly<Record<Range, number>> = {
 }
 
 const at = (ms: number) => clock(new Date(ms).toISOString())
-
-const loadPanels = [
-  { key: "requests", label: "Requests", unit: "/s" },
-  { key: "errors", label: "Errors", unit: "/s" },
-  { key: "p99", label: "p99", unit: "s" },
-] as const
 
 /**
  * What the charts of one window share: how long it is and how to say so, when it ends, the moment marked, the span

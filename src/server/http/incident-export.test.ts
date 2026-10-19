@@ -163,7 +163,7 @@ describe("an incident's export as a zip", () => {
       )
     }))
 
-  test("writes incident.json in the shared schema, and a CSV row an event", () =>
+  test("writes incident.json in the shared schema, a CSV row an event, and each chart's points with their times", () =>
     Effect.runPromise(exported).then(({ files }) => {
       const read = (path: string) => strFromU8(files[`Chip-registry-slow-2026-10-12/${path}`] ?? new Uint8Array())
       const record = decodeRecord(JSON.parse(read("incident.json")))
@@ -178,6 +178,10 @@ describe("an incident's export as a zip", () => {
       expect(JSON.parse(read("versions.json"))).toEqual([{ service: "orders", start: null, changes: [] }])
       expect(JSON.parse(read("manifest.json"))).toMatchObject({ live: false, keptBy: "Estate" })
       expect(read("incident.md")).toContain("](charts/orders-requests.svg)")
+      const chart = JSON.parse(read("charts/orders-requests.json"))
+      expect(chart.unit).toBe("/s")
+      expect(chart.series).toHaveLength(chart.points.length)
+      expect(chart.series[0]).toEqual({ at: new Date(chart.window.start * 1000).toISOString(), value: chart.points[0] })
     }))
 
   test("writes each trace as OTLP JSON, its ids in hex of their full length, named for its trace id", () =>

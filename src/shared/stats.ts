@@ -1,6 +1,13 @@
 /** A service's stats: the usual queries for its kind of process, narrowed to it, and any of its own. */
 import { kubernetesOf, type Service } from "./catalog"
 
+/** A service's Load: its panels as the page labels them, and the unit each is in. */
+export const loadPanels = [
+  { key: "requests", label: "Requests", unit: "/s" },
+  { key: "errors", label: "Errors", unit: "/s" },
+  { key: "p99", label: "p99", unit: "s" },
+] as const
+
 export interface Stat {
   readonly title: string
   readonly query: string

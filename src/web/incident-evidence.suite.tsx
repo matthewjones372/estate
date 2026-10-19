@@ -13,7 +13,7 @@ const set = (keptBy: string, last: number): EvidenceSet => ({
   id: keptBy,
   keptAt: "2026-10-03T12:00:00Z",
   keptBy,
-  window: { start, end: start + 3000, step: 60 },
+  window: { start, end: start + 120, step: 60 },
   charts: [
     {
       service: "storefront",
@@ -52,8 +52,8 @@ describe("an incident's evidence, on its page", () => {
     await page.settle()
     const figures = [...page.container.querySelectorAll(".incident-evidence figure")]
     expect(figures.map((each) => each.querySelector("figcaption")?.textContent)).toEqual([
-      "storefront requests, production",
-      "storefront Memory (bytes), production",
+      expect.stringMatching(/^storefront requests \(\/s\), productionhighest 9\/s at \d\d:12$/),
+      expect.stringMatching(/^storefront Memory \(bytes\), productionhighest 4 B at \d\d:12$/),
     ])
     expect(page.container.querySelector(".incident-evidence .muted")?.textContent).toMatch(
       /^Kept by Estate, 3 Oct \d\d:00\. 2 sets kept\.$/,
@@ -61,6 +61,24 @@ describe("an incident's evidence, on its page", () => {
     expect(figures[0]?.querySelectorAll("line.plot-mark")).toHaveLength(1)
     expect(figures[0]?.querySelector("rect")).not.toBeNull()
     expect(page.calls.some(([name]) => name === "load")).toBe(false)
+  })
+
+  test("reads as a live chart does: a point's value in its unit at a moment marked, and the window's ends", async () => {
+    const page = withEvidence([set("Estate", 0.25)])
+    await page.settle()
+    const [requests] = [...page.container.querySelectorAll(".incident-evidence figure")]
+    const svg = requests?.querySelector("svg")
+    if (requests === undefined || svg === null || svg === undefined) throw new Error("no kept chart")
+    const key = (name: string) =>
+      svg.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true }))
+    const caption = () => requests.querySelector("figcaption")?.textContent
+    key("End")
+    expect(caption()).toMatch(/^storefront requests \(\/s\), production at \d\d:12 ?0\.25\/s$/)
+    key("ArrowLeft")
+    expect(caption()).toMatch(/ at \d\d:11 ?2\/s$/)
+    key("Escape")
+    expect(caption()).toMatch(/highest 2\/s at \d\d:11$/)
+    expect(requests.querySelector(".chart-axis")?.textContent).toMatch(/^3 Oct \d\d:10 ?3 Oct \d\d:12$/)
   })
 
   test("is kept now by an operator, and the page reads the incident again", async () => {

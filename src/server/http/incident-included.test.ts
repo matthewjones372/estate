@@ -91,7 +91,7 @@ const recordOf = (server: Server) =>
   Effect.map(ask(server, sending("GET", "/api/incidents/i1")), (answer) => answer.json() as IncidentRecord)
 
 describe("including something in an incident", () => {
-  test("a chart is read again from the catalog's query over the range asked, and kept with who and why", () =>
+  test("a chart is read again from the catalog's query over the range asked, and kept with its unit, who and why", () =>
     Effect.runPromise(
       Effect.gen(function* () {
         const server = yield* serverFor(as("gil", "operator"), firing, prometheus)
@@ -102,7 +102,9 @@ describe("including something in an incident", () => {
       const kept = answer?.[1] as EvidenceSet
       expect(answer?.[0]).toBe(201)
       expect(kept).toMatchObject({ from: "included", keptBy: "gil", why: "errors start here" })
-      expect(kept.charts).toEqual([expect.objectContaining({ service: "orders", panel: "errors", query: load.errors })])
+      expect(kept.charts).toEqual([
+        expect.objectContaining({ service: "orders", panel: "errors", unit: "/s", query: load.errors }),
+      ])
       expect(kept.charts[0]?.points.slice(-2)).toEqual([4, 5])
       expect(kept.window.end - kept.window.start).toBe(3600)
       expect(asked).toContain(load.errors)

@@ -175,6 +175,12 @@ the 300-line limit, so the incident actions move out of it first.
       note*, the export's `## Summary`.
       Done when: the panel shows what, impact, cause, turns and follow-ups; keeping it adds an incident note and heads
       `incident.md`; with `ai:` unset the button is not shown.
+- [x] **`spec-0051-kept-charts-read`** — a kept chart reads as it did where it was found: its highest, or the value
+      at the moment marked, in its unit, the window's ends beneath it, and the arrow keys; every kept chart carries
+      its unit, Load's included; the brief says its values in their units; the export's SVG says its highest and the
+      window's ends in UTC, and its JSON each point with its time.
+      Done when: a kept Errors chart reads `0.25/s` at the moment marked and its highest when none is; a chart
+      included from Load keeps `/s`; the SVG's text names its highest and ends; the JSON's `series` has a time a point.
 
 ## Acceptance
 
