@@ -1,5 +1,8 @@
 /** @jsxImportSource solid-js */
-/** A service's load around a past firing: from an hour before it fired to an hour after it ended, the firing shaded. */
+/**
+ * A service's load around a past firing: from an hour before it fired to an hour after it ended, the firing shaded.
+ * Each chart is included in an incident over the range on screen (spec 0051).
+ */
 import { createEffect, createSignal, on, onCleanup } from "solid-js"
 import type { Load } from "../../shared/events"
 import type { PastFiring } from "../../shared/firing"
@@ -33,6 +36,7 @@ export const LoadThen = (props: { readonly service: string; readonly firing: Pas
       })
     }),
   )
+  const of = (panel: string) => ({ service: props.service, panel })
   const shared: Reading = {
     span: () => (window().end - window().start) * 1000,
     over: () => "the firing",
@@ -51,9 +55,17 @@ export const LoadThen = (props: { readonly service: string; readonly firing: Pas
         Load then
       </h2>
       <div class="charts">
-        <Chart label="Requests" unit="/s" series={load()?.requests} limit={undefined} reading={shared} spike />
-        <Chart label="Errors" unit="/s" series={load()?.errors} limit={undefined} reading={shared} />
-        <Chart label="p99" unit="s" series={load()?.p99} limit={undefined} reading={shared} />
+        <Chart
+          label="Requests"
+          unit="/s"
+          series={load()?.requests}
+          limit={undefined}
+          reading={shared}
+          of={of("requests")}
+          spike
+        />
+        <Chart label="Errors" unit="/s" series={load()?.errors} limit={undefined} reading={shared} of={of("errors")} />
+        <Chart label="p99" unit="s" series={load()?.p99} limit={undefined} reading={shared} of={of("p99")} />
       </div>
     </section>
   )
