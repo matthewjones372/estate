@@ -3,8 +3,9 @@
  * is said short: a chart as its first, last, lowest and highest values, lines and errors as text, a trace as its
  * length and its five longest steps. Nothing a reader may not read is in their record, so it is not in their brief.
  */
-import { type EvidenceSet, includedIn, type KeptChart, keptByEstate } from "../shared/evidence"
+import { type EvidenceSet, includedIn, type KeptChart, keptByEstate, unitOf } from "../shared/evidence"
 import type { IncidentRecord } from "../shared/incidents"
+import { measured } from "../shared/measure"
 import { said } from "../shared/timeline"
 import { tookOf } from "../shared/traces"
 
@@ -21,7 +22,7 @@ const chartText = (chart: KeptChart, set: EvidenceSet) => {
   const low = read.reduce((a, b) => (b.value < a.value ? b : a))
   const high = read.reduce((a, b) => (b.value > a.value ? b : a))
   const say = (point: { readonly value: number; readonly index: number }) =>
-    `${point.value}${chart.unit ?? ""} at ${atOf(set, point.index)}`
+    `${measured(point.value, unitOf(chart))} at ${atOf(set, point.index)}`
   return `${chart.service} ${chart.panel} in ${chart.environment}: first ${say(first)}, last ${say(last)}, lowest ${say(low)}, highest ${say(high)}`
 }
 

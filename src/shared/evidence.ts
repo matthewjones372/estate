@@ -4,6 +4,7 @@
  */
 import { Schema } from "effect"
 import { ErrorGroups, LogLine } from "./log-events"
+import { loadPanels } from "./stats"
 import { TraceSpan } from "./traces"
 
 const optional = Schema.optionalKey
@@ -20,6 +21,21 @@ export const KeptChart = Schema.Struct({
   points: Schema.Array(Schema.NullOr(Schema.Number)),
 })
 export type KeptChart = typeof KeptChart.Type
+
+/** Its unit; a Load chart kept before it carried one is in its panel's. */
+export const unitOf = (chart: KeptChart): string | undefined =>
+  chart.unit ?? loadPanels.find((each) => each.key === chart.panel)?.unit
+
+/** Each point with when it was read, from the window's start a step apart, as Prometheus laid them. */
+export const pointsAt = (chart: KeptChart, window: { readonly start: number; readonly step: number }) =>
+  chart.points.map((value, index) => ({ at: (window.start + index * window.step) * 1000, value }))
+
+/** Its highest point, with when; none where the source had nothing. */
+export const highestOf = (chart: KeptChart, window: { readonly start: number; readonly step: number }) => {
+  const read = pointsAt(chart, window).flatMap(({ at, value }) => (value === null ? [] : [{ at, value }]))
+  const [first] = read
+  return first === undefined ? undefined : read.reduce((a, b) => (b.value > a.value ? b : a), first)
+}
 
 export const KeptLogs = Schema.Struct({
   service: Schema.String,

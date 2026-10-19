@@ -46,7 +46,8 @@ const record: IncidentRecord = {
       keptBy: "Estate",
       window,
       charts: [
-        { service: "registry", environment: "staging", panel: "p99", unit: "s", query: "q", points: [null, 2, 9, 1] },
+        { service: "registry", environment: "staging", panel: "p99", query: "q", points: [null, 2, 9, 1] },
+        { service: "registry", environment: "staging", panel: "errors", query: "q", points: [0.123456] },
         { service: "registry", environment: "staging", panel: "requests", query: "q", points: [null, null] },
       ],
       traces: [
@@ -62,14 +63,17 @@ const record: IncidentRecord = {
 }
 
 describe("an incident's brief", () => {
-  test("says its record, a chart as its first, last, lowest and highest, and a trace as its longest steps", () => {
+  test("says its record, a chart as its first, last, lowest and highest in its unit, and a trace as its longest steps", () => {
     const brief = incidentBrief(record)
     expect(brief).toContain("Closed by ada at 2026-10-12T17:10:00Z: restarted the registry")
     expect(brief).toContain("- ChipRegistryUnreachable in staging, from 2026-10-12T16:47:58Z")
     expect(brief).toContain("- registry: 1.8.0 at start, no change, 1.7.3 at close")
     expect(brief).toContain("rolled the registry back")
     expect(brief).toContain(
-      "registry p99 in staging: first 2s at 2025-10-12T16:54, last 1s at 2025-10-12T16:56, lowest 1s at 2025-10-12T16:56, highest 9s at 2025-10-12T16:55",
+      "registry p99 in staging: first 2 s at 2025-10-12T16:54, last 1 s at 2025-10-12T16:56, lowest 1 s at 2025-10-12T16:56, highest 9 s at 2025-10-12T16:55",
+    )
+    expect(brief).toContain(
+      "registry errors in staging: first 0.12/s at 2025-10-12T16:53, last 0.12/s at 2025-10-12T16:53, lowest 0.12/s at 2025-10-12T16:53, highest 0.12/s at 2025-10-12T16:53",
     )
     expect(brief).toContain("registry requests: no points")
     expect(brief).toContain("- trace t1, 9100 ms: registry GET /chips 9100 ms failed; registry SELECT 200 ms")
