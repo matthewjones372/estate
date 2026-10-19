@@ -2,12 +2,14 @@
 /** *Include in incident* on what the page shows (spec 0051): run by `include.test.ts` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
 import type { Me } from "../shared/events"
+import type { PastFiring } from "../shared/firing"
 import type { Incident } from "../shared/incidents"
 import { now, operator } from "./fixture"
 import { groups } from "./fixture-logs"
 import { mount } from "./harness"
 import { TracePage } from "./pages/Trace"
 import { Load } from "./parts/Charts"
+import { LoadThen } from "./parts/LoadThen"
 import { ErrorList } from "./parts/LogErrors"
 import { LogsPanel } from "./parts/Logs"
 import { recording } from "./recording"
@@ -131,6 +133,44 @@ describe("including what was found in an incident", () => {
     expect(calls).toEqual([
       ["include", "i1", { kind: "chart", environment: "production", service: "storefront", panel: "errors", ...range }],
       ["include", "i1", { kind: "chart", environment: "production", service: "storefront", panel: "Queue", ...range }],
+    ])
+  })
+
+  test("a chart from a past firing goes over the window around it", async () => {
+    const calls: Array<readonly [string, ...ReadonlyArray<unknown>]> = []
+    const recorded = recording()
+    const actions = {
+      ...recorded.actions,
+      incidents: () => Promise.resolve([ordersSlow]),
+      include: (...args: Parameters<typeof recorded.actions.include>) => {
+        calls.push(["include", ...args])
+        return recorded.actions.include(...args)
+      },
+    }
+    const firing = {
+      environment: "production",
+      startsAt: "2026-10-03T09:00:00Z",
+      endsAt: "2026-10-03T09:30:00Z",
+    } as PastFiring
+    const page = mount(() => <LoadThen service="storefront" firing={firing} />, { actions })
+    await page.settle()
+    expect(page.container.querySelectorAll(".chart .plain-button")).toHaveLength(3)
+    page.click(page.button("Include…", 1))
+    page.click(page.button("Include in Orders slow"))
+    await page.settle()
+    expect(calls).toEqual([
+      [
+        "include",
+        "i1",
+        {
+          kind: "chart",
+          environment: "production",
+          service: "storefront",
+          panel: "errors",
+          from: "2026-10-03T08:00:00.000Z",
+          to: "2026-10-03T10:30:00.000Z",
+        },
+      ],
     ])
   })
 

@@ -181,6 +181,10 @@ the 300-line limit, so the incident actions move out of it first.
       window's ends in UTC, and its JSON each point with its time.
       Done when: a kept Errors chart reads `0.25/s` at the moment marked and its highest when none is; a chart
       included from Load keeps `/s`; the SVG's text names its highest and ends; the JSON's `series` has a time a point.
+- [x] **`spec-0051-include-past-firing`** — *Include* on a past firing's *Load then* charts, over the range on
+      screen.
+      Done when: including Errors from a past firing sends its environment, the service, the panel and the window
+      from an hour before it fired to an hour after it ended.
 
 ## Acceptance
 
@@ -200,5 +204,6 @@ restore`; close the incident. Its page shows the summary and the three included 
 - **Who may summarise?** Recommended: any writer, as with Ask AI; it spends the same budget.
 - **Should a summary be written on close by itself?** Recommended: no; it spends tokens nobody asked for. A closed
   incident with no kept summary shows *Summarise* first.
-- **Include on a past firing's page (spec 0037)?** Its charts and errors are the same parts. Recommended: yes, in the
-  same entries, since they share the components.
+- **Include on a past firing's page (spec 0037)?** Its charts and errors are the same parts. Decided: yes. Its errors
+  already offer it; its *Load then* charts are included over the range on screen
+  (`spec-0051-include-past-firing`).
