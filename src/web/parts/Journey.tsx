@@ -150,8 +150,9 @@ const Read = (props: { readonly sample: JourneySample }) => {
 const [asked, setAsked] = createSignal<string | undefined>()
 
 /**
- * A link to a journey: to the page of a service it crosses, with its panel open and in view. The service's page
- * draws as it is navigated to, so its panel has seen the ask by the time it is cleared.
+ * A link to a journey: to the page of a service it crosses, with its panel open and in view. The page may draw a
+ * frame later, after a view transition, so the panel clears the ask once it has seen it; that service's page always
+ * has the journey's panel.
  */
 export const JourneyLink = (props: {
   readonly service: string
@@ -171,7 +172,6 @@ export const JourneyLink = (props: {
         event.preventDefault()
         setAsked(props.journey)
         if (window.location.pathname !== to()) actions.navigate(to())
-        setTimeout(() => setAsked(undefined), 0)
       }}
     >
       {props.children}
@@ -214,6 +214,8 @@ const JourneyPanel = (props: { readonly name: string; readonly title: string }) 
   createEffect(() => {
     if (asked() !== props.name) return
     setOpen(true)
+    // Seen: cleared once this effect is done, so a later page with this journey does not open it unasked.
+    queueMicrotask(() => setAsked(undefined))
     // After the page has drawn, so the panel is where it will stay.
     setTimeout(() => section?.scrollIntoView({ behavior: "smooth", block: "start" }), 0)
   })

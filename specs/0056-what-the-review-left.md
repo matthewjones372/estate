@@ -66,7 +66,7 @@ Nothing.
       Done when: no stylesheet sets a left or right margin or padding, and the pages lay out as before.
 - [ ] **`log-search-debounce`** — the log search filters once typing pauses.
       Done when: typing a word filters the lines once, and clearing the search shows them at once.
-- [ ] **`page-transitions`** — a cross-fade between pages where the browser has view transitions.
+- [x] **`page-transitions`** — a cross-fade between pages where the browser has view transitions.
       Done when: moving to a page starts a view transition, none under reduced motion, and focus is on the new page.
 
 ## Acceptance

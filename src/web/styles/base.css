@@ -253,3 +253,11 @@ button:not(:disabled):active,
     transition: none;
   }
 }
+/* A page's cross-fade is the browser's own; none for someone who asks for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}
