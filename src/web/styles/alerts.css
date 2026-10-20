@@ -44,7 +44,7 @@
   color: var(--amber-muted);
 }
 .alert-for {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: 0.75rem;
   color: var(--amber-muted);
 }
@@ -160,7 +160,7 @@
   color: var(--amber-ink);
 }
 .push-right {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .choices {
   display: flex;
@@ -243,7 +243,7 @@
 }
 .around-list {
   margin: 4px 0 0;
-  padding-left: 1.2em;
+  padding-inline-start: 1.2em;
 }
 .around {
   margin: 0;
@@ -271,7 +271,7 @@
 }
 .around-runbook {
   margin: 0 0 4px;
-  padding-left: 10px;
+  padding-inline-start: 10px;
   border-left: 2px solid var(--amber-rule);
   white-space: pre-line;
   max-height: 12em;
