@@ -33,11 +33,11 @@
 }
 .service-card-name {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .service-card-meta,
 .service-card-why {
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.35;
 }
 .service-card-why {

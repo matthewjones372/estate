@@ -1,8 +1,8 @@
 /* The estate on a screen: type sized from the screen's width, nothing to press, the worst first. */
 .kiosk {
-  font-size: clamp(14px, 1.15vw, 32px);
+  font-size: clamp(0.875rem, 0.125rem + 1.05vw, 2rem);
   padding: 1.5em 2em;
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   gap: 1.25em;
@@ -143,6 +143,6 @@
 }
 .kiosk-impact {
   margin: 0;
-  font-size: 22px;
+  font-size: 1.375rem;
   color: var(--ink-soft);
 }

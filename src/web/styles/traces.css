@@ -21,7 +21,7 @@ fieldset.choices {
 }
 .journey-hint {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .journey-top {
   display: flex;
@@ -32,7 +32,7 @@ fieldset.choices {
 }
 .journey-headline {
   margin: 0;
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 600;
   line-height: 1.35;
   max-width: 760px;
@@ -52,7 +52,7 @@ fieldset.choices {
 .trace-waterfall {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .journey-stages {
   min-width: 640px;
@@ -68,7 +68,7 @@ fieldset.choices {
 }
 .journey-stages thead th,
 .trace-waterfall thead th {
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-3);

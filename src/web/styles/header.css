@@ -19,7 +19,7 @@
   gap: 10px;
   color: var(--ink);
   font-weight: 700;
-  font-size: 17px;
+  font-size: 1.0625rem;
   letter-spacing: -0.01em;
 }
 .brand:hover {
@@ -36,7 +36,7 @@
   background: var(--ground);
   border-radius: 999px;
   padding: 0 12px 0 10px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   min-height: 32px;
 }
 .switcher-list {
@@ -92,7 +92,7 @@
   color: var(--amber-text);
   border-radius: 999px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 .header-end {
@@ -107,14 +107,14 @@
   align-items: center;
   gap: 8px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--ink-2);
 }
 .person {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ink-2);
 }
 .avatar {
@@ -126,7 +126,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--ink);
 }
 .plain-button {
@@ -135,7 +135,7 @@
   border-radius: 8px;
   padding: 0 12px;
   min-height: 32px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ink-soft);
 }
 
@@ -162,7 +162,7 @@
   border: 0;
   background: transparent;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 0.8125rem;
   padding: 0;
   outline: none;
 }
@@ -181,7 +181,7 @@
 }
 .jump-chord {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--ink-2);
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -193,8 +193,8 @@
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  min-width: min(320px, calc(100vw - 32px));
-  max-height: min(420px, 70vh);
+  min-width: min(320px, calc(100dvw - 32px));
+  max-height: min(420px, 70dvh);
   overflow: auto;
   margin: 0;
   padding: 8px;
@@ -205,7 +205,7 @@
 }
 .jump-kind {
   margin: 8px 8px 4px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -230,7 +230,7 @@
   padding: 8px 10px;
   min-height: 36px;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .jump-hit[aria-selected="true"] {
   background: var(--line);
@@ -242,17 +242,17 @@
   white-space: nowrap;
 }
 .jump-hint {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .jump-health {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--ink-2);
 }
 .jump-empty {
   margin: 0;
   padding: 12px 10px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }

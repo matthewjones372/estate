@@ -9,7 +9,7 @@
 }
 .section-title {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--ink-3);
   text-transform: uppercase;
@@ -60,7 +60,7 @@
   align-items: center;
   gap: 10px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--ink-3);
@@ -78,14 +78,14 @@
 }
 .headline {
   margin: 0;
-  font-size: 46px;
+  font-size: 2.875rem;
   line-height: 1.05;
   font-weight: 700;
   letter-spacing: -0.025em;
 }
 .lede {
   margin: 0;
-  font-size: 16px;
+  font-size: 1rem;
   color: var(--ink-2);
   max-width: 460px;
 }
@@ -106,7 +106,7 @@
 }
 .vital-value {
   font-family: var(--mono);
-  font-size: 26px;
+  font-size: 1.625rem;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
@@ -154,14 +154,14 @@
 .lane-title {
   color: var(--ink);
   font-weight: 600;
-  font-size: 17px;
+  font-size: 1.0625rem;
   letter-spacing: -0.01em;
 }
 .health {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .health-word {
   font-weight: 600;
@@ -179,7 +179,7 @@
   align-items: center;
   background: var(--debug-panel);
   color: var(--debug-ink);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   border-radius: 999px;
   padding: 3px 10px;
@@ -201,7 +201,7 @@
   border-radius: 8px;
   background: var(--chip);
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 /* Feed */
@@ -222,7 +222,7 @@
 }
 .feed li {
   display: grid;
-  grid-template-columns: 46px 14px minmax(0, 1fr);
+  grid-template-columns: 2.875rem 14px minmax(0, 1fr);
   gap: 10px;
   padding: 9px 0;
   border-bottom: 1px solid var(--line-soft);
@@ -242,7 +242,7 @@
 }
 .state-page h1 {
   margin: 0;
-  font-size: 34px;
+  font-size: 2.125rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
@@ -280,16 +280,16 @@
   border-radius: 10px;
   padding: 10px 14px;
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: 0.8125rem;
   display: flex;
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 40em) {
   .headline {
-    font-size: 34px;
+    font-size: 2.125rem;
   }
   .header-inner,
   .main {
