@@ -221,7 +221,7 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
                 </button>
               )}
             </For>
-            <span class="muted" style={{ "font-size": "12px" }}>
+            <span class="muted" style={{ "font-size": "0.75rem" }}>
               Traffic over the last minute · amber is what needs you
             </span>
           </span>

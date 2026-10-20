@@ -261,7 +261,7 @@ export const Timeline = (props: {
                   : firingPath(alert.id, alert.startsAt)
               }
               class="mono"
-              style={{ "font-size": "12px" }}
+              style={{ "font-size": "0.75rem" }}
             >
               {alert.name}
             </A>
@@ -278,7 +278,7 @@ export const Timeline = (props: {
           </div>
         )}
       </For>
-      <div class="timeline-row muted mono" style={{ "font-size": "11px" }}>
+      <div class="timeline-row muted mono" style={{ "font-size": "0.6875rem" }}>
         <span />
         <span class="spread">
           <span>24 h ago</span>

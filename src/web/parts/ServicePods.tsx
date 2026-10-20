@@ -28,11 +28,11 @@ export const ServicePods = (props: { readonly pods: ServiceState["pods"] }) => {
                   {pod.ready ? "Ready" : pod.phase}
                 </span>
               </span>
-              <span class="muted" style={{ "font-size": "12px" }}>
+              <span class="muted" style={{ "font-size": "0.75rem" }}>
                 {pod.node ?? ""}
                 {pod.startedAt === undefined ? "" : ` · up ${since(pod.startedAt, now())}`}
               </span>
-              <span class="muted" style={{ "font-size": "12px" }}>
+              <span class="muted" style={{ "font-size": "0.75rem" }}>
                 {pod.restarts === 0 ? "no restarts" : `${pod.restarts} restarts`}
               </span>
             </div>

@@ -25,7 +25,7 @@ export const JobLane = (props: { readonly job: DescribedJob; readonly state: Job
         <span class="lane-title">{props.job.name}</span>
         <HealthLine state={props.state} />
         <CostLine cost={props.state?.cost} />
-        <span class="muted mono" style={{ "font-size": "12px" }}>
+        <span class="muted mono" style={{ "font-size": "0.75rem" }}>
           {read()?.schedule ?? kindWords[props.job.kind]}
           <Show when={read()?.next}>{(next) => ` · next at ${clock(next())}`}</Show>
         </span>

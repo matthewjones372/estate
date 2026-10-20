@@ -30,7 +30,7 @@ export const ServiceBuilds = (props: { readonly builds: ReadonlyArray<Build> }) 
               />
               <div style={{ "min-width": 0 }}>
                 <Out href={build.url}>{build.title}</Out>
-                <div class="muted mono" style={{ "font-size": "12px" }}>
+                <div class="muted mono" style={{ "font-size": "0.75rem" }}>
                   {build.sha.slice(0, 7)} · {build.status}
                   {build.job === undefined ? "" : ` at ${build.job}`} · {since(build.at, now())} ago
                 </div>

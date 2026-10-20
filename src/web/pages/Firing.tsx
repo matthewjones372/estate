@@ -37,7 +37,7 @@ const windowOf = (firing: PastFiring) => ({
 
 const WhatHappened = (props: { readonly firing: PastFiring }) => (
   <section aria-labelledby="firing-happened" class="stack">
-    <h1 id="firing-happened" class="headline" style={{ "font-size": "32px" }}>
+    <h1 id="firing-happened" class="headline" style={{ "font-size": "2rem" }}>
       What happened
     </h1>
     <p class="lede">{lede(props.firing)}</p>

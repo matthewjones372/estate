@@ -33,7 +33,7 @@ export const StorePage = (props: { readonly name: string }) => {
           <nav aria-label="Breadcrumb" class="muted crumbs">
             <A to="/">Overview</A> / {props.name}
           </nav>
-          <h1 class="headline" style={{ "font-size": "38px" }}>
+          <h1 class="headline" style={{ "font-size": "2.375rem" }}>
             {props.name}
           </h1>
           <HealthLine state={state()} />

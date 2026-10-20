@@ -39,7 +39,7 @@ const Opens = (props: { readonly item: FeedItem; readonly children: JSX.Element 
   </Show>
 )
 
-const text = { "font-size": "13px", color: "#D5DAE3" }
+const text = { "font-size": "0.8125rem", color: "#D5DAE3" }
 
 const FeedText = (props: { readonly item: FeedItem }) => (
   <span style={text}>
@@ -88,7 +88,7 @@ export const Feed = (props: { readonly feed: FeedEvent | undefined }) => {
           <For each={items()}>
             {(item) => (
               <li>
-                <span class="mono muted" style={{ "font-size": "12px" }}>
+                <span class="mono muted" style={{ "font-size": "0.75rem" }}>
                   {clock(item.at)}
                 </span>
                 <span class="dot" style={{ background: dots[item.kind] }} />

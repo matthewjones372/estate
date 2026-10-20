@@ -72,7 +72,7 @@ export const AlertPage = (props: { readonly id: string }) => {
             <A to="/">Overview</A> / <A to="/alerts">Alerts</A> / {found().name}
           </nav>
           <section aria-labelledby="alert-happening" class="stack">
-            <h1 id="alert-happening" class="headline" style={{ "font-size": "32px" }}>
+            <h1 id="alert-happening" class="headline" style={{ "font-size": "2rem" }}>
               What's happening
             </h1>
             <p class="lede">

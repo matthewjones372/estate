@@ -44,7 +44,7 @@ const Switcher = () => {
         <strong>{environment()}</strong>
         <Show when={current()?.title !== current()?.name ? current() : undefined}>
           {(shown) => (
-            <span class="mono muted" style={{ "font-size": "11px" }}>
+            <span class="mono muted" style={{ "font-size": "0.6875rem" }}>
               {shown().title}
             </span>
           )}
@@ -79,12 +79,12 @@ const Switcher = () => {
                   <span>
                     <strong>{each.name}</strong>{" "}
                     {each.title !== each.name && (
-                      <span class="muted" style={{ "font-size": "12px" }}>
+                      <span class="muted" style={{ "font-size": "0.75rem" }}>
                         {each.title}
                       </span>
                     )}
                   </span>
-                  <span class="muted" style={{ "font-size": "12px" }}>
+                  <span class="muted" style={{ "font-size": "0.75rem" }}>
                     {worstWords[worst(each.name)]}
                   </span>
                 </button>

@@ -101,7 +101,7 @@ export const Reading = (props: { readonly sources: ReadonlyArray<SourceStatus> |
         </ul>
       )}
     </Show>
-    <p class="muted" style={{ margin: 0, "font-size": "13px" }}>
+    <p class="muted" style={{ margin: 0, "font-size": "0.8125rem" }}>
       Each part appears as its source answers. Never a blank page.
     </p>
   </section>
