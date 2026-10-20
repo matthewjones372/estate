@@ -59,10 +59,15 @@ Nothing.
 - [x] **`forced-colors-and-browser-ui`** — state kept in Forced Colors; scrollbars, accent and selection themed;
       `font-size-adjust` against the swap; gstatic preconnected.
       Done when: in forced colors a status dot keeps its colour and a picked log line is outlined.
-- [ ] **`keyboard-and-readers`** — IME-safe Enter in jump, no live region on streaming lines or ticking seconds, the
-      environment menu a popover, debug's confirm a `<dialog>`, reasons out of `title`, focusable wide tables, a title
-      per page and a skip link.
-      Done when: axe passes on every page and Enter mid-composition chooses nothing.
+- [x] **`keyboard-and-readers`** — IME-safe Enter in jump, no live region on streaming lines or ticking seconds,
+      focusable wide tables, a title per page and a skip link.
+      Done when: Enter mid-composition chooses nothing, and a keyboard skips the header to the page.
+- [ ] **`inline-text-that-scales`** — the 41 text sizes set inline in the pages' parts in `rem`, as the stylesheets'
+      are.
+      Done when: no part sets a `px` font size inline.
+- [ ] **`menus-and-dialogs`** — the environment menu a popover, debug's confirm a `<dialog>`, health reasons and
+      the shift-click hint out of `title`.
+      Done when: Escape closes the environment menu, and a health reason is read without a pointer.
 - [ ] **`less-work-per-event`** — path-set heartbeats, memoised log search, the map laid out only when its shape
       changes, `content-visibility` on lanes and log lines.
       Done when: `bun run perf` holds its budgets and a heartbeat does not reconcile the snapshot.

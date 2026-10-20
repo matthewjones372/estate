@@ -70,6 +70,8 @@ export const Jump = () => {
   }
 
   const onKey = (event: KeyboardEvent) => {
+    // A key that ends an IME composition is the composition's, not the palette's; Safari says so only by 229.
+    if (event.isComposing || event.keyCode === 229) return
     const list = hits()
     if (event.key === "Escape") {
       event.preventDefault()

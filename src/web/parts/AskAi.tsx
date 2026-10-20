@@ -156,8 +156,9 @@ export const AskAiAnswer = (props: { readonly alert: Alert }) => {
   const warned = () => me.logsForOperators === true && ask().answer.get()?.readLogs === true
   return (
     <Show when={me.ai === true}>
+      {/* Its seconds tick outside the live region, so a screen reader hears the answer and not every second. */}
+      <Show when={ask().since.get()}>{(since) => <Reading since={since()} alert={props.alert.name} />}</Show>
       <div class="ask-ai" aria-live="polite" aria-busy={ask().since.get() !== undefined}>
-        <Show when={ask().since.get()}>{(since) => <Reading since={since()} alert={props.alert.name} />}</Show>
         <Show when={ask().error.get()}>
           {(message) => (
             <p class="alert-detail" role="alert">

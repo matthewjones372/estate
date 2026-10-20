@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 /** The signed-in page: the header, then the page the address names. */
-import { Match, Show, Switch } from "solid-js"
+import { createEffect, Match, Show, Switch } from "solid-js"
 import { type Estate, EstateContext } from "./context"
 import { AgentPage } from "./pages/Agent"
 import { AlertPage } from "./pages/Alert"
@@ -17,6 +17,7 @@ import { StorePage } from "./pages/Store"
 import { TracePage } from "./pages/Trace"
 import { A } from "./parts/A"
 import { Header } from "./parts/Header"
+import { titleOf } from "./route"
 
 const Missing = () => (
   <main class="state-page">
@@ -88,18 +89,28 @@ const Page = (props: { readonly estate: Estate }) => {
 const kioskOf = (page: ReturnType<Estate["page"]>) =>
   page.page === "kiosk" ? { team: page.team, category: page.category } : {}
 
-export const App = (props: { readonly estate: Estate }) => (
-  <EstateContext.Provider value={props.estate}>
-    <Show
-      when={props.estate.page().page === "kiosk"}
-      fallback={
-        <>
-          <Header />
-          <Page estate={props.estate} />
-        </>
-      }
-    >
-      <Kiosk {...kioskOf(props.estate.page())} />
-    </Show>
-  </EstateContext.Provider>
-)
+export const App = (props: { readonly estate: Estate }) => {
+  createEffect(() => {
+    document.title = titleOf(props.estate.page())
+  })
+  return (
+    <EstateContext.Provider value={props.estate}>
+      <Show
+        when={props.estate.page().page === "kiosk"}
+        fallback={
+          <>
+            <a class="skip-link" href="#content">
+              Skip to the page
+            </a>
+            <Header />
+            <div id="content" tabindex="-1">
+              <Page estate={props.estate} />
+            </div>
+          </>
+        }
+      >
+        <Kiosk {...kioskOf(props.estate.page())} />
+      </Show>
+    </EstateContext.Provider>
+  )
+}

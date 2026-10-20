@@ -70,6 +70,38 @@ export const pageOf = (pathname: string, search = ""): Page => {
   return named === undefined || decoded === undefined ? { page: "missing" } : named(decoded)
 }
 
+/** The browser's title for a page: what it shows first, so a tab, a history entry or a screen reader says which. */
+export const titleOf = (page: Page): string => {
+  const named = (title: string) => `${title} · Estate`
+  switch (page.page) {
+    case "overview":
+      return "Estate"
+    case "service":
+    case "store":
+    case "job":
+    case "agent":
+      return named(page.name)
+    case "deploys":
+      return named("Deploys")
+    case "alerts":
+      return named("Alerts")
+    case "alert":
+      return named("Alert")
+    case "firing":
+      return named("Past firing")
+    case "incidents":
+      return named("Incidents")
+    case "incident":
+      return named("Incident")
+    case "trace":
+      return named("Trace")
+    case "kiosk":
+      return named("On a screen")
+    case "missing":
+      return named("No such page")
+  }
+}
+
 export const pathOf = (page: Page): string => {
   switch (page.page) {
     case "overview":

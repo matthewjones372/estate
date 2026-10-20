@@ -22,7 +22,7 @@ export const IncidentVersions = (props: {
       <h2 id="incident-versions" class="section-title">
         What changed
       </h2>
-      <div class="table-scroll">
+      <section class="table-scroll" aria-labelledby="incident-versions" tabindex="0">
         <table class="grid">
           <thead>
             <tr>
@@ -66,7 +66,7 @@ export const IncidentVersions = (props: {
             </For>
           </tbody>
         </table>
-      </div>
+      </section>
     </section>
   </Show>
 )

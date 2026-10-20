@@ -12,7 +12,7 @@ export const EvidenceLogs = (props: { readonly logs: KeptLogs }) => (
       {props.logs.leftOut === 0 ? "" : `, ${props.logs.leftOut} left out past incidents.evidence.lines`}
     </h3>
     <Show when={props.logs.errors.length > 0} fallback={<p class="muted">No errors among them.</p>}>
-      <div class="table-scroll">
+      <section class="table-scroll" aria-label={`Errors among ${props.logs.service}'s kept lines`} tabindex="0">
         <table class="grid">
           <thead>
             <tr>
@@ -31,7 +31,7 @@ export const EvidenceLogs = (props: { readonly logs: KeptLogs }) => (
             </For>
           </tbody>
         </table>
-      </div>
+      </section>
     </Show>
     <details>
       <summary>Lines</summary>

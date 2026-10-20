@@ -140,7 +140,7 @@ export const Deploys = () => {
             What runs in each, and what is waiting to move on
           </span>
         </div>
-        <div class="table-scroll panel">
+        <section class="table-scroll panel" aria-label="What runs in each environment" tabindex="0">
           <table class="grid">
             <thead>
               <tr>
@@ -170,7 +170,7 @@ export const Deploys = () => {
               </For>
             </tbody>
           </table>
-        </div>
+        </section>
       </section>
       <section aria-labelledby="pipelines" class="stack">
         <h2 id="pipelines" class="section-title">

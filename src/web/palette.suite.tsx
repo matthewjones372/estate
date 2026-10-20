@@ -39,6 +39,21 @@ describe("jump", () => {
     page.dispose()
   })
 
+  test("Enter that ends an IME composition chooses nothing", async () => {
+    const page = mount(() => <Header />, { sent: jumpCatalog })
+    press(window, "k", { metaKey: true })
+    await page.settle()
+    const input = field(page)
+    page.type(input, "storefront")
+    await page.settle()
+    press(input, "Enter", { isComposing: true })
+    // Safari ends a composition with an Enter that says nothing of it but keyCode 229.
+    press(input, "Enter", { keyCode: 229 })
+    await page.settle()
+    expect(page.calls).not.toContainEqual(["navigate", "/services/storefront"])
+    page.dispose()
+  })
+
   test("Esc closes without navigating, and gives focus back to where ⌘K was pressed", async () => {
     const page = mount(
       () => (

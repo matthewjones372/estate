@@ -90,6 +90,24 @@ button:disabled {
 .secondary {
   color: var(--ink-2);
 }
+/* Off screen until a keyboard reaches it, first on the page. */
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -100px;
+  z-index: 10;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--ink);
+}
+.skip-link:focus {
+  top: 12px;
+}
+/* The page is focused only to start from it; it is not a control. */
+#content:focus {
+  outline: none;
+}
 .visually-hidden {
   position: absolute;
   width: 1px;

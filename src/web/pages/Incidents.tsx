@@ -85,7 +85,7 @@ export const Incidents = () => {
           </Show>
         }
       >
-        <section aria-label="Incidents" class="incidents table-scroll panel">
+        <section aria-label="Incidents" class="incidents table-scroll panel" tabindex="0">
           <table class="grid">
             <thead>
               <tr>
