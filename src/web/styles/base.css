@@ -33,6 +33,14 @@
   --sans: "Instrument Sans", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
   color-scheme: dark;
+  /* The browser's own scrollbars and controls in the page's colours; the thumb stays 3:1 on its track. */
+  scrollbar-color: var(--quiet) var(--panel);
+  scrollbar-width: thin;
+  accent-color: var(--amber);
+}
+::selection {
+  background: var(--amber-deep);
+  color: var(--amber-ink);
 }
 
 *,
@@ -48,6 +56,8 @@ body {
 body {
   color: var(--ink);
   font-family: var(--sans);
+  /* Text keeps its size while the web font is still the fallback. */
+  font-size-adjust: from-font;
   font-size: 0.875rem;
   line-height: 1.45;
 }
@@ -150,6 +160,12 @@ button:disabled {
 }
 .dot.unknown {
   background: var(--waiting);
+}
+/* A dot's colour is what it says, so forced colors leave it. */
+@media (forced-colors: active) {
+  .dot {
+    forced-color-adjust: none;
+  }
 }
 
 /* Every control answers the pointer: it lights up under it and dims as it is pressed, so what will be clicked is plain. */

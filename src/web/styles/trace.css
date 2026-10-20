@@ -29,6 +29,19 @@
 .trace-lanes .trace-slow {
   box-shadow: 0 0 0 2px var(--amber);
 }
+/* Forced colors drop gradients and shadows: a wait is dashed, and a slow or pressed bar outlined. */
+@media (forced-colors: active) {
+  .trace-lanes .trace-wait,
+  .trace-wait {
+    border: 1px dashed CanvasText;
+  }
+  .trace-lanes .trace-slow {
+    outline: 2px solid CanvasText;
+  }
+  .trace-lanes .trace-bar[aria-pressed="true"] {
+    outline: 2px solid Highlight;
+  }
+}
 
 .trace-controls {
   display: flex;

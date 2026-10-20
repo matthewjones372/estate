@@ -56,7 +56,7 @@ Nothing.
 - [x] **`text-that-scales`** — text sizes in `rem`, breakpoints in `em`, scrollers in `lh`, dynamic viewport units,
       the text-scale meta.
       Done when: with the browser's text at 20px, the body's text is 17.5px and a log line's is 15px.
-- [ ] **`forced-colors-and-browser-ui`** — state kept in Forced Colors; scrollbars, accent and selection themed;
+- [x] **`forced-colors-and-browser-ui`** — state kept in Forced Colors; scrollbars, accent and selection themed;
       `font-size-adjust` against the swap; gstatic preconnected.
       Done when: in forced colors a status dot keeps its colour and a picked log line is outlined.
 - [ ] **`keyboard-and-readers`** — IME-safe Enter in jump, no live region on streaming lines or ticking seconds, the
