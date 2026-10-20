@@ -5,7 +5,7 @@
 table.grid {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 table.grid th,
 table.grid td {
@@ -15,7 +15,7 @@ table.grid td {
   vertical-align: top;
 }
 table.grid thead th {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--ink-3);
   text-transform: uppercase;
@@ -30,7 +30,7 @@ table.grid tbody th {
   gap: 8px;
 }
 .cell-note {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--ink-3);
   margin-top: 2px;
 }
@@ -44,7 +44,7 @@ table.grid tbody th {
   gap: 16px;
 }
 .pipeline-head {
-  font-size: 12px;
+  font-size: 0.75rem;
   padding: 0 18px;
 }
 .pipeline {
@@ -67,7 +67,7 @@ table.grid tbody th {
   min-width: 0;
   border-top: 2px solid var(--waiting);
   padding-top: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .step.done {
   border-color: var(--ink-soft);
@@ -79,20 +79,20 @@ table.grid tbody th {
   border-color: var(--amber);
 }
 .step-state {
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-3);
 }
 .step-detail {
-  font-size: 12px;
+  font-size: 0.75rem;
   overflow-wrap: anywhere;
 }
 .step.stalled .step-state,
 .step.stalled .step-detail {
   color: var(--amber-text);
 }
-@media (max-width: 900px) {
+@media (max-width: 56.25em) {
   .pipeline-head {
     display: none;
   }
@@ -106,7 +106,7 @@ table.grid tbody th {
   border-radius: 8px;
   padding: 0 12px;
   min-height: 36px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ink-2);
 }
 .filter[aria-pressed="true"] {
@@ -117,7 +117,7 @@ table.grid tbody th {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ink-2);
 }
 .select {
@@ -128,7 +128,7 @@ table.grid tbody th {
   min-height: 36px;
   padding: 0 10px;
   font: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 tr.row-link {
   cursor: pointer;

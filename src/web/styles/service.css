@@ -113,7 +113,7 @@ fieldset.silencing {
   margin: 0;
 }
 .crumbs {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .crumbs a {
   text-decoration: underline;
@@ -126,18 +126,18 @@ fieldset.silencing {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .job-run {
   display: grid;
-  grid-template-columns: 10px 44px minmax(0, 1fr);
+  grid-template-columns: 10px 2.75rem minmax(0, 1fr);
   gap: 8px;
   align-items: center;
 }
 .reasons {
   margin: 0;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -150,7 +150,7 @@ fieldset.silencing {
   gap: 8px;
 }
 .versions-label {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -184,7 +184,7 @@ fieldset.silencing {
   border-color: var(--quiet);
 }
 .version-env {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;

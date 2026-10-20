@@ -57,3 +57,4 @@ entries, one per pull request, each with what proves it done.
 | [0050](0050-finding-an-incident.md) | finding an incident: *Incidents* in the header, a page listing every incident, open ones first and then closed, filtered by either, each opening its page; done |
 | [0051](0051-what-an-incident-holds-and-its-summary.md) | what an incident holds, and its summary: *Include in incident* on charts, picked log lines, error groups and traces, kept with who and why; evidence above the firings; and *Summarise*, an account of the incident from the same model and budget as Ask AI |
 | [0052](0052-a-spike-on-the-load.md) | a spike on the load: a band behind the Requests spark and chart where the rate jumped, not an alert |
+| [0053](0053-what-the-web-guidance-found.md) | what the web guidance found: text that follows the browser's size, state kept in Forced Colors, the keyboard and screen readers served, and less work per event |

@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 /* A bar that sweeps while the model reads: there is no fraction done to show, only that it is working. */
 .ask-bar {
@@ -38,8 +38,8 @@
 }
 .ask-stream {
   white-space: pre-wrap;
-  font-size: 12px;
-  max-height: 120px;
+  font-size: 0.75rem;
+  max-height: 10em;
   overflow: auto;
 }
 .ask-button {
@@ -77,6 +77,6 @@
 }
 .ask-kept {
   color: var(--amber-text);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
 }

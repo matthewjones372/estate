@@ -17,22 +17,22 @@
   list-style: none;
   margin: 0;
   padding: 8px 0;
-  max-height: 360px;
+  max-height: 30em;
   overflow: auto;
   background: var(--ground);
   border: 1px solid var(--line);
   border-radius: 8px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.55;
 }
 .log-lines.examples {
-  max-height: 240px;
+  max-height: 20em;
   margin-top: 8px;
 }
 .log-line {
   display: grid;
-  grid-template-columns: 44px minmax(0, 9em) 5ch minmax(0, 1fr) 20px;
+  grid-template-columns: 2.75rem minmax(0, 9em) 5ch minmax(0, 1fr) 20px;
   gap: 10px;
   padding: 0 12px 0 10px;
   border-left: 2px solid transparent;
@@ -50,7 +50,7 @@
 }
 .log-level {
   font-weight: 700;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .log-line.error .log-level {
   color: var(--critical);
@@ -108,7 +108,7 @@
 }
 .log-foot {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .error-groups {
   list-style: none;
@@ -139,11 +139,11 @@
   font-variant-numeric: tabular-nums;
 }
 .error-shape {
-  font-size: 12px;
+  font-size: 0.75rem;
   overflow-wrap: anywhere;
 }
 .error-when {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .log-lines mark {
   background: var(--link);
@@ -151,7 +151,7 @@
   border-radius: 2px;
 }
 .log-invalid {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--critical);
 }
 .log-line.picked {
@@ -188,7 +188,7 @@
   color: var(--ink);
 }
 .log-told {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--healthy);
 }
 .log-copy-examples {

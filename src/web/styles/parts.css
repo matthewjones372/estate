@@ -21,11 +21,11 @@
   display: flex;
   justify-content: space-between;
   gap: 6px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--ink-3);
 }
 .spark-now {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--ink);
 }
@@ -70,7 +70,7 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--ink-3);
 }
 .rail-note.attention {
@@ -80,7 +80,7 @@
   color: var(--link);
 }
 .rail-version {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--ink);
 }
 .rail-notes > span,
@@ -144,18 +144,18 @@
 /* An entry's cost under its health: quiet, and never the first thing read. */
 .cost-line {
   display: block;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 /* A service found in a cluster rather than written in the catalog: said quietly, as its cost is. */
 .found {
   display: block;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 /* A service's code health under its cost: quiet, in amber when its owner should look. */
 .code-line {
   display: block;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .code-line a {
   color: inherit;
