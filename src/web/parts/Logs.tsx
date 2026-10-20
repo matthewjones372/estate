@@ -31,7 +31,17 @@ const Live = (props: { readonly service: string }) => {
   const [skipped, setSkipped] = createSignal(false)
   const [failed, setFailed] = createSignal<string | undefined>(undefined)
   const [hidden, setHidden] = createSignal<ReadonlySet<Kind>>(new Set())
+  // What is typed, shown as typed; what is searched, once typing has paused, or at once when the search is cleared.
+  const [typed, setTyped] = createSignal("")
   const [text, setText] = createSignal("")
+  let pausing: ReturnType<typeof setTimeout> | undefined
+  const type = (value: string) => {
+    setTyped(value)
+    clearTimeout(pausing)
+    if (value.trim() === "") setText(value)
+    else pausing = setTimeout(() => setText(value), searchPause)
+  }
+  onCleanup(() => clearTimeout(pausing))
   const [picked, setPicked] = createSignal<ReadonlySet<string>>(new Set())
   const [anchor, setAnchor] = createSignal<string | undefined>(undefined)
   const [told, setTold] = createSignal("")
@@ -145,8 +155,8 @@ const Live = (props: { readonly service: string }) => {
             type="search"
             class="select"
             placeholder="Search, a*b or /regex/"
-            value={text()}
-            onInput={(event) => setText(event.currentTarget.value)}
+            value={typed()}
+            onInput={(event) => type(event.currentTarget.value)}
           />
         </label>
         <Show when={search()._tag === "Invalid"}>
@@ -216,6 +226,9 @@ const Live = (props: { readonly service: string }) => {
 const shownFirst: LogsShown = { view: "live", range: "1h" }
 
 /** A service's logs, showing what its page's address asks for, and writing what is chosen here back to it. */
+/** How long typing in the search pauses before the lines are filtered again, in ms. */
+export const searchPause = 150
+
 export const LogsPanel = (props: { readonly service: string; readonly shown?: LogsShown | undefined }) => {
   const [shown, setShown] = createSignal(props.shown ?? shownFirst)
   let panel: HTMLElement | undefined

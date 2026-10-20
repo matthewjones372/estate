@@ -3,7 +3,7 @@
 import { describe, expect, test } from "bun:test"
 import { mount } from "./harness"
 import { Overview } from "./pages/Overview"
-import { LogsPanel } from "./parts/Logs"
+import { LogsPanel, searchPause } from "./parts/Logs"
 
 const texts = (container: HTMLElement) =>
   [...container.querySelectorAll(".log-lines .log-text")].map((each) => each.textContent)
@@ -16,7 +16,7 @@ const line = (minute: number, level: string, text: string, pod = "storefront-2")
 })
 
 describe("a service's live lines", () => {
-  test("arrive as they are read, the same line never twice, and filter by level and text", () => {
+  test("arrive as they are read, the same line never twice, and filter by level and text", async () => {
     const page = mount(() => <LogsPanel service="storefront" />)
     expect(texts(page.container)).toEqual(["INFO started", "ERROR order 41 lost", "WARN slow"])
     expect(page.container.textContent).toContain("from Loki")
@@ -35,19 +35,22 @@ describe("a service's live lines", () => {
     const search = page.container.querySelector<HTMLInputElement>(".log-search input")
     if (search === null) throw new Error("no search")
     page.type(search, "DISK")
+    await Bun.sleep(searchPause + 50)
     expect(texts(page.container)).toEqual(["ERROR disk full"])
   })
 
-  test("are searched with a star or a pattern, the matches marked and counted", () => {
+  test("are searched with a star or a pattern, the matches marked and counted", async () => {
     const page = mount(() => <LogsPanel service="storefront" />)
     const search = page.container.querySelector<HTMLInputElement>(".log-search input")
     if (search === null) throw new Error("no search")
     page.type(search, "order*lost")
+    await Bun.sleep(searchPause + 50)
     expect(texts(page.container)).toEqual(["ERROR order 41 lost"])
     const marks = [...page.container.querySelectorAll(".log-lines mark")].map((each) => each.textContent)
     expect(marks).toEqual(["order 41 lost"])
     expect(page.container.textContent).toContain("1 of the last 3 lines match")
     page.type(search, "/(order/")
+    await Bun.sleep(searchPause + 50)
     expect(texts(page.container)).toHaveLength(3)
     expect(page.container.textContent).toContain("Not a valid pattern")
   })
@@ -148,7 +151,21 @@ describe("a service's live lines", () => {
     expect(page.calls).toContainEqual(["unwatchLogs", "storefront"])
   })
 
-  test("are searched with their pattern built once, however many lines there are", () => {
+  test("are filtered once typing pauses, not at every key, and all shown again as soon as the search is cleared", async () => {
+    const page = mount(() => <LogsPanel service="storefront" />)
+    const search = page.container.querySelector<HTMLInputElement>(".log-search input")
+    if (search === null) throw new Error("no search")
+    // While the keys come, nothing is filtered: "o" alone would already hide a line.
+    for (const typed of ["o", "or", "ord", "order"]) page.type(search, typed)
+    expect(texts(page.container)).toHaveLength(3)
+    await Bun.sleep(searchPause + 50)
+    expect(texts(page.container)).toEqual(["ERROR order 41 lost"])
+    page.type(search, "")
+    expect(texts(page.container)).toHaveLength(3)
+    page.dispose()
+  })
+
+  test("are searched with their pattern built once, however many lines there are", async () => {
     const page = mount(() => <LogsPanel service="storefront" />)
     const search = page.container.querySelector<HTMLInputElement>(".log-search input")
     if (search === null) throw new Error("no search")
@@ -162,6 +179,7 @@ describe("a service's live lines", () => {
     })
     try {
       page.type(search, "order*lost")
+      await Bun.sleep(searchPause + 50)
     } finally {
       globalThis.RegExp = Real
     }
