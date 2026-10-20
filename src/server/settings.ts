@@ -15,6 +15,7 @@ import { notADuration, secondsIn } from "./settings-every"
 import { IncidentTool, incidentToolMistakes } from "./settings-incident-tool"
 import { Incidents, incidentsMistakes } from "./settings-incidents"
 import { Kubernetes } from "./settings-kubernetes"
+import { WebSettings, webMistakes } from "./settings-web"
 
 const optional = Schema.optionalKey
 
@@ -208,6 +209,8 @@ export const Settings = Schema.Struct({
   backstage: optional(Backstage),
   /** Several replicas reading each source once: `true`, or the runners' port and health check to override. */
   cluster: optional(ClusterSettings),
+  /** The pages: other origins that may frame them, as a wall screen's dashboard does. */
+  web: optional(WebSettings),
 })
 export type Settings = typeof Settings.Type
 export type { Ai, Mcp } from "./settings-ai"
@@ -284,6 +287,7 @@ export const readSettings = (text: string): Effect.Effect<Settings, SettingsErro
       ...clusterMistakes(settings),
       ...incidentsMistakes(settings.incidents),
       ...incidentToolMistakes(settings.incidentTool),
+      ...webMistakes(settings.web),
     )
     return sense.length === 0 ? settings : yield* new SettingsError({ mistakes: sense })
   })

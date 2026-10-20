@@ -203,6 +203,17 @@ describe("the pages", () => {
       }),
     ))
 
+  test("the shell may be framed by the origins the settings list, a wall screen's dashboard, and no others", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor({ ...oidc, web: { frameAncestors: ["https://grafana.example.com"] } })
+        const shell = yield* ask(server, new Request("http://estate/services/orders"))
+        expect(shell.headers.get("content-security-policy")).toEndWith(
+          "; frame-ancestors 'self' https://grafana.example.com",
+        )
+      }),
+    ))
+
   test("is ready once every part it reads has been read once, answered or failed", () =>
     Effect.runPromise(
       Effect.gen(function* () {

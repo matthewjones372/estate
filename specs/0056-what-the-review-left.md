@@ -58,7 +58,7 @@ Nothing.
 
 - [x] **`bench-deadlines`** — the bench's waits with deadlines that say what stalled, and a line a phase.
       Done when: a wait that runs out fails within its deadline naming what it waited for, and `bun run perf` passes.
-- [ ] **`frame-ancestors-setting`** — `web.frameAncestors` in the settings, checked at start, added to the policy.
+- [x] **`frame-ancestors-setting`** — `web.frameAncestors` in the settings, checked at start, added to the policy.
       Done when: a page on a listed origin can frame Estate, and one on any other cannot.
 - [ ] **`colour-tokens`** — the stylesheets' hex colours as `:root` tokens.
       Done when: no stylesheet but the tokens names a colour by hex, and the pages compute the same colours.

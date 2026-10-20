@@ -4,6 +4,8 @@ port: 8080
 # readOnly: true   # write to no tool (no silences, no debug, notes in memory), for trying Estate on real tools
 # A screen on the wall: open /kiosk?token=… once on it (and ?team=… for one team's services).
 # kiosk: { token: ${KIOSK_TOKEN}, environments: [ production, staging ], every: 30s }
+# Other sites that may show the pages in a frame, a wall screen's dashboard say; none but Estate's own unless set.
+# web: { frameAncestors: [ https://grafana.example.com ] }
 catalog: /etc/estate/catalog.yaml
 # Only some of the catalog's environments, where this Estate cannot reach them all (a developer's own cluster, say):
 # environments: [ staging ]
