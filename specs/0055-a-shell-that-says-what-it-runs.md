@@ -66,7 +66,7 @@ Nothing.
 - [x] **`self-hosted-fonts`** — the two fonts as files in the bundle, declared by `fonts.ts` and preloaded by the
       shell; no Google links.
       Done when: the shell names no host but Estate's, and the pages draw in Instrument Sans and JetBrains Mono.
-- [ ] **`shell-headers`** — the policy, `nosniff` and the referrer policy on the shell.
+- [x] **`shell-headers`** — the policy, `nosniff` and the referrer policy on the shell.
       Done when: every page loads with no CSP violation, and a framed Estate on another origin is refused.
 - [ ] **`styles-by-class`** — the parts' inline styles as classes in their stylesheets, and `style-src-attr` dropped
       from the policy, so the pages hold no styling value outside `styles/`.
