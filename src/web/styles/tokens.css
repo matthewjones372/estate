@@ -1,0 +1,53 @@
+/* The design's tokens: a control room at night. Amber asks for attention; red is down; violet is debug. */
+:root {
+  --ground: #0b0d12;
+  --panel: #11141b;
+  --raised: #161a23;
+  --chip: #171b25;
+  --line: #1e2330;
+  --line-soft: #1b1f2a;
+  --line-strong: #2a3040;
+  --ink: #e9ecf2;
+  --ink-2: #a9b0be;
+  --ink-3: #8c93a3;
+  --ink-soft: #c8ced9;
+  --link: #8fb0ff;
+  --link-hover: #c3d3ff;
+  --amber: #f5a524;
+  --amber-text: #f5b54a;
+  --amber-panel: #16130c;
+  --amber-line: #4a3510;
+  --amber-deep: #2e2410;
+  --amber-ink: #f2e6cf;
+  --amber-muted: #c9a86a;
+  --amber-quiet: #9c9078;
+  --critical: #ff5d5d;
+  --critical-panel: #1a0f10;
+  --critical-line: #5a1f22;
+  --healthy: #3dd68c;
+  --quiet: #6e7687;
+  --waiting: #3a4152;
+  --debug: #a98bff;
+  --debug-panel: #221a3d;
+  --debug-ink: #c6b5ff;
+  --sans: "Instrument Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+  /* The browser's own scrollbars and controls in the page's colours; the thumb stays 3:1 on its track. */
+  scrollbar-color: var(--quiet) var(--panel);
+  scrollbar-width: thin;
+  accent-color: var(--amber);
+  /* Ink on a filled amber, red or violet; and the amber, debug and raised shades the parts draw with. */
+  --on-amber: #1a1204;
+  --on-critical: #1a0606;
+  --on-debug: #140d2b;
+  --amber-detail: #bdb3a0;
+  --amber-rule: #3a2a0e;
+  --amber-edge: #3a2c12;
+  --amber-ring: #7a5414;
+  --amber-node: #1e170a;
+  --amber-well: #0f0c06;
+  --note-ink: #e6dcc8;
+  --debug-line: #3b2f6b;
+  --pressed: #232836;
+}

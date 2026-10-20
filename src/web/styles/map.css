@@ -58,8 +58,8 @@ a.map-node:hover {
   border-color: var(--ink-3);
 }
 .map-node.attention {
-  background: #1e170a;
-  border-color: #7a5414;
+  background: var(--amber-node);
+  border-color: var(--amber-ring);
   box-shadow: 0 0 0 4px rgba(245, 165, 36, 0.1);
 }
 .map-node.critical {

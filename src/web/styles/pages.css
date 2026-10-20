@@ -110,7 +110,7 @@ table.grid tbody th {
   color: var(--ink-2);
 }
 .filter[aria-pressed="true"] {
-  background: #232836;
+  background: var(--pressed);
   color: var(--ink);
 }
 .select-label {

@@ -139,7 +139,7 @@
   align-items: center;
 }
 .lane.attention {
-  border-color: #3a2c12;
+  border-color: var(--amber-edge);
 }
 .lane.critical {
   border-color: var(--critical-line);
@@ -249,7 +249,7 @@
 .primary-button {
   align-self: flex-start;
   background: var(--amber);
-  color: #1a1204;
+  color: var(--on-amber);
   font-weight: 700;
   border: 0;
   border-radius: 8px;
@@ -259,7 +259,7 @@
   align-items: center;
 }
 .primary-button:hover {
-  color: #1a1204;
+  color: var(--on-amber);
 }
 .source-list {
   list-style: none;

@@ -27,7 +27,7 @@
 }
 .severity {
   background: var(--amber);
-  color: #1a1204;
+  color: var(--on-amber);
   font-weight: 700;
   font-size: 0.6875rem;
   letter-spacing: 0.06em;
@@ -37,7 +37,7 @@
 }
 .alert-card.critical .severity {
   background: var(--critical);
-  color: #1a0606;
+  color: var(--on-critical);
 }
 .alert-name {
   font-size: 0.75rem;
@@ -56,7 +56,7 @@
 }
 .alert-detail {
   margin: 4px 0 0;
-  color: #bdb3a0;
+  color: var(--amber-detail);
   font-size: 0.8125rem;
 }
 .chart-axis {
@@ -80,7 +80,7 @@
   font-size: 0.875rem;
 }
 .alert-notes {
-  border-top: 1px solid #3a2a0e;
+  border-top: 1px solid var(--amber-rule);
   padding-top: 12px;
   display: flex;
   flex-direction: column;
@@ -130,7 +130,7 @@
 .amber-input {
   flex: 1;
   min-width: 0;
-  background: #0f0c06;
+  background: var(--amber-well);
   border: 1px solid var(--amber-line);
   border-radius: 8px;
   color: var(--amber-ink);
@@ -181,7 +181,7 @@
   border-color: var(--amber);
 }
 .silencing {
-  background: #0f0c06;
+  background: var(--amber-well);
   border: 1px solid var(--amber-line);
   border-radius: 10px;
   padding: 12px;
@@ -272,7 +272,7 @@
 .around-runbook {
   margin: 0 0 4px;
   padding-left: 10px;
-  border-left: 2px solid #3a2a0e;
+  border-left: 2px solid var(--amber-rule);
   white-space: pre-line;
   max-height: 12em;
   overflow: auto;

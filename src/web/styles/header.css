@@ -95,7 +95,7 @@
   font-weight: 600;
 }
 .count {
-  background: #3a2a0e;
+  background: var(--amber-rule);
   color: var(--amber-text);
   border-radius: 999px;
   padding: 0 8px;
@@ -128,7 +128,7 @@
   width: 30px;
   height: 30px;
   border-radius: 15px;
-  background: #232836;
+  background: var(--pressed);
   display: inline-flex;
   align-items: center;
   justify-content: center;
