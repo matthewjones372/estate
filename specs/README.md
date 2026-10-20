@@ -60,3 +60,4 @@ entries, one per pull request, each with what proves it done.
 | [0053](0053-what-the-web-guidance-found.md) | what the web guidance found: text that follows the browser's size, state kept in Forced Colors, the keyboard and screen readers served, and less work per event; done |
 | [0054](0054-errors-in-the-last-day.md) | errors in the last day: a count of a service's errors and their groups over 24 hours under its health line, linking to the Errors view, and each log source asked for errors only so the cap counts errors |
 | [0055](0055-a-shell-that-says-what-it-runs.md) | a shell that says what it runs: the fonts served by Estate, and a content security policy, `nosniff` and a referrer policy on the shell; done |
+| [0056](0056-what-the-review-left.md) | what the review left: a benchmark that says where it stalls, Estate framed by named origins, colours as tokens, logical sides, a log search that waits for typing to pause, and pages that cross-fade |

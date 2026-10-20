@@ -65,6 +65,16 @@ const everyPartAnswered = (state: EstateState) =>
       answered(environment.costs),
   )
 
+/** The parts not answered yet, by name, for a wait that runs out to say. */
+const unanswered = (state: EstateState) => [
+  ...(answered(state.builds) ? [] : ["builds"]),
+  ...Object.entries(state.environments).flatMap(([name, environment]) =>
+    (["metrics", "alerts", "cluster", "deploys", "costs"] as const)
+      .filter((part) => !answered(environment[part]))
+      .map((part) => `${name} ${part}`),
+  ),
+]
+
 export const measureFrames = async (size: number) => {
   const tools = startTools(size, 20)
   try {
@@ -84,7 +94,21 @@ export const measureFrames = async (size: number) => {
           }),
         ),
       )
-      yield* SubscriptionRef.changes(estate).pipe(Stream.filter(everyPartAnswered), Stream.runHead)
+      yield* SubscriptionRef.changes(estate).pipe(
+        Stream.filter(everyPartAnswered),
+        Stream.runHead,
+        Effect.timeoutOrElse({
+          duration: "3 minutes",
+          orElse: () =>
+            Effect.flatMap(SubscriptionRef.get(estate), (state) =>
+              Effect.die(
+                new Error(
+                  `every part to be answered did not happen within 180 s; waiting: ${unanswered(state).join(", ")}`,
+                ),
+              ),
+            ),
+        }),
+      )
       // A slow first read is old when it lands, so the reads after it are not 30 s apart until the next one.
       yield* metricsReadAgain(estate, yield* SubscriptionRef.get(estate))
       // Time for the frames of those reads to be counted before the minute starts.
