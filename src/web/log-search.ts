@@ -4,7 +4,8 @@
  */
 export type Search =
   | { readonly _tag: "Empty" }
-  | { readonly _tag: "Pattern"; readonly pattern: RegExp }
+  /** `marking` finds every match, for marking; `matchAll` works on its own copy, so lines share it. */
+  | { readonly _tag: "Pattern"; readonly pattern: RegExp; readonly marking: RegExp }
   | { readonly _tag: "Invalid"; readonly reason: string }
 
 const empty: Search = { _tag: "Empty" }
@@ -21,7 +22,8 @@ export const searchOf = (typed: string): Search => {
   const regular = trimmed.length > 2 && trimmed.startsWith("/") && trimmed.endsWith("/")
   const source = regular ? trimmed.slice(1, -1) : wildcard(trimmed)
   try {
-    return { _tag: "Pattern", pattern: new RegExp(source, "i") }
+    const pattern = new RegExp(source, "i")
+    return { _tag: "Pattern", pattern, marking: new RegExp(pattern.source, "gi") }
   } catch (error) {
     return { _tag: "Invalid", reason: error instanceof Error ? error.message : String(error) }
   }
@@ -38,7 +40,7 @@ export const marked = (
   if (search._tag !== "Pattern") return [{ text, mark: false }]
   const parts: Array<{ text: string; mark: boolean }> = []
   let from = 0
-  for (const found of text.matchAll(new RegExp(search.pattern.source, "gi"))) {
+  for (const found of text.matchAll(search.marking)) {
     if (found[0] === "") continue
     if (found.index > from) parts.push({ text: text.slice(from, found.index), mark: false })
     parts.push({ text: found[0], mark: true })

@@ -72,7 +72,7 @@ Nothing.
       reconciles only itself.
       Done when: a beat, a lost stream and one new event do not copy the rest of what the server sent, and
       `bun run perf` holds its budgets.
-- [ ] **`log-search-memo`** — the log filter's pattern built once a search, and the shown lines worked out once a
+- [x] **`log-search-memo`** — the log filter's pattern built once a search, and the shown lines worked out once a
       change, not on every read.
       Done when: a search over the held lines builds its pattern once.
 - [ ] **`map-layout-memo`** — the map laid out again only when its nodes or edges change, with nodes found by id.
