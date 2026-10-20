@@ -75,7 +75,7 @@ Nothing.
 - [x] **`log-search-memo`** — the log filter's pattern built once a search, and the shown lines worked out once a
       change, not on every read.
       Done when: a search over the held lines builds its pattern once.
-- [ ] **`map-layout-memo`** — the map laid out again only when its nodes or edges change, with nodes found by id.
+- [x] **`map-layout-memo`** — the map laid out again only when its nodes or edges change, with nodes found by id.
       Done when: a health change on the map does not lay it out again.
 - [ ] **`off-screen-rendering`** — `content-visibility: auto` on lanes, kiosk tiles and log lines, and the map's flow
       paused while it is off screen.

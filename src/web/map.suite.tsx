@@ -1,8 +1,9 @@
 /** @jsxImportSource solid-js */
 /** Dead vs live map edges on the page: run by `map.test.ts` once Solid's compiler is in place. */
-import { describe, expect, test } from "bun:test"
-import { events } from "./fixture"
+import { describe, expect, spyOn, test } from "bun:test"
+import { events, listening } from "./fixture"
 import { mount } from "./harness"
+import * as layouts from "./layout"
 import { Overview } from "./pages/Overview"
 
 describe("dead map edges", () => {
@@ -50,6 +51,30 @@ describe("dead map edges", () => {
     })
     expect(page.container.querySelectorAll("line.flow").length).toBe(0)
     expect(page.container.querySelectorAll("line.dead").length).toBe(2)
+    page.dispose()
+  })
+})
+
+describe("the map's layout", () => {
+  test("is worked out again when its nodes or lines change, not when a node's health does", () => {
+    const { live, send } = listening()
+    send("catalog", events.catalog)
+    send("services", events.services)
+    const laid = spyOn(layouts, "layout")
+    const page = mount(() => <Overview />, { live })
+    const first = laid.mock.calls.length
+    expect(first).toBeGreaterThan(0)
+    send("services", {
+      ...events.services,
+      services: events.services.services.map((each) => ({ ...each, health: "critical" as const })),
+    })
+    expect(page.container.querySelector(".map-node.critical")).not.toBeNull()
+    expect(laid.mock.calls.length).toBe(first)
+    const catalog = events.catalog
+    if (catalog === undefined) throw new Error("no catalog")
+    send("catalog", { ...catalog, map: { ...catalog.map, edges: catalog.map.edges.slice(1) } })
+    expect(laid.mock.calls.length).toBe(first + 1)
+    laid.mockRestore()
     page.dispose()
   })
 })
