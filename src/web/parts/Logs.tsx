@@ -206,7 +206,9 @@ const Live = (props: { readonly service: string }) => {
             : `${shown().length} of the last ${lines().length} lines`}
         {from() === undefined ? "" : ` · from ${from()}`}
         {skipped() ? " · busy: older lines were skipped" : ""}
-        {" · Copy and Save take the lines held here, at most 500, or those picked"}
+        {
+          " · Copy and Save take the lines held here, at most 500, or those picked: a line's time picks it, shift-click the lines between"
+        }
       </p>
     </Show>
   )

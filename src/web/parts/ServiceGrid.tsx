@@ -49,9 +49,10 @@ const ServiceCard = (props: {
         <span aria-hidden="true"> · </span>
         <span>{versionOf(props.state, props.deployed, props.environment)}</span>
       </span>
-      <span class="muted service-card-why" title={(props.state?.reasons ?? []).join("\n")}>
+      <span class="muted service-card-why" aria-hidden="true">
         {detail()}
       </span>
+      <span class="visually-hidden">{(props.state?.reasons ?? []).join("; ")}</span>
     </A>
   )
 }
