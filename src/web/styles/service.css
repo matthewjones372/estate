@@ -189,3 +189,19 @@ fieldset.silencing {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+.errors-day {
+  align-self: flex-start;
+  font-size: 14px;
+  color: var(--ink-2);
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}
+.errors-day.some {
+  color: var(--critical);
+}
+.errors-day.none {
+  color: var(--healthy);
+}
+.errors-day:hover {
+  border-bottom-style: solid;
+}

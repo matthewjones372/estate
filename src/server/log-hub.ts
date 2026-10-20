@@ -2,16 +2,49 @@
  * One reader of a service's lines per environment, shared by everyone watching it, and stopped a few seconds after
  * the last of them leaves. It asks for what is new every two seconds and keeps the last batches for whoever joins.
  */
-import { Clock, Context, Duration, Effect, Layer, PubSub, RcMap, type Scope, Stream, SubscriptionRef } from "effect"
+import {
+  Cache,
+  Clock,
+  Context,
+  Duration,
+  Effect,
+  Exit,
+  type FileSystem,
+  Layer,
+  PubSub,
+  RcMap,
+  type Scope,
+  Stream,
+  SubscriptionRef,
+} from "effect"
 import type { LogBatch } from "../shared/log-events"
+import type { Remote } from "./remote"
 import { Configured } from "./settings"
-import { logsFor, type ServiceLogs } from "./sources/logs"
+import { type ErrorsRead, logsFor, type ServiceLogs } from "./sources/logs"
+import type { Failure } from "./sources/run"
 import { Estate } from "./state"
 import { inEnvironment } from "./views/catalog"
 
 export interface LogHub {
   readonly watch: (environment: string, service: string) => Effect.Effect<Stream.Stream<LogBatch>, never, Scope.Scope>
+  /**
+   * A service's errors over the last `range`, one read a minute however many pages ask, so that a crowd on one
+   * service page during an incident is one read; undefined where it has no logs.
+   */
+  readonly errorsOver: (
+    environment: string,
+    service: string,
+    range: Duration.Duration,
+  ) => Effect.Effect<ErrorsOver | undefined, Failure, Remote | FileSystem.FileSystem | Estate | Configured>
 }
+
+interface ErrorsOver {
+  readonly logs: ServiceLogs
+  readonly read: ErrorsRead
+}
+
+/** The most errors one read takes in. */
+export const errorsMost = 2000
 export const LogHub = Context.Service<LogHub>("estate/LogHub")
 
 const every = Duration.seconds(2)
@@ -65,9 +98,23 @@ export const logHubLayer = Layer.effect(LogHub)(
         }),
       idleTimeToLive: "5 seconds",
     })
+    const errors = yield* Cache.makeWith(
+      (key: string) =>
+        Effect.gen(function* () {
+          const [environment = "", service = "", millis = "0"] = key.split("\u0000")
+          const logs = yield* serviceLogs(environment, service)
+          if (logs === undefined) return undefined
+          const now = yield* Clock.currentTimeMillis
+          return { logs, read: yield* logs.errors(now - Number(millis), now, errorsMost) }
+        }),
+      // A failed read is not kept, so the next ask tries again.
+      { capacity: 256, timeToLive: (exit) => (Exit.isSuccess(exit) ? "1 minute" : 0), requireServicesAt: "lookup" },
+    )
     return {
       watch: (environment: string, service: string) =>
         Effect.map(RcMap.get(readers, `${environment}\u0000${service}`), Stream.fromPubSub),
+      errorsOver: (environment, service, range) =>
+        Cache.get(errors, `${environment}\u0000${service}\u0000${Duration.toMillis(range)}`),
     }
   }),
 )

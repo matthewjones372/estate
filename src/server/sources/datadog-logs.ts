@@ -21,6 +21,19 @@ const Found = Schema.Struct({
   ),
 })
 
+/** The most lines one search answers. */
+export const datadogPage = 1000
+
+/** Datadog's statuses, which it gives every line. */
+const statuses = ["emergency", "alert", "critical", "error", "warn", "notice", "info", "debug", "ok"]
+
+/** The statuses whose lines are errors by `pattern`, as a search term; undefined when none are. */
+export const datadogErrors = (pattern: string): string | undefined => {
+  const errors = new RegExp(pattern, "i")
+  const matched = statuses.filter((status) => errors.test(status.toUpperCase()))
+  return matched.length === 0 ? undefined : `status:(${matched.join(" OR ")})`
+}
+
 /** What a service's lines are searched by: the catalog's query, or its service tag in the environment's tags. */
 export const datadogQueryOf = (datadog: Datadog, service: Service): string =>
   service.logs?.selector ?? [`service:${service.name}`, ...(datadog.tags ?? [])].join(" ")
@@ -31,6 +44,8 @@ export const datadogLines = (
   from: number,
   to: number,
   limit: number,
+  /** More to search by, such as the statuses that are errors. */
+  narrowed?: string,
 ): Effect.Effect<ReadonlyArray<Line>, Failure, Remote> => {
   const reach = datadogReach(datadog)
   return callJson({
@@ -38,10 +53,14 @@ export const datadogLines = (
     method: "POST",
     headers: { ...reach.headers, "content-type": "application/json" },
     body: JSON.stringify({
-      filter: { query: datadogQueryOf(datadog, service), from: iso(from), to: iso(to) },
+      filter: {
+        query: [datadogQueryOf(datadog, service), ...(narrowed === undefined ? [] : [narrowed])].join(" "),
+        from: iso(from),
+        to: iso(to),
+      },
       // The newest lines in the window, so that a busy service skips its older lines rather than its latest.
       sort: "-timestamp",
-      page: { limit: Math.min(limit, 1000) },
+      page: { limit: Math.min(limit, datadogPage) },
     }),
   }).pipe(
     Effect.mapError((error) => new SourceFailure({ message: `Datadog ${error.message}` })),

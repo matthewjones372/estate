@@ -5,7 +5,7 @@
 import { Clock, Duration, Effect, Schema, Stream } from "effect"
 import { HttpRouter, HttpServerResponse } from "effect/http"
 import type { ErrorGroups } from "../../shared/log-events"
-import { LogHub, serviceLogs } from "../log-hub"
+import { errorsMost, LogHub, serviceLogs } from "../log-hub"
 import { Configured } from "../settings"
 import { groupErrors } from "../sources/lines"
 import { heartbeat } from "../stream"
@@ -55,7 +55,19 @@ const ErrorsAsked = Schema.Struct({
   until: Schema.optionalKey(Schema.String),
 })
 
-const most = 2000
+/** A window's errors: a range up to now shared through the hub, a window with a start or an end read for itself. */
+const errorsIn = (asked: typeof ErrorsAsked.Type) =>
+  Effect.gen(function* () {
+    if (asked.since === undefined && asked.until === undefined)
+      return yield* (yield* LogHub).errorsOver(asked.env, asked.service, ranges[asked.range ?? "1h"])
+    const logs = yield* serviceLogs(asked.env, asked.service)
+    if (logs === undefined) return undefined
+    const now = yield* Clock.currentTimeMillis
+    const since = asked.since === undefined ? Number.NaN : Date.parse(asked.since)
+    const from = Number.isNaN(since) ? now - Duration.toMillis(ranges[asked.range ?? "1h"]) : since
+    const until = asked.until === undefined ? Number.NaN : Date.parse(asked.until)
+    return { logs, read: yield* logs.errors(from, Number.isNaN(until) ? now : Math.min(until, now), errorsMost) }
+  })
 
 export const errorsRoute = HttpRouter.add(
   "GET",
@@ -66,15 +78,12 @@ export const errorsRoute = HttpRouter.add(
       ErrorsAsked,
       "errors are asked for by env, service, and a range of 1h, 6h or 24h or a since time, and an until time",
     )
-    const logs = yield* serviceLogs(asked.env, asked.service)
-    if (logs === undefined) return json({ message: `${asked.service} has no logs to read in ${asked.env}` }, 404)
-    const now = yield* Clock.currentTimeMillis
-    const since = asked.since === undefined ? Number.NaN : Date.parse(asked.since)
-    const from = Number.isNaN(since) ? now - Duration.toMillis(ranges[asked.range ?? "1h"]) : since
-    const until = asked.until === undefined ? Number.NaN : Date.parse(asked.until)
-    const read = yield* Effect.result(logs.read(from, Number.isNaN(until) ? now : Math.min(until, now), most))
-    if (read._tag === "Failure") return json({ message: read.failure.message }, 502)
-    const body: ErrorGroups = { from: logs.from, groups: groupErrors(read.success, logs.isError) }
+    const found = yield* Effect.result(errorsIn(asked))
+    if (found._tag === "Failure") return json({ message: found.failure.message }, 502)
+    if (found.success === undefined)
+      return json({ message: `${asked.service} has no logs to read in ${asked.env}` }, 404)
+    const { logs, read } = found.success
+    const body: ErrorGroups = { from: logs.from, groups: groupErrors(read.lines, logs.isError), capped: read.capped }
     return json(body)
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

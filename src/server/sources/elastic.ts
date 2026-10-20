@@ -46,12 +46,28 @@ export const matchOf = (service: Service): Readonly<Record<string, string>> =>
     "kubernetes.labels.app": service.name,
   }
 
+/** The levels a shipper writes, as `log.level` is a keyword: case matters. */
+const levels = ["trace", "debug", "info", "notice", "warn", "warning", "error", "critical", "fatal", "panic"]
+
+/**
+ * The `log.level`s whose lines are not errors by `pattern`, in each case a shipper writes them. A line without one,
+ * or with another, is kept for Estate to decide by its text.
+ */
+export const elasticNotErrors = (pattern: string): ReadonlyArray<string> => {
+  const errors = new RegExp(pattern, "i")
+  return levels
+    .filter((level) => !errors.test(level.toUpperCase()))
+    .flatMap((level) => [level, level.toUpperCase(), `${level[0]?.toUpperCase()}${level.slice(1)}`])
+}
+
 export const elasticLines = (
   elastic: Elastic,
   service: Service,
   from: number,
   to: number,
   limit: number,
+  /** `log.level`s to leave out, such as those that are not errors. */
+  without: ReadonlyArray<string> = [],
 ): Effect.Effect<ReadonlyArray<Line>, Failure, Remote> =>
   Effect.gen(function* () {
     const remote = yield* Remote
@@ -66,6 +82,7 @@ export const elasticLines = (
             { range: { "@timestamp": { gte: iso(from), lte: iso(to), format: "strict_date_optional_time" } } },
             ...Object.entries(matchOf(service)).map(([field, value]) => ({ match_phrase: { [field]: value } })),
           ],
+          ...(without.length === 0 ? {} : { must_not: [{ terms: { "log.level": without } }] }),
         },
       },
     }

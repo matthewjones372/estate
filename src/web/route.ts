@@ -1,7 +1,17 @@
-/** Where the page is: the path names the page, `?env=` the environment. */
+/** The windows a service's errors are shown over. */
+export const errorRanges = ["1h", "6h", "24h"] as const
+export type ErrorRange = (typeof errorRanges)[number]
+
+/** Which of a service's logs its page shows: the live lines, or the errors over a range. */
+export interface LogsShown {
+  readonly view: "live" | "errors"
+  readonly range: ErrorRange
+}
+
+/** Where the page is: the path names the page, `?env=` the environment, and a service's `?logs=&range=` its logs. */
 export type Page =
   | { readonly page: "overview" }
-  | { readonly page: "service"; readonly name: string }
+  | { readonly page: "service"; readonly name: string; readonly logs?: LogsShown }
   | { readonly page: "store"; readonly name: string }
   | { readonly page: "job"; readonly name: string }
   | { readonly page: "agent"; readonly name: string }
@@ -67,7 +77,24 @@ export const pageOf = (pathname: string, search = ""): Page => {
   const [, kind = "", name] = /^\/(\w+)\/([^/]+)$/.exec(pathname) ?? []
   const named = pagesNamed.get(kind)
   const decoded = name === undefined ? undefined : decodedOf(name)
-  return named === undefined || decoded === undefined ? { page: "missing" } : named(decoded)
+  if (named === undefined || decoded === undefined) return { page: "missing" }
+  const found = named(decoded)
+  if (found.page !== "service") return found
+  const logs = logsOf(new URLSearchParams(search))
+  return logs === undefined ? found : { ...found, logs }
+}
+
+/** The logs an address asks for; undefined when it asks for none Estate knows, so the page shows its default. */
+const logsOf = (params: URLSearchParams): LogsShown | undefined => {
+  if (params.get("logs") !== "errors") return undefined
+  const range = errorRanges.find((each) => each === params.get("range"))
+  return { view: "errors", range: range ?? "1h" }
+}
+
+/** A service page's `?logs=&range=`, leaving out what it shows anyway. */
+const logsQuery = (logs: LogsShown | undefined): string => {
+  if (logs === undefined || logs.view === "live") return ""
+  return logs.range === "1h" ? "?logs=errors" : `?logs=errors&range=${logs.range}`
 }
 
 export const pathOf = (page: Page): string => {
@@ -75,7 +102,7 @@ export const pathOf = (page: Page): string => {
     case "overview":
       return "/"
     case "service":
-      return `/services/${encodeURIComponent(page.name)}`
+      return `/services/${encodeURIComponent(page.name)}${logsQuery(page.logs)}`
     case "store":
       return `/stores/${encodeURIComponent(page.name)}`
     case "job":

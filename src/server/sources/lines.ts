@@ -57,11 +57,12 @@ export const fieldsOf = (keys: FieldKeys | undefined) => {
   }
 }
 
-const defaultErrors = /\b(error|fatal|panic)\b|exception\b/i
+/** What an error is unless the catalog says otherwise: matched against a line's level, or its text, case aside. */
+export const defaultErrors = String.raw`\b(error|fatal|panic)\b|exception\b`
 
 /** Whether a line is an error, by the catalog's pattern or the default, against its level or else its text. */
 export const errorTest = (pattern: string | undefined) => {
-  const errors = pattern === undefined ? defaultErrors : new RegExp(pattern, "i")
+  const errors = new RegExp(pattern ?? defaultErrors, "i")
   return (line: Line) => errors.test(line.level ?? line.text)
 }
 

@@ -34,5 +34,10 @@ export const ErrorGroup = Schema.Struct({
   examples: Schema.Array(LogLine),
 })
 
-export const ErrorGroups = Schema.Struct({ from: Schema.String, groups: Schema.Array(ErrorGroup) })
+export const ErrorGroups = Schema.Struct({
+  from: Schema.String,
+  groups: Schema.Array(ErrorGroup),
+  /** The read reached its limit, so there were more errors than these. */
+  capped: Schema.optionalKey(Schema.Boolean),
+})
 export type ErrorGroups = typeof ErrorGroups.Type

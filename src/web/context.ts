@@ -15,7 +15,7 @@ import type { FiringEvent } from "../shared/timeline"
 import type { TraceView } from "../shared/trace-view"
 import type { JourneySample } from "../shared/traces"
 import type { Live, Snapshot } from "./live"
-import type { Page } from "./route"
+import type { ErrorRange, Page } from "./route"
 import type { Exported } from "./timeline-path"
 
 export interface Actions {
@@ -108,7 +108,7 @@ export interface LogHandlers {
   readonly missing: () => void
 }
 
-export type ErrorWindow = { readonly range: "1h" | "6h" | "24h" } | { readonly since: string; readonly until?: string }
+export type ErrorWindow = { readonly range: ErrorRange } | { readonly since: string; readonly until?: string }
 
 export type Range = "1h" | "6h" | "24h" | "7d"
 
