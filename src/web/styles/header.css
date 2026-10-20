@@ -39,19 +39,26 @@
   font-size: 0.8125rem;
   min-height: 32px;
 }
+/* A popover in the top layer: placed under its button by the toggle handler, or by anchor positioning below. */
 .switcher-list {
-  position: absolute;
-  z-index: 5;
-  top: 40px;
-  left: 0;
+  position: fixed;
+  inset: auto;
   min-width: 280px;
   margin: 0;
   padding: 6px;
   list-style: none;
+  color: var(--ink);
   background: var(--raised);
   border: 1px solid var(--line-strong);
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+@supports (position-area: block-end) {
+  .switcher-list {
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: flip-inline;
+    margin-block-start: 8px;
+  }
 }
 .switcher-option {
   width: 100%;

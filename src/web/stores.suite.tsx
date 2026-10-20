@@ -77,7 +77,10 @@ describe("stores on the overview", () => {
   test("have a lane each after the services: health and why, stats, links", () => {
     const page = text(render(() => <Overview />, { sent: withStores }))
     expect(page).toContain("Stores")
-    expect(page).toContain("orders-db Degraded 1 instance is not ready +1 cnpg")
+    // The line shows the first reason; a screen reader is read every one.
+    expect(page).toContain(
+      "orders-db Degraded 1 instance is not ready +1 1 instance is not ready; no backup for 30 h cnpg",
+    )
     expect(page).toContain("Connections used")
     expect(page).toContain("cache Unknown")
     expect(text(render(() => <Overview />))).not.toContain("Stores")

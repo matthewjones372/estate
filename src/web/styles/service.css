@@ -25,10 +25,15 @@
   border-color: var(--debug);
 }
 .debug-confirm {
+  max-width: min(480px, calc(100dvw - 32px));
+  color: var(--ink);
   background: var(--raised);
   border: 1px solid #3b2f6b;
   border-radius: 10px;
   padding: 12px 14px;
+}
+.debug-confirm::backdrop {
+  background: rgba(11, 13, 18, 0.7);
 }
 
 /* The service page */

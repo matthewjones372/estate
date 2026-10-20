@@ -78,9 +78,11 @@ export const HealthLine = (props: {
     <span class="health">
       <span class={`dot ${health()}`} />
       <span class={`health-word ${health()}`}>{healthWords[health()]}</span>
-      <span class="muted health-why" title={(props.state?.reasons ?? []).join("\n")}>
+      {/* The line shows the first reason; a screen reader is read them all. */}
+      <span class="muted health-why" aria-hidden="true">
         {why()}
       </span>
+      <span class="visually-hidden">{(props.state?.reasons ?? []).join("; ")}</span>
     </span>
   )
 }

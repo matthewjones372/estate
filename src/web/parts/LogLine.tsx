@@ -37,7 +37,6 @@ export const LineRow = (props: {
           type="button"
           class="log-at log-pick"
           aria-pressed={props.picked === true}
-          title="Pick this line; shift-click to pick the lines between"
           onClick={(event) => pick()(event.shiftKey)}
         >
           {clock(props.line.at)}

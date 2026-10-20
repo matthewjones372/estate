@@ -1,0 +1,30 @@
+import { expect, test } from "@playwright/test"
+
+test("Escape and a click elsewhere close the environment menu, which opens under its button", async ({ page }) => {
+  await page.goto("/?env=production")
+  const button = page.getByRole("button", { name: /^Environment: production/ })
+  const menu = page.getByRole("list", { name: "Environments" })
+  await button.click({ timeout: 20_000 })
+  await expect(menu).toBeVisible()
+  const [under, list] = await Promise.all([button.boundingBox(), menu.boundingBox()])
+  expect(list?.y ?? 0).toBeGreaterThan((under?.y ?? 0) + (under?.height ?? 0))
+  expect(Math.abs((list?.x ?? 0) - (under?.x ?? 0))).toBeLessThan(2)
+  await page.keyboard.press("Escape")
+  await expect(menu).toBeHidden()
+  await button.click()
+  await expect(menu).toBeVisible()
+  await page.getByRole("heading", { level: 1 }).click()
+  await expect(menu).toBeHidden()
+})
+
+test("Escape cancels debug's confirm, and focus goes back to what opened it", async ({ page }) => {
+  await page.goto("/services/storefront?env=production")
+  const turnOn = page.getByRole("button", { name: "Turn on debug…" })
+  await turnOn.click({ timeout: 20_000 })
+  const confirm = page.getByRole("dialog", { name: /^DEBUG for storefront/ })
+  await expect(confirm).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(confirm).toBeHidden()
+  await expect(turnOn).toBeFocused()
+  await expect(page.getByText(/On until/)).toHaveCount(0)
+})

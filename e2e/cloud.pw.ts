@@ -11,7 +11,9 @@ test("on EKS: Grafana's alert with its chart, Argo CD's stall in its words, and 
   await expect(card).toBeVisible({ timeout: 20_000 })
   await expect(card.getByRole("img").first()).toBeVisible({ timeout: 10_000 })
   await expect(
-    page.getByText("stalled: one or more objects failed to apply: admission webhook denied the request"),
+    page.getByText("stalled: one or more objects failed to apply: admission webhook denied the request", {
+      exact: true,
+    }),
   ).toBeVisible()
   await card.getByRole("button", { name: "Silence…" }).click()
   await card.getByRole("button", { name: "6 hours" }).click()
@@ -39,7 +41,9 @@ test("on ECS: CloudWatch's alarm with its chart, ECS's failed rollout, tasks, a 
   await expect(card).toBeVisible({ timeout: 20_000 })
   await expect(card.getByRole("img").first()).toBeVisible({ timeout: 10_000 })
   await expect(card.getByRole("button", { name: "Silence…" })).toHaveCount(0)
-  await expect(page.getByText("stalled: ECS deployment circuit breaker: tasks failed to start.")).toBeVisible()
+  await expect(
+    page.getByText("stalled: ECS deployment circuit breaker: tasks failed to start.", { exact: true }),
+  ).toBeVisible()
   await page.getByRole("link", { name: "checkout", exact: true }).first().click()
   await expect(page.getByText("checkout-nightly-export")).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText("2/2 pods")).toBeVisible()

@@ -65,7 +65,7 @@ Nothing.
 - [x] **`inline-text-that-scales`** — the 40 text sizes set inline in the pages' parts in `rem`, as the stylesheets'
       are.
       Done when: no part sets a `px` font size inline.
-- [ ] **`menus-and-dialogs`** — the environment menu a popover, debug's confirm a `<dialog>`, health reasons and
+- [x] **`menus-and-dialogs`** — the environment menu a popover, debug's confirm a `<dialog>`, health reasons and
       the shift-click hint out of `title`.
       Done when: Escape closes the environment menu, and a health reason is read without a pointer.
 - [ ] **`less-work-per-event`** — path-set heartbeats, memoised log search, the map laid out only when its shape

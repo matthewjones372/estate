@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 /** A service's debug switch: on for a while under someone's name, then off by itself. */
-import { createSignal, For, Show } from "solid-js"
+import { createSignal, For, type JSX, onMount, Show } from "solid-js"
 import type { CatalogEvent, ServiceState } from "../../shared/events"
 import { useEstate } from "../context"
 import { clock } from "../format"
@@ -10,6 +10,17 @@ const spans = [
   { label: "1 hour", minutes: 60 },
   { label: "2 hours", minutes: 120 },
 ] as const
+
+/** A modal confirm, opened once it is on the page so the page behind waits; Escape closes it as Cancel does. */
+const Confirm = (props: { readonly onClose: () => void; readonly children: JSX.Element }) => {
+  let dialog: HTMLDialogElement | undefined
+  onMount(() => dialog?.showModal())
+  return (
+    <dialog ref={dialog} aria-labelledby="confirm-title" class="debug-confirm" onClose={() => props.onClose()}>
+      <div class="stack">{props.children}</div>
+    </dialog>
+  )
+}
 
 export const DebugPanel = (props: {
   readonly service: CatalogEvent["services"][number]
@@ -57,11 +68,10 @@ export const DebugPanel = (props: {
                       )}
                     </For>
                   </fieldset>
-                  <Show when={!confirming()}>
-                    <button type="button" class="debug-button" onClick={() => setConfirming(true)}>
-                      Turn on debug…
-                    </button>
-                  </Show>
+                  {/* It stays while the confirm is open, so focus comes back to it when the confirm closes. */}
+                  <button type="button" class="debug-button" onClick={() => setConfirming(true)}>
+                    Turn on debug…
+                  </button>
                 </Show>
               </div>
             }
@@ -88,7 +98,7 @@ export const DebugPanel = (props: {
             )}
           </Show>
           <Show when={confirming()}>
-            <div role="alertdialog" aria-labelledby="confirm-title" class="debug-confirm stack">
+            <Confirm onClose={() => setConfirming(false)}>
               <strong id="confirm-title">
                 {levels().at(-1) ?? "DEBUG"} for {props.service.name},{" "}
                 {spans.find((span) => span.minutes === minutes())?.label}?
@@ -109,7 +119,7 @@ export const DebugPanel = (props: {
                   Cancel
                 </button>
               </div>
-            </div>
+            </Confirm>
           </Show>
         </div>
       )}

@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 /** The header: Estate, the environment switcher with each environment's worst, the pages, live, and who you are. */
-import { createSignal, For, Show } from "solid-js"
+import { createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import type { Health } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { clock, initials } from "../format"
@@ -31,14 +31,28 @@ const Switcher = () => {
   const worst = (name: string): Health =>
     snapshot.events.services?.environments.find((each) => each.name === name)?.worst ?? "unknown"
   const current = () => environments().find((each) => each.name === environment())
+  let button: HTMLButtonElement | undefined
+  let list: HTMLUListElement | undefined
+  // Under its button: anchor positioning does it where there is any, and this where there is none.
+  const place = (event: Event) => {
+    const opening = (event as ToggleEvent).newState === "open"
+    setOpen(opening)
+    if (!opening || button === undefined || list === undefined || CSS.supports("position-area", "block-end")) return
+    const below = button.getBoundingClientRect()
+    list.style.top = `${below.bottom + 8}px`
+    list.style.left = `${below.left}px`
+  }
+  onMount(() => list?.addEventListener("toggle", place))
+  onCleanup(() => list?.removeEventListener("toggle", place))
   return (
     <div class="switcher">
       <button
+        ref={button}
         type="button"
         class="switcher-button"
+        popovertarget="environments"
         aria-expanded={open()}
         aria-label={`Environment: ${environment()}. Change environment`}
-        onClick={() => setOpen(!open())}
       >
         <span class={`dot ${worst(environment())}`} />
         <strong>{environment()}</strong>
@@ -61,38 +75,36 @@ const Switcher = () => {
           <path d="M2 4l3 3 3-3" />
         </svg>
       </button>
-      <Show when={open()}>
-        <ul aria-label="Environments" class="switcher-list">
-          <For each={environments()}>
-            {(each) => (
-              <li>
-                <button
-                  type="button"
-                  class="switcher-option"
-                  aria-current={each.name === environment()}
-                  onClick={() => {
-                    setOpen(false)
-                    actions.choose(each.name)
-                  }}
-                >
-                  <span class={`dot ${worst(each.name)}`} />
-                  <span>
-                    <strong>{each.name}</strong>{" "}
-                    {each.title !== each.name && (
-                      <span class="muted" style={{ "font-size": "0.75rem" }}>
-                        {each.title}
-                      </span>
-                    )}
-                  </span>
-                  <span class="muted" style={{ "font-size": "0.75rem" }}>
-                    {worstWords[worst(each.name)]}
-                  </span>
-                </button>
-              </li>
-            )}
-          </For>
-        </ul>
-      </Show>
+      <ul ref={list} id="environments" popover="auto" aria-label="Environments" class="switcher-list">
+        <For each={environments()}>
+          {(each) => (
+            <li>
+              <button
+                type="button"
+                class="switcher-option"
+                aria-current={each.name === environment()}
+                onClick={() => {
+                  list?.hidePopover?.()
+                  actions.choose(each.name)
+                }}
+              >
+                <span class={`dot ${worst(each.name)}`} />
+                <span>
+                  <strong>{each.name}</strong>{" "}
+                  {each.title !== each.name && (
+                    <span class="muted" style={{ "font-size": "0.75rem" }}>
+                      {each.title}
+                    </span>
+                  )}
+                </span>
+                <span class="muted" style={{ "font-size": "0.75rem" }}>
+                  {worstWords[worst(each.name)]}
+                </span>
+              </button>
+            </li>
+          )}
+        </For>
+      </ul>
     </div>
   )
 }
