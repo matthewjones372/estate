@@ -38,5 +38,7 @@ jobs:
       - if: steps.changed.outputs.code == 'true'
         timeout-minutes: 5
         run: bunx playwright install --with-deps chromium
+      # It takes about four minutes; one that hangs fails here and can be run again, not hold the job for six hours.
       - if: steps.changed.outputs.code == 'true'
+        timeout-minutes: 10
         run: bun run perf
