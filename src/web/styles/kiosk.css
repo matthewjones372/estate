@@ -24,7 +24,7 @@
   color: var(--ink-3);
 }
 .kiosk-clock {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: 1.6em;
   color: var(--ink);
 }
@@ -86,7 +86,7 @@
   color: var(--critical);
 }
 .kiosk-since {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .kiosk-note {
   margin: 0.5em 0 0;

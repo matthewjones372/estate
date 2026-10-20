@@ -62,7 +62,7 @@ Nothing.
       Done when: a page on a listed origin can frame Estate, and one on any other cannot.
 - [x] **`colour-tokens`** — the stylesheets' hex colours as `:root` tokens.
       Done when: no stylesheet but the tokens names a colour by hex, and the pages compute the same colours.
-- [ ] **`logical-sides`** — the physical sides as logical ones.
+- [x] **`logical-sides`** — the physical sides as logical ones.
       Done when: no stylesheet sets a left or right margin or padding, and the pages lay out as before.
 - [ ] **`log-search-debounce`** — the log search filters once typing pauses.
       Done when: typing a word filters the lines once, and clearing the search shows them at once.
