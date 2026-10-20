@@ -6,6 +6,7 @@ import { seenLive } from "../shared/timeline"
 import { App } from "./App"
 import { heard, now, operator } from "./fixture"
 import { mount } from "./harness"
+import type { Change } from "./live"
 import { IncidentPage } from "./pages/Incident"
 import { recording } from "./recording"
 
@@ -74,11 +75,11 @@ describe("the incident in the incident tool, on its page", () => {
   })
 
   test("is read again as the stream beats, at most every half minute, while the incident is open", async () => {
-    const listeners: Array<() => void> = []
+    const listeners: Array<(change: Change) => void> = []
     const base = heard()
     const live = {
       ...base,
-      subscribe: (listener: () => void) => {
+      subscribe: (listener: (change: Change) => void) => {
         listeners.push(listener)
         return base.subscribe(listener)
       },
@@ -103,7 +104,7 @@ describe("the incident in the incident tool, on its page", () => {
     ))
     await page.settle()
     const beat = async () => {
-      for (const listener of listeners) listener()
+      for (const listener of listeners) listener({ kind: "heard" })
       await page.settle()
     }
     await beat()

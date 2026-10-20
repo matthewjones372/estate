@@ -68,9 +68,18 @@ Nothing.
 - [x] **`menus-and-dialogs`** — the environment menu a popover, debug's confirm a `<dialog>`, health reasons and
       the shift-click hint out of `title`.
       Done when: Escape closes the environment menu, and a health reason is read without a pointer.
-- [ ] **`less-work-per-event`** — path-set heartbeats, memoised log search, the map laid out only when its shape
-      changes, `content-visibility` on lanes and log lines.
-      Done when: `bun run perf` holds its budgets and a heartbeat does not reconcile the snapshot.
+- [x] **`heartbeat-path-set`** — the store told what changed: a beat or a lost stream sets two fields, an event
+      reconciles only itself.
+      Done when: a beat, a lost stream and one new event do not copy the rest of what the server sent, and
+      `bun run perf` holds its budgets.
+- [ ] **`log-search-memo`** — the log filter's pattern built once a search, and the shown lines worked out once a
+      change, not on every read.
+      Done when: a search over the held lines builds its pattern once.
+- [ ] **`map-layout-memo`** — the map laid out again only when its nodes or edges change, with nodes found by id.
+      Done when: a health change on the map does not lay it out again.
+- [ ] **`off-screen-rendering`** — `content-visibility: auto` on lanes, kiosk tiles and log lines, and the map's flow
+      paused while it is off screen.
+      Done when: an off-screen lane is skipped by the browser and keeps a size to scroll by.
 
 ## Acceptance
 

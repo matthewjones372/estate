@@ -57,35 +57,45 @@ const merged = (held: Events["services"] | undefined, sent: ServicesPartEvent): 
   }
 }
 
+/** What changed, so a listener does only that much: when the server was heard, one event, or all of it. */
+export type Change =
+  | { readonly kind: "heard" }
+  | { readonly kind: "event"; readonly name: EventName }
+  | { readonly kind: "all" }
+
 export interface Live {
-  readonly subscribe: (listener: () => void) => () => void
+  readonly subscribe: (listener: (change: Change) => void) => () => void
   readonly snapshot: () => Snapshot
   readonly choose: (environment: string) => void
 }
 
 export const createLive = (open: Open, environment: string, now: () => number = Date.now): Live => {
   let snapshot: Snapshot = { environment, connection: "connecting", events: {}, heardAt: undefined }
-  const listeners = new Set<() => void>()
-  const set = (next: Snapshot) => {
+  const listeners = new Set<(change: Change) => void>()
+  const heard: Change = { kind: "heard" }
+  const set = (next: Snapshot, change: Change) => {
     snapshot = next
-    for (const listener of listeners) listener()
+    for (const listener of listeners) listener(change)
   }
   const connect = (chosen: string) =>
     open(chosen, {
-      onOpen: () => set({ ...snapshot, connection: "open" }),
-      onLost: () => set({ ...snapshot, connection: "lost" }),
-      onBeat: () => set({ ...snapshot, connection: "open", heardAt: now() }),
+      onOpen: () => set({ ...snapshot, connection: "open" }, heard),
+      onLost: () => set({ ...snapshot, connection: "lost" }, heard),
+      onBeat: () => set({ ...snapshot, connection: "open", heardAt: now() }, heard),
       onEvent: (name, data) => {
         const decoded = decoders[name](parse(data))
         if (Option.isSome(decoded)) {
           const value =
             name === "services" ? merged(snapshot.events.services, decoded.value as ServicesPartEvent) : decoded.value
-          set({
-            ...snapshot,
-            connection: "open",
-            heardAt: now(),
-            events: { ...snapshot.events, [name]: value } as Partial<Events>,
-          })
+          set(
+            {
+              ...snapshot,
+              connection: "open",
+              heardAt: now(),
+              events: { ...snapshot.events, [name]: value } as Partial<Events>,
+            },
+            { kind: "event", name },
+          )
         }
       },
     })
@@ -99,7 +109,7 @@ export const createLive = (open: Open, environment: string, now: () => number = 
     choose: (chosen) => {
       if (chosen === snapshot.environment) return
       close()
-      set({ environment: chosen, connection: "connecting", events: {}, heardAt: undefined })
+      set({ environment: chosen, connection: "connecting", events: {}, heardAt: undefined }, { kind: "all" })
       close = connect(chosen)
     },
   }
