@@ -54,13 +54,44 @@ describe("the pages' bundle", () => {
   test("is made by a process of its own, which says what went wrong when it cannot", () =>
     Promise.all([bundle(join(import.meta.dir, "..", "web")), bundle(join(tmpdir(), "estate-nowhere"))]).then(
       ([made, failed]) => {
-        expect(made.ok && made.outputs.map((output) => output.name.replace(/-.*\./, "."))).toEqual([
-          "main.js",
+        expect(made.ok && made.outputs.map((output) => output.name.replace(/-[^-]+\./, ".")).toSorted()).toEqual([
+          "instrument-sans-latin.woff2",
+          "jetbrains-mono-latin.woff2",
           "main.css",
+          "main.js",
         ])
         expect(failed.ok).toBe(false)
       },
     ))
+
+  test(
+    "serves the fonts the pages are drawn in itself, byte for byte, and names no other host for them",
+    () =>
+      Effect.runPromise(
+        read.pipe(
+          Effect.flatMap((web) =>
+            Effect.gen(function* () {
+              expect(web.index).not.toMatch(/fonts\.(googleapis|gstatic)\.com/)
+              // Each font is preloaded by the shell, from Estate's own /assets/.
+              const fonts = [...web.index.matchAll(/rel="preload" href="\/assets\/([^"]+\.woff2)"/g)].map(
+                ([, name]) => name ?? "",
+              )
+              const unhashed = (name: string) => name.replace(/-[^-]+\.woff2$/, "")
+              expect(fonts.map(unhashed)).toEqual(["instrument-sans-latin", "jetbrains-mono-latin"])
+              for (const name of fonts) {
+                const served = Option.getOrThrow(web.asset(name))
+                const kept = yield* Effect.promise(() =>
+                  Bun.file(join(import.meta.dir, "..", "web", "fonts", `${unhashed(name)}.woff2`)).bytes(),
+                )
+                expect([served.type, served.body]).toEqual(["font/woff2", kept])
+              }
+            }),
+          ),
+          Effect.provide(Layer.fresh(builtWeb).pipe(Layer.provide(platform))),
+        ),
+      ),
+    30_000,
+  )
 
   test("is printed as JSON for Estate to read", () => {
     const to = Bun.file(join(mkdtempSync(join(tmpdir(), "estate-bundle-")), "printed.json"))

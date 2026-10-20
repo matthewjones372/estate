@@ -33,9 +33,11 @@ referrer-policy: strict-origin-when-cross-origin
 cache-control: no-cache
 ```
 
-- **The fonts** are Instrument Sans and JetBrains Mono as `woff2` files in `src/web/fonts`, both under the SIL Open
-  Font License, declared by `@font-face` in `base.css` with `font-display: swap`. The bundle serves them under
-  `/assets/` with the rest, hashed and immutable. The Google links go from `index.html`.
+- **The fonts** are Instrument Sans and JetBrains Mono as variable, Latin-only `woff2` files in `src/web/fonts`, both
+  under the SIL Open Font License, imported by `fonts.ts` and declared through the `FontFace` API with `display: swap`.
+  Bun's CSS bundler inlines a `url()` font into the stylesheet as data, where an import is emitted as a file of its
+  own, so the bundle serves them under `/assets/` with the rest, hashed and immutable, and the shell preloads them.
+  The Google links go from `index.html`.
 - **The headers** are set where the shell is served, in `routes.ts`, and nowhere else.
 - **`img-src data:`** is for the favicon, which is an SVG in the shell.
 - **`style-src-attr 'unsafe-inline'`** is for the parts' `style={{ … }}`: Solid compiles a constant one into its
@@ -61,7 +63,8 @@ Nothing.
 
 ## Stack
 
-- [ ] **`self-hosted-fonts`** — the two fonts as files in the bundle, declared in `base.css`; no Google links.
+- [x] **`self-hosted-fonts`** — the two fonts as files in the bundle, declared by `fonts.ts` and preloaded by the
+      shell; no Google links.
       Done when: the shell names no host but Estate's, and the pages draw in Instrument Sans and JetBrains Mono.
 - [ ] **`shell-headers`** — the policy, `nosniff` and the referrer policy on the shell.
       Done when: every page loads with no CSP violation, and a framed Estate on another origin is refused.
