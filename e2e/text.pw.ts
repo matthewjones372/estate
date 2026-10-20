@@ -5,7 +5,8 @@ test("text follows the browser's text size", async ({ page }) => {
   const line = page.getByRole("region", { name: "Logs" }).locator(".log-line").first()
   await expect(line).toBeVisible({ timeout: 20_000 })
   // A person's default text size is the root's; 20px stands in for one set larger than the usual 16px.
-  await page.addStyleTag({ content: "html { font-size: 20px }" })
+  // Through the CSSOM: the shell's policy refuses a <style> written into the page.
+  await page.evaluate(() => document.documentElement.style.setProperty("font-size", "20px"))
   const size = (selector: string) =>
     page
       .locator(selector)

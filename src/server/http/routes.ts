@@ -199,6 +199,25 @@ const assets = HttpRouter.add("GET", "/assets/:name", (request) =>
 )
 
 /**
+ * What the shell may run: Estate's own script, styles and fonts, its own stream and API, and nothing framing it from
+ * elsewhere (spec 0055). Style attributes are allowed because Solid compiles a part's constant style into one.
+ */
+const policy = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "style-src-attr 'unsafe-inline'",
+  "font-src 'self'",
+  // The favicon is an SVG written into the shell.
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+].join("; ")
+
+/**
  * The pages' shell, to anyone: it holds no estate, which comes over the signed-in event stream. Nothing read from a
  * tool or the catalog goes into it, or it is shown to people who have not signed in.
  */
@@ -209,7 +228,12 @@ const pages = HttpRouter.add(
     const web = yield* Web
     return HttpServerResponse.text(web.index, {
       contentType: "text/html; charset=utf-8",
-      headers: { "cache-control": "no-cache" },
+      headers: {
+        "cache-control": "no-cache",
+        "content-security-policy": policy,
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+      },
     })
   }),
 )

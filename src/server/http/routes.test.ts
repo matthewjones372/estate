@@ -185,6 +185,24 @@ describe("the pages", () => {
       }),
     ))
 
+  test("the shell says what it may run and who may frame it, and nothing else does", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const server = yield* serverFor(oidc)
+        const shell = yield* ask(server, new Request("http://estate/services/orders"))
+        const named = ["content-security-policy", "x-content-type-options", "referrer-policy"]
+        expect(Object.fromEntries(named.map((name) => [name, shell.headers.get(name)]))).toEqual({
+          "content-security-policy":
+            "default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'",
+          "x-content-type-options": "nosniff",
+          "referrer-policy": "strict-origin-when-cross-origin",
+        })
+        // Health, the stream and the API answer text, JSON or events, never a page, so they carry no policy.
+        const health = yield* ask(server, new Request("http://estate/healthz"))
+        expect(health.headers.get("content-security-policy")).toBeNull()
+      }),
+    ))
+
   test("is ready once every part it reads has been read once, answered or failed", () =>
     Effect.runPromise(
       Effect.gen(function* () {
