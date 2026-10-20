@@ -35,7 +35,7 @@ export const DebugPanel = (props: {
     <Show
       when={props.service.debug?.levels}
       fallback={
-        <p class="muted" style={{ margin: 0 }}>
+        <p class="muted flush">
           The catalog names no log level for {props.service.name}, so it cannot be switched here.
         </p>
       }
@@ -49,9 +49,7 @@ export const DebugPanel = (props: {
             when={debug()?.on === true ? debug() : undefined}
             fallback={
               <div class="stack">
-                <p class="secondary" style={{ margin: 0, "font-size": "0.8125rem" }}>
-                  Off: it logs at {debug()?.level ?? levels()[0]}.
-                </p>
+                <p class="secondary flush fine">Off: it logs at {debug()?.level ?? levels()[0]}.</p>
                 <Show when={operator}>
                   <fieldset class="choices bare">
                     <legend class="visually-hidden">For how long</legend>
@@ -79,7 +77,7 @@ export const DebugPanel = (props: {
             {(on) => (
               <div class="debug-on stack">
                 <strong>On until {on().until === undefined ? "switched off" : clock(on().until ?? "")}</strong>
-                <span class="secondary" style={{ "font-size": "0.8125rem" }}>
+                <span class="secondary fine">
                   Turned on{on().by === undefined ? "" : ` by ${on().by}`}
                   {on().since === undefined ? "" : ` at ${clock(on().since ?? "")}`}. It turns itself off then; nobody
                   needs to remember.
@@ -87,8 +85,7 @@ export const DebugPanel = (props: {
                 <Show when={operator}>
                   <button
                     type="button"
-                    class="plain-button"
-                    style={{ "align-self": "flex-start" }}
+                    class="plain-button self-start"
                     onClick={() => void actions.undebug(props.service.name)}
                   >
                     Turn off now
@@ -103,7 +100,7 @@ export const DebugPanel = (props: {
                 {levels().at(-1) ?? "DEBUG"} for {props.service.name},{" "}
                 {spans.find((span) => span.minutes === minutes())?.label}?
               </strong>
-              <p class="secondary" style={{ margin: 0, "font-size": "0.8125rem" }}>
+              <p class="secondary flush fine">
                 Many more lines, and more disk in the log store. It is recorded under your name, and ends at{" "}
                 {clock(new Date(now() + minutes() * 60_000).toISOString())}.
               </p>

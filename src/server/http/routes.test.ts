@@ -193,7 +193,7 @@ describe("the pages", () => {
         const named = ["content-security-policy", "x-content-type-options", "referrer-policy"]
         expect(Object.fromEntries(named.map((name) => [name, shell.headers.get(name)]))).toEqual({
           "content-security-policy":
-            "default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'",
+            "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'",
           "x-content-type-options": "nosniff",
           "referrer-policy": "strict-origin-when-cross-origin",
         })

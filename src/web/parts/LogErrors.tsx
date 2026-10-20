@@ -39,7 +39,7 @@ export const ErrorList = (props: {
     <Show
       when={read()}
       fallback={
-        <p class="muted" style={{ margin: 0 }}>
+        <p class="muted flush">
           {groups() === "loading"
             ? "Reading the errors…"
             : groups() === "none"
@@ -51,18 +51,9 @@ export const ErrorList = (props: {
       {(found) => (
         <>
           <Show when={"until" in props.window && found().from === "the cluster"}>
-            <p class="muted" style={{ margin: 0 }}>
-              Read from the pods running now, so lines from before they started are not here.
-            </p>
+            <p class="muted flush">Read from the pods running now, so lines from before they started are not here.</p>
           </Show>
-          <Show
-            when={found().groups.length > 0}
-            fallback={
-              <p class="muted" style={{ margin: 0 }}>
-                No errors.
-              </p>
-            }
-          >
+          <Show when={found().groups.length > 0} fallback={<p class="muted flush">No errors.</p>}>
             <ol class="error-groups">
               <For each={found().groups.slice(0, props.most ?? 50)}>
                 {(group) => (

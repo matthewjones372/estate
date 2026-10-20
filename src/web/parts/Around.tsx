@@ -36,7 +36,7 @@ export const Around = (props: { readonly alert: Alert }) => {
       <Show
         when={read()}
         fallback={
-          <p class="muted" style={{ margin: 0 }}>
+          <p class="muted flush">
             {brief() === "loading" ? "Gathering what is around it…" : "Estate could not gather what is around it."}
           </p>
         }

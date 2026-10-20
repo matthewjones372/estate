@@ -16,21 +16,18 @@ export const ServiceBuilds = (props: { readonly builds: ReadonlyArray<Build> }) 
         What changed
       </h2>
       <Show when={props.builds.length === 0}>
-        <p class="muted" style={{ margin: 0 }}>
-          No builds read.
-        </p>
+        <p class="muted flush">No builds read.</p>
       </Show>
       <ol class="builds">
         <For each={props.builds}>
           {(build) => (
             <li>
               <span
-                class={`dot ${build.status === "success" ? "healthy" : build.status === "failure" ? "critical" : "unknown"}`}
-                style={{ "margin-top": "6px" }}
+                class={`dot nudge ${build.status === "success" ? "healthy" : build.status === "failure" ? "critical" : "unknown"}`}
               />
-              <div style={{ "min-width": 0 }}>
+              <div class="shrink">
                 <Out href={build.url}>{build.title}</Out>
-                <div class="muted mono" style={{ "font-size": "0.75rem" }}>
+                <div class="muted mono small">
                   {build.sha.slice(0, 7)} · {build.status}
                   {build.job === undefined ? "" : ` at ${build.job}`} · {since(build.at, now())} ago
                 </div>

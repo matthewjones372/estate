@@ -57,11 +57,7 @@ const Switcher = () => {
         <span class={`dot ${worst(environment())}`} />
         <strong>{environment()}</strong>
         <Show when={current()?.title !== current()?.name ? current() : undefined}>
-          {(shown) => (
-            <span class="mono muted" style={{ "font-size": "0.6875rem" }}>
-              {shown().title}
-            </span>
-          )}
+          {(shown) => <span class="mono muted tiny">{shown().title}</span>}
         </Show>
         <svg
           width="10"
@@ -91,15 +87,9 @@ const Switcher = () => {
                 <span class={`dot ${worst(each.name)}`} />
                 <span>
                   <strong>{each.name}</strong>{" "}
-                  {each.title !== each.name && (
-                    <span class="muted" style={{ "font-size": "0.75rem" }}>
-                      {each.title}
-                    </span>
-                  )}
+                  {each.title !== each.name && <span class="muted small">{each.title}</span>}
                 </span>
-                <span class="muted" style={{ "font-size": "0.75rem" }}>
-                  {worstWords[worst(each.name)]}
-                </span>
+                <span class="muted small">{worstWords[worst(each.name)]}</span>
               </button>
             </li>
           )}
@@ -139,10 +129,7 @@ export const Header = () => {
         <Jump />
         <div class="header-end">
           <span class="live-clock">
-            <span
-              class={`dot ${connection() === "open" ? "healthy live" : "unknown"}`}
-              style={{ width: "7px", height: "7px" }}
-            />
+            <span class={`dot small-dot ${connection() === "open" ? "healthy live" : "unknown"}`} />
             {connection() === "lost" ? "Reconnecting" : connection() === "connecting" ? "Connecting" : "Live"}
             {snapshot.heardAt !== undefined && ` · ${clock(new Date(snapshot.heardAt).toISOString())}`}
           </span>

@@ -19,7 +19,7 @@ export const IncidentMayBelong = (props: { readonly record: IncidentRecord; read
         <h2 id="incident-may-belong" class="section-title">
           May belong
         </h2>
-        <ul class="stack" style={{ margin: 0, padding: 0, "list-style": "none", gap: "6px" }}>
+        <ul class="stack plain-list">
           <For each={listed()}>
             {(firing) => (
               <li>

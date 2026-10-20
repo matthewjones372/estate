@@ -13,11 +13,7 @@ export const AroundThen = (props: { readonly around: NonNullable<PastFiring["aro
     </h2>
     <Show
       when={props.around.changed.length > 0}
-      fallback={
-        <p class="muted" style={{ margin: 0 }}>
-          Nothing Estate holds changed in the hour before it fired.
-        </p>
-      }
+      fallback={<p class="muted flush">Nothing Estate holds changed in the hour before it fired.</p>}
     >
       <ol class="alert-history" aria-label="Changed in the hour before it fired">
         <For each={props.around.changed}>
@@ -34,7 +30,7 @@ export const AroundThen = (props: { readonly around: NonNullable<PastFiring["aro
     </Show>
     <For each={props.around.unseen}>
       {(unseen) => (
-        <p class="muted" style={{ margin: 0 }}>
+        <p class="muted flush">
           Deploys of {unseen.service} before {unseen.version} are not kept here.
         </p>
       )}

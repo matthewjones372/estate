@@ -114,14 +114,14 @@ export const AgentLane = (props: { readonly agent: DescribedAgent; readonly stat
         <span class="lane-title">{props.agent.name}</span>
         <HealthLine state={props.state && { ...props.state, pods: [] }} />
         <CostLine cost={props.state?.cost} />
-        <span class="muted mono" style={{ "font-size": "0.75rem" }}>
+        <span class="muted mono small">
           {usage()?.model ?? "model not read"}
           <Show when={usage()?.modelSince}>{(since) => ` · since ${clock(since())}`}</Show>
           <Show when={pods().length > 0}>{` · ${pods().filter((pod) => pod.ready).length}/${pods().length} pods`}</Show>
         </span>
         <Show when={props.agent.budget}>
           {(budget) => (
-            <span class="mono agent-budget" style={{ "font-size": "0.75rem" }}>
+            <span class="mono agent-budget small">
               {usage()?.spent === undefined || usage()?.spent === null
                 ? `budget ${tokens(budget().tokens)} tokens a ${budget().per}`
                 : `${tokens(usage()?.spent ?? 0)} of ${tokens(budget().tokens)} tokens ${periods[budget().per]}`}

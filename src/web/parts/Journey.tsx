@@ -49,7 +49,7 @@ const Read = (props: { readonly sample: JourneySample }) => {
   return (
     <>
       <div class="journey-top">
-        <div class="stack" style={{ gap: "6px" }}>
+        <div class="stack snug">
           <p class="journey-headline">
             It reaches its end in {took(total())} at {at()}. {props.sample.stages[largest()]?.title} is {share()}% of
             the time its stages take.
@@ -220,7 +220,7 @@ const JourneyPanel = (props: { readonly name: string; readonly title: string }) 
   return (
     <section aria-labelledby={id()} class="panel section-box" ref={section}>
       <div class="journey-head">
-        <div class="stack" style={{ gap: "4px" }}>
+        <div class="stack tight">
           <h2 id={id()} class="section-title">
             {props.title}
           </h2>
@@ -239,7 +239,7 @@ const JourneyPanel = (props: { readonly name: string; readonly title: string }) 
         </button>
       </div>
       <Show when={open()}>
-        <div id={`${id()}-body`} class="stack" style={{ gap: "14px" }}>
+        <div id={`${id()}-body`} class="stack roomy">
           <Show when={read() !== "loading"} fallback={<p class="muted">Reading its traces…</p>}>
             <Show
               when={read() !== "none"}

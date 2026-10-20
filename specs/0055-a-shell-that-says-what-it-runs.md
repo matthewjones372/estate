@@ -25,9 +25,9 @@ would have to name both hosts.
 
 ```text
 GET /services/checkout
-content-security-policy: default-src 'self'; script-src 'self'; style-src 'self';
-  style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none';
-  base-uri 'none'; form-action 'self'; frame-ancestors 'self'
+content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self';
+  img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self';
+  frame-ancestors 'self'
 x-content-type-options: nosniff
 referrer-policy: strict-origin-when-cross-origin
 cache-control: no-cache
@@ -40,19 +40,17 @@ cache-control: no-cache
   The Google links go from `index.html`.
 - **The headers** are set where the shell is served, in `routes.ts`, and nowhere else.
 - **`img-src data:`** is for the favicon, which is an SVG in the shell.
-- **`style-src-attr 'unsafe-inline'`** is for the parts' `style={{ … }}`: Solid compiles a constant one into its
-  template as a `style` attribute, which the browser parses from markup. It allows style attributes only, never a
-  `<style>` element or a stylesheet from elsewhere, and a style attribute cannot run script. It goes once the parts
-  style themselves by class.
+- **No style attribute** is allowed: Solid compiles a constant `style={{ … }}` into its template as a `style`
+  attribute, which the browser parses from markup, so the pages and parts style themselves by class. A style that
+  changes with the data is set through the CSSOM, which `style-src` does not govern.
 
 ## Why this shape
 
 The policy could start in Report-Only, as the usual advice is, but with no one to report to it would protect nothing
 and say nothing. The pages are small enough to check instead: no inline script, no `eval`, no worker, and every
-fetch and the stream to the same origin. Styles are the one exception: a part's style that changes is set through the
-CSSOM, which `style-src` does not govern, but a constant one is compiled into Solid's template as a `style`
-attribute, so style attributes are allowed until the parts use classes instead. An e2e test that loads every page and
-fails on a CSP violation is the proof. Recommended: enforced.
+fetch and the stream to the same origin. Styles needed the one change: a constant style is compiled into Solid's
+template as a `style` attribute, so the parts name classes instead, and a test reads the compiled templates for any
+left. An e2e test that loads every page and fails on a CSP violation is the proof. Recommended: enforced.
 
 The fonts could stay on Google with their hosts in `style-src` and `font-src`, but then the first paint still waits
 on a third party and the policy names two hosts that are not Estate's. Recommended: self-hosted.
@@ -68,10 +66,9 @@ Nothing.
       Done when: the shell names no host but Estate's, and the pages draw in Instrument Sans and JetBrains Mono.
 - [x] **`shell-headers`** — the policy, `nosniff` and the referrer policy on the shell.
       Done when: every page loads with no CSP violation, and a framed Estate on another origin is refused.
-- [ ] **`styles-by-class`** — the parts' inline styles as classes in their stylesheets, and `style-src-attr` dropped
-      from the policy, so the pages hold no styling value outside `styles/`.
+- [x] **`styles-by-class`** — the constant inline styles of the pages and the parts as classes in their stylesheets,
+      in two pull requests, and `style-src-attr` dropped from the policy.
       Done when: no part's template has a `style` attribute, and every page still loads with no CSP violation.
-      About 120 `style={{ … }}` across the parts, so likely two pull requests, pages and then parts.
 
 ## Acceptance
 

@@ -86,9 +86,7 @@ export const IncidentChooser = (props: { readonly alert: Alert; readonly close: 
   }
   return (
     <fieldset class="silencing incident-chooser" aria-busy={busy() !== undefined}>
-      <legend style={{ "font-size": "0.8125rem", "font-weight": 600, padding: 0 }}>
-        Link {props.alert.name} to an incident
-      </legend>
+      <legend class="legend">Link {props.alert.name} to an incident</legend>
       <Show when={open() !== "reading"} fallback={<p class="alert-quiet">Reading the open incidents…</p>}>
         <Show when={open() !== undefined} fallback={<p class="alert-detail">The open incidents could not be read.</p>}>
           <Show when={offered().length > 0} fallback={<p class="alert-quiet">No other incident is open.</p>}>

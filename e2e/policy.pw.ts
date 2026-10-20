@@ -8,6 +8,9 @@ const pages = [
   ["/alerts?env=production", /alerts?/i],
   ["/incidents?env=production", /incidents?/i],
   ["/stores/orders-db?env=production", /orders-db/],
+  ["/alerts/a1?env=production", /./],
+  ["/jobs/settlement?env=production", /settlement/],
+  ["/agents/support-triage?env=production", /support-triage/],
   ["/kiosk?token=e2e-screen", /./],
 ] as const
 

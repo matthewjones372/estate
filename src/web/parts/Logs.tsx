@@ -121,11 +121,7 @@ const Live = (props: { readonly service: string }) => {
   return (
     <Show
       when={!missing()}
-      fallback={
-        <p class="muted" style={{ margin: 0 }}>
-          No logs are read for {props.service} here, or they are kept to operators.
-        </p>
-      }
+      fallback={<p class="muted flush">No logs are read for {props.service} here, or they are kept to operators.</p>}
     >
       <div class="log-controls">
         <fieldset class="choices bare">

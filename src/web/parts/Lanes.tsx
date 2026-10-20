@@ -94,9 +94,7 @@ export const Lanes = () => {
                 <h2 id="stores-title" class="section-title">
                   Stores
                 </h2>
-                <span class="muted" style={{ "font-size": "0.75rem" }}>
-                  Last hour
-                </span>
+                <span class="muted small">Last hour</span>
               </div>
             </Show>
             <For each={group.stores}>

@@ -181,3 +181,18 @@ tr.greyed {
 .stack.close {
   gap: 8px;
 }
+.stack.snug {
+  gap: 6px;
+}
+.stack.spaced {
+  gap: 10px;
+}
+.stack.roomy {
+  gap: 14px;
+}
+.stack.plain-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 6px;
+}

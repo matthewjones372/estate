@@ -95,7 +95,7 @@ export const Notes = (props: {
               <span class="note-avatar" aria-hidden="true">
                 {initials(note.by)}
               </span>
-              <div style={{ "min-width": 0 }}>
+              <div class="shrink">
                 <div class="alert-quiet">
                   <strong class="note-who">{note.by}</strong> · {stamp(note.at, now())}
                   <Show when={note.incident}>

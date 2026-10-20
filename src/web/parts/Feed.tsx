@@ -76,21 +76,12 @@ export const Feed = (props: { readonly feed: FeedEvent | undefined }) => {
         </h2>
         <A to="/deploys">Deploys</A>
       </div>
-      <Show
-        when={items().length > 0}
-        fallback={
-          <p class="muted" style={{ margin: 0 }}>
-            Nothing yet today.
-          </p>
-        }
-      >
+      <Show when={items().length > 0} fallback={<p class="muted flush">Nothing yet today.</p>}>
         <ol>
           <For each={items()}>
             {(item) => (
               <li>
-                <span class="mono muted" style={{ "font-size": "0.75rem" }}>
-                  {clock(item.at)}
-                </span>
+                <span class="mono muted small">{clock(item.at)}</span>
                 <span class="dot" style={{ background: dots[item.kind] }} />
                 <Show
                   when={item.kind === "note"}

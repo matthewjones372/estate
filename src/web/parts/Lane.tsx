@@ -115,7 +115,7 @@ export const Lane = (props: {
         <Show when={props.state?.debug?.on === true ? props.state.debug : undefined}>
           {(debug) => (
             <span class="badge-debug">
-              <span class="dot live" style={{ background: "var(--debug)", width: "6px", height: "6px" }} />
+              <span class="dot live debug-dot" />
               Debug{debug().until === undefined ? "" : ` until ${clock(debug().until ?? "")}`}
               {debug().by === undefined ? "" : ` · ${debug().by}`}
             </span>
