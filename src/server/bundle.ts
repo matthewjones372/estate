@@ -4,11 +4,15 @@
  */
 import { join } from "node:path"
 
+/** An output as JSON can carry it: text as it is, anything else (the fonts) in base64. */
 interface Bundled {
   readonly name: string
   readonly type: string
-  readonly text: string
+  readonly text?: string
+  readonly base64?: string
 }
+
+const isText = (type: string) => type.startsWith("text/") || type.startsWith("application/json")
 
 export type Bundle =
   | { readonly ok: true; readonly outputs: ReadonlyArray<Bundled> }
@@ -23,6 +27,9 @@ export const bundle = (directory: string): Promise<Bundle> =>
         entrypoints: [join(directory, "main.tsx")],
         minify: true,
         naming: "[name]-[hash].[ext]",
+        // A font imported by `fonts.ts` is its own file under /assets/, cached for good.
+        loader: { ".woff2": "file" },
+        publicPath: "/assets/",
         plugins: [solidPlugin],
         define: { "process.env.NODE_ENV": '"production"' },
       }),
@@ -30,9 +37,14 @@ export const bundle = (directory: string): Promise<Bundle> =>
     .then((built): Promise<Bundle> | Bundle =>
       built.success
         ? Promise.all(
-            built.outputs.map((output) =>
-              output.text().then((text) => ({ name: output.path.replace(/^.*\//, ""), type: output.type, text })),
-            ),
+            built.outputs.map((output) => {
+              const name = output.path.replace(/^.*\//, "")
+              return isText(output.type)
+                ? output.text().then((text) => ({ name, type: output.type, text }))
+                : output
+                    .arrayBuffer()
+                    .then((bytes) => ({ name, type: output.type, base64: new Uint8Array(bytes).toBase64() }))
+            }),
           ).then((outputs) => ({ ok: true, outputs }))
         : { ok: false, message: built.logs.map(String).join("\n") },
     )

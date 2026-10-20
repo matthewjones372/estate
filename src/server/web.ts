@@ -19,7 +19,12 @@ export const Web = Context.Service<Web>("estate/Web")
 
 const WebBuildError = Data.TaggedError("WebBuildError")<{ readonly message: string }>
 
-const Output = Schema.Struct({ name: Schema.String, type: Schema.String, text: Schema.String })
+const Output = Schema.Struct({
+  name: Schema.String,
+  type: Schema.String,
+  text: Schema.optional(Schema.String),
+  base64: Schema.optional(Schema.String),
+})
 const Printed = Schema.Union([
   Schema.Struct({ ok: Schema.Literal(true), outputs: Schema.Array(Output) }),
   Schema.Struct({ ok: Schema.Literal(false), message: Schema.String }),
@@ -61,7 +66,14 @@ export const buildWeb = (directory?: string, prebuilt?: string) =>
       if (!built.ok) return yield* new WebBuildError({ message: built.message })
       const encoder = new TextEncoder()
       const assets = new Map<string, Asset>(
-        built.outputs.map((output) => [output.name, { body: encoder.encode(output.text), type: output.type }]),
+        built.outputs.map((output) => [
+          output.name,
+          {
+            body:
+              output.base64 === undefined ? encoder.encode(output.text ?? "") : Uint8Array.fromBase64(output.base64),
+            type: output.type,
+          },
+        ]),
       )
       const template = yield* fs
         .readFileString(path.join(pages, "index.html"))
@@ -72,7 +84,10 @@ export const buildWeb = (directory?: string, prebuilt?: string) =>
             ? `<link rel="stylesheet" href="/assets/${name}">`
             : name.endsWith(".js")
               ? `<script type="module" src="/assets/${name}"></script>`
-              : "",
+              : name.endsWith(".woff2")
+                ? // Asked for at once, not once the script has run and declared it.
+                  `<link rel="preload" href="/assets/${name}" as="font" type="font/woff2" crossorigin>`
+                : "",
         )
         .join("\n    ")
       return {

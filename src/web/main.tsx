@@ -23,12 +23,14 @@ import "./styles/trace.css"
 import "./styles/traces.css"
 import { App } from "./App"
 import { openEvents, serverActions } from "./connect"
+import { loadFonts } from "./fonts"
 import { kept } from "./kept"
 import { createLive } from "./live"
 import { NoAccess, SignIn } from "./pages/States"
 import { chooseEnvironment, pageOf } from "./route"
 
 const storage = kept("estate.environment")
+loadFonts()
 
 const element = document.getElementById("estate")
 const show = (page: () => JSX.Element) => {
