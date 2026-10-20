@@ -184,7 +184,8 @@ claude mcp add --transport http estate https://estate.example/mcp --header "Auth
 
 `/kiosk` is meant for a wall screen. It shows the headline, what's firing and every service, worst first, in large
 type and with no controls. Open `/kiosk?token=…` once on the screen; it signs in for 30 days and can
-read but never change anything.
+read but never change anything. A screen that shows Estate inside a dashboard's frame needs that dashboard's origin
+in `web: { frameAncestors: [https://grafana.example.com] }`; otherwise Estate refuses to be framed by another site.
 
 ![The kiosk on a 1080p screen](docs/kiosk.png)
 

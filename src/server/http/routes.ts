@@ -7,6 +7,7 @@ import { awaited, Roles, spoken } from "../role"
 import { Configured } from "../settings"
 import { secondsIn } from "../settings-every"
 import { suggestWithin } from "../settings-incidents"
+import { frameAncestorsOf } from "../settings-web"
 import { incidentToolOf } from "../sources/incident-tool-of"
 import { silencerOf } from "../sources/silencers"
 import { Estate, type EstateState } from "../state"
@@ -199,23 +200,24 @@ const assets = HttpRouter.add("GET", "/assets/:name", (request) =>
 )
 
 /**
- * What the shell may run: Estate's own script, styles and fonts, its own stream and API, and nothing framing it from
- * elsewhere (spec 0055). No style attribute either: the parts style themselves by class, and a style that changes is
- * set through the CSSOM, which this does not govern.
+ * What the shell may run: Estate's own script, styles and fonts, its own stream and API, and nothing framing it but
+ * itself and the origins `web.frameAncestors` lists (specs 0055, 0056). No style attribute either: the parts style
+ * themselves by class, and a style that changes is set through the CSSOM, which this does not govern.
  */
-const policy = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self'",
-  "font-src 'self'",
-  // The favicon is an SVG written into the shell.
-  "img-src 'self' data:",
-  "connect-src 'self'",
-  "object-src 'none'",
-  "base-uri 'none'",
-  "form-action 'self'",
-  "frame-ancestors 'self'",
-].join("; ")
+const policyOf = (frameAncestors: ReadonlyArray<string>) =>
+  [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self'",
+    "font-src 'self'",
+    // The favicon is an SVG written into the shell.
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    ["frame-ancestors 'self'", ...frameAncestors].join(" "),
+  ].join("; ")
 
 /**
  * The pages' shell, to anyone: it holds no estate, which comes over the signed-in event stream. Nothing read from a
@@ -226,11 +228,12 @@ const pages = HttpRouter.add(
   "/*",
   Effect.gen(function* () {
     const web = yield* Web
+    const settings = yield* Configured
     return HttpServerResponse.text(web.index, {
       contentType: "text/html; charset=utf-8",
       headers: {
         "cache-control": "no-cache",
-        "content-security-policy": policy,
+        "content-security-policy": policyOf(frameAncestorsOf(settings.web)),
         "x-content-type-options": "nosniff",
         "referrer-policy": "strict-origin-when-cross-origin",
       },
