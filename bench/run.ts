@@ -8,6 +8,7 @@ import { startEstate } from "./estate"
 import { measureFrames } from "./frames"
 import { measurePage } from "./page"
 import { startTools } from "./tools"
+import { phase, until } from "./wait"
 
 const [services = 50, pages = 5] = process.argv
   .slice(2)
@@ -15,6 +16,7 @@ const [services = 50, pages = 5] = process.argv
   .map(Number)
 const check = process.argv.includes("--check")
 const minute = 60_000
+const step = phase(performance.now())
 
 /** Estate's process: CPU seconds used so far and resident memory in MB, from `ps`, as Linux and macOS both give. */
 const usage = async (pid: number) => {
@@ -42,12 +44,22 @@ const watch = (url: string) => {
   return { counted, stop: () => controller.abort() }
 }
 
-/** Whether Estate's `/readyz` says every configured part has been read once. */
-const ready = (url: string) =>
-  fetch(`${url}/readyz`).then(
-    (response) => response.ok,
-    () => false,
-  )
+/** Whether Estate's `/readyz` says every configured part has been read once; `said` keeps what it last answered. */
+const readiness = (url: string) => {
+  let said = "no answer yet"
+  const ready = () =>
+    fetch(`${url}/readyz`).then(
+      async (response) => {
+        said = await response.text()
+        return response.ok
+      },
+      (error: unknown) => {
+        said = String(error)
+        return false
+      },
+    )
+  return { ready, said: () => said }
+}
 
 /**
  * Waits until Estate is ready, every part read once, and the tools have been asked for every range at least once and
@@ -55,16 +67,24 @@ const ready = (url: string) =>
  * leaves its part unread after the tools have answered everything else.
  */
 const firstReadsDone = async (url: string, calls: () => number, size: number) => {
-  while (!(await ready(url))) await Bun.sleep(500)
+  const { ready, said } = readiness(url)
+  await until("Estate to be ready", ready, { within: 2 * minute, every: 500, saw: said })
   let last = -1
-  while (calls() !== last || calls() < size * 6) {
+  const settled = async () => {
+    const settledNow = calls() === last && calls() >= size * 6
     last = calls()
-    await Bun.sleep(2000)
+    return settledNow
   }
+  await until("the tools to be asked for every range and go quiet", settled, {
+    within: 3 * minute,
+    every: 2000,
+    saw: () => `${calls()} calls, of at least ${size * 6}`,
+  })
 }
 
 /** The page drawn once the first reads are done, at a size of its own, for how it grows. */
 const pageAt = async (size: number) => {
+  step(`the page at ${size} services`)
   const tools = startTools(size, 20)
   const estate = await startEstate(size, tools.url)
   try {
@@ -76,20 +96,24 @@ const pageAt = async (size: number) => {
   }
 }
 
+step(`Estate with ${services} services`)
 const tools = startTools(services, 20)
 const estate = await startEstate(services, tools.url)
 try {
   await firstReadsDone(estate.url, tools.calls, services)
+  step(`a minute with ${pages} pages watching`)
   const watchers = Array.from({ length: pages }, () => watch(estate.url))
   await Bun.sleep(3000)
   const before = { calls: tools.calls(), ...(await usage(estate.pid)), bytes: watchers[0]?.counted.total ?? 0 }
   await Bun.sleep(minute)
   const after = { calls: tools.calls(), ...(await usage(estate.pid)), bytes: watchers[0]?.counted.total ?? 0 }
   for (const watcher of watchers) watcher.stop()
+  step("the page drawn")
   const page = await measurePage(estate.url, services)
   estate.stop()
   const larger = check ? await pageAt(services * 4) : undefined
   // What a clustered Estate sends each follower, measured through the owner's own frames (spec 0030).
+  if (check) step("what a follower is sent")
   const frames = check ? await measureFrames(services) : undefined
   const measured = {
     callsPerSecond: Math.round(((after.calls - before.calls) / minute) * 1000 * 10) / 10,
