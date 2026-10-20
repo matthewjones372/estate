@@ -86,7 +86,7 @@ export const Alerts = () => {
           </div>
         )}
       </Show>
-      <section aria-label="Alerts" class="table-scroll panel">
+      <section aria-label="Alerts" class="table-scroll panel" tabindex="0">
         <table class="grid">
           <thead>
             <tr>

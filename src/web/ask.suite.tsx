@@ -47,6 +47,13 @@ describe("Ask AI on an alert's card", () => {
     expect(page.button(/^Ask again/).disabled).toBe(true)
   })
 
+  test("counts its seconds where a screen reader does not read each one aloud", () => {
+    const page = mount(card(), { me: asking })
+    page.click(page.button(askAi))
+    expect(page.container.querySelector(".ask-reading")?.closest("[aria-live]")).toBeNull()
+    expect(page.container.querySelector("[aria-live]")).not.toBeNull()
+  })
+
   test("keeps the answer as a note once", async () => {
     const page = mount(card(), { me: asking })
     page.click(page.button(askAi))

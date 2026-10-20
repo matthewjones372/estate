@@ -31,8 +31,10 @@
 }
 /* Forced colors drop gradients and shadows: a wait is dashed, and a slow or pressed bar outlined. */
 @media (forced-colors: active) {
-  .trace-lanes .trace-wait,
   .trace-wait {
+    border: 1px dashed CanvasText;
+  }
+  .trace-lanes .trace-wait {
     border: 1px dashed CanvasText;
   }
   .trace-lanes .trace-slow {

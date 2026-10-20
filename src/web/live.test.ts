@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { events } from "./fixture"
 import { createLive, type Handlers } from "./live"
-import { chooseEnvironment, pageOf, pathOf } from "./route"
+import { chooseEnvironment, pageOf, pathOf, titleOf } from "./route"
 
 const opened = () => {
   const streams: Array<{ environment: string; handlers: Handlers; closed: boolean }> = []
@@ -147,6 +147,18 @@ describe("where the page is", () => {
     expect(pageOf("/kiosk", "?team=payments&env=production")).toEqual({ page: "kiosk", team: "payments" })
     expect(pageOf("/kiosk", "?category=Data")).toEqual({ page: "kiosk", category: "Data" })
     expect(pathOf(pageOf("/kiosk"))).toBe("/kiosk")
+  })
+
+  test("each page has a title of its own, naming what it shows", () => {
+    expect(titleOf(pageOf("/"))).toBe("Estate")
+    expect(titleOf(pageOf("/services/checkout"))).toBe("checkout · Estate")
+    expect(titleOf(pageOf("/stores/orders-db"))).toBe("orders-db · Estate")
+    expect(titleOf(pageOf("/deploys"))).toBe("Deploys · Estate")
+    expect(titleOf(pageOf("/alerts/a1"))).toBe("Alert · Estate")
+    expect(titleOf(pageOf("/alerts/a1/2026-10-06T09:00:00Z"))).toBe("Past firing · Estate")
+    expect(titleOf(pageOf("/incidents"))).toBe("Incidents · Estate")
+    expect(titleOf(pageOf("/incidents/i1"))).toBe("Incident · Estate")
+    expect(titleOf(pageOf("/nowhere/at/all"))).toBe("No such page · Estate")
   })
 
   test("the environment is the address's, then the one remembered, then the first", () => {

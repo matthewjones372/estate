@@ -186,7 +186,7 @@ const Live = (props: { readonly service: string }) => {
         </Show>
       </div>
       <Show when={failed()}>{(message) => <div class="notice">The logs did not answer: {message()}</div>}</Show>
-      <ol class="log-lines" ref={setBox} onScroll={scrolled} aria-live={paused() ? "off" : "polite"}>
+      <ol class="log-lines" ref={setBox} onScroll={scrolled}>
         <For each={shown()}>
           {(line) => (
             <LineRow

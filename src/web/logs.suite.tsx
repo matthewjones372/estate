@@ -148,6 +148,11 @@ describe("a service's live lines", () => {
     expect(page.calls).toContainEqual(["unwatchLogs", "storefront"])
   })
 
+  test("arrive without a screen reader reading each one aloud", () => {
+    const page = mount(() => <LogsPanel service="storefront" />)
+    expect(page.container.querySelector(".log-lines")?.closest("[aria-live]")).toBeNull()
+  })
+
   test("say so when there are none to read", () => {
     const page = mount(() => <LogsPanel service="orders" />)
     expect(page.container.textContent).toContain("No logs are read for orders here")
