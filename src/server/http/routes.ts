@@ -202,7 +202,7 @@ const assets = HttpRouter.add("GET", "/assets/:name", (request) =>
  * What the shell may run: Estate's own script, styles and fonts, its own stream and API, and nothing framing it from
  * elsewhere (spec 0055). Style attributes are allowed because Solid compiles a part's constant style into one.
  */
-const policy = [
+export const policy = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self'",
