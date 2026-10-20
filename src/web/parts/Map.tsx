@@ -22,6 +22,17 @@ const columnWidth = 170
 const opening = kept("estate.map.opened")
 const openedAtFirst = (): ReadonlySet<string> => new Set((opening.read() ?? "").split("\n").filter(Boolean))
 
+interface Shape {
+  readonly ids: ReadonlyArray<string>
+  readonly edges: ReadonlyArray<{ readonly from: string; readonly to: string }>
+}
+
+const sameShape = (was: Shape, now: Shape) =>
+  was.ids.length === now.ids.length &&
+  was.edges.length === now.edges.length &&
+  was.ids.every((id, index) => now.ids[index] === id) &&
+  was.edges.every((edge, index) => now.edges[index]?.from === edge.from && now.edges[index]?.to === edge.to)
+
 const isCategory = (node: DrawnNode): node is DrawnCategory => "kind" in node && node.kind === "category"
 
 export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly services: ServicesEvent | undefined }) => {
@@ -35,12 +46,13 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
   }
   const on = journeyOnMap(() => props.catalog)
   const drawn = createMemo(() => drawnOf(props.catalog, props.services, opened(), props.catalog.map.collapse))
-  const placed = createMemo(() =>
-    layout(
-      drawn().nodes.map((node) => node.id),
-      drawn().edges,
-    ),
+  // Laid out again only when the nodes or the lines between them change, not each time one changes its health.
+  const shape = createMemo(
+    () => ({ ids: drawn().nodes.map((node) => node.id), edges: drawn().edges.map(({ from, to }) => ({ from, to })) }),
+    undefined,
+    { equals: sameShape },
   )
+  const placed = createMemo(() => layout(shape().ids, shape().edges))
   const states = byName(() => props.services?.services)
   const storeStates = byName(() => props.services?.stores)
   const stateOf = (service: string | undefined) => (service === undefined ? undefined : states().get(service))

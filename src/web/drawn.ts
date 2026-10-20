@@ -94,19 +94,23 @@ export const drawnOf = (
     const within = nodeCategory(node)
     return within !== undefined && shut.has(within) && !needs(nodeHealth(node)) ? within : undefined
   }
+  // Each edge looks its ends up, so by id rather than through every node.
+  const byId = new Map(nodes.map((node) => [node.id, node] as const))
   const drawnId = (id: string) => {
-    const node = nodes.find((each) => each.id === id)
+    const node = byId.get(id)
     const within = node === undefined ? undefined : folded(node)
     return within === undefined ? id : categoryId(within)
   }
   const drawnNodes: DrawnNode[] = []
+  const drawnCategories = new Set<string>()
   for (const node of nodes) {
     const within = folded(node)
     if (within === undefined) {
       drawnNodes.push(node)
       continue
     }
-    if (drawnNodes.some((each) => each.id === categoryId(within))) continue
+    if (drawnCategories.has(within)) continue
+    drawnCategories.add(within)
     const members = nodes.filter((each) => folded(each) === within)
     const healths = members.map(nodeHealth)
     drawnNodes.push({
