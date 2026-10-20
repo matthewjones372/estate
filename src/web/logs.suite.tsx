@@ -148,6 +148,29 @@ describe("a service's live lines", () => {
     expect(page.calls).toContainEqual(["unwatchLogs", "storefront"])
   })
 
+  test("are searched with their pattern built once, however many lines there are", () => {
+    const page = mount(() => <LogsPanel service="storefront" />)
+    const search = page.container.querySelector<HTMLInputElement>(".log-search input")
+    if (search === null) throw new Error("no search")
+    const Real = RegExp
+    let made = 0
+    globalThis.RegExp = new Proxy(Real, {
+      construct: (target, args) => {
+        made += 1
+        return Reflect.construct(target, args)
+      },
+    })
+    try {
+      page.type(search, "order*lost")
+    } finally {
+      globalThis.RegExp = Real
+    }
+    // One to test each line, one to mark what matched.
+    expect(made).toBe(2)
+    expect(texts(page.container)).toEqual(["ERROR order 41 lost"])
+    page.dispose()
+  })
+
   test("arrive without a screen reader reading each one aloud", () => {
     const page = mount(() => <LogsPanel service="storefront" />)
     expect(page.container.querySelector(".log-lines")?.closest("[aria-live]")).toBeNull()

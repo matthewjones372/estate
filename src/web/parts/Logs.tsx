@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 /** A service's logs: its lines as they arrive, and its errors grouped by message. */
-import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, on, onCleanup, Show } from "solid-js"
 import type { LogLine } from "../../shared/log-events"
 import { replaceAddress } from "../address"
 import { useEstate, useSnapshot } from "../context"
@@ -69,8 +69,9 @@ const Live = (props: { readonly service: string }) => {
       return after
     })
   const count = (kind: Kind) => lines().filter((line) => kindOf(line) === kind).length
-  const search = () => searchOf(text())
-  const shown = () => lines().filter((line) => !hidden().has(kindOf(line)) && shows(search(), line.text))
+  // Worked out once a change, not on every read: the list, its footer, the copy and each picked range read them.
+  const search = createMemo(() => searchOf(text()))
+  const shown = createMemo(() => lines().filter((line) => !hidden().has(kindOf(line)) && shows(search(), line.text)))
   const pick = (line: LogLine, range: boolean) => {
     const key = keyOf(line)
     const keys = shown().map(keyOf)
