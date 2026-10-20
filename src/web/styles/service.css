@@ -210,3 +210,15 @@ fieldset.silencing {
 .errors-day:hover {
   border-bottom-style: solid;
 }
+
+/* The service page's two columns: its charts and logs, then what is beside them. */
+.stack.service-main {
+  flex: 999 1 640px;
+  min-width: 0;
+  gap: 24px;
+}
+.stack.service-side {
+  flex: 1 1 320px;
+  min-width: 0;
+  gap: 24px;
+}

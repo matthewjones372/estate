@@ -133,7 +133,7 @@ export const TracePage = (props: { readonly id: string; readonly journey?: strin
         <nav aria-label="Breadcrumb" class="muted crumbs">
           <A to="/">Overview</A> / {found()?.journey?.title ?? "Trace"} / <span class="mono">{props.id}</span>
         </nav>
-        <h1 id="trace-title" class="headline" style={{ "font-size": "2rem" }}>
+        <h1 id="trace-title" class="headline item-title">
           {found()?.journey?.title ?? "A trace"}
         </h1>
         <Show when={read() !== "loading"} fallback={<p class="muted">Reading the trace…</p>}>

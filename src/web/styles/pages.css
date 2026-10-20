@@ -152,3 +152,32 @@ tr.greyed {
   align-items: center;
   color: var(--ink-soft);
 }
+
+/* A page's headline and lede, and how its rows line up. */
+.headline.page-title {
+  font-size: 2.375rem;
+}
+.headline.item-title {
+  font-size: 2rem;
+}
+.lede.measure {
+  max-width: 760px;
+}
+.lede.measure-short {
+  max-width: 720px;
+}
+.spread.bottom {
+  align-items: flex-end;
+}
+.choices.middle {
+  align-items: center;
+}
+.choices.end {
+  justify-content: flex-end;
+}
+.stack.tight {
+  gap: 4px;
+}
+.stack.close {
+  gap: 8px;
+}

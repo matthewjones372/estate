@@ -71,9 +71,7 @@ const Closing = (props: { readonly incident: Incident; readonly done: () => void
       }
     >
       <fieldset class="silencing incident-close" aria-busy={busy()}>
-        <legend style={{ "font-size": "0.8125rem", "font-weight": 600, padding: 0 }}>
-          Close {props.incident.title}
-        </legend>
+        <legend class="legend">Close {props.incident.title}</legend>
         <label class="reason">
           How it ended (required, kept on its record)
           <input
@@ -125,7 +123,7 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
         <A to="/">Overview</A> / <A to="/incidents">Incidents</A> / {incident().title}
       </nav>
       <section aria-labelledby="incident-title" class="stack">
-        <h1 id="incident-title" class="headline" style={{ "font-size": "2rem" }}>
+        <h1 id="incident-title" class="headline item-title">
           {incident().title}
         </h1>
         <p class="lede">{lede(incident(), now())}</p>
@@ -151,11 +149,7 @@ const Record = (props: { readonly record: IncidentRecord; readonly changed: () =
         <IncidentHappened incident={incident()} changed={props.changed} />
         <Show
           when={props.record.events.length > 0}
-          fallback={
-            <p class="muted" style={{ margin: 0 }}>
-              Nothing is kept for its firings yet.
-            </p>
-          }
+          fallback={<p class="muted flush">Nothing is kept for its firings yet.</p>}
         >
           <ol class="timeline">
             <For each={props.record.events}>

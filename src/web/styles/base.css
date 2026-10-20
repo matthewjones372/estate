@@ -90,6 +90,27 @@ button:disabled {
 .secondary {
   color: var(--ink-2);
 }
+/* Small adjustments a part names by class, so its template holds no style the shell's policy must allow. */
+.flush {
+  margin: 0;
+}
+.small {
+  font-size: 0.75rem;
+}
+.fine {
+  font-size: 0.8125rem;
+}
+.ink {
+  color: var(--ink);
+}
+.ink-soft {
+  color: var(--ink-soft);
+}
+.legend {
+  padding: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
 /* Off screen until a keyboard reaches it, first on the page. */
 .skip-link {
   position: absolute;
