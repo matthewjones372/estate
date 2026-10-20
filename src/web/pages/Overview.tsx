@@ -246,13 +246,13 @@ export const Overview = () => {
           <For each={tilesOf(events())}>
             {(tile) => (
               <div class="vital">
-                <span class="muted" style={{ "font-size": "12px" }}>
+                <span class="muted" style={{ "font-size": "0.75rem" }}>
                   {tile.label}
                 </span>
                 <span class="vital-value" style={{ color: tile.alarm ? "var(--amber-text)" : undefined }}>
                   {tile.value}
                 </span>
-                <span class="muted" style={{ "font-size": "12px" }}>
+                <span class="muted" style={{ "font-size": "0.75rem" }}>
                   {tile.note}
                 </span>
               </div>

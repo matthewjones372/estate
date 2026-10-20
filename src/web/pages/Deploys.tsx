@@ -124,7 +124,7 @@ export const Deploys = () => {
   return (
     <main class="main">
       <section aria-label="Summary" class="stack">
-        <h1 class="headline" style={{ "font-size": "38px" }}>
+        <h1 class="headline" style={{ "font-size": "2.375rem" }}>
           {summary().title}
         </h1>
         <p class="lede" style={{ "max-width": "720px" }}>
@@ -136,7 +136,7 @@ export const Deploys = () => {
           <h2 id="across" class="section-title">
             Across environments
           </h2>
-          <span class="muted" style={{ "font-size": "12px" }}>
+          <span class="muted" style={{ "font-size": "0.75rem" }}>
             What runs in each, and what is waiting to move on
           </span>
         </div>
@@ -184,7 +184,7 @@ export const Deploys = () => {
           <span>Running</span>
         </div>
         <For each={here()}>{(row) => pipelineRow({ row, environment: snapshot.environment, now: now() })}</For>
-        <p class="muted" style={{ margin: 0, "font-size": "13px" }}>
+        <p class="muted" style={{ margin: 0, "font-size": "0.8125rem" }}>
           A step that stalls says why, in the words the tool used.
         </p>
       </section>

@@ -45,7 +45,7 @@ export const Jobs = (props: { readonly jobs: ReadonlyArray<Job> }) => {
             <div class="pod job">
               <span class="spread">
                 <span class="mono">{job.name}</span>
-                <span class="muted" style={{ "font-size": "12px" }}>
+                <span class="muted" style={{ "font-size": "0.75rem" }}>
                   {job.kind === "CronJob" ? (
                     <span class="mono">{job.schedule}</span>
                   ) : job.kind === "ScheduledTask" ? (
@@ -62,7 +62,7 @@ export const Jobs = (props: { readonly jobs: ReadonlyArray<Job> }) => {
               </Show>
               <Show when={job.next}>
                 {(next) => (
-                  <span class="muted" style={{ "font-size": "12px" }}>
+                  <span class="muted" style={{ "font-size": "0.75rem" }}>
                     next at {clock(next())}
                   </span>
                 )}

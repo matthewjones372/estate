@@ -62,7 +62,7 @@ Nothing.
 - [x] **`keyboard-and-readers`** — IME-safe Enter in jump, no live region on streaming lines or ticking seconds,
       focusable wide tables, a title per page and a skip link.
       Done when: Enter mid-composition chooses nothing, and a keyboard skips the header to the page.
-- [ ] **`inline-text-that-scales`** — the 41 text sizes set inline in the pages' parts in `rem`, as the stylesheets'
+- [x] **`inline-text-that-scales`** — the 40 text sizes set inline in the pages' parts in `rem`, as the stylesheets'
       are.
       Done when: no part sets a `px` font size inline.
 - [ ] **`menus-and-dialogs`** — the environment menu a popover, debug's confirm a `<dialog>`, health reasons and

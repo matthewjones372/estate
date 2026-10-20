@@ -38,7 +38,7 @@ export const DebugPanel = (props: {
             when={debug()?.on === true ? debug() : undefined}
             fallback={
               <div class="stack">
-                <p class="secondary" style={{ margin: 0, "font-size": "13px" }}>
+                <p class="secondary" style={{ margin: 0, "font-size": "0.8125rem" }}>
                   Off: it logs at {debug()?.level ?? levels()[0]}.
                 </p>
                 <Show when={operator}>
@@ -69,7 +69,7 @@ export const DebugPanel = (props: {
             {(on) => (
               <div class="debug-on stack">
                 <strong>On until {on().until === undefined ? "switched off" : clock(on().until ?? "")}</strong>
-                <span class="secondary" style={{ "font-size": "13px" }}>
+                <span class="secondary" style={{ "font-size": "0.8125rem" }}>
                   Turned on{on().by === undefined ? "" : ` by ${on().by}`}
                   {on().since === undefined ? "" : ` at ${clock(on().since ?? "")}`}. It turns itself off then; nobody
                   needs to remember.
@@ -93,7 +93,7 @@ export const DebugPanel = (props: {
                 {levels().at(-1) ?? "DEBUG"} for {props.service.name},{" "}
                 {spans.find((span) => span.minutes === minutes())?.label}?
               </strong>
-              <p class="secondary" style={{ margin: 0, "font-size": "13px" }}>
+              <p class="secondary" style={{ margin: 0, "font-size": "0.8125rem" }}>
                 Many more lines, and more disk in the log store. It is recorded under your name, and ends at{" "}
                 {clock(new Date(now() + minutes() * 60_000).toISOString())}.
               </p>

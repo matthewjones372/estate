@@ -48,7 +48,7 @@ export const Incidents = () => {
     <main class="main">
       <div class="spread" style={{ "align-items": "flex-end" }}>
         <div class="stack">
-          <h1 class="headline" style={{ "font-size": "38px" }}>
+          <h1 class="headline" style={{ "font-size": "2.375rem" }}>
             Incidents
           </h1>
           <Show when={read().length > 0}>

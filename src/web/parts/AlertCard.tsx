@@ -95,7 +95,9 @@ const Silencing = (props: { readonly alert: Alert; readonly close: () => void })
   }
   return (
     <fieldset class="silencing">
-      <legend style={{ "font-size": "13px", "font-weight": 600, padding: 0 }}>Silence {props.alert.name} for</legend>
+      <legend style={{ "font-size": "0.8125rem", "font-weight": 600, padding: 0 }}>
+        Silence {props.alert.name} for
+      </legend>
       <div class="choices">
         <For each={spans}>
           {(span) => (
