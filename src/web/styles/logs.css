@@ -37,6 +37,9 @@
   padding: 0 12px 0 10px;
   border-left: 2px solid transparent;
   color: var(--ink-soft);
+  /* Up to 500 held, most scrolled out of the panel. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 1.55em;
 }
 .log-line.debug {
   color: var(--ink-3);

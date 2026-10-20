@@ -77,8 +77,8 @@ Nothing.
       Done when: a search over the held lines builds its pattern once.
 - [x] **`map-layout-memo`** — the map laid out again only when its nodes or edges change, with nodes found by id.
       Done when: a health change on the map does not lay it out again.
-- [ ] **`off-screen-rendering`** — `content-visibility: auto` on lanes, kiosk tiles and log lines, and the map's flow
-      paused while it is off screen.
+- [x] **`off-screen-rendering`** — `content-visibility: auto` on lanes, the map and log lines, so the browser skips
+      drawing them off screen, the map's flowing lines with it; not the kiosk's tiles, which are all on its screen.
       Done when: an off-screen lane is skipped by the browser and keeps a size to scroll by.
 
 ## Acceptance
