@@ -111,6 +111,34 @@ button:disabled {
   font-size: 0.8125rem;
   font-weight: 600;
 }
+.tiny {
+  font-size: 0.6875rem;
+}
+.ink-3 {
+  color: var(--ink-3);
+}
+.strong {
+  font-weight: 600;
+}
+.shrink {
+  min-width: 0;
+}
+.self-start {
+  align-self: flex-start;
+}
+/* A dot a size smaller, set level with the first line beside it, or debug's. */
+.dot.small-dot {
+  width: 7px;
+  height: 7px;
+}
+.dot.nudge {
+  margin-top: 6px;
+}
+.dot.debug-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--debug);
+}
 /* Off screen until a keyboard reaches it, first on the page. */
 .skip-link {
   position: absolute;

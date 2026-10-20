@@ -16,9 +16,7 @@ export const StoreLane = (props: { readonly store: DescribedStore; readonly stat
         {props.store.name}
       </A>
       <HealthLine state={props.state} />
-      <span class="muted mono" style={{ "font-size": "0.75rem" }}>
-        {props.store.engine}
-      </span>
+      <span class="muted mono small">{props.store.engine}</span>
     </div>
     <div class="sparks">
       <For each={(props.state?.stats ?? []).slice(0, 4)}>

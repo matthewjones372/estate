@@ -66,6 +66,10 @@
   color: var(--amber-quiet);
   margin-top: 4px;
 }
+/* A service's charts and a kept one read their axis in grey; an alert's card keeps it amber. */
+.chart-axis.ink-3 {
+  color: var(--ink-3);
+}
 .alert-impact {
   margin: 0;
   display: flex;

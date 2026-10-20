@@ -82,7 +82,7 @@ export const IncidentFirings = (props: {
         when={props.record.incident.firings.length > 0}
         fallback={<p class="muted">No firing is part of it now.</p>}
       >
-        <ul class="stack" style={{ margin: 0, padding: 0, "list-style": "none", gap: "6px" }}>
+        <ul class="stack plain-list">
           <For each={props.record.incident.firings}>
             {(firing) => (
               <li>

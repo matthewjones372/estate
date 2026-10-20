@@ -23,9 +23,7 @@ export const ServiceAlerts = (props: {
         </Show>
       </div>
       <Show when={firing().length === 0}>
-        <p class="muted" style={{ margin: 0 }}>
-          Nothing firing.
-        </p>
+        <p class="muted flush">Nothing firing.</p>
       </Show>
       <FiringAlerts
         alerts={firing()}

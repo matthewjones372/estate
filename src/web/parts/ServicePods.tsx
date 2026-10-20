@@ -13,9 +13,7 @@ export const ServicePods = (props: { readonly pods: ServiceState["pods"] }) => {
         Pods
       </h2>
       <Show when={props.pods.length === 0}>
-        <p class="muted" style={{ margin: 0 }}>
-          No pods read for it here.
-        </p>
+        <p class="muted flush">No pods read for it here.</p>
       </Show>
       <div class="pods">
         <For each={props.pods}>
@@ -28,13 +26,11 @@ export const ServicePods = (props: { readonly pods: ServiceState["pods"] }) => {
                   {pod.ready ? "Ready" : pod.phase}
                 </span>
               </span>
-              <span class="muted" style={{ "font-size": "0.75rem" }}>
+              <span class="muted small">
                 {pod.node ?? ""}
                 {pod.startedAt === undefined ? "" : ` · up ${since(pod.startedAt, now())}`}
               </span>
-              <span class="muted" style={{ "font-size": "0.75rem" }}>
-                {pod.restarts === 0 ? "no restarts" : `${pod.restarts} restarts`}
-              </span>
+              <span class="muted small">{pod.restarts === 0 ? "no restarts" : `${pod.restarts} restarts`}</span>
             </div>
           )}
         </For>

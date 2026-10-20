@@ -128,10 +128,7 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
           onClick={() => toggle(shown.node.title)}
         >
           <span class="map-node-name">
-            <span
-              class={`dot ${shown.node.health} ${hotOf(shown.node.health)}`}
-              style={{ width: "7px", height: "7px" }}
-            />
+            <span class={`dot small-dot ${shown.node.health} ${hotOf(shown.node.health)}`} />
             {shown.node.title}
           </span>
           <span class="mono map-node-sub">
@@ -181,7 +178,7 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
           </span>
         </Show>
         <span class="map-node-name">
-          <span class={`dot ${health()} ${hotOf(health())}`} style={{ width: "7px", height: "7px" }} />
+          <span class={`dot small-dot ${health()} ${hotOf(health())}`} />
           {shown.node.title}
         </span>
         <span class="mono map-node-sub">{sub()}</span>
@@ -221,7 +218,7 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
         classList={{ "map-journeying": on.journey() !== undefined }}
       >
         <figcaption class="spread">
-          <span id="map-title" style={{ "font-weight": 600 }}>
+          <span id="map-title" class="strong">
             The estate, live
           </span>
           <span class="map-opened">
@@ -233,9 +230,7 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
                 </button>
               )}
             </For>
-            <span class="muted" style={{ "font-size": "0.75rem" }}>
-              Traffic over the last minute · amber is what needs you
-            </span>
+            <span class="muted small">Traffic over the last minute · amber is what needs you</span>
           </span>
         </figcaption>
         <div class="map-scroll">

@@ -27,22 +27,11 @@ export const FiringTimeline = (props: {
   )
   return (
     <Show when={events() !== "unread"}>
-      <Show
-        when={events()}
-        fallback={
-          <p class="muted" style={{ margin: 0 }}>
-            The timeline could not be read.
-          </p>
-        }
-      >
+      <Show when={events()} fallback={<p class="muted flush">The timeline could not be read.</p>}>
         {(read) => (
           <Show
             when={(read() as ReadonlyArray<FiringEvent>).length > 0}
-            fallback={
-              <p class="muted" style={{ margin: 0 }}>
-                Nothing is kept for this firing yet.
-              </p>
-            }
+            fallback={<p class="muted flush">Nothing is kept for this firing yet.</p>}
           >
             <ol class="timeline">
               <For each={read() as ReadonlyArray<FiringEvent>}>{(event) => <TimelineRow event={event} />}</For>

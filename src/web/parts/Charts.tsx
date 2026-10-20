@@ -91,7 +91,7 @@ export const Chart = (props: {
         shade={shared.shade?.()}
         bands={props.spike === true ? spikeBands(points(), shared.end(), span()) : undefined}
       />
-      <div class="chart-axis mono" style={{ color: "var(--ink-3)" }}>
+      <div class="chart-axis mono ink-3">
         <span>{zoomed() ? edge(shared.zoom().from) : shared.starts()}</span>
         <Show when={props.limit !== undefined}>
           <span>threshold {measured(props.limit, props.unit)}</span>
@@ -245,11 +245,9 @@ export const Timeline = (props: {
 }) => {
   const place = (iso: string) => Math.max(0, Math.min(100, ((Date.parse(iso) - (props.now - day)) / day) * 100))
   return (
-    <div class="stack" style={{ gap: "8px" }}>
+    <div class="stack close">
       <Show when={props.alerts.length === 0}>
-        <p class="muted" style={{ margin: 0 }}>
-          Nothing fired in the last day.
-        </p>
+        <p class="muted flush">Nothing fired in the last day.</p>
       </Show>
       <For each={props.alerts}>
         {(alert) => (
@@ -278,7 +276,7 @@ export const Timeline = (props: {
           </div>
         )}
       </For>
-      <div class="timeline-row muted mono" style={{ "font-size": "0.6875rem" }}>
+      <div class="timeline-row muted mono tiny">
         <span />
         <span class="spread">
           <span>24 h ago</span>

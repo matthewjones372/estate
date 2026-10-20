@@ -22,9 +22,7 @@ export const TrafficSpike = (props: {
   readonly span: number
 }) => (
   <Show when={spikes(props.points ?? [], props.span).length > 0}>
-    <p class="muted" style={{ margin: 0 }}>
-      Unusual spike in traffic.
-    </p>
+    <p class="muted flush">Unusual spike in traffic.</p>
   </Show>
 )
 

@@ -62,7 +62,7 @@ export const KeptChartFigure = (props: {
         shade={props.shade}
         marks={props.marks}
       />
-      <div class="chart-axis mono" style={{ color: "var(--ink-3)" }}>
+      <div class="chart-axis mono ink-3">
         <span>{day(iso(props.set.window.start * 1000))}</span>
         <span>{day(iso(end()))}</span>
       </div>

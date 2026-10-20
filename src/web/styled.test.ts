@@ -16,7 +16,7 @@ const written = async (pattern: string) => {
 }
 
 describe("the pages' styles", () => {
-  test("no page writes a style attribute into its template, so how it looks is the stylesheets'", async () => {
-    expect(await written("pages/*.tsx")).toEqual([])
+  test("no page or part writes a style attribute into its template, so how it looks is the stylesheets'", async () => {
+    expect(await written("{pages,parts}/*.tsx")).toEqual([])
   })
 })

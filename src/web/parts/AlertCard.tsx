@@ -95,9 +95,7 @@ const Silencing = (props: { readonly alert: Alert; readonly close: () => void })
   }
   return (
     <fieldset class="silencing">
-      <legend style={{ "font-size": "0.8125rem", "font-weight": 600, padding: 0 }}>
-        Silence {props.alert.name} for
-      </legend>
+      <legend class="legend">Silence {props.alert.name} for</legend>
       <div class="choices">
         <For each={spans}>
           {(span) => (
@@ -122,7 +120,7 @@ const Silencing = (props: { readonly alert: Alert; readonly close: () => void })
           class="amber-input"
         />
       </label>
-      <p class="alert-quiet" style={{ margin: 0 }}>
+      <p class="alert-quiet flush">
         It stays on this page, greyed, and fires again if it is still true when the silence ends.
       </p>
       <div class="choices">

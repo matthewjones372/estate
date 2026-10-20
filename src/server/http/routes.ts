@@ -200,13 +200,13 @@ const assets = HttpRouter.add("GET", "/assets/:name", (request) =>
 
 /**
  * What the shell may run: Estate's own script, styles and fonts, its own stream and API, and nothing framing it from
- * elsewhere (spec 0055). Style attributes are allowed because Solid compiles a part's constant style into one.
+ * elsewhere (spec 0055). No style attribute either: the parts style themselves by class, and a style that changes is
+ * set through the CSSOM, which this does not govern.
  */
 const policy = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self'",
-  "style-src-attr 'unsafe-inline'",
   "font-src 'self'",
   // The favicon is an SVG written into the shell.
   "img-src 'self' data:",

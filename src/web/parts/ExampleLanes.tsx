@@ -37,7 +37,7 @@ export const ExampleLanes = (props: {
     return at === undefined ? undefined : view()?.rows[at]
   }
   return (
-    <div class="stack journey-lanes" style={{ gap: "10px" }}>
+    <div class="stack journey-lanes spaced">
       <Show when={read() !== "loading"} fallback={<p class="muted">Reading the trace…</p>}>
         <Show when={view()} fallback={<p class="muted">The trace could not be read.</p>}>
           {(found) => (

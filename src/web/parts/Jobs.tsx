@@ -31,21 +31,14 @@ export const Run = (props: { readonly run: Job["runs"][number]; readonly now: nu
 export const Jobs = (props: { readonly jobs: ReadonlyArray<Job> }) => {
   const { now } = useEstate()
   return (
-    <Show
-      when={props.jobs.length > 0}
-      fallback={
-        <p class="muted" style={{ margin: 0 }}>
-          No jobs are named for it.
-        </p>
-      }
-    >
+    <Show when={props.jobs.length > 0} fallback={<p class="muted flush">No jobs are named for it.</p>}>
       <div class="pods">
         <For each={props.jobs}>
           {(job) => (
             <div class="pod job">
               <span class="spread">
                 <span class="mono">{job.name}</span>
-                <span class="muted" style={{ "font-size": "0.75rem" }}>
+                <span class="muted small">
                   {job.kind === "CronJob" ? (
                     <span class="mono">{job.schedule}</span>
                   ) : job.kind === "ScheduledTask" ? (
@@ -60,13 +53,7 @@ export const Jobs = (props: { readonly jobs: ReadonlyArray<Job> }) => {
               <Show when={job.missed}>
                 {(missed) => <span class="rail-note attention">missed its run at {clock(missed())}</span>}
               </Show>
-              <Show when={job.next}>
-                {(next) => (
-                  <span class="muted" style={{ "font-size": "0.75rem" }}>
-                    next at {clock(next())}
-                  </span>
-                )}
-              </Show>
+              <Show when={job.next}>{(next) => <span class="muted small">next at {clock(next())}</span>}</Show>
               <ol class="job-runs">
                 {job.runs.length === 0 && job.absent === undefined && <li class="muted">no runs kept</li>}
                 <For each={job.runs}>{(run) => <Run run={run} now={now()} />}</For>
