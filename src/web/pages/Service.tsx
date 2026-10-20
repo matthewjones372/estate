@@ -52,9 +52,7 @@ export const ServicePage = (props: { readonly name: string; readonly logs?: Logs
           <nav aria-label="Breadcrumb" class="muted crumbs">
             <A to="/">Overview</A> / {props.name}
           </nav>
-          <h1 class="headline" style={{ "font-size": "2.375rem" }}>
-            {props.name}
-          </h1>
+          <h1 class="headline page-title">{props.name}</h1>
           <HealthLine state={state()} />
           <ErrorsDay service={props.name} />
           <Show when={(state()?.reasons ?? []).length > 1}>
@@ -62,7 +60,7 @@ export const ServicePage = (props: { readonly name: string; readonly logs?: Logs
               <For each={state()?.reasons ?? []}>{(reason) => <li>{reason}</li>}</For>
             </ul>
           </Show>
-          <p class="lede" style={{ "max-width": "760px" }}>
+          <p class="lede measure">
             {[service()?.description, state()?.version === undefined ? undefined : `running ${state()?.version}`]
               .filter(Boolean)
               .join(" · ")}
@@ -76,7 +74,7 @@ export const ServicePage = (props: { readonly name: string; readonly logs?: Logs
         </section>
         <ServiceAlerts alerts={alerts()} catalog={events().catalog} canSilence={canSilence()} />
         <div class="row">
-          <div class="stack" style={{ flex: "999 1 640px", "min-width": 0, gap: "24px" }}>
+          <div class="stack service-main">
             <Load name={props.name} hour={state()?.load} read={actions.load} alerts={alerts()} />
             <Journeys service={props.name} />
             <LogsPanel service={props.name} shown={props.logs} />
@@ -100,7 +98,7 @@ export const ServicePage = (props: { readonly name: string; readonly logs?: Logs
               />
             </section>
           </div>
-          <div class="stack" style={{ flex: "1 1 320px", "min-width": 0, gap: "24px" }}>
+          <div class="stack service-side">
             <ServiceBuilds builds={builds()} />
             <Show when={hasDebug()}>
               <section aria-labelledby="debug" class="panel section-box">

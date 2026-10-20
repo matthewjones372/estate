@@ -46,11 +46,9 @@ export const Incidents = () => {
   ]
   return (
     <main class="main">
-      <div class="spread" style={{ "align-items": "flex-end" }}>
+      <div class="spread bottom">
         <div class="stack">
-          <h1 class="headline" style={{ "font-size": "2.375rem" }}>
-            Incidents
-          </h1>
+          <h1 class="headline page-title">Incidents</h1>
           <Show when={read().length > 0}>
             <p class="lede">
               {count("open")} open, {count("closed")} closed.

@@ -33,18 +33,14 @@ export const StorePage = (props: { readonly name: string }) => {
           <nav aria-label="Breadcrumb" class="muted crumbs">
             <A to="/">Overview</A> / {props.name}
           </nav>
-          <h1 class="headline" style={{ "font-size": "2.375rem" }}>
-            {props.name}
-          </h1>
+          <h1 class="headline page-title">{props.name}</h1>
           <HealthLine state={state()} />
           <Show when={(state()?.reasons ?? []).length > 1}>
             <ul class="reasons muted">
               <For each={state()?.reasons ?? []}>{(reason) => <li>{reason}</li>}</For>
             </ul>
           </Show>
-          <p class="lede" style={{ "max-width": "760px" }}>
-            {[store()?.description, store()?.engine].filter(Boolean).join(" · ")}
-          </p>
+          <p class="lede measure">{[store()?.description, store()?.engine].filter(Boolean).join(" · ")}</p>
           <Show when={store()}>{(described) => <Links service={described()} />}</Show>
         </section>
         <Load
@@ -59,9 +55,7 @@ export const StorePage = (props: { readonly name: string }) => {
             Alerts about it
           </h2>
           <Show when={firing().length === 0}>
-            <p class="muted" style={{ margin: 0 }}>
-              Nothing firing.
-            </p>
+            <p class="muted flush">Nothing firing.</p>
           </Show>
           <div class="cards">
             <For each={firing()}>

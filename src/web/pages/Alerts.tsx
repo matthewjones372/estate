@@ -42,14 +42,12 @@ export const Alerts = () => {
   const resolved = () => snapshot.events.alerts?.resolved ?? []
   return (
     <main class="main">
-      <div class="spread" style={{ "align-items": "flex-end" }}>
+      <div class="spread bottom">
         <div class="stack">
-          <h1 class="headline" style={{ "font-size": "2.375rem" }}>
-            Alerts
-          </h1>
+          <h1 class="headline page-title">Alerts</h1>
           <p class="lede">{alertsSummary(alerts())}</p>
         </div>
-        <div class="choices" style={{ "align-items": "center" }}>
+        <div class="choices middle">
           <fieldset class="choices bare">
             <legend class="visually-hidden">State</legend>
             <For each={filters}>
@@ -150,7 +148,7 @@ export const Alerts = () => {
                       <Show when={note()}>{(latest) => <div class="cell-note">{clock(latest().at)}</div>}</Show>
                     </td>
                     <td>
-                      <div class="choices" style={{ "justify-content": "flex-end" }}>
+                      <div class="choices end">
                         <Show when={alert.runbook}>
                           {(runbook) => (
                             <Out href={runbook()} class="plain-button link-button">
@@ -184,9 +182,7 @@ export const Alerts = () => {
           </tbody>
         </table>
         <Show when={shown().length === 0}>
-          <p class="muted" style={{ padding: "0 16px" }}>
-            Nothing here for this filter.
-          </p>
+          <p class="muted inset">Nothing here for this filter.</p>
         </Show>
       </section>
       <section aria-labelledby="resolved" class="stack">
@@ -194,21 +190,12 @@ export const Alerts = () => {
           Resolved today
         </h2>
         <Show when={resolved().length === 0}>
-          <p class="muted" style={{ margin: 0 }}>
-            Nothing has resolved today.
-          </p>
+          <p class="muted flush">Nothing has resolved today.</p>
         </Show>
         <For each={resolved()}>
           {(each) => (
             <div class="silenced-row">
-              <Show
-                when={each.alert !== ""}
-                fallback={
-                  <span class="mono" style={{ color: "var(--ink-soft)" }}>
-                    {each.name}
-                  </span>
-                }
-              >
+              <Show when={each.alert !== ""} fallback={<span class="mono ink-soft">{each.name}</span>}>
                 <A to={firingPath(each.alert, each.startsAt)} class="mono">
                   {each.name}
                 </A>

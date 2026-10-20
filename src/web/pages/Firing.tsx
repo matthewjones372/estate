@@ -37,7 +37,7 @@ const windowOf = (firing: PastFiring) => ({
 
 const WhatHappened = (props: { readonly firing: PastFiring }) => (
   <section aria-labelledby="firing-happened" class="stack">
-    <h1 id="firing-happened" class="headline" style={{ "font-size": "2rem" }}>
+    <h1 id="firing-happened" class="headline item-title">
       What happened
     </h1>
     <p class="lede">{lede(props.firing)}</p>
@@ -98,7 +98,7 @@ const WhatHappened = (props: { readonly firing: PastFiring }) => (
       )}
     </Show>
     <Show when={props.firing.others.length > 0}>
-      <nav aria-label={`Other firings of ${props.firing.name}`} class="stack" style={{ gap: "4px" }}>
+      <nav aria-label={`Other firings of ${props.firing.name}`} class="stack tight">
         <span class="alert-label">
           Fired {props.firing.others.length} other time{props.firing.others.length === 1 ? "" : "s"} here
         </span>

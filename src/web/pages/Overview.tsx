@@ -147,16 +147,14 @@ export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
 const Silenced = (props: { readonly alerts: ReadonlyArray<Alert>; readonly canSilence: boolean }) => {
   const { actions } = useEstate()
   return (
-    <div class="stack" style={{ gap: "8px" }}>
+    <div class="stack close">
       <For each={props.alerts}>
         {(alert) => (
           <Show when={alert.silence}>
             {(silence) => (
               <div class="silenced-row">
                 <Icon name="silence" />
-                <span class="mono" style={{ color: "var(--ink-soft)" }}>
-                  {alert.name}
-                </span>
+                <span class="mono ink-soft">{alert.name}</span>
                 <span>
                   silenced until {clock(silence().endsAt)} by {silence().by}: “{silence().reason}”
                 </span>
@@ -218,7 +216,7 @@ export const Overview = () => {
             Needs you now{firing().length === 0 ? "" : ` · ${firing().length} firing`}
           </h2>
           <Show when={firing().length > 0}>
-            <div class="choices" style={{ "align-items": "center" }}>
+            <div class="choices middle">
               <LayoutChoice layout={layout()} choose={choose} />
               <Show when={rows(firing())}>
                 <A to="/alerts">All on Alerts →</A>
@@ -227,9 +225,7 @@ export const Overview = () => {
           </Show>
         </div>
         <Show when={firing().length === 0}>
-          <p class="muted" style={{ margin: 0 }}>
-            Nothing. When something does, it appears here first.
-          </p>
+          <p class="muted flush">Nothing. When something does, it appears here first.</p>
         </Show>
         <FiringAlerts
           alerts={firing()}
@@ -246,15 +242,11 @@ export const Overview = () => {
           <For each={tilesOf(events())}>
             {(tile) => (
               <div class="vital">
-                <span class="muted" style={{ "font-size": "0.75rem" }}>
-                  {tile.label}
-                </span>
+                <span class="muted small">{tile.label}</span>
                 <span class="vital-value" style={{ color: tile.alarm ? "var(--amber-text)" : undefined }}>
                   {tile.value}
                 </span>
-                <span class="muted" style={{ "font-size": "0.75rem" }}>
-                  {tile.note}
-                </span>
+                <span class="muted small">{tile.note}</span>
               </div>
             )}
           </For>

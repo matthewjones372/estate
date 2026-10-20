@@ -7,7 +7,8 @@ import typescript from "@babel/preset-typescript"
 import solid from "babel-preset-solid"
 import type { BunPlugin } from "bun"
 
-const compile = (path: string, source: string): Promise<string> =>
+/** A `.tsx` as Solid compiles it for the bundle; the pages' tests read it too. */
+export const compile = (path: string, source: string): Promise<string> =>
   transformAsync(source, {
     filename: path,
     presets: [

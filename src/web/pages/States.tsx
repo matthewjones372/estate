@@ -80,14 +80,7 @@ export const Reading = (props: { readonly sources: ReadonlyArray<SourceStatus> |
     <h2 id="loading" class="section-title">
       Reading the estate
     </h2>
-    <Show
-      when={props.sources}
-      fallback={
-        <p class="muted" style={{ margin: 0 }}>
-          Connecting to Estate…
-        </p>
-      }
-    >
+    <Show when={props.sources} fallback={<p class="muted flush">Connecting to Estate…</p>}>
       {(sources) => (
         <ul class="source-list">
           <For each={sources().filter((source) => source.state !== "off")}>
@@ -101,9 +94,7 @@ export const Reading = (props: { readonly sources: ReadonlyArray<SourceStatus> |
         </ul>
       )}
     </Show>
-    <p class="muted" style={{ margin: 0, "font-size": "0.8125rem" }}>
-      Each part appears as its source answers. Never a blank page.
-    </p>
+    <p class="muted flush fine">Each part appears as its source answers. Never a blank page.</p>
   </section>
 )
 
@@ -117,7 +108,7 @@ export const SourceNotices = (props: { readonly services: ServicesEvent | undefi
       <For each={failing()}>
         {(source) => (
           <div role="status" class="notice">
-            <strong style={{ color: "var(--ink)" }}>{nameOf(source)} did not answer.</strong>
+            <strong class="ink">{nameOf(source)} did not answer.</strong>
             <span>
               {parts[source.kind]}{" "}
               {source.answeredAt === undefined
