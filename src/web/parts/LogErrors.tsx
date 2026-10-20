@@ -5,10 +5,9 @@ import type { ErrorGroups } from "../../shared/log-events"
 import { type ErrorWindow, useEstate, useSnapshot } from "../context"
 import { since } from "../format"
 import { asText, copy } from "../log-copy"
+import { type ErrorRange, errorRanges } from "../route"
 import { IncludeInIncident } from "./IncludeInIncident"
 import { LineRow } from "./LogLine"
-
-const ranges = ["1h", "6h", "24h"] as const
 
 /** The errors in a window, grouped: the commonest first, each opening to its newest examples. */
 export const ErrorList = (props: {
@@ -112,21 +111,24 @@ export const ErrorList = (props: {
   )
 }
 
-export const Errors = (props: { readonly service: string }) => {
-  const [range, setRange] = createSignal<(typeof ranges)[number]>("1h")
+export const Errors = (props: {
+  readonly service: string
+  readonly range: ErrorRange
+  readonly choose: (range: ErrorRange) => void
+}) => {
   return (
     <div class="stack">
       <fieldset class="choices bare">
         <legend class="visually-hidden">Over</legend>
-        <For each={ranges}>
+        <For each={errorRanges}>
           {(each) => (
-            <button type="button" class="filter" aria-pressed={range() === each} onClick={() => setRange(each)}>
+            <button type="button" class="filter" aria-pressed={props.range === each} onClick={() => props.choose(each)}>
               {each}
             </button>
           )}
         </For>
       </fieldset>
-      <ErrorList service={props.service} window={{ range: range() }} />
+      <ErrorList service={props.service} window={{ range: props.range }} />
     </div>
   )
 }

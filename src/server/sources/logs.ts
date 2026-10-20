@@ -8,11 +8,11 @@ import { Remote } from "../remote"
 import type { Sources } from "../settings"
 import { iso } from "../time"
 import { podsOf } from "./cluster"
-import { datadogLines } from "./datadog-logs"
-import { elasticLines } from "./elastic"
+import { datadogErrors, datadogLines, datadogPage } from "./datadog-logs"
+import { elasticLines, elasticNotErrors } from "./elastic"
 import { lokiOf, type Reach } from "./grafana"
 import { type Cluster, clusterOf } from "./kubernetes"
-import { errorTest, fieldsOf, type Line, lineOf, masking } from "./lines"
+import { defaultErrors, errorTest, fieldsOf, type Line, lineOf, masking } from "./lines"
 import { type Failure, SourceFailure } from "./run"
 
 const LokiStreams = Schema.Struct({
@@ -116,7 +116,39 @@ export interface ServiceLogs {
     limit: number,
   ) => Effect.Effect<ReadonlyArray<Line>, Failure, Remote | FileSystem.FileSystem>
   readonly isError: (line: Line) => boolean
+  /**
+   * The errors from `from` to `to`, at most `limit`, newest kept: the source is asked for lines that may be errors,
+   * and `isError` decides. `capped` when the source had more than were read.
+   */
+  readonly errors: (
+    from: number,
+    to: number,
+    limit: number,
+  ) => Effect.Effect<ErrorsRead, Failure, Remote | FileSystem.FileSystem>
 }
+
+export interface ErrorsRead {
+  readonly lines: ReadonlyArray<Line>
+  readonly capped: boolean
+}
+
+type Read = (
+  from: number,
+  to: number,
+  limit: number,
+) => Effect.Effect<ReadonlyArray<Line>, Failure, Remote | FileSystem.FileSystem>
+
+/** Errors from a read of the lines that may be errors, which reached its limit when it read as many as asked. */
+const errorsFrom =
+  (sieved: Read, isError: (line: Line) => boolean, mask: (line: Line) => Line, most = Number.POSITIVE_INFINITY) =>
+  (from: number, to: number, limit: number) =>
+    Effect.map(sieved(from, to, limit), (lines) => ({
+      lines: lines.filter(isError).map(mask),
+      capped: lines.length >= Math.min(limit, most),
+    }))
+
+/** A LogQL line filter for the catalog's pattern, case aside: a superset of the errors, as levels are in the text. */
+const lokiSieve = (pattern: string) => ` |~ "(?i)${pattern.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`
 
 /** A service's lines in an environment: from Loki, Datadog or Elasticsearch, or else its pods in the cluster. */
 export const logsFor = (section: Sources, service: Service): ServiceLogs | undefined => {
@@ -132,44 +164,56 @@ export const logsFor = (section: Sources, service: Service): ServiceLogs | undef
     const selector =
       service.logs?.selector ??
       (namespace === undefined ? `{app="${service.name}"}` : `{namespace="${namespace}", app="${service.name}"}`)
+    const sieved = `${selector}${lokiSieve(service.logs?.errors ?? defaultErrors)}`
     return {
       from: "Loki",
       isError,
       read: (from, to, limit) =>
         Effect.map(lokiLines(loki, selector, fields, from, to, limit), (lines) => lines.map(finished)),
+      errors: errorsFrom((from, to, limit) => lokiLines(loki, sieved, fields, from, to, limit), isError, finished),
     }
   }
-  if (datadog !== undefined)
+  if (datadog !== undefined) {
+    const lines: Read = (from, to, limit) => datadogLines(datadog, service, from, to, limit)
+    // Every Datadog line has a status, which is its level, so the statuses that are errors find them all.
+    const errorStatuses = datadogErrors(service.logs?.errors ?? defaultErrors)
+    const sieved: Read = (from, to, limit) => datadogLines(datadog, service, from, to, limit, errorStatuses)
     return {
       from: "Datadog",
       isError,
-      read: (from, to, limit) =>
-        Effect.map(datadogLines(datadog, service, from, to, limit), (lines) => lines.map(finished)),
+      read: (from, to, limit) => Effect.map(lines(from, to, limit), (read) => read.map(finished)),
+      errors: errorsFrom(sieved, isError, finished, datadogPage),
     }
-  if (elasticsearch !== undefined)
+  }
+  if (elasticsearch !== undefined) {
+    const lines: Read = (from, to, limit) => elasticLines(elasticsearch, service, from, to, limit)
+    const notErrors = elasticNotErrors(service.logs?.errors ?? defaultErrors)
+    const sieved: Read = (from, to, limit) => elasticLines(elasticsearch, service, from, to, limit, notErrors)
     return {
       from: "Elasticsearch",
       isError,
-      read: (from, to, limit) =>
-        Effect.map(elasticLines(elasticsearch, service, from, to, limit), (lines) => lines.map(finished)),
+      read: (from, to, limit) => Effect.map(lines(from, to, limit), (read) => read.map(finished)),
+      errors: errorsFrom(sieved, isError, finished),
     }
+  }
   if (kubernetes === undefined || namespace === undefined) return undefined
+  const lines: Read = (from, to, limit) =>
+    Effect.gen(function* () {
+      const cluster = yield* clusterOf(kubernetes)
+      const pods = yield* podsOf(cluster, service)
+      const read = yield* Effect.forEach(pods, (pod) => podLines(cluster, namespace, pod.name, from, limit), {
+        concurrency: 4,
+      })
+      return read
+        .flat()
+        .filter((line) => line.at <= iso(to))
+        .sort((a, b) => a.at.localeCompare(b.at))
+        .slice(-limit)
+    })
   return {
     from: "the cluster",
     isError,
-    read: (from, to, limit) =>
-      Effect.gen(function* () {
-        const cluster = yield* clusterOf(kubernetes)
-        const pods = yield* podsOf(cluster, service)
-        const read = yield* Effect.forEach(pods, (pod) => podLines(cluster, namespace, pod.name, from, limit), {
-          concurrency: 4,
-        })
-        return read
-          .flat()
-          .filter((line) => line.at <= iso(to))
-          .sort((a, b) => a.at.localeCompare(b.at))
-          .slice(-limit)
-          .map(finished)
-      }),
+    read: (from, to, limit) => Effect.map(lines(from, to, limit), (read) => read.map(finished)),
+    errors: errorsFrom(lines, isError, finished),
   }
 }

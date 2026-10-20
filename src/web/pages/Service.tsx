@@ -10,6 +10,7 @@ import { Load, Timeline } from "../parts/Charts"
 import { CodeLine } from "../parts/CodeLine"
 import { CostLine } from "../parts/CostLine"
 import { DebugPanel } from "../parts/Debug"
+import { ErrorsDay } from "../parts/ErrorsDay"
 import { FoundEntry } from "../parts/Found"
 import { Jobs } from "../parts/Jobs"
 import { Journeys } from "../parts/Journey"
@@ -20,9 +21,10 @@ import { ServiceBuilds } from "../parts/ServiceBuilds"
 import { ServicePods } from "../parts/ServicePods"
 import { Owner } from "../parts/Team"
 import { Versions } from "../parts/Versions"
+import type { LogsShown } from "../route"
 import { teamOf } from "../teams"
 
-export const ServicePage = (props: { readonly name: string }) => {
+export const ServicePage = (props: { readonly name: string; readonly logs?: LogsShown | undefined }) => {
   const { actions, me, now } = useEstate()
   const snapshot = useSnapshot()
   const events = () => snapshot.events
@@ -54,6 +56,7 @@ export const ServicePage = (props: { readonly name: string }) => {
             {props.name}
           </h1>
           <HealthLine state={state()} />
+          <ErrorsDay service={props.name} />
           <Show when={(state()?.reasons ?? []).length > 1}>
             <ul class="reasons muted">
               <For each={state()?.reasons ?? []}>{(reason) => <li>{reason}</li>}</For>
@@ -76,7 +79,7 @@ export const ServicePage = (props: { readonly name: string }) => {
           <div class="stack" style={{ flex: "999 1 640px", "min-width": 0, gap: "24px" }}>
             <Load name={props.name} hour={state()?.load} read={actions.load} alerts={alerts()} />
             <Journeys service={props.name} />
-            <LogsPanel service={props.name} />
+            <LogsPanel service={props.name} shown={props.logs} />
             <ServicePods pods={state()?.pods ?? []} />
             <section aria-labelledby="jobs" class="stack">
               <h2 id="jobs" class="section-title">

@@ -2,9 +2,11 @@
 /** A service's logs: its lines as they arrive, and its errors grouped by message. */
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
 import type { LogLine } from "../../shared/log-events"
+import { replaceAddress } from "../address"
 import { useEstate, useSnapshot } from "../context"
 import { asText, copy, fileName, save } from "../log-copy"
 import { searchOf, shows } from "../log-search"
+import { type ErrorRange, type LogsShown, pathOf } from "../route"
 import { IncludeInIncident } from "./IncludeInIncident"
 import { Errors } from "./LogErrors"
 import { type Kind, kindOf, kinds, LineRow } from "./LogLine"
@@ -214,10 +216,32 @@ const Live = (props: { readonly service: string }) => {
   )
 }
 
-export const LogsPanel = (props: { readonly service: string }) => {
-  const [view, setView] = createSignal<"live" | "errors">("live")
+const shownFirst: LogsShown = { view: "live", range: "1h" }
+
+/** A service's logs, showing what its page's address asks for, and writing what is chosen here back to it. */
+export const LogsPanel = (props: { readonly service: string; readonly shown?: LogsShown | undefined }) => {
+  const [shown, setShown] = createSignal(props.shown ?? shownFirst)
+  let panel: HTMLElement | undefined
+  // The address changed, by a link to these logs or Back: show what it asks for, and bring it into view.
+  createEffect(
+    on(
+      () => props.shown,
+      (asked) => {
+        setShown(asked ?? shownFirst)
+        if (asked?.view === "errors") panel?.scrollIntoView?.({ block: "start" })
+      },
+      { defer: true },
+    ),
+  )
+  const view = () => shown().view
+  const choose = (chosen: LogsShown) => {
+    setShown(chosen)
+    replaceAddress(pathOf({ page: "service", name: props.service, logs: chosen }))
+  }
+  const setView = (chosen: "live" | "errors") => choose({ ...shown(), view: chosen })
+  const setRange = (range: ErrorRange) => choose({ ...shown(), range })
   return (
-    <section aria-labelledby="logs" class="panel section-box">
+    <section aria-labelledby="logs" class="panel section-box" ref={panel}>
       <div class="spread">
         <h2 id="logs" class="section-title">
           Logs
@@ -232,7 +256,10 @@ export const LogsPanel = (props: { readonly service: string }) => {
           </button>
         </fieldset>
       </div>
-      <Show when={view() === "live"} fallback={<Errors service={props.service} />}>
+      <Show
+        when={view() === "live"}
+        fallback={<Errors service={props.service} range={shown().range} choose={setRange} />}
+      >
         <Live service={props.service} />
       </Show>
     </section>

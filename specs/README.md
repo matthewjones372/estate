@@ -58,3 +58,4 @@ entries, one per pull request, each with what proves it done.
 | [0051](0051-what-an-incident-holds-and-its-summary.md) | what an incident holds, and its summary: *Include in incident* on charts, picked log lines, error groups and traces, kept with who and why; evidence above the firings; and *Summarise*, an account of the incident from the same model and budget as Ask AI |
 | [0052](0052-a-spike-on-the-load.md) | a spike on the load: a band behind the Requests spark and chart where the rate jumped, not an alert |
 | [0053](0053-what-the-web-guidance-found.md) | what the web guidance found: text that follows the browser's size, state kept in Forced Colors, the keyboard and screen readers served, and less work per event |
+| [0054](0054-errors-in-the-last-day.md) | errors in the last day: a count of a service's errors and their groups over 24 hours under its health line, linking to the Errors view, and each log source asked for errors only so the cap counts errors |
