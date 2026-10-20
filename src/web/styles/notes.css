@@ -35,7 +35,7 @@
 }
 .note-text {
   font-size: 0.8125rem;
-  color: #e6dcc8;
+  color: var(--note-ink);
 }
 /* As it was written: a kept AI answer's cause, evidence and next steps each on their own line. */
 .note-body {

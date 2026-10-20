@@ -1,7 +1,7 @@
 /* Debug */
 .debug-on {
   background: var(--debug-panel);
-  border: 1px solid #3b2f6b;
+  border: 1px solid var(--debug-line);
   border-radius: 10px;
   padding: 12px 14px;
   gap: 6px;
@@ -9,7 +9,7 @@
 .debug-button {
   align-self: flex-start;
   background: var(--debug);
-  color: #140d2b;
+  color: var(--on-debug);
   border: 0;
   border-radius: 8px;
   font-weight: 700;
@@ -28,7 +28,7 @@
   max-width: min(480px, calc(100dvw - 32px));
   color: var(--ink);
   background: var(--raised);
-  border: 1px solid #3b2f6b;
+  border: 1px solid var(--debug-line);
   border-radius: 10px;
   padding: 12px 14px;
 }

@@ -60,7 +60,7 @@ Nothing.
       Done when: a wait that runs out fails within its deadline naming what it waited for, and `bun run perf` passes.
 - [x] **`frame-ancestors-setting`** — `web.frameAncestors` in the settings, checked at start, added to the policy.
       Done when: a page on a listed origin can frame Estate, and one on any other cannot.
-- [ ] **`colour-tokens`** — the stylesheets' hex colours as `:root` tokens.
+- [x] **`colour-tokens`** — the stylesheets' hex colours as `:root` tokens.
       Done when: no stylesheet but the tokens names a colour by hex, and the pages compute the same colours.
 - [ ] **`logical-sides`** — the physical sides as logical ones.
       Done when: no stylesheet sets a left or right margin or padding, and the pages lay out as before.

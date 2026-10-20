@@ -13,7 +13,7 @@
 }
 .trace-hot.trace-wait,
 .journey-segment.trace-hot {
-  background: repeating-linear-gradient(135deg, #7a5413 0 6px, var(--amber-deep) 6px 12px);
+  background: repeating-linear-gradient(135deg, var(--amber-ring) 0 6px, var(--amber-deep) 6px 12px);
   outline: 1px solid var(--amber);
 }
 .trace-failed {
