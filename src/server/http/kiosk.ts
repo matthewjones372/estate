@@ -10,6 +10,7 @@ import { Configured } from "../settings"
 import { after } from "../time"
 import { Web } from "../web"
 import { cookieOptions, sessionCookie } from "./people"
+import { policy } from "./routes"
 
 const screenDays = 30
 
@@ -44,7 +45,12 @@ export const kioskRoute = HttpRouter.add("GET", "/kiosk", (request) =>
     const web = yield* Web
     return HttpServerResponse.text(web.index, {
       contentType: "text/html; charset=utf-8",
-      headers: { "cache-control": "no-cache" },
+      headers: {
+        "cache-control": "no-cache",
+        "content-security-policy": policy,
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+      },
     })
   }),
 )
