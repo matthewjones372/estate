@@ -251,7 +251,7 @@ export const listening = () => {
   handlers?.onOpen()
   const send = <Name extends keyof Events>(name: Name, data: Events[Name]) =>
     handlers?.onEvent(name, JSON.stringify(data))
-  return { live, send }
+  return { live, send, beat: () => handlers?.onBeat(), lose: () => handlers?.onLost() }
 }
 
 /** A store that has heard `heard` for production. */

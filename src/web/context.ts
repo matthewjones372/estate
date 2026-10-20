@@ -1,10 +1,10 @@
 /** What every part of the page can reach: the store, the person, where we are, and the actions they may take. */
 import { createContext, useContext } from "solid-js"
-import { createStore, reconcile } from "solid-js/store"
+import { createStore, reconcile, unwrap } from "solid-js/store"
 import type { AgentRun } from "../shared/agents"
 import type { AroundAlert } from "../shared/around"
 import type { AskAnswer } from "../shared/ask"
-import type { Me, ServiceState } from "../shared/events"
+import type { Events, Me, ServiceState } from "../shared/events"
 import type { EvidenceSet } from "../shared/evidence"
 import type { PastFiring } from "../shared/firing"
 import type { Incident, IncidentRecord } from "../shared/incidents"
@@ -161,7 +161,25 @@ export const useSnapshot = (): Snapshot => {
   const kept = stores.get(live)
   if (kept !== undefined) return kept
   const [snapshot, setSnapshot] = createStore<Snapshot>(held(live.snapshot()) as Snapshot)
-  live.subscribe(() => setSnapshot(reconcile(held(live.snapshot()) as Snapshot, { key: "id", merge: true })))
+  // Only what changed is copied and reconciled: a beat touches two fields, an event only itself.
+  live.subscribe((change) => {
+    const now = live.snapshot()
+    switch (change.kind) {
+      case "heard":
+        setSnapshot({ connection: now.connection, heardAt: now.heardAt })
+        return
+      case "event": {
+        // The other events are the store's own, unchanged, so reconciling passes over them at once.
+        const events = { ...unwrap(snapshot.events), [change.name]: held(now.events[change.name]) } as Partial<Events>
+        const next = { ...unwrap(snapshot), connection: now.connection, heardAt: now.heardAt, events }
+        setSnapshot(reconcile(next, { key: "id", merge: true }))
+        return
+      }
+      case "all":
+        setSnapshot(reconcile(held(now) as Snapshot, { key: "id", merge: true }))
+        return
+    }
+  })
   stores.set(live, snapshot)
   return snapshot
 }
