@@ -45,3 +45,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* A lane a service, most below the fold: the browser skips drawing those off screen, keeping the size it last drew. */
+.lane {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 5.5rem;
+}
