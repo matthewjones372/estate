@@ -29,6 +29,7 @@ import { kept } from "./kept"
 import { createLive } from "./live"
 import { NoAccess, SignIn } from "./pages/States"
 import { chooseEnvironment, pageOf } from "./route"
+import { moveTo } from "./transition"
 
 const storage = kept("estate.environment")
 loadFonts()
@@ -73,8 +74,10 @@ const boot = async () => {
   const actions = serverActions(() => live.snapshot().environment, {
     navigate: (path) => {
       window.history.pushState(null, "", withEnvironment(path))
-      window.scrollTo(0, 0)
-      setPage(pageOf(path))
+      moveTo(() => {
+        window.scrollTo(0, 0)
+        setPage(pageOf(path))
+      })
     },
     choose: (chosen) => {
       live.choose(chosen)
@@ -82,7 +85,9 @@ const boot = async () => {
       window.history.replaceState(null, "", withEnvironment(window.location.pathname))
     },
   })
-  window.addEventListener("popstate", () => setPage(pageOf(window.location.pathname, window.location.search)))
+  window.addEventListener("popstate", () =>
+    moveTo(() => setPage(pageOf(window.location.pathname, window.location.search))),
+  )
   storage.write(environment)
   window.history.replaceState(null, "", withEnvironment(window.location.pathname))
   show(() => <App estate={{ live, me, page, actions, now: Date.now }} />)
