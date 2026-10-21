@@ -5,12 +5,11 @@ import type { LogBatch } from "../shared/log-events"
 import { allSeenLive, type FiringEvent } from "../shared/timeline"
 import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
-import { databaseCluster, loneDatabase } from "./fixture-database"
 import { incidentActions, keptIncidents } from "./fixture-incidents"
 import { includedAs, summarised } from "./fixture-included"
-import { clusterAnswer, kafkaCluster } from "./fixture-kafka"
 import { groups, lines } from "./fixture-logs"
 import { journeySample, orderTrace, refusedTrace } from "./fixture-traces"
+import { storeActions } from "./recording-stores"
 
 /** Two runs of the triage agent, as Langfuse would give them: one failed, one through. */
 const runs = [
@@ -181,19 +180,7 @@ export const recording = (): Recorded => {
         calls.push(["storeLoad", store, range])
         return Promise.resolve({ stats: [{ title: "Connections used", unit: "%", series: series([40, 45]) }] })
       },
-      askStore: (store) => {
-        calls.push(["askStore", store])
-        return Promise.resolve(store === "bus" ? clusterAnswer : "Ask AI is not configured")
-      },
-      storeCluster: (store) => {
-        calls.push(["storeCluster", store])
-        return Promise.resolve(store === "bus" ? kafkaCluster : `kafka_exporter publishes nothing for ${store}`)
-      },
-      databaseCluster: (store) => {
-        calls.push(["databaseCluster", store])
-        const drawn = store === "orders-db" ? databaseCluster : store === "shop-db" ? loneDatabase : undefined
-        return Promise.resolve(drawn ?? `the exporter publishes nothing for ${store}`)
-      },
+      ...storeActions(calls),
       watchLogs: (service, handlers) => {
         calls.push(["watchLogs", service])
         if (service !== "storefront") {

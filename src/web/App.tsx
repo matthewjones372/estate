@@ -38,7 +38,7 @@ const Page = (props: { readonly estate: Estate }) => {
   }
   const store = () => {
     const now = page()
-    return now.page === "store" ? now.name : undefined
+    return now.page === "store" ? now : undefined
   }
   const job = () => {
     const now = page()
@@ -70,7 +70,7 @@ const Page = (props: { readonly estate: Estate }) => {
         <Overview />
       </Match>
       <Match when={service()}>{(name) => <ServicePage name={name()} logs={logs()} />}</Match>
-      <Match when={store()}>{(name) => <StorePage name={name()} />}</Match>
+      <Match when={store()}>{(store) => <StorePage name={store().name} message={store().message} />}</Match>
       <Match when={job()}>{(name) => <JobPage name={name()} />}</Match>
       <Match when={agent()}>{(name) => <AgentPage name={name()} />}</Match>
       <Match when={alert()}>{(id) => <AlertPage id={id()} />}</Match>
