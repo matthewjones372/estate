@@ -3,6 +3,7 @@ import { Schema } from "effect"
 import { Agent } from "./catalog-agent"
 import { Journey } from "./catalog-journey"
 import { Kubernetes } from "./catalog-parts"
+import { KafkaRule, Store, StoreTemplate } from "./catalog-store"
 import { CostOf } from "./costs"
 import { CatalogMap } from "./map"
 
@@ -142,6 +143,9 @@ const DiscoverRule = Schema.Struct({
   kubernetes: optional(Schema.Struct({ selector: Schema.String, namespaces: optional(Schema.Array(Schema.String)) })),
   /** Backstage's Components, by a catalog filter (spec 0033); where Backstage is, estate.yaml says. */
   backstage: optional(Schema.Struct({ filter: optional(Schema.String) })),
+  /** Kafka clusters by kafka_exporter's series (spec 0057), each made a store from `store:`. */
+  kafka: optional(KafkaRule),
+  store: optional(StoreTemplate),
   service: optional(
     Schema.Struct({
       description,
@@ -195,27 +199,9 @@ export const pipelinesOf = (service: Service): typeof Pipelines.Type | undefined
 
 const Vital = Schema.Struct({ title: Schema.String, query: Schema.String, unit: optional(Schema.String) })
 
-/** A database, queue or cache, read through its exporter's series with the preset for its engine. */
-export const Store = Schema.Struct({
-  name: Schema.String,
-  description: optional(Schema.String),
-  /** The area it belongs to, such as payments or data: the overview groups lanes by it, and a screen can show one. */
-  category: optional(Schema.String),
-  environments: Schema.Array(Schema.String),
-  engine: Schema.Literals(["postgres", "cnpg", "mysql", "redis", "kafka"]),
-  /** The labels its exporter's series carry, as PromQL matchers. */
-  selector: Schema.String,
-  links: optional(Schema.Record(Schema.String, Schema.String)),
-  extra: optional(
-    Schema.Array(Schema.Struct({ title: Schema.String, query: Schema.String, unit: optional(Schema.String) })),
-  ),
-  /** The preset's thresholds, overridden for a store sized close to its limits on purpose. */
-  attention: optional(Schema.Record(Schema.String, Schema.Number)),
-})
-export type Store = typeof Store.Type
-
 export { Agent } from "./catalog-agent"
 export { Journey } from "./catalog-journey"
+export { Store } from "./catalog-store"
 
 /** A team, by the name an owner gives: where to reach it, its chat, its pages and its on-call. */
 const Team = Schema.Struct({

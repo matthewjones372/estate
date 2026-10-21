@@ -1,6 +1,7 @@
 /** Prometheus's HTTP API: a query over a range as a series on an even grid, and the alerting rules' expressions. */
 import { Effect, Schema } from "effect"
 import type { Series } from "../../shared/events"
+import type { Reading } from "../../shared/kafka-cluster"
 import { callJson, type Remote } from "../remote"
 import type { Reach } from "./grafana"
 import { type Failure, SourceFailure } from "./run"
@@ -18,6 +19,17 @@ const Matrix = Schema.Struct({
 
 const Instant = Schema.Struct({
   data: Schema.Struct({ result: Schema.Array(Schema.Struct({ metric: Schema.Record(Schema.String, Schema.String) })) }),
+})
+
+const Vector = Schema.Struct({
+  data: Schema.Struct({
+    result: Schema.Array(
+      Schema.Struct({
+        metric: Schema.Record(Schema.String, Schema.String),
+        value: Schema.Tuple([Schema.Number, Schema.String]),
+      }),
+    ),
+  }),
 })
 
 const Rules = Schema.Struct({
@@ -120,6 +132,8 @@ export interface Ranges {
   readonly rules: Effect.Effect<ReadonlyMap<string, string>, Failure, Remote>
   /** A query now, as the labels of each series it gives: where a source can say which, such as a model's name. */
   readonly labels?: (query: string) => Effect.Effect<ReadonlyArray<Readonly<Record<string, string>>>, Failure, Remote>
+  /** A query now, as each series' labels and its value; a value that is not a finite number is left out. */
+  readonly instant?: (query: string) => Effect.Effect<ReadonlyArray<Reading>, Failure, Remote>
   /** How many queries a read asks at once: all of them, where the source batches them itself. */
   readonly concurrency?: number | "unbounded"
 }
@@ -138,6 +152,19 @@ export const prometheusRanges = (
       Effect.mapError(failure),
       Effect.flatMap(decoded(Instant)),
       Effect.map((answer) => answer.data.result.map((each) => each.metric)),
+    ),
+  instant: (query) =>
+    callJson({
+      url: `${prometheus.url}/api/v1/query?${new URLSearchParams({ query })}`,
+      headers: prometheus.headers,
+    }).pipe(
+      Effect.mapError(failure),
+      Effect.flatMap(decoded(Vector)),
+      Effect.map((answer) =>
+        answer.data.result.flatMap(({ metric, value: [, value] }) =>
+          Number.isFinite(Number(value)) ? [{ labels: metric, value: Number(value) }] : [],
+        ),
+      ),
     ),
   rules: Effect.gen(function* () {
     return new Map([...(yield* alertingRules(prometheus)), ...(yield* more)])

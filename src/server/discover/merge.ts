@@ -3,7 +3,7 @@
  * is and left out with its mistakes when it fails; a written entry of the same name wins whole.
  */
 import { Result } from "effect"
-import type { Catalog, Service } from "../../shared/catalog"
+import type { Catalog, Service, Store } from "../../shared/catalog"
 import { checkCatalog } from "../../shared/check"
 import type { Mistake } from "../../shared/shape"
 
@@ -37,11 +37,36 @@ export const checked = (
   return { kept, leftOut }
 }
 
-/** The written catalog with the found services after it, and the names a written entry took over. */
-export const shown = (written: Catalog, found: ReadonlyArray<Service>) => {
+/**
+ * The written catalog with the found services and stores after it, the names a written entry took over, and the
+ * found entries left out because an entry of another kind has their name: the written one wins, then a service.
+ */
+export const shown = (written: Catalog, found: ReadonlyArray<Service>, stores: ReadonlyArray<Store> = []) => {
   const names = new Set(written.services.map((service) => service.name))
+  const storeNames = new Set((written.stores ?? []).map((store) => store.name))
+  const foundServices = found.filter((service) => !names.has(service.name) && !storeNames.has(service.name))
+  const serviceNames = new Set([...names, ...foundServices.map((service) => service.name)])
+  const foundStores = stores.filter((store) => !storeNames.has(store.name) && !serviceNames.has(store.name))
+  const clashes = [
+    ...found
+      .filter((service) => !names.has(service.name) && storeNames.has(service.name))
+      .map((service) => `${service.name}: a written store has this name`),
+    ...stores
+      .filter((store) => !storeNames.has(store.name) && serviceNames.has(store.name))
+      .map((store) => `${store.name}: a ${names.has(store.name) ? "written" : "found"} service has this name`),
+  ]
   return {
-    catalog: { ...written, services: [...written.services, ...found.filter((service) => !names.has(service.name))] },
-    writtenOver: found.filter((service) => names.has(service.name)).map((service) => service.name),
+    clashes,
+    catalog: {
+      ...written,
+      services: [...written.services, ...foundServices],
+      ...(written.stores === undefined && foundStores.length === 0
+        ? {}
+        : { stores: [...(written.stores ?? []), ...foundStores] }),
+    },
+    writtenOver: [
+      ...found.filter((service) => names.has(service.name)).map((service) => service.name),
+      ...stores.filter((store) => storeNames.has(store.name)).map((store) => store.name),
+    ],
   }
 }

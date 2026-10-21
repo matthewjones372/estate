@@ -13,6 +13,9 @@ describe("a service found in a cluster", () => {
     expect(mount(() => <FoundMark discovered={{ ...discovered, from: "backstage" }} />).container.textContent).toBe(
       "found in Backstage",
     )
+    expect(mount(() => <FoundMark discovered={{ ...discovered, from: "prometheus" }} />).container.textContent).toBe(
+      "found in Prometheus",
+    )
     expect(mount(() => <FoundEntry discovered={undefined} />).container.textContent).toBe("")
   })
 

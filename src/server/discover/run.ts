@@ -1,10 +1,10 @@
 /**
  * Discovery every minute, beside the catalog file's reload: each environment read from Kubernetes asked what its
- * rules find, and the catalog shown made again from the written one and all that was found. A cluster that does not
- * answer keeps what it found last.
+ * rules find, its Prometheus what Kafka clusters it scrapes, and the catalog shown made again from the written one and
+ * all that was found. A source that does not answer keeps what it found last.
  */
 import { Effect, type FileSystem, Ref } from "effect"
-import type { Catalog, Service } from "../../shared/catalog"
+import type { Catalog, Service, Store } from "../../shared/catalog"
 import { withCatalog } from "../catalog-file"
 import type { Remote } from "../remote"
 import { forEver } from "../schedule"
@@ -13,6 +13,7 @@ import { clusterOf } from "../sources/kubernetes"
 import { runtimeOf } from "../sources/ports"
 import { type Estate, updateEstate } from "../state"
 import { entryOf as backstageEntry, componentsIn } from "./backstage"
+import { discoverKafka, togetherStores } from "./kafka"
 import { entryOf, together, workloadsIn } from "./kubernetes"
 import { checked, shown } from "./merge"
 
@@ -20,15 +21,17 @@ import { checked, shown } from "./merge"
 export interface Catalogs {
   readonly written: Ref.Ref<Catalog>
   readonly found: Ref.Ref<Readonly<Record<string, ReadonlyArray<Service>>>>
+  /** The Kafka clusters each environment's Prometheus was last found to scrape, as stores. */
+  readonly stores: Ref.Ref<Readonly<Record<string, ReadonlyArray<Store>>>>
   /** What was last said about entries left out, so a mistake is logged once, not every minute. */
   readonly said: Ref.Ref<string>
 }
 
 export const makeCatalogs = (written: Catalog): Effect.Effect<Catalogs> =>
-  Effect.all({ written: Ref.make(written), found: Ref.make({}), said: Ref.make("") })
+  Effect.all({ written: Ref.make(written), found: Ref.make({}), stores: Ref.make({}), said: Ref.make("") })
 
-/** The catalog shown made again; the state is left alone when it comes out the same. */
-const publish = (catalogs: Catalogs, settings: Settings): Effect.Effect<void, never, Estate> =>
+/** The catalog shown from what is written and found, and the found entries left out for a name already taken. */
+const shownNow = (catalogs: Catalogs) =>
   Effect.gen(function* () {
     const written = yield* Ref.get(catalogs.written)
     // In the rules' order, so that of two rules finding one name, the first's entry is the one kept.
@@ -41,7 +44,16 @@ const publish = (catalogs: Catalogs, settings: Settings): Effect.Effect<void, ne
         .sort(([a], [b]) => order(a) - order(b))
         .flatMap(([, each]) => each),
     )
-    const { catalog } = shown(written, found)
+    const stores = yield* Ref.get(catalogs.stores)
+    const merged = togetherStores(written.environments.flatMap((environment) => stores[environment.name] ?? []))
+    const { catalog, clashes } = shown(written, found, merged.stores)
+    return { catalog, clashes: [...merged.clashes, ...clashes] }
+  })
+
+/** The catalog shown made again; the state is left alone when it comes out the same. */
+const publish = (catalogs: Catalogs, settings: Settings): Effect.Effect<void, never, Estate> =>
+  Effect.gen(function* () {
+    const { catalog } = yield* shownNow(catalogs)
     yield* updateEstate((estate) =>
       JSON.stringify(estate.catalog) === JSON.stringify(catalog) ? estate : withCatalog(estate, catalog, settings),
     )
@@ -82,13 +94,9 @@ const discoverBackstage = (catalogs: Catalogs, settings: Settings, catalog: Cata
     return leftOut
   })
 
-/** Each environment's cluster, and Backstage, asked once what the rules find there. */
-export const discoverOnce = (
-  catalogs: Catalogs,
-  settings: Settings,
-): Effect.Effect<void, never, Estate | Remote | FileSystem.FileSystem> =>
+/** Each environment's cluster asked once what the Kubernetes rules find; returns what was left out, and why. */
+const discoverKubernetes = (catalogs: Catalogs, settings: Settings, catalog: Catalog) =>
   Effect.gen(function* () {
-    const catalog = yield* Ref.get(catalogs.written)
     const rules = (catalog.discover ?? []).flatMap((rule) =>
       rule.kubernetes === undefined ? [] : [{ ...rule, kubernetes: rule.kubernetes }],
     )
@@ -117,10 +125,30 @@ export const discoverOnce = (
       leftOut.push(...wrong.map((each) => `${environment.name} ${each.name}: ${each.mistakes[0]?.message ?? ""}`))
       yield* Ref.update(catalogs.found, (found) => ({ ...found, [environment.name]: kept }))
     }
-    leftOut.push(...(yield* discoverBackstage(catalogs, settings, catalog)))
-    const saying = leftOut.join("; ")
+    return leftOut
+  })
+
+/**
+ * Each environment's cluster and Prometheus, and Backstage, asked once what the rules find there. They are asked
+ * together, so that what is found reaches the page as soon as the slowest of them answers.
+ */
+export const discoverOnce = (
+  catalogs: Catalogs,
+  settings: Settings,
+): Effect.Effect<void, never, Estate | Remote | FileSystem.FileSystem> =>
+  Effect.gen(function* () {
+    const catalog = yield* Ref.get(catalogs.written)
+    const leftOut = yield* Effect.all(
+      [
+        discoverKubernetes(catalogs, settings, catalog),
+        discoverBackstage(catalogs, settings, catalog),
+        discoverKafka(catalogs.stores, settings, catalog),
+      ],
+      { concurrency: "unbounded" },
+    )
+    const saying = [...leftOut.flat(), ...(yield* shownNow(catalogs)).clashes].join("; ")
     if (saying !== (yield* Ref.getAndSet(catalogs.said, saying)) && saying !== "")
-      yield* Effect.logWarning(`discovered services left out, each with a mistake: ${saying}`)
+      yield* Effect.logWarning(`discovered entries left out, each with a mistake: ${saying}`)
     yield* publish(catalogs, settings)
   })
 

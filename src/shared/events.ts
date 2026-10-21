@@ -10,6 +10,7 @@ import { DeploysEvent } from "./deploys"
 import { FeedEvent } from "./feed"
 import { Suggested } from "./incidents"
 import { CardNote, Note } from "./note"
+import { DescribedStore } from "./stores"
 
 export { type Build, DeploysEvent } from "./deploys"
 
@@ -56,17 +57,7 @@ export const CatalogEvent = Schema.Struct({
     }),
   ),
   vitals: Schema.Array(Schema.Struct({ title: Schema.String, unit: optional(Schema.String) })),
-  stores: optional(
-    Schema.Array(
-      Schema.Struct({
-        name: Schema.String,
-        description: optional(Schema.String),
-        category: optional(Schema.String),
-        engine: Schema.String,
-        links: Schema.Array(Link),
-      }),
-    ),
-  ),
+  stores: optional(Schema.Array(DescribedStore)),
   teams: optional(
     Schema.Array(Schema.Struct({ name: Schema.String, title: Schema.String, links: Schema.Array(Link) })),
   ),

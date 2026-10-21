@@ -5,6 +5,7 @@ import { AroundAlert } from "../shared/around"
 import { AskAnswer } from "../shared/ask"
 import { type EventName, Load } from "../shared/events"
 import { PastFiring } from "../shared/firing"
+import { KafkaCluster } from "../shared/kafka-cluster"
 import { ErrorGroups, LogBatch } from "../shared/log-events"
 import { FiringEvent } from "../shared/timeline"
 import { TraceView } from "../shared/trace-view"
@@ -23,6 +24,7 @@ const decodeAsk = Schema.decodeUnknownOption(AskAnswer)
 const decodeThread = Schema.decodeUnknownOption(Schema.Struct({ url: Schema.String }))
 const decodeJourney = Schema.decodeUnknownOption(JourneySample)
 const decodeTrace = Schema.decodeUnknownOption(TraceView)
+const decodeCluster = Schema.decodeUnknownOption(KafkaCluster)
 
 /** A read that answers a 404 or 403 as "none", any other failure as undefined, and the body decoded. */
 const readOrNone = <A>(path: string, decode: (body: unknown) => Option.Option<A>): Promise<A | "none" | undefined> =>
@@ -148,6 +150,19 @@ export const serverActions = (
     loadFrom(
       `/api/store-load?env=${encodeURIComponent(environment())}&store=${encodeURIComponent(store)}&range=${range}`,
     ),
+  storeCluster: (store) =>
+    fetch(`/api/store-cluster?env=${encodeURIComponent(environment())}&store=${encodeURIComponent(store)}`)
+      .then((response) =>
+        response
+          .json()
+          .then((body) =>
+            response.ok
+              ? (Option.getOrUndefined(decodeCluster(body)) ?? "The cluster could not be read.")
+              : (Option.getOrUndefined(decodeMessage(body))?.message ??
+                `The cluster could not be read (${response.status}).`),
+          ),
+      )
+      .catch(() => "The cluster could not be read."),
   firing: (alert, at) =>
     fetch(
       `/api/firings/${encodeURIComponent(alert)}?env=${encodeURIComponent(environment())}${at === undefined ? "" : `&at=${encodeURIComponent(at)}`}`,
@@ -172,6 +187,7 @@ export const serverActions = (
       )
       .catch(() => undefined),
   askAlert: (alert, signal) => askAlert(environment(), alert, signal),
+  askStore: (store) => askAt(`/api/stores/${encodeURIComponent(store)}/ask?env=${encodeURIComponent(environment())}`),
   ...incidentsOn(environment),
   timelineMarkdown: (of) =>
     fetch(timelinePath(of, environment(), "md"))
@@ -206,11 +222,14 @@ export const serverActions = (
 })
 
 const askAlert = (environment: string, alert: string, signal: AbortSignal): Promise<AskAnswer | string> =>
-  fetch(`/api/alerts/${encodeURIComponent(alert)}/ask?env=${encodeURIComponent(environment)}`, {
+  askAt(`/api/alerts/${encodeURIComponent(alert)}/ask?env=${encodeURIComponent(environment)}`, signal)
+
+const askAt = (path: string, signal?: AbortSignal): Promise<AskAnswer | string> =>
+  fetch(path, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: "{}",
-    signal,
+    ...(signal === undefined ? {} : { signal }),
   })
     .then(
       (response): Promise<AskAnswer | string> =>

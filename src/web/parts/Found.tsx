@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-/** A service found rather than written (spec 0031): where it was found, and its entry to put in the catalog. */
+/** A service or store found rather than written (specs 0031, 0057): where it was found, and its catalog entry. */
 import { createSignal, Show } from "solid-js"
 
 interface Discovered {
@@ -7,13 +7,19 @@ interface Discovered {
   readonly yaml: string
 }
 
-const where = (from: string) => (from === "kubernetes" ? "Kubernetes" : from === "backstage" ? "Backstage" : from)
+const places: Readonly<Record<string, string>> = {
+  kubernetes: "Kubernetes",
+  backstage: "Backstage",
+  prometheus: "Prometheus",
+}
+
+const where = (from: string) => places[from] ?? from
 
 export const FoundMark = (props: { readonly discovered: Discovered | undefined }) => (
   <Show when={props.discovered}>{(found) => <span class="muted found">found in {where(found().from)}</span>}</Show>
 )
 
-/** On a found service's page: that it is not written, and its entry copied for the catalog. */
+/** On a found service's or store's page: that it is not written, and its entry copied for the catalog. */
 export const FoundEntry = (props: { readonly discovered: Discovered | undefined }) => {
   const [copied, setCopied] = createSignal(false)
   const copy = (yaml: string) =>

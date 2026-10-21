@@ -21,6 +21,12 @@ const withStores: Events = {
         links: [{ name: "dashboard", url: "https://grafana.example/d/cnpg" }],
       },
       { name: "cache", engine: "redis", links: [] },
+      {
+        name: "bus",
+        engine: "kafka",
+        links: [],
+        discovered: { from: "prometheus", yaml: "- name: bus\n  engine: kafka\n" },
+      },
     ],
     map: {
       nodes: [
@@ -84,6 +90,14 @@ describe("stores on the overview", () => {
     expect(page).toContain("Connections used")
     expect(page).toContain("cache Unknown")
     expect(text(render(() => <Overview />))).not.toContain("Stores")
+  })
+
+  test("say when they were found rather than written", () => {
+    expect(text(render(() => <Overview />, { sent: withStores }))).toContain("bus Unknown kafka found in Prometheus")
+    expect(text(render(() => <StorePage name="bus" />, { sent: withStores }))).toMatch(
+      /Found in Prometheus ?, not written in the catalog\. Copy as YAML/,
+    )
+    expect(text(render(() => <StorePage name="orders-db" />, { sent: withStores }))).not.toContain("Found in")
   })
 
   test("count in the headline when they need someone", () => {

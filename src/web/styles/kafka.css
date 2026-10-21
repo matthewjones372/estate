@@ -1,0 +1,228 @@
+/* A Kafka store's cluster (spec 0057): topics in, the cluster's brokers, groups out, joined by flowing lines. */
+.kafka-diagram {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) minmax(0, 3fr) minmax(200px, 1.2fr);
+  align-items: center;
+}
+.kafka-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.kafka-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.kafka-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.kafka-row {
+  display: flex;
+  align-items: center;
+}
+.kafka-card {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-block: 8px;
+  padding-inline: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--raised);
+  color: var(--ink);
+  font-size: 0.875rem;
+  text-align: start;
+}
+button.kafka-card {
+  cursor: pointer;
+}
+.kafka-card.attention {
+  border-color: var(--amber-line);
+  background: var(--amber-panel);
+}
+.kafka-card.attention .kafka-card-line {
+  color: var(--amber-text);
+}
+.kafka-card.marked,
+.kafka-chip.marked {
+  outline: 2px solid var(--link);
+  outline-offset: 1px;
+}
+.kafka-card-line {
+  font-size: 0.8125rem;
+  color: var(--quiet);
+}
+.kafka-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: var(--panel);
+  min-width: 0;
+}
+.kafka-brokers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.kafka-broker {
+  flex: 1 1 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--raised);
+}
+.kafka-broker h4 {
+  margin: 0;
+  font-size: 0.875rem;
+}
+.kafka-broker.gone,
+.kafka-broker.none {
+  border-style: dashed;
+  border-color: var(--critical-line);
+  background: var(--critical-panel);
+}
+.kafka-broker.gone h4,
+.kafka-broker.gone p,
+.kafka-broker.none h4 {
+  color: var(--critical);
+}
+.kafka-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kafka-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding-inline: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--chip);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+button.kafka-chip {
+  cursor: pointer;
+  text-align: start;
+}
+.kafka-chip.attention {
+  border-color: var(--amber-ring);
+  background: var(--amber-panel);
+  color: var(--amber-text);
+}
+.kafka-chip.critical {
+  border-color: var(--critical);
+  background: var(--critical-panel);
+  color: var(--critical);
+}
+.kafka-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 0.8125rem;
+  color: var(--quiet);
+}
+.kafka-key label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+
+/* A flow: dashes that move faster, on a thicker line, the more messages a second; still with none. */
+.kafka-flow {
+  flex: 1 1 48px;
+  min-inline-size: 40px;
+  block-size: 10px;
+  overflow: visible;
+}
+.kafka-flow line {
+  stroke: var(--quiet);
+  stroke-dasharray: 3 9;
+  vector-effect: non-scaling-stroke;
+  animation: flow 1.2s linear infinite;
+}
+.kafka-flow polygon {
+  fill: var(--quiet);
+}
+.kafka-flow.behind line {
+  stroke: var(--amber);
+}
+.kafka-flow.behind polygon {
+  fill: var(--amber);
+}
+.kafka-flow.step-0 line {
+  stroke-dasharray: none;
+  opacity: 0.35;
+  animation: none;
+}
+.kafka-flow.step-1 line {
+  stroke-width: 1;
+  animation-duration: 3.2s;
+}
+.kafka-flow.step-2 line {
+  stroke-width: 1.5;
+  animation-duration: 2s;
+}
+.kafka-flow.step-3 line {
+  stroke-width: 2;
+  animation-duration: 1.2s;
+}
+.kafka-flow.step-4 line {
+  stroke-width: 3;
+  animation-duration: 0.7s;
+}
+.kafka-flow.step-5 line {
+  stroke-width: 4;
+  animation-duration: 0.4s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kafka-flow line {
+    animation: none;
+  }
+}
+
+/* In a narrow panel the diagram reads top to bottom, its flows pointing down: the panel's width, not the screen's. */
+.kafka-panel {
+  container-type: inline-size;
+}
+@container (max-width: 50em) {
+  .kafka-diagram {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .kafka-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .kafka-flow {
+    flex: 0 0 auto;
+    align-self: center;
+    inline-size: 28px;
+    min-inline-size: 28px;
+    margin-block: 9px;
+    transform: rotate(90deg);
+  }
+}
