@@ -1,7 +1,8 @@
 /** @jsxImportSource solid-js */
 /**
  * *Include in incident* (spec 0051): what the page shows, kept in one of the incidents open now with a line on why.
- * Offered to anyone who may write, while an incident is open; a screen and a read-only Estate change nothing.
+ * Offered to anyone who may write, while an incident is open; a screen and a read-only Estate change nothing. Several
+ * things picked together (spec 0063) go in one press, stopping at the first the server refuses.
  */
 import { createSignal, For, onMount, Show } from "solid-js"
 import type { Incident } from "../../shared/incidents"
@@ -18,10 +19,24 @@ const openNow = (actions: Actions, now: number) => {
   return read
 }
 
-export const IncludeInIncident = (props: { readonly label: string; readonly what: () => Included }) => {
+export const IncludeInIncident = (props: {
+  readonly label: string
+  readonly what: () => Included | ReadonlyArray<Included>
+  /** Said while choosing, when what goes is picked on the page. */
+  readonly hint?: string
+  readonly onChoosing?: (choosing: boolean) => void
+}) => {
   const { me, actions } = useEstate()
   const [open, setOpen] = createSignal<ReadonlyArray<Incident>>([])
-  const [choosing, setChoosing] = createSignal(false)
+  const [choosing, setChosen] = createSignal(false)
+  const setChoosing = (now: boolean) => {
+    setChosen(now)
+    props.onChoosing?.(now)
+  }
+  const all = (): ReadonlyArray<Included> => {
+    const what = props.what()
+    return "kind" in what ? [what] : what
+  }
   const [why, setWhy] = createSignal("")
   const [busy, setBusy] = createSignal(false)
   const [told, setTold] = createSignal("")
@@ -30,14 +45,22 @@ export const IncludeInIncident = (props: { readonly label: string; readonly what
     if (me.kiosk !== true && me.readOnly !== true) void openNow(actions, Date.now()).then(setOpen)
   })
   const include = (incident: Incident) => {
-    if (busy()) return
+    const going = all()
+    if (busy() || going.length === 0) return
     setBusy(true)
     setRefused(undefined)
     const reason = why().trim()
-    void actions.include(incident.id, { ...props.what(), ...(reason === "" ? {} : { why: reason }) }).then((kept) => {
+    const each = (index: number): Promise<string | undefined> => {
+      const what = going[index]
+      if (what === undefined) return Promise.resolve(undefined)
+      return actions
+        .include(incident.id, { ...what, ...(reason === "" ? {} : { why: reason }) })
+        .then((kept) => (typeof kept === "string" ? kept : each(index + 1)))
+    }
+    void each(0).then((said) => {
       setBusy(false)
-      if (typeof kept === "string") {
-        setRefused(kept)
+      if (said !== undefined) {
+        setRefused(said)
         return
       }
       setChoosing(false)
@@ -62,6 +85,7 @@ export const IncludeInIncident = (props: { readonly label: string; readonly what
       >
         <fieldset class="silencing include-chooser" aria-busy={busy()}>
           <legend class="visually-hidden">{props.label}</legend>
+          <Show when={props.hint}>{(hint) => <p class="muted flush">{hint()}</p>}</Show>
           <label class="reason include-why">
             Why, if you want to say
             <input
@@ -76,8 +100,13 @@ export const IncludeInIncident = (props: { readonly label: string; readonly what
           <div class="choices">
             <For each={open()}>
               {(incident) => (
-                <button type="button" class="choice" disabled={busy()} onClick={() => include(incident)}>
-                  Include in {incident.title}
+                <button
+                  type="button"
+                  class="choice"
+                  disabled={busy() || all().length === 0}
+                  onClick={() => include(incident)}
+                >
+                  Include {all().length > 1 ? `${all().length} ` : ""}in {incident.title}
                 </button>
               )}
             </For>

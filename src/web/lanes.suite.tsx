@@ -110,6 +110,8 @@ describe("the map of a large estate", () => {
         },
       },
     })
+    page.click(page.button("Lines"))
+    await page.settle()
     const nodes = () => [...page.container.querySelectorAll(".map-node")].map((node) => node.textContent?.trim())
     expect(nodes()).toEqual(["Shop7 nodes", "Data7 nodes"])
     page.click(page.button(/^Data/))
@@ -118,6 +120,7 @@ describe("the map of a large estate", () => {
     page.click(page.button("Close Data"))
     await page.settle()
     expect(nodes()).toHaveLength(2)
+    window.localStorage.removeItem("estate.map.view")
   })
 })
 
