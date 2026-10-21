@@ -1,0 +1,316 @@
+# The demo's estate: Larder, an online grocer that never was, in two environments. Every tool it names is played by
+# examples/demo/world.ts, which answers for whatever is written here; add a service and it has pods, versions and load.
+environments:
+  - name: production
+    title: Production, three zones
+    sources: production
+  - name: staging
+    title: Staging, one zone
+    sources: staging
+
+discover:
+  # loyalty is not written below: its Deployment is labelled, and Kubernetes finds it.
+  - kubernetes: { selector: estate.dev/show=true, namespaces: [ orders ] }
+    service:
+      category: "{label:app.kubernetes.io/part-of}"
+      owner: "{label:team}"
+      load:
+        requests: sum(rate(http_requests_total{app="{name}"}[1m]))
+        errors: sum(rate(http_requests_total{app="{name}",code=~"5.."}[1m]))
+        p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="{name}"}[5m])))
+  # Every Kafka cluster kafka_exporter is scraped for, one store per Strimzi cluster.
+  - kafka: { by: [ namespace, strimzi_io_cluster ], selector: 'job="kafka-exporter"' }
+    store:
+      name: "{label:strimzi_io_cluster}"
+      category: Data
+      description: "Strimzi cluster {label:strimzi_io_cluster} in {label:namespace}"
+
+teams:
+  - name: storefront
+    title: Storefront
+    links: { slack: https://larder.example/slack/storefront, oncall: https://larder.example/oncall/storefront }
+  - name: orders
+    title: Orders
+    links: { slack: https://larder.example/slack/orders, oncall: https://larder.example/oncall/orders }
+  - name: payments
+    title: Payments
+    links: { slack: https://larder.example/slack/payments }
+  - name: fulfilment
+    title: Fulfilment
+    links: { slack: https://larder.example/slack/fulfilment, oncall: https://larder.example/oncall/fulfilment }
+  - name: platform
+    title: Platform
+    links: { slack: https://larder.example/slack/platform }
+
+services:
+  # Shop: what customers see.
+  - name: web
+    category: Shop
+    owner: storefront
+    description: The shop's pages, from the aisles to the basket
+    repository: github:larder/web
+    build: { github: { workflow: build.yml } }
+    environments: [ production, staging ]
+    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: web } ] }
+    deploy: { flux: { kustomization: shop, imagePolicy: web } }
+    load:
+      requests: sum(rate(http_requests_total{app="web"}[1m]))
+      errors: sum(rate(http_requests_total{app="web",code=~"5.."}[1m]))
+      p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="web"}[5m])))
+    links: { app: "https://{env}.larder.example", dashboard: "https://grafana.larder.example/d/{service}?env={env}" }
+    stats: { preset: container }
+  - name: mobile-api
+    category: Shop
+    owner: storefront
+    description: What the apps ask for
+    repository: github:larder/mobile-api
+    build: { github: { workflow: build.yml } }
+    environments: [ production, staging ]
+    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: mobile-api } ] }
+    deploy: { flux: { kustomization: shop, imagePolicy: mobile-api } }
+    load:
+      requests: sum(rate(http_requests_total{app="mobile-api"}[1m]))
+      errors: sum(rate(http_requests_total{app="mobile-api",code=~"5.."}[1m]))
+      p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="mobile-api"}[5m])))
+  - name: search
+    category: Shop
+    owner: storefront
+    description: Finds groceries as customers type
+    repository: github:larder/search
+    environments: [ production, staging ]
+    kubernetes: { namespace: shop, workloads: [ { kind: StatefulSet, name: search } ] }
+    load:
+      requests: sum(rate(http_requests_total{app="search"}[1m]))
+      errors: sum(rate(http_requests_total{app="search",code=~"5.."}[1m]))
+      p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="search"}[5m])))
+  - name: recommendations
+    category: Shop
+    owner: storefront
+    description: "You bought pasta; you may want parmesan"
+    environments: [ production, staging ]
+    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: recommendations } ] }
+    load:
+      requests: sum(rate(http_requests_total{app="recommendations"}[1m]))
+      errors: sum(rate(http_requests_total{app="recommendations",code=~"5.."}[1m]))
+  - name: basket
+    category: Shop
+    owner: storefront
+    description: Keeps what each customer means to buy
+    repository: github:larder/basket
+    build: { github: { workflow: build.yml } }
+    environments: [ production, staging ]
+    kubernetes: { namespace: shop, workloads: [ { kind: Deployment, name: basket } ] }
+    deploy: { flux: { kustomization: shop, imagePolicy: basket } }
+    load:
+      requests: sum(rate(http_requests_total{app="basket"}[1m]))
+      errors: sum(rate(http_requests_total{app="basket",code=~"5.."}[1m]))
+      p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="basket"}[5m])))
+
+  # Orders: a basket becomes an order and goes on the bus.
+  - name: checkout
+    category: Orders
+    owner: orders
+    description: Takes the basket, the slot and the payment, and places the order
+    repository: github:larder/checkout
+    build: { github: { workflow: build.yml } }
+    runbook: https://larder.example/runbooks/checkout
+    environments: [ production, staging ]
+    kubernetes: { namespace: orders, workloads: [ { kind: Deployment, name: checkout } ] }
+    deploy: { flux: { kustomization: orders, imagePolicy: checkout } }
+    load:
+      requests: sum(rate(http_requests_total{app="checkout"}[1m]))
+      errors: sum(rate(http_requests_total{app="checkout",code=~"5.."}[1m]))
+      p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="checkout"}[5m])))
+    links: { traces: "https://grafana.larder.example/explore?env={env}&traces={service}" }
+    stats: { preset: jvm }
+  - name: orders
+    category: Orders
+    owner: orders
+    description: Every order, from placed to delivered, and the outbox that puts it on the bus
+    repository: github:larder/orders
+    build: { github: { workflow: build.yml } }
+    environments: [ production, staging ]
+    kubernetes: { namespace: orders, workloads: [ { kind: Deployment, name: orders } ] }
+    deploy: { flux: { kustomization: orders, imagePolicy: orders } }
+    load:
+      requests: sum(rate(http_requests_total{app="orders"}[1m]))
+      errors: sum(rate(http_requests_total{app="orders",code=~"5.."}[1m]))
+      p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="orders"}[5m])))
+    stats:
+      preset: jvm
+      extra: [ { title: Waiting in the outbox, query: 'sum(outbox_waiting{app="orders"})' } ]
+  - name: pricing
+    category: Orders
+    owner: orders
+    description: Prices, offers and the delivery charge
+    environments: [ production, staging ]
+    kubernetes: { namespace: orders, workloads: [ { kind: Deployment, name: pricing } ] }
+    load:
+      requests: sum(rate(http_requests_total{app="pricing"}[1m]))
+      errors: sum(rate(http_requests_total{app="pricing",code=~"5.."}[1m]))
+
+  # Payments.
+  - name: payments
+    category: Payments
+    owner: payments
+    description: Takes the money, through the card provider
+    repository: github:larder/payments
+    build: { github: { workflow: build.yml } }
+    environments: [ production, staging ]
+    kubernetes: { namespace: payments, workloads: [ { kind: StatefulSet, name: payments } ] }
+    deploy: { flux: { kustomization: payments, imagePolicy: payments } }
+    load:
+      requests: sum(rate(http_requests_total{app="payments"}[1m]))
+      errors: sum(rate(http_requests_total{app="payments",code=~"5.."}[1m]))
+      p99: histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{app="payments"}[5m])))
+  - name: fraud
+    category: Payments
+    owner: payments
+    description: Scores each payment before it is taken
+    environments: [ production, staging ]
+    kubernetes: { namespace: payments, workloads: [ { kind: Deployment, name: fraud } ] }
+    load:
+      requests: sum(rate(http_requests_total{app="fraud"}[1m]))
+      errors: sum(rate(http_requests_total{app="fraud",code=~"5.."}[1m]))
+
+  # Fulfilment: from the bus to the door.
+  - name: inventory
+    category: Fulfilment
+    owner: fulfilment
+    description: What is on the shelves in each warehouse
+    repository: github:larder/inventory
+    build: { github: { workflow: build.yml } }
+    environments: [ production, staging ]
+    kubernetes: { namespace: fulfilment, workloads: [ { kind: Deployment, name: inventory } ] }
+    deploy: { flux: { kustomization: fulfilment, imagePolicy: inventory } }
+    load:
+      requests: sum(rate(http_requests_total{app="inventory"}[1m]))
+      errors: sum(rate(http_requests_total{app="inventory",code=~"5.."}[1m]))
+  - name: picking
+    category: Fulfilment
+    owner: fulfilment
+    description: Reads orders off the bus and makes the warehouse's pick lists
+    repository: github:larder/picking
+    build: { github: { workflow: build.yml } }
+    environments: [ production, staging ]
+    kubernetes: { namespace: fulfilment, workloads: [ { kind: Deployment, name: picking } ] }
+    deploy: { flux: { kustomization: fulfilment, imagePolicy: picking } }
+    load:
+      requests: sum(rate(http_requests_total{app="picking"}[1m]))
+      errors: sum(rate(http_requests_total{app="picking",code=~"5.."}[1m]))
+    stats: { preset: jvm }
+  - name: delivery
+    category: Fulfilment
+    owner: fulfilment
+    description: Vans, routes and slots
+    environments: [ production, staging ]
+    kubernetes: { namespace: fulfilment, workloads: [ { kind: Deployment, name: delivery } ] }
+    load:
+      requests: sum(rate(http_requests_total{app="delivery"}[1m]))
+      errors: sum(rate(http_requests_total{app="delivery",code=~"5.."}[1m]))
+
+  # Platform.
+  - name: identity
+    category: Platform
+    owner: platform
+    description: Sign-in for customers and staff
+    environments: [ production, staging ]
+    kubernetes: { namespace: platform, workloads: [ { kind: Deployment, name: identity } ] }
+    load:
+      requests: sum(rate(http_requests_total{app="identity"}[1m]))
+      errors: sum(rate(http_requests_total{app="identity",code=~"5.."}[1m]))
+  - name: notifications
+    category: Platform
+    owner: platform
+    description: "Emails and texts: order placed, van on its way"
+    environments: [ production, staging ]
+    kubernetes: { namespace: platform, workloads: [ { kind: Deployment, name: notifications } ] }
+    load:
+      requests: sum(rate(http_requests_total{app="notifications"}[1m]))
+      errors: sum(rate(http_requests_total{app="notifications",code=~"5.."}[1m]))
+
+stores:
+  - name: orders-db
+    category: Orders
+    description: Orders, baskets and the outbox
+    environments: [ production, staging ]
+    engine: cnpg
+    selector: 'cnpg_io_cluster="orders-db"'
+  - name: stock-db
+    category: Fulfilment
+    description: Stock in every warehouse
+    environments: [ production, staging ]
+    engine: cnpg
+    selector: 'cnpg_io_cluster="stock-db"'
+  - name: sessions
+    category: Shop
+    description: Who is signed in, and their baskets in flight
+    environments: [ production, staging ]
+    engine: redis
+    selector: 'instance="sessions:9121"'
+
+jobs:
+  - name: stock-count
+    category: Fulfilment
+    owner: fulfilment
+    description: Counts every shelf overnight and puts the numbers right
+    environments: [ production ]
+    run: { kubernetes: { namespace: fulfilment, cronJob: stock-count } }
+
+agents:
+  - name: substitutions
+    category: Orders
+    owner: orders
+    description: Picks a substitute when a product is out of stock
+    environments: [ production ]
+    usage:
+      runs: sum(rate(gen_ai_client_operation_duration_seconds_count{gen_ai_agent_name="substitutions"}[5m]))
+      errors: sum(rate(gen_ai_client_operation_duration_seconds_count{gen_ai_agent_name="substitutions",error_type!=""}[5m]))
+      tokens: sum(rate(gen_ai_client_token_usage_sum{gen_ai_agent_name="substitutions"}[5m])) * 3600
+      spent: sum(increase(gen_ai_client_token_usage_sum{gen_ai_agent_name="substitutions"}[1d]))
+    budget: { tokens: 20000000, per: day }
+
+alerts:
+  CheckoutSlow: { impact: "Customers wait at the last step, and some leave their basket." }
+  ConsumerLagGrowing: { impact: "Orders reach the warehouse late; slots may be missed." }
+
+vitals:
+  - { title: Orders, query: 'sum(rate(orders_placed_total[5m]))', unit: /s }
+  - { title: Baskets, query: 'sum(rate(baskets_created_total[5m]))', unit: /s }
+
+journeys:
+  - name: order
+    title: Placing an order
+    environments: [ production, staging ]
+    start: { service: web, span: place order }
+    stages:
+      - { title: Reaches checkout, where: web, from: { start: place order }, to: { start: POST /checkout, service: checkout } }
+      - { title: Takes the payment, where: payments, span: take payment }
+      - { title: Writes the order, where: orders, span: INSERT orders }
+      - { title: Waits in the outbox, where: orders, from: { end: INSERT orders }, to: { start: publish } }
+      - { title: On the bus, where: orders, span: publish }
+
+map:
+  nodes:
+    - { id: web, service: web }
+    - { id: mobile-api, service: mobile-api }
+    - { id: search, service: search }
+    - { id: basket, service: basket }
+    - { id: checkout, service: checkout }
+    - { id: payments, service: payments }
+    - { id: orders, service: orders }
+    - { id: db, title: Postgres, store: orders-db }
+    - { id: picking, service: picking }
+    - { id: delivery, service: delivery }
+    - { id: cards, title: Card provider, kind: external }
+  edges:
+    - { from: web, to: search, label: search, rate: 'sum(rate(http_requests_total{app="search"}[1m]))' }
+    - { from: web, to: basket, label: basket, rate: 'sum(rate(http_requests_total{app="basket"}[1m]))' }
+    - { from: mobile-api, to: basket, label: basket }
+    - { from: web, to: checkout, label: checkout, rate: 'sum(rate(http_requests_total{app="checkout"}[1m]))', alert: CheckoutSlow }
+    - { from: checkout, to: payments, label: pay, rate: 'sum(rate(http_requests_total{app="payments"}[1m]))' }
+    - { from: checkout, to: orders, label: places }
+    - { from: orders, to: db, label: writes }
+    - { from: orders, to: picking, label: on the bus, alert: ConsumerLagGrowing }
+    - { from: picking, to: delivery, label: slots }
+    - { from: payments, to: cards, label: charges }

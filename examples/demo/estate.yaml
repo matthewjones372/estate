@@ -1,0 +1,32 @@
+# Estate's settings for the demo: every tool of both environments is examples/demo/world.ts on port 8484, each
+# environment a path of its own under it. Started by `bun examples/demo/run.ts`.
+port: 8080
+catalog: examples/demo/catalog.yaml
+
+auth:
+  sessionSecret: a-secret-for-the-demo-only-never-for-a-real-estate
+  roles: { viewer: [ developers ], operator: [ ops ] }
+  anonymous: { name: demo, role: operator }
+
+# A screen on the wall: /kiosk?token=demo-screen shows each environment in turn.
+kiosk: { token: demo-screen, environments: [ production, staging ], every: 10s }
+
+# Ask AI, from a model the world plays: its answers are canned, and say so.
+ai: { provider: openai-compatible, url: http://127.0.0.1:8484/v1, model: canned-demo-model }
+
+builds:
+  github: { url: http://127.0.0.1:8484 }
+
+sources:
+  production:
+    prometheus: { url: http://127.0.0.1:8484/production }
+    alertmanager: { url: http://127.0.0.1:8484/production }
+    kubernetes: { url: http://127.0.0.1:8484/production, token: demo }
+    tempo: { url: http://127.0.0.1:8484/production }
+    flux: {}
+  staging:
+    prometheus: { url: http://127.0.0.1:8484/staging }
+    alertmanager: { url: http://127.0.0.1:8484/staging }
+    kubernetes: { url: http://127.0.0.1:8484/staging, token: demo }
+    tempo: { url: http://127.0.0.1:8484/staging }
+    flux: {}
