@@ -49,12 +49,11 @@ discover:
   - kafka:
       by: [ namespace, strimzi_io_cluster ]   # the labels that tell one cluster from another
       selector: 'job=~"kafka-exporter.*"'     # optional: only these exporters' series
-    # What each cluster found becomes. Values may name {label:KEY} for any `by` label, and {env}.
+    # What each cluster found becomes. Values may name {label:KEY} for any `by` label; links
+    # may also name what a written link does, such as {env}.
     store:
       name: "{label:strimzi_io_cluster}"
       category: Data
-      owner: "{label:team}"
-      jmx: 'strimzi_io_cluster="{label:strimzi_io_cluster}",namespace="{label:namespace}"'
       links: { dashboard: "https://grafana.{env}.example/d/kafka?var-cluster={label:strimzi_io_cluster}" }
 ```
 
@@ -217,22 +216,22 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
 
 ## Stack
 
-- [ ] **`instant-readings`** — `instant` on the metrics source: a query now, as each series' labels and value, for
-      Prometheus and Grafana's proxy.
-      Done when: against the Prometheus stub, an instant query gives labels with numbers, `NaN` and `+Inf` are
-      dropped, and a failing source is a `SourceFailure`.
-- [ ] **`discover-kafka-rule`** — `kafka:` and `store:` in a discover rule, and its checks.
+- [x] **`discover-kafka-rule`** — `kafka:` and `store:` in a discover rule, and its checks.
       Done when: a rule with no `by`, with `{label:x}` not among its `by`, or with `service:`, is a catalog mistake
       that says so.
 - [ ] **`discover-kafka`** — every minute, each environment's clusters found from kafka_exporter's series, checked,
       and put after the written stores, which win by name.
       Done when: against the Prometheus stub, two clusters in two environments are two stores in both, each with its
-      selector and filled `jmx:`; a written store of the same name replaces one; and a failing Prometheus keeps what
+      selector and its template filled; a written store of the same name replaces one; and a failing Prometheus keeps what
       was found.
 - [ ] **`discover-kafka-page`** — *found in Prometheus* on a found store's lane and page, *Copy as YAML*, and the
       doctor's line.
       Done when: the page suite shows the mark and copies an entry that parses as a catalog store, and the doctor
       names what was found, written over and left out.
+- [ ] **`instant-readings`** — `instant` on the metrics source: a query now, as each series' labels and value, for
+      Prometheus and Grafana's proxy.
+      Done when: against the Prometheus stub, an instant query gives labels with numbers, `NaN` and `+Inf` are
+      dropped, and a failing source is a `SourceFailure`.
 - [ ] **`kafka-cluster-read`** — the cluster from kafka_exporter into one shape in `shared`, at
       `GET /api/store-cluster`.
       Done when: against the stub, three brokers with one gone, a partition under-replicated, one without a leader
@@ -247,7 +246,7 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
       partitions above.
 - [ ] **`kafka-cluster-detail`** — the detail beside the view for a broker, partition, group or topic.
       Done when: a suite opens each, and a partition's detail lists the groups reading it with their lag.
-- [ ] **`kafka-cluster-jmx`** — `jmx:` on a Kafka store, and followers, the controller quorum and per-broker rates
+- [ ] **`kafka-cluster-jmx`** — `jmx:` on a Kafka store and in a Kafka rule's `store:`, and followers, the controller quorum and per-broker rates
       and sizes from it.
       Done when: against the stub, followers are placed in their brokers' columns, one out of sync is marked, the
       active controller is starred, and a store without `jmx:` says what it would show.
