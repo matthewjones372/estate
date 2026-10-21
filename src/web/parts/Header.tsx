@@ -31,6 +31,8 @@ const Switcher = () => {
   const worst = (name: string): Health =>
     snapshot.events.services?.environments.find((each) => each.name === name)?.worst ?? "unknown"
   const current = () => environments().find((each) => each.name === environment())
+  /** The environment's title, when it says more than its name; part of the button's name as it is of what it shows. */
+  const titled = () => (current()?.title !== current()?.name ? current()?.title : undefined)
   let button: HTMLButtonElement | undefined
   let list: HTMLUListElement | undefined
   // Under its button: anchor positioning does it where there is any, and this where there is none.
@@ -52,13 +54,11 @@ const Switcher = () => {
         class="switcher-button"
         popovertarget="environments"
         aria-expanded={open()}
-        aria-label={`Environment: ${environment()}. Change environment`}
+        aria-label={`Environment: ${environment()}${titled() === undefined ? "" : ` ${titled()}`}. Change environment`}
       >
         <span class={`dot ${worst(environment())}`} />
-        <strong>{environment()}</strong>
-        <Show when={current()?.title !== current()?.name ? current() : undefined}>
-          {(shown) => <span class="mono muted tiny">{shown().title}</span>}
-        </Show>
+        <strong>{environment()}</strong>{" "}
+        <Show when={titled()}>{(title) => <span class="mono muted tiny">{title()}</span>}</Show>
         <svg
           width="10"
           height="10"

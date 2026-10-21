@@ -66,7 +66,7 @@ a.map-step-part:hover {
   gap: 4px;
   padding: 0 4px;
   font-size: 0.6875rem;
-  color: var(--quiet);
+  color: var(--ink-3);
 }
 .map-arrow.map-hot {
   color: var(--amber-text);
