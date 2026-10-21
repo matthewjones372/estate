@@ -33,7 +33,8 @@ const Topic = Schema.Struct({ name: Schema.String, rate: Count, partitions: Sche
 const Group = Schema.Struct({
   name: Schema.String,
   members: Count,
-  lag: Schema.Number,
+  /** Null when the exporter's lag series could not be read: unknown, not caught up. */
+  lag: Count,
   /** Messages it reads a second, from how fast its committed offsets move. */
   rate: Count,
   /** How fast its lag grew over ten minutes, a second. */
@@ -148,27 +149,32 @@ const groupsFrom = (readings: Readings): KafkaCluster["groups"] => {
   const members = byKey(readings.members, groupOf)
   const growing = byKey(readings.growing, groupOf)
   const consumed = byKey(readings.consumed, groupOf)
-  const offsets = byKey(readings.offset, (labels) => `${groupOf(labels)} ${key(labels)}`)
-  const names = [...new Set([...members.keys(), ...readings.lag.map((reading) => groupOf(reading.labels))])]
+  const perPartition = (labels: Readonly<Record<string, string>>) => `${groupOf(labels)} ${key(labels)}`
+  const lags = byKey(readings.lag, perPartition)
+  const offsets = byKey(readings.offset, perPartition)
+  // A group's partitions are those either series names, so a lag series that fails keeps the offsets.
+  const read = [...new Map([...readings.lag, ...readings.offset].map(({ labels }) => [perPartition(labels), labels]))]
+  const names = [...new Set([...members.keys(), ...read.map(([, labels]) => groupOf(labels))])]
   return names
     .map((name) => {
-      const partitions = readings.lag
-        .filter((reading) => groupOf(reading.labels) === name)
-        .map(({ labels, value }) => ({
+      const partitions = read
+        .filter(([, labels]) => groupOf(labels) === name)
+        .map(([id, labels]) => ({
           topic: labels["topic"] ?? "",
           partition: Number(labels["partition"]),
-          offset: offsets.get(`${name} ${key(labels)}`) ?? null,
-          lag: value,
+          offset: offsets.get(id) ?? null,
+          lag: lags.get(id) ?? null,
         }))
         .sort((a, b) => a.topic.localeCompare(b.topic) || a.partition - b.partition)
+      const known = partitions.filter((partition) => partition.lag !== null)
       return {
         name,
         members: members.get(name) ?? null,
-        lag: partitions.reduce((sum, partition) => sum + (partition.lag ?? 0), 0),
+        lag: known.length === 0 ? null : known.reduce((sum, partition) => sum + (partition.lag ?? 0), 0),
         rate: consumed.get(name) ?? null,
         growing: growing.get(name) ?? null,
         partitions,
       }
     })
-    .sort((a, b) => b.lag - a.lag || a.name.localeCompare(b.name))
+    .sort((a, b) => (b.lag ?? 0) - (a.lag ?? 0) || a.name.localeCompare(b.name))
 }

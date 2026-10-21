@@ -37,7 +37,7 @@ export const clusterBrief = (store: Store, environment: string, cluster: KafkaCl
     "Consumer groups:",
     ...cluster.groups.map(
       (group) =>
-        `- ${group.name}: ${known(group.members)} members, reads ${known(group.rate)} a second, lag ${group.lag}, ` +
+        `- ${group.name}: ${known(group.members)} members, reads ${known(group.rate)} a second, lag ${known(group.lag)}, ` +
         `growing ${known(group.growing)} a second; lag by partition: ${group.partitions
           .map((each) => `${each.topic} p${each.partition} ${known(each.lag)}`)
           .join(", ")}`,

@@ -162,6 +162,20 @@ describe("a found name that is taken", () => {
       }),
     ))
 
+  test("by a written job or agent is left out, as it would be written", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const taken: Catalog = {
+          ...written,
+          jobs: [
+            { name: "bus", environments: ["staging"], run: { kubernetes: { namespace: "batch", cronJob: "bus" } } },
+          ],
+        }
+        const shown = yield* shownAfter(taken, [[]])
+        expect(shown.stores?.map((store) => store.name)).toEqual(["audit"])
+      }),
+    ))
+
   test("by a service or a store is left to the written entry, then to the found service", () => {
     const store = { name: "bus", environments: ["production"], engine: "kafka" as const, selector: "a" }
     const service = { name: "bus", environments: ["production"] }

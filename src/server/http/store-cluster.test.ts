@@ -69,6 +69,21 @@ describe("a Kafka store's cluster", () => {
       }),
     ))
 
+  test("says a group's lag is not known when its lag series fails, keeping its offsets", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const answer = exporter(Date.now() / 1000)
+        const answered = yield* asked("/api/store-cluster?env=staging&store=bus", (call) =>
+          new URL(call.url).searchParams.get("query")?.startsWith("kafka_consumergroup_lag")
+            ? reply({ error: "down" }, 503)
+            : answer(call),
+        )
+        const group = (answered.json() as KafkaCluster).groups[0]
+        expect(group?.lag).toBeNull()
+        expect(group?.partitions).toEqual([{ topic: "orders", partition: 0, offset: 1_870_340, lag: null }])
+      }),
+    ))
+
   test("is not there for a store that is not Kafka, one with no series, or without metrics, each saying why", () =>
     Effect.runPromise(
       Effect.gen(function* () {

@@ -48,7 +48,7 @@ export const Groups = (props: {
                   <strong>{group.name}</strong>{" "}
                   <span class="kafka-card-line">
                     {group.members ?? "?"} member{group.members === 1 ? "" : "s"} · {measured(group.rate, "/s")} · lag{" "}
-                    {group.lag.toLocaleString("en-GB")}
+                    {group.lag === null ? "unknown" : group.lag.toLocaleString("en-GB")}
                     {(group.growing ?? 0) > 0 ? ` ▲ ${measured(group.growing, "/s")}` : ""}
                   </span>{" "}
                   <Show when={behindWords(group)}>{(words) => <span class="kafka-card-line">{words()}</span>}</Show>

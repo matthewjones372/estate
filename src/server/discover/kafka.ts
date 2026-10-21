@@ -46,6 +46,10 @@ export const checkedStores = (written: Catalog, entries: ReadonlyArray<unknown>)
     const result = checkCatalog({
       environments: written.environments,
       services: written.services,
+      // Every kind a store's name must not share, and the teams their owners name.
+      ...(written.jobs === undefined ? {} : { jobs: written.jobs }),
+      ...(written.agents === undefined ? {} : { agents: written.agents }),
+      ...(written.teams === undefined ? {} : { teams: written.teams }),
       stores: [...(written.stores ?? []).filter((store) => store.name !== name), unmarked],
     })
     if (Result.isSuccess(result))
