@@ -7,7 +7,7 @@ import { Overview } from "./pages/Overview"
 import { scaled, shareOf } from "./parts/AgentLane"
 import { chatOf, teamOf } from "./teams"
 
-// These read and act on alerts' cards, which a viewer now chooses over the rows shown first (spec 0064).
+// These read and act on alerts' cards, which a viewer now chooses over the rows shown first (spec 0065).
 beforeEach(() => window.localStorage.setItem("estate.alerts.layout", "cards"))
 afterEach(() => window.localStorage.removeItem("estate.alerts.layout"))
 

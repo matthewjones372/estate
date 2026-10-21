@@ -1,10 +1,10 @@
 /** @jsxImportSource solid-js */
-/** Alerts about a service, firing and silenced: the "What's happening" block at the top of its page. */
+/** Alerts about a service: the "What's happening" block at the top of its page, firing ones and then silenced. */
 import { Show } from "solid-js"
 import type { Alert, CatalogEvent } from "../../shared/events"
 import { alertsLayout, LayoutChoice } from "./AlertsLayout"
 import { FiringAlerts } from "./FiringAlerts"
-import { Silenced } from "./Silenced"
+import { SilencedAlerts } from "./Silenced"
 
 export const ServiceAlerts = (props: {
   readonly alerts: ReadonlyArray<Alert>
@@ -12,6 +12,7 @@ export const ServiceAlerts = (props: {
   readonly canSilence: boolean
 }) => {
   const firing = () => props.alerts.filter((alert) => alert.state === "firing")
+  const silenced = () => props.alerts.filter((alert) => alert.state === "silenced")
   const { layout, choose, rows } = alertsLayout()
   return (
     <section aria-labelledby="service-alerts" class="stack">
@@ -33,7 +34,7 @@ export const ServiceAlerts = (props: {
         by="incident"
         rows={rows(firing())}
       />
-      <Silenced alerts={props.alerts} canSilence={props.canSilence} />
+      <SilencedAlerts alerts={silenced()} canSilence={props.canSilence} />
     </section>
   )
 }

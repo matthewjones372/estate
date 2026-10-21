@@ -9,7 +9,7 @@ import { ServicePage } from "./pages/Service"
 import { A } from "./parts/A"
 import { Header } from "./parts/Header"
 
-// These read and act on alerts' cards, which a viewer now chooses over the rows shown first (spec 0064).
+// These read and act on alerts' cards, which a viewer now chooses over the rows shown first (spec 0065).
 beforeEach(() => window.localStorage.setItem("estate.alerts.layout", "cards"))
 afterEach(() => window.localStorage.removeItem("estate.alerts.layout"))
 

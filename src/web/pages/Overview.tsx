@@ -14,7 +14,7 @@ import { FiringAlerts } from "../parts/FiringAlerts"
 import { Lanes } from "../parts/Lanes"
 import { EstateMap } from "../parts/Map"
 import { Signals } from "../parts/Signals"
-import { Silenced } from "../parts/Silenced"
+import { SilencedAlerts } from "../parts/Silenced"
 import { Reading, SourceNotices } from "./States"
 
 export interface Headline {
@@ -202,7 +202,7 @@ export const Overview = () => {
           by="incident and service"
           rows={rows(firing())}
         />
-        <Silenced alerts={silenced()} canSilence={canSilence()} />
+        <SilencedAlerts alerts={silenced()} canSilence={canSilence()} />
       </section>
       <Signals services={events().services?.services} />
       <section aria-label="Vitals and map" class="now">

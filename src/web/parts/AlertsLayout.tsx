@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-/** Auto, Cards or Rows for what is firing, Rows unless chosen (spec 0064), kept in this browser. */
+/** Auto, Cards or Rows for what is firing, Rows unless chosen (spec 0065), kept in this browser. */
 import { createSignal, For } from "solid-js"
 import type { Alert } from "../../shared/events"
 import { kept } from "../kept"

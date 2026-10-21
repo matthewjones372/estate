@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test"
 // The second estate, on other kinds of tool: e2e/cloud.yaml against e2e/cloud-tools.ts.
 const cloud = "http://127.0.0.1:8183"
 
-// These act on alerts' cards, which a viewer chooses over the rows shown first (spec 0064).
+// These act on alerts' cards, which a viewer chooses over the rows shown first (spec 0065).
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem("estate.alerts.layout", "cards"))
 })

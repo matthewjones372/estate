@@ -19,7 +19,7 @@ import { MayBelong } from "./MayBelong"
 import { Notes } from "./Notes"
 import { Plot } from "./Plot"
 import { RaiseIncident } from "./RaiseIncident"
-import { Silenced } from "./Silenced"
+import { SilencedRow } from "./Silenced"
 import { TellTeam } from "./TellTeam"
 
 const minutesUntilNine = (now: number): number => {
@@ -176,8 +176,8 @@ export const AlertCard = (props: {
       <History alert={props.alert} />
       <AroundLine alert={props.alert} />
       <Show when={props.alert.chart}>{(chart) => <Chart name={props.alert.name} chart={chart()} />}</Show>
+      <SilencedRow alert={props.alert} canSilence={props.canSilence} />
       <Notes alert={props.alert} folded={props.level !== 2} />
-      <Silenced alerts={[props.alert]} canSilence={props.canSilence} />
       <Show when={choosing()}>
         <Silencing alert={props.alert} close={() => setChoosing(false)} />
       </Show>
@@ -239,7 +239,7 @@ export const AlertCard = (props: {
             Lines from then
           </button>
         </Show>
-        <Show when={props.canSilence && !choosing() && props.alert.silence === undefined}>
+        <Show when={props.canSilence && props.alert.silence === undefined && !choosing()}>
           <button type="button" class="amber-button ghost push-right" onClick={() => setChoosing(true)}>
             <Icon name="silence" />
             Silence…

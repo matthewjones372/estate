@@ -23,7 +23,7 @@ const MapEdge = Schema.Struct({
 export const MapCounts = {
   /** Past how many nodes the map draws a node a category: 12 unless set, or never. */
   collapse: optional(Schema.Union([Schema.Number, Schema.Literal("never")])),
-  /** Past how many services the map's *Auto* is areas (spec 0064): 12 unless set, or never. */
+  /** Past how many services the map's *Auto* is areas (spec 0065): 12 unless set, or never. */
   areas: optional(Schema.Union([Schema.Number, Schema.Literal("never")])),
 }
 

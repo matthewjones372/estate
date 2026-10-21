@@ -12,7 +12,7 @@ const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screensh
 
 const services = (page: Page) => page.getByRole("region", { name: "The estate by area" })
 
-// These act on alerts' cards, which a viewer chooses over the rows shown first (spec 0064).
+// These act on alerts' cards, which a viewer chooses over the rows shown first (spec 0065).
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem("estate.alerts.layout", "cards"))
 })

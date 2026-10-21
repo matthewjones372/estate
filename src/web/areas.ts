@@ -148,7 +148,7 @@ export const troubleOf = (parts: ReadonlyMap<string, Part>, edges: ReadonlyArray
   return rows
 }
 
-/** Past `map.areas` services, 12 unless set, the map's *Auto* is areas (spec 0064); `never` keeps it drawn. */
+/** Past `map.areas` services, 12 unless set, the map's *Auto* is areas (spec 0065); `never` keeps it drawn. */
 export const manyServices = (catalog: CatalogEvent) => {
   const areas = catalog.map.areas ?? 12
   return areas !== "never" && catalog.services.length > areas

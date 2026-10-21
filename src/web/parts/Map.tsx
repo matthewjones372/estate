@@ -53,7 +53,7 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
     setChosen(next)
     choosing.write(next)
   }
-  // Auto is areas for many services or a phone's width, and the drawing otherwise (spec 0064).
+  // Auto is areas for many services or a phone's width, and the drawing otherwise (spec 0065).
   const view = () => {
     const now = chosen()
     return now !== "auto" ? now : manyServices(props.catalog) || narrow() ? "areas" : "lines"
