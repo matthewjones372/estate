@@ -54,11 +54,11 @@ export const Versions = (props: { readonly name: string }) => {
                     if (!here()) actions.choose(each.environment)
                   }}
                 >
-                  <span class="muted version-env">{each.environment}</span>
+                  <span class="muted version-env">{each.environment}</span>{" "}
                   <span class="cell-version mono">
                     <span class={`dot ${toneOf(each)}`} />
                     {versionOf(each)}
-                  </span>
+                  </span>{" "}
                   <Show when={note()}>{(shown) => <span class="cell-note attention">{shown()}</span>}</Show>
                 </button>
               )

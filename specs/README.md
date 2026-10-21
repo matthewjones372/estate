@@ -70,3 +70,4 @@ entries, one per pull request, each with what proves it done.
 | [0063](0063-charts-picked-once.md) | charts picked once: *Include charts…* once a panel instead of *Include…* under every chart, a box on each chart, and the ticked ones included in one press; done |
 | [0064](0064-a-silence-undone-where-it-was-made.md) | a silence undone where it was made: who silenced an alert, until when and why, and *Unsilence* for an operator, on the alert's card, its service's page and its store's page; done |
 | [0065](0065-what-each-view-starts-as.md) | what each view starts as: the map *Auto*, *Areas* or *Lines*, *Auto* areas past `map.areas` services or on a phone; what is firing as rows unless a viewer chooses cards; done |
+| [0066](0066-what-axe-still-found.md) | what axe still found: the environment switcher named with what it shows, version cells with spaces between their words, faint grey text made readable, and an unnamed database instance headed "(no name)"; done |

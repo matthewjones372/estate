@@ -33,7 +33,7 @@ const columnClass = (cluster: PostgresCluster, instance: Instance) =>
 
 const Column = (props: { readonly cluster: PostgresCluster; readonly instance: Instance }) => (
   <section class={`kafka-broker${columnClass(props.cluster, props.instance)}`}>
-    <h4>{props.instance.name}</h4>
+    <h4>{props.instance.name || "(no name)"}</h4>
     <p class="muted small flush">{roleOf(props.instance)}</p>
     <Show when={props.instance.connections !== null && props.instance.maxConnections !== null}>
       <meter
