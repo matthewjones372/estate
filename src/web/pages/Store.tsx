@@ -9,6 +9,7 @@ import { DatabasePanel } from "../parts/DatabaseCluster"
 import { FoundEntry } from "../parts/Found"
 import { ClusterPanel } from "../parts/KafkaCluster"
 import { HealthLine, Links } from "../parts/Lane"
+import { Silenced } from "../parts/Silenced"
 
 export const StorePage = (props: { readonly name: string; readonly message?: string | undefined }) => {
   const { actions, me, now } = useEstate()
@@ -72,6 +73,7 @@ export const StorePage = (props: { readonly name: string; readonly message?: str
               {(alert) => <AlertCard alert={alert} catalog={events().catalog} canSilence={canSilence()} />}
             </For>
           </div>
+          <Silenced alerts={alerts()} canSilence={canSilence()} />
         </section>
         <section aria-labelledby="store-today" class="panel section-box">
           <h2 id="store-today" class="section-title">
