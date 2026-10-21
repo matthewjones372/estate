@@ -76,7 +76,7 @@ other than `postgres` or `cnpg`.
 
 ```text
 petshop-db-3 is 42 s behind the primary and falling further. It is async, so writes go on; reads sent to it are stale.
-3 instances · 2 databases · timeline 4 · read 14:26
+3 instances · 2 databases · read 14:26
 
 CONNECTED FROM          ┌ POSTGRES 17 · 3 INSTANCES ────────────────────────────┐   WAL GOES TO
 ┌───────────────────┐   │ ┌ petshop-db-1 ┐ ┌ petshop-db-2 ┐ ┌ petshop-db-3   ┐ │   ┌──────────────────────┐
@@ -94,8 +94,9 @@ From the exporter every Postgres or cnpg store already has:
 - **Instances** are columns in the cluster, one per value of the label that names an instance (`pod` for cnpg,
   `instance` for postgres_exporter). The primary is first, then replicas by how far behind they are. An instance seen
   in the last hour that is not there now stays as a dashed column marked *gone*, with how long ago, as spec 0057's
-  gone broker does. A change of primary within the hour is said on the new primary: *promoted 3 min ago*, with the
-  timeline it moved to.
+  gone broker does. A change of primary within the hour is said on the new primary, *promoted in the last hour*,
+  from its role over the hour. Neither exporter's default series carry the timeline, so it is left out until one is
+  checked; nor do they say when in the hour the promotion was.
 - **Role** from `cnpg_pg_replication_in_recovery`, or `pg_replication_is_replica`. **Lag** from
   `cnpg_pg_replication_lag`, or `pg_replication_lag_seconds`, and the bytes still to replay from the primary's
   `pg_stat_replication` series, per replica. A replica past the store's `lag` threshold is amber, and growing lag over
@@ -221,9 +222,9 @@ read a store. Recommended: exporters and traces only, as spec 0057 chose.
       Done when: against the Prometheus stub, a cnpg and a postgres_exporter cluster are two stores with their
       engines and selectors, a written store of the same name replaces one, and a failing Prometheus keeps what was
       found.
-- [ ] **`postgres-cluster-read`** — a Postgres or cnpg cluster into one shape in `shared`, at
+- [x] **`postgres-cluster-read`** — a Postgres or cnpg cluster into one shape in `shared`, at
       `GET /api/store-cluster`.
-      Done when: against the stub, three instances with one gone, a promoted primary on a new timeline, a replica
+      Done when: against the stub, three instances with one gone, a promoted primary, a replica
       past the lag threshold, an inactive slot retaining WAL and a client idle in a transaction all read as such,
       and a single-instance store reads as one primary.
 - [ ] **`postgres-cluster-panel`** — *The cluster* on a Postgres or cnpg store's page: clients, instance columns,
