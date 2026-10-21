@@ -1,6 +1,7 @@
 /** Prometheus's HTTP API: a query over a range as a series on an even grid, and the alerting rules' expressions. */
 import { Effect, Schema } from "effect"
 import type { Series } from "../../shared/events"
+import type { Reading } from "../../shared/kafka-cluster"
 import { callJson, type Remote } from "../remote"
 import type { Reach } from "./grafana"
 import { type Failure, SourceFailure } from "./run"
@@ -118,12 +119,6 @@ export const thresholdOf = (
   const measure = match?.[1]
   const threshold = Number(match?.[2])
   return measure === undefined || !Number.isFinite(threshold) ? undefined : { measure, threshold }
-}
-
-/** One series of an instant query: its labels and its value now. */
-interface Reading {
-  readonly labels: Readonly<Record<string, string>>
-  readonly value: number
 }
 
 /** What a metrics source gives: a query over a span, and each alerting rule as `measure > threshold`. */

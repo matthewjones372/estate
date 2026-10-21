@@ -232,7 +232,7 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
       Prometheus and Grafana's proxy.
       Done when: against the Prometheus stub, an instant query gives labels with numbers, `NaN` and `+Inf` are
       dropped, and a failing source is a `SourceFailure`.
-- [ ] **`kafka-cluster-read`** — the cluster from kafka_exporter into one shape in `shared`, at
+- [x] **`kafka-cluster-read`** — the cluster from kafka_exporter into one shape in `shared`, at
       `GET /api/store-cluster`.
       Done when: against the stub, three brokers with one gone, a partition under-replicated, one without a leader
       and one off its preferred leader all read as such, and a store with no series is a 404 naming why.

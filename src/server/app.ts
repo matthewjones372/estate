@@ -30,6 +30,7 @@ import { loadNotes, notesRoute, removeNoteRoute, sweepNotes } from "./http/notes
 import { routes } from "./http/routes"
 import { signInRoutes } from "./http/sign-in"
 import { silenceRoute, unsilenceRoute } from "./http/silences"
+import { storeClusterRoute } from "./http/store-cluster"
 import { tellRoute } from "./http/tell"
 import { timelineExportRoutes } from "./http/timeline-export"
 import { logHubLayer } from "./log-hub"
@@ -113,6 +114,7 @@ export const application = Layer.mergeAll(
   kioskRoute,
   loadRoute,
   storeLoadRoute,
+  storeClusterRoute,
   notesRoute,
   removeNoteRoute,
   impactRoute,
