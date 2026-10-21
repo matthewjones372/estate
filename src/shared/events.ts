@@ -150,6 +150,15 @@ export const ServicesEvent = Schema.Struct({
         health: Health,
         reasons: Schema.Array(Schema.String),
         stats: Schema.Array(Stat),
+        /** A database's instances, for its lane's dots (spec 0060). */
+        instances: optional(
+          Schema.Struct({
+            primaries: Schema.Number,
+            replicas: Schema.Number,
+            behind: Schema.Number,
+            gone: Schema.Number,
+          }),
+        ),
       }),
     ),
   ),

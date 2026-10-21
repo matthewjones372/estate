@@ -23,6 +23,8 @@ export interface StoreStat {
   readonly title: string
   readonly query: string
   readonly unit?: string
+  /** A count read for the lane's instance dots (spec 0060), not drawn as a chart. */
+  readonly count?: true
 }
 
 /** Past `threshold`, read from the stat `key`, the store needs attention, and `says` why. */
@@ -174,9 +176,45 @@ const presets: Readonly<Record<Store["engine"], Preset>> = {
 
 export const engines = Object.keys(presets) as ReadonlyArray<Store["engine"]>
 
-/** The preset's stats for the store, narrowed by its selector, then its own. */
+/** A database's instances counted by role, those behind its lag threshold and those gone, for its lane's dots. */
+const instanceCounts = (store: Store, lag: number): ReadonlyArray<StoreStat> => {
+  const s = `{${store.selector}}`
+  const [recovery, lagged, up] =
+    store.engine === "cnpg"
+      ? ["cnpg_pg_replication_in_recovery", "cnpg_pg_replication_lag", "cnpg_collector_up"]
+      : store.engine === "postgres"
+        ? ["pg_replication_is_replica", "pg_replication_lag_seconds", "pg_up"]
+        : []
+  if (recovery === undefined) return []
+  const counted = (key: string, title: string, query: string) => ({
+    key,
+    title,
+    query: `count(${query}) or vector(0)`,
+    count: true as const,
+  })
+  return [
+    counted("primaries", "Primaries", `${recovery}${s} == 0`),
+    counted("replicas", "Replicas", `${recovery}${s} == 1`),
+    counted("behind", "Replicas behind", `${lagged}${s} > ${lag}`),
+    counted("gone", "Instances gone", `${up}${s} == 0`),
+  ]
+}
+
+/** The keys of the counts read for a lane's dots, which are not sent as stats. */
+const countKeys = new Set(["primaries", "replicas", "behind", "gone"])
+export const isCount = (key: string) => countKeys.has(key)
+
+/** A database's instances as its lane draws them, from its counts now; undefined where none were read. */
+export const instancesOf = (now: Readonly<Record<string, number | null | undefined>>) => {
+  const [primaries, replicas, behind, gone] = ["primaries", "replicas", "behind", "gone"].map((key) => now[key] ?? null)
+  if (primaries === null && replicas === null) return undefined
+  return { primaries: primaries ?? 0, replicas: replicas ?? 0, behind: behind ?? 0, gone: gone ?? 0 }
+}
+
+/** The preset's stats for the store, narrowed by its selector, the counts its lane's dots need, then its own. */
 export const storeStatsOf = (store: Store): ReadonlyArray<StoreStat> => [
   ...presets[store.engine].stats(store.selector),
+  ...instanceCounts(store, rulesOf(store).find((rule) => rule.key === "lag")?.threshold ?? 30),
   ...(store.extra ?? []).map((extra, index) => ({ key: `extra${index}`, ...extra })),
 ]
 

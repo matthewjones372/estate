@@ -5,12 +5,13 @@
  * as fast as its messages a second. Read when the page opens, and again every 15 seconds while it is open and seen.
  * A followed message is a dot in its partition, and each group is marked with whether it has read it.
  */
-import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
+import { createSignal, For, Show } from "solid-js"
 import { type KafkaCluster, type Partition, troubled } from "../../shared/kafka-cluster"
 import type { FollowedMessage, Written } from "../../shared/kafka-message"
 import { useEstate } from "../context"
 import { clock, duration, measured } from "../format"
 import { internal, whatIsWrong } from "../kafka"
+import { readEvery } from "../read-every"
 import { ClusterAsk } from "./KafkaAsk"
 import { Flow } from "./KafkaFlow"
 import { FollowedPath, FollowForm, useFollowed } from "./KafkaFollow"
@@ -226,35 +227,10 @@ export const ClusterPanel = (props: {
     () => props.store,
     () => props.message,
   )
-  const [cluster, setCluster] = createSignal<KafkaCluster | string | "loading">("loading")
-  createEffect(
-    on(
-      () => props.store,
-      (store) => {
-        let current = true
-        let readAt = 0
-        const often = props.every ?? every
-        setCluster("loading")
-        // A read again keeps what is drawn until it answers, and a failure in between leaves it drawn.
-        const read = (again: boolean) => {
-          readAt = Date.now()
-          void actions.storeCluster(store).then((answer) => {
-            if (current && (!again || typeof answer !== "string")) setCluster(answer)
-          })
-        }
-        const visible = () => document.visibilityState !== "hidden"
-        read(false)
-        // Read again while someone can see it, and on coming back to a tab left longer than that.
-        const timer = setInterval(() => visible() && read(true), often)
-        const back = () => visible() && Date.now() - readAt >= often && read(true)
-        document.addEventListener("visibilitychange", back)
-        onCleanup(() => {
-          current = false
-          clearInterval(timer)
-          document.removeEventListener("visibilitychange", back)
-        })
-      },
-    ),
+  const cluster = readEvery(
+    () => props.store,
+    (store) => actions.storeCluster(store),
+    () => props.every ?? every,
   )
   const marked = () => {
     const message = followed()

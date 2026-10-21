@@ -4,6 +4,7 @@ import { For } from "solid-js"
 import type { CatalogEvent, ServicesEvent } from "../../shared/events"
 import { A } from "./A"
 import { FoundMark } from "./Found"
+import { InstanceDots } from "./InstanceDots"
 import { HealthLine, Links } from "./Lane"
 import { Spark } from "./Sparkline"
 
@@ -17,6 +18,7 @@ export const StoreLane = (props: { readonly store: DescribedStore; readonly stat
         {props.store.name}
       </A>
       <HealthLine state={props.state} />
+      <InstanceDots instances={props.state?.instances} />
       <span class="muted mono small">{props.store.engine}</span>
       <FoundMark discovered={props.store.discovered} />
     </div>

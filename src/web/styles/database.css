@@ -1,0 +1,74 @@
+/* A database store's cluster (spec 0060), in the Kafka cluster's layout: the primary marked, a replica behind in amber. */
+.kafka-broker.primary {
+  border-color: var(--link);
+}
+.kafka-broker.attention {
+  border-color: var(--amber-line);
+  background: var(--amber-panel);
+}
+.kafka-broker.attention p {
+  color: var(--amber-text);
+}
+.database-connections {
+  inline-size: 100%;
+  block-size: 8px;
+}
+.database-connections::-webkit-meter-bar {
+  background: var(--chip);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+}
+.database-connections::-webkit-meter-optimum-value {
+  background: var(--healthy);
+  border-radius: 4px;
+}
+.database-connections::-webkit-meter-suboptimum-value {
+  background: var(--amber);
+  border-radius: 4px;
+}
+.database-key {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding-inline: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--ink);
+}
+.database-key.primary {
+  border-color: var(--link);
+}
+.database-key.attention {
+  border-color: var(--amber-line);
+  background: var(--amber-panel);
+  color: var(--amber-text);
+}
+.database-key.gone {
+  border-style: dashed;
+  border-color: var(--critical-line);
+  background: var(--critical-panel);
+  color: var(--critical);
+}
+
+/* A database's instances on its lane: the primary filled, a replica a ring, amber when behind, gone dashed. */
+.instance-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.instance-dot {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--healthy);
+}
+.instance-dot.primary {
+  background: var(--healthy);
+}
+.instance-dot.behind {
+  border-color: var(--amber);
+}
+.instance-dot.gone {
+  border: 2px dashed var(--critical);
+}

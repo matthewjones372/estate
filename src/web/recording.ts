@@ -7,6 +7,7 @@ import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
 import { incidentActions, keptIncidents } from "./fixture-incidents"
 import { includedAs, summarised } from "./fixture-included"
+import { databaseCluster, loneDatabase } from "./fixture-database"
 import { clusterAnswer, followedMessage, kafkaCluster } from "./fixture-kafka"
 import { groups, lines } from "./fixture-logs"
 import { journeySample, orderTrace, refusedTrace } from "./fixture-traces"
@@ -193,6 +194,11 @@ export const recording = (): Recorded => {
         return Promise.resolve(
           trace === followedMessage.trace ? followedMessage : `${store} has no Tempo to follow a message in`,
         )
+      },
+      databaseCluster: (store) => {
+        calls.push(["databaseCluster", store])
+        const drawn = store === "orders-db" ? databaseCluster : store === "shop-db" ? loneDatabase : undefined
+        return Promise.resolve(drawn ?? `the exporter publishes nothing for ${store}`)
       },
       watchLogs: (service, handlers) => {
         calls.push(["watchLogs", service])

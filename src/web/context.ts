@@ -10,6 +10,7 @@ import type { PastFiring } from "../shared/firing"
 import type { Incident, IncidentRecord } from "../shared/incidents"
 import type { Included } from "../shared/included"
 import type { KafkaCluster } from "../shared/kafka-cluster"
+import type { PostgresCluster } from "../shared/postgres-cluster"
 import type { FollowedMessage } from "../shared/kafka-message"
 import type { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { SummaryAnswer } from "../shared/summary"
@@ -39,6 +40,8 @@ export interface Actions {
   readonly storeLoad: (store: string, range: Range) => Promise<ServiceState["load"] | undefined>
   /** A Kafka store's cluster now (spec 0057), or why it could not be read. */
   readonly storeCluster: (store: string) => Promise<KafkaCluster | string>
+  /** A Postgres or cnpg store's cluster now (spec 0060), or why it could not be read. */
+  readonly databaseCluster: (store: string) => Promise<PostgresCluster | string>
   /** A message followed through a Kafka store by its trace, or why it cannot be. */
   readonly storeMessage: (store: string, trace: string) => Promise<FollowedMessage | string>
   /** Ask AI about a Kafka store's cluster: its answer, or why there is none. */

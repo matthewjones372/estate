@@ -8,7 +8,7 @@ import { type Call, reply } from "../remote"
 import type { Settings } from "../settings"
 
 const bus: Store = { name: "bus", environments: ["staging"], engine: "kafka", selector: 'job="kafka"' }
-const withBus: Catalog = { ...catalog, stores: [bus, { ...bus, name: "orders-db", engine: "cnpg" }] }
+const withBus: Catalog = { ...catalog, stores: [bus, { ...bus, name: "cache", engine: "redis" }] }
 const metered: Settings = {
   ...settings({ anonymous: { name: "visitor", role: "viewer" } }),
   sources: { staging: { prometheus: { url: "http://prometheus" } } },
@@ -84,11 +84,14 @@ describe("a Kafka store's cluster", () => {
       }),
     ))
 
-  test("is not there for a store that is not Kafka, one with no series, or without metrics, each saying why", () =>
+  test("is not there for a store whose cluster is not drawn, one with no series, or without metrics, each saying why", () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        const cnpg = yield* asked("/api/store-cluster?env=staging&store=orders-db", exporter(Date.now() / 1000))
-        expect([cnpg.status, cnpg.json()]).toEqual([404, { message: "orders-db is not a Kafka store" }])
+        const redis = yield* asked("/api/store-cluster?env=staging&store=cache", exporter(Date.now() / 1000))
+        expect([redis.status, redis.json()]).toEqual([
+          404,
+          { message: "cache is a redis store, whose cluster Estate does not draw" },
+        ])
         const silent = yield* asked("/api/store-cluster?env=staging&store=bus", () => reply({ data: { result: [] } }))
         expect([silent.status, silent.json()]).toEqual([
           404,
