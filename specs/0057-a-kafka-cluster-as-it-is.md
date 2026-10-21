@@ -228,7 +228,7 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
       doctor's line.
       Done when: the page suite shows the mark and copies an entry that parses as a catalog store, and the doctor
       names what was found, written over and left out.
-- [ ] **`instant-readings`** — `instant` on the metrics source: a query now, as each series' labels and value, for
+- [x] **`instant-readings`** — `instant` on the metrics source: a query now, as each series' labels and value, for
       Prometheus and Grafana's proxy.
       Done when: against the Prometheus stub, an instant query gives labels with numbers, `NaN` and `+Inf` are
       dropped, and a failing source is a `SourceFailure`.

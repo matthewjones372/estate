@@ -20,6 +20,17 @@ const Instant = Schema.Struct({
   data: Schema.Struct({ result: Schema.Array(Schema.Struct({ metric: Schema.Record(Schema.String, Schema.String) })) }),
 })
 
+const Vector = Schema.Struct({
+  data: Schema.Struct({
+    result: Schema.Array(
+      Schema.Struct({
+        metric: Schema.Record(Schema.String, Schema.String),
+        value: Schema.Tuple([Schema.Number, Schema.String]),
+      }),
+    ),
+  }),
+})
+
 const Rules = Schema.Struct({
   data: Schema.Struct({
     groups: Schema.Array(
@@ -109,6 +120,12 @@ export const thresholdOf = (
   return measure === undefined || !Number.isFinite(threshold) ? undefined : { measure, threshold }
 }
 
+/** One series of an instant query: its labels and its value now. */
+interface Reading {
+  readonly labels: Readonly<Record<string, string>>
+  readonly value: number
+}
+
 /** What a metrics source gives: a query over a span, and each alerting rule as `measure > threshold`. */
 export interface Ranges {
   readonly range: (
@@ -120,6 +137,8 @@ export interface Ranges {
   readonly rules: Effect.Effect<ReadonlyMap<string, string>, Failure, Remote>
   /** A query now, as the labels of each series it gives: where a source can say which, such as a model's name. */
   readonly labels?: (query: string) => Effect.Effect<ReadonlyArray<Readonly<Record<string, string>>>, Failure, Remote>
+  /** A query now, as each series' labels and its value; a value that is not a finite number is left out. */
+  readonly instant?: (query: string) => Effect.Effect<ReadonlyArray<Reading>, Failure, Remote>
   /** How many queries a read asks at once: all of them, where the source batches them itself. */
   readonly concurrency?: number | "unbounded"
 }
@@ -138,6 +157,19 @@ export const prometheusRanges = (
       Effect.mapError(failure),
       Effect.flatMap(decoded(Instant)),
       Effect.map((answer) => answer.data.result.map((each) => each.metric)),
+    ),
+  instant: (query) =>
+    callJson({
+      url: `${prometheus.url}/api/v1/query?${new URLSearchParams({ query })}`,
+      headers: prometheus.headers,
+    }).pipe(
+      Effect.mapError(failure),
+      Effect.flatMap(decoded(Vector)),
+      Effect.map((answer) =>
+        answer.data.result.flatMap(({ metric, value: [, value] }) =>
+          Number.isFinite(Number(value)) ? [{ labels: metric, value: Number(value) }] : [],
+        ),
+      ),
     ),
   rules: Effect.gen(function* () {
     return new Map([...(yield* alertingRules(prometheus)), ...(yield* more)])
