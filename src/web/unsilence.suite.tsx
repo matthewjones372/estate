@@ -29,6 +29,12 @@ const pages = [
 ]
 
 describe("a silenced alert", () => {
+  test("links to its page from its service's page", () => {
+    const page = mount(() => <ServicePage name="storefront" />, { sent: silenced({ service: "storefront" }) })
+    expect(page.container.querySelector(".silenced-row a")?.textContent).toBe("DiskFilling")
+    page.dispose()
+  })
+
   for (const { where, page: node, sent } of pages) {
     test(`says who silenced it, until when and why, and an operator unsilences it on ${where}`, () => {
       const page = mount(node, { sent })
@@ -46,9 +52,10 @@ describe("a silenced alert", () => {
     })
   }
 
-  test("is not offered to be silenced again on its own page", () => {
+  test("is not offered to be silenced again on its own page, and its silence names it without a link", () => {
     const page = mount(() => <AlertPage id="a2" />, { sent: silenced({}) })
     expect(page.container.textContent).not.toContain("Silence…")
+    expect(page.container.querySelector(".silenced-row a")).toBeNull()
     page.dispose()
   })
 })
