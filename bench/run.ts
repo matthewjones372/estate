@@ -162,3 +162,6 @@ try {
   estate.stop()
   tools.stop()
 }
+// Leaves once it has said its numbers: a browser or driver left behind would otherwise keep the run open until the
+// gate's step timeout.
+process.exit(process.exitCode ?? 0)

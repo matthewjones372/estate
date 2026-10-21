@@ -37,7 +37,8 @@ web:
 ```
 
 - **The bench's waits** each have a deadline, and fail saying what they waited for and what they last saw. Each
-  phase writes a line to stderr as it starts.
+  phase writes a line to stderr as it starts. Each call into Chromium has one too, so a browser that wedges fails the measure
+  naming the call, and the run leaves once it has said its numbers, whatever it left behind.
 - **`web.frameAncestors`** is a list of origins, each checked as one, added to `frame-ancestors 'self'`.
 - **Colours** are tokens on `:root`, each named for what it is used for.
 - **Sides** are logical: `margin-inline-start`, `padding-inline`.
@@ -58,6 +59,9 @@ Nothing.
 
 - [x] **`bench-deadlines`** — the bench's waits with deadlines that say what stalled, and a line a phase.
       Done when: a wait that runs out fails within its deadline naming what it waited for, and `bun run perf` passes.
+- [x] **`bench-browser-deadlines`** — a deadline on each call into Chromium, and the run's exit once it has reported.
+      Done when: a step past its deadline fails naming it, a browser that will not close is said and passed over, and
+      `bun run perf` exits when it has printed its numbers.
 - [x] **`frame-ancestors-setting`** — `web.frameAncestors` in the settings, checked at start, added to the policy.
       Done when: a page on a listed origin can frame Estate, and one on any other cannot.
 - [x] **`colour-tokens`** — the stylesheets' hex colours as `:root` tokens.

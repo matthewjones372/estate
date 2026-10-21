@@ -22,3 +22,12 @@ export const until = async (
 /** A line on stderr as each phase starts, so a run's log says how far it got. */
 export const phase = (started: number) => (name: string) =>
   process.stderr.write(`bench: ${name} (${Math.round((performance.now() - started) / 1000)} s)\n`)
+
+/** A step that may never answer, such as a call into a wedged Chromium, given a deadline that names it. */
+export const deadline = <A>(what: string, within: number, step: Promise<A>): Promise<A> => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what} did not finish within ${within / 1000} s`)), within)
+  })
+  return Promise.race([step, late]).finally(() => clearTimeout(timer))
+}
