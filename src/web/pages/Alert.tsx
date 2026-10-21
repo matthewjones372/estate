@@ -6,11 +6,12 @@
 import { createEffect, createSignal, on, onCleanup, Show } from "solid-js"
 import type { PastFiring } from "../../shared/firing"
 import { useEstate, useSnapshot } from "../context"
-import { day, since } from "../format"
+import { day } from "../format"
 import { A } from "../parts/A"
 import { AlertCard } from "../parts/AlertCard"
 import { Around } from "../parts/Around"
 import { FiringTimeline } from "../parts/FiringTimeline"
+import { standing } from "../parts/Silenced"
 import { Owner } from "../parts/Team"
 import { TimelineExport } from "../parts/TimelineExport"
 import { firingPath } from "../route"
@@ -76,7 +77,7 @@ export const AlertPage = (props: { readonly id: string }) => {
               What's happening
             </h1>
             <p class="lede">
-              {found().severity} · firing {since(found().startsAt, now())}
+              {found().severity} · {standing(found(), now())}
               {found().service === undefined ? "" : ` · ${found().service}`} · {snapshot.environment}
             </p>
             <AlertCard alert={found()} catalog={catalog()} canSilence={canSilence()} level={2} />

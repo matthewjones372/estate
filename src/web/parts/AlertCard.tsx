@@ -5,7 +5,7 @@ import { Dynamic } from "solid-js/web"
 import type { Alert, CatalogEvent } from "../../shared/events"
 import { reading } from "../chart"
 import { useEstate } from "../context"
-import { amount, clock, since } from "../format"
+import { amount, clock } from "../format"
 import { chatOf, onSlack, teamOf } from "../teams"
 import { A, Out } from "./A"
 import { AroundLine } from "./Around"
@@ -19,7 +19,7 @@ import { MayBelong } from "./MayBelong"
 import { Notes } from "./Notes"
 import { Plot } from "./Plot"
 import { RaiseIncident } from "./RaiseIncident"
-import { SilencedRow } from "./Silenced"
+import { SilencedRow, standing } from "./Silenced"
 import { TellTeam } from "./TellTeam"
 
 const minutesUntilNine = (now: number): number => {
@@ -158,7 +158,7 @@ export const AlertCard = (props: {
         <A to={`/alerts/${encodeURIComponent(props.alert.id)}`} class="mono alert-name">
           {props.alert.name}
         </A>
-        <span class="alert-for">firing {since(props.alert.startsAt, now())}</span>
+        <span class="alert-for">{standing(props.alert, now())}</span>
       </div>
       <div>
         <Dynamic component={props.level === 2 ? "h2" : "h3"} class="alert-title">

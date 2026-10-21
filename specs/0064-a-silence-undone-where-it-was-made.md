@@ -19,7 +19,8 @@ page to find it and press *Unsilence*.
 - **One silenced row**, the overview's, moved to `parts/Silenced.tsx`: the alert's name, *silenced until 15:00 by ada:
   “resizing”*, and *Unsilence* for an operator where silences can be written (`me.role === "operator"` and
   `events().alerts?.silences === true`). A viewer sees the row without the button.
-- **The alert's card** shows that row when the alert carries a silence, in place of *Silence…*.
+- **The alert's card** shows that row when the alert carries a silence, in place of *Silence…*, and its head says
+  *silenced until 15:00* where a firing one says *firing 19 min*; so does the line under the alert's own page's title.
 - **The service's page** lists its silenced alerts under *What's happening*, and **the store's page** under *Alerts
   about it*, as those rows.
 
@@ -42,6 +43,9 @@ Nothing.
 - [x] **`unsilence-where-silenced`** — the silenced row as a part, on the card, the service's page and the store's page.
       Done when: an operator sees who, until when and why and *Unsilence* on the alert's, service's and store's page,
       which calls `unsilence` with the silence's id; a viewer sees the silence without the button.
+- [x] **`silenced-not-firing`** — a silenced alert's card head and its page's line say *silenced until*, not *firing*.
+      Done when: the alert's own page names a silenced alert as silenced until the silence ends, and a firing one as
+      firing for how long.
 
 ## Acceptance
 
@@ -51,5 +55,4 @@ bun run gate
 
 ## Open questions
 
-1. **Should the card's head still say "firing since" for a silenced alert?** Recommended: yes for now; it is still
-   true in the alert manager, and the silenced row beneath says the rest.
+None.
