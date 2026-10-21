@@ -53,9 +53,6 @@ export const StorePage = (props: { readonly name: string; readonly message?: str
         <Show when={store()?.engine === "postgres" || store()?.engine === "cnpg"}>
           <DatabasePanel store={props.name} />
         </Show>
-        <Show when={store()?.engine === "postgres" || store()?.engine === "cnpg"}>
-          <DatabasePanel store={props.name} />
-        </Show>
         <Load
           name={props.name}
           title="Stats"
