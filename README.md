@@ -207,8 +207,9 @@ bun examples/demo/run.ts
 
 It starts Estate on <http://localhost:8080> against one process playing every tool it reads, for Larder, a made-up
 online grocer. Staging is well. In production a broker of the six-broker Kafka cluster is gone, a consumer group is
-falling behind, checkout's new version is slow, an incident is open with comments in it, and you can follow an order
-from the web to each group that reads it. Ask AI answers there are canned, and say so. Everything comes from
+falling behind, a database replica is behind, checkout's new version is slow, an incident is open with comments in
+it, traffic rises and falls with a lunchtime rush and a newsletter, and you can follow an order from the web to each
+group that reads it. Ask AI answers there are canned, and say so. Everything comes from
 [`examples/demo/`](examples/demo): its catalog is a real one to read and copy from.
 
 To see it with live data, [petshop's demo](https://github.com/matthewjones372/petshop/tree/main/demo) runs Estate

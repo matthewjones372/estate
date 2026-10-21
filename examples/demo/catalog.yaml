@@ -234,14 +234,14 @@ stores:
     category: Orders
     description: Orders, baskets and the outbox
     environments: [ production, staging ]
-    engine: postgres
-    selector: 'datname="orders"'
+    engine: cnpg
+    selector: 'cnpg_io_cluster="orders-db"'
   - name: stock-db
     category: Fulfilment
     description: Stock in every warehouse
     environments: [ production, staging ]
     engine: cnpg
-    selector: 'cluster="stock-db"'
+    selector: 'cnpg_io_cluster="stock-db"'
   - name: sessions
     category: Shop
     description: Who is signed in, and their baskets in flight

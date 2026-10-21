@@ -5,6 +5,7 @@
  */
 import type { Catalog } from "../../src/shared/catalog"
 import { at, type Environment, environments } from "./clock"
+import { databaseAnswer } from "./databases"
 import { clusterAsked, discovered, exporterAnswer } from "./kafka"
 import { kubeAnswer } from "./kube"
 import { rangeOf, seriesOf } from "./metrics"
@@ -22,6 +23,8 @@ const instantOf = (environment: Environment, query: string) => {
   if (query.startsWith("count by") && query.includes("kafka_brokers")) return vector(discovered(environment))
   const cluster = clusterAsked(environment, query)
   if (cluster !== undefined) return vector(exporterAnswer(cluster, query))
+  const database = databaseAnswer(environment, query)
+  if (database !== undefined) return vector(database)
   if (query.includes("gen_ai_response_model"))
     return vector([{ metric: { gen_ai_response_model: "claude-haiku" }, value: [at(), "1"] }])
   const value = seriesOf(environment, query)

@@ -79,6 +79,37 @@ describe("the demo", () => {
       })
   })
 
+  test("has orders-db as three cnpg instances in production, its third replica behind", () =>
+    instant("production", 'cnpg_pg_replication_lag{cnpg_io_cluster="orders-db"}').then((vector) =>
+      expect(vector.data.result.map((each) => [each.metric["pod"], Number(each.value[1]) > 30])).toEqual([
+        ["orders-db-1", false],
+        ["orders-db-2", false],
+        ["orders-db-3", true],
+      ]),
+    ))
+
+  test("has traffic that rises and falls in production, and stays level in staging", () => {
+    const now = Math.floor(Date.now() / 1000)
+    const swing = (environment: string) =>
+      asked(
+        `/${environment}/api/v1/query_range?${new URLSearchParams({
+          query: 'sum(rate(http_requests_total{app="checkout"}[1m]))',
+          start: String(now - 3600),
+          end: String(now),
+          step: "60",
+        })}`,
+      ).then((answer) => {
+        const { values } = (answer as { data: { result: [{ values: ReadonlyArray<[number, string]> }] } }).data
+          .result[0]
+        const numbers = values.map(([, value]) => Number(value))
+        return Math.max(...numbers) / Math.min(...numbers)
+      })
+    return Promise.all([swing("production"), swing("staging")]).then(([production, staging]) => {
+      expect(production).toBeGreaterThan(2.4)
+      expect(staging).toBeLessThan(2)
+    })
+  })
+
   test("answers Ask AI with a canned answer that says so", () =>
     asked("/v1/chat/completions", {
       method: "POST",

@@ -1,4 +1,4 @@
-# 0060 — A demo with nothing but Estate
+# 0061 — A demo with nothing but Estate
 
 ## Problem
 
@@ -29,7 +29,7 @@ bun examples/demo/run.ts          # Estate on http://localhost:8080, the world i
 `examples/demo/` holds:
 
 - **`catalog.yaml`**: Larder, an online grocer that never was. Two environments: staging, well, and production, with
-  a problem. Five teams, sixteen services in five categories (one found in Kubernetes), Postgres and Redis stores,
+  a problem. Five teams, sixteen services in five categories (one found in Kubernetes), two cnpg Postgres clusters and Redis,
   two Kafka clusters found by a `kafka:` rule, jobs, an agent, vitals, a journey and the map.
 - **`estate.yaml`**: Estate's settings, every source of both environments pointing at the world, signed in as an
   operator called `demo`, with Ask AI, a kiosk token and Estate's notes in memory.
@@ -51,12 +51,21 @@ inventory's image policy cannot list tags, so its deploy is stalled
 an incident, "Orders reach the warehouse late", holds KafkaBrokerDown and ConsumerLagGrowing, four comments and
   what was done by hand
 an order placed every few seconds, traced from the web through checkout to bus and on to each group that reads it
+orders-db, a three-instance cnpg cluster: its async replica 38 s behind and falling further, a reporting job idle in
+  a transaction, and an old change-data-capture slot nobody reads holding 2 GB of WAL on the primary
+traffic that rises and falls every 24 minutes: a lunchtime rush through the shop and checkout, the weekly newsletter
+  sending people searching, and a push notification from the app bringing a burst to the apps and baskets
 ```
 
-Staging has the same services, a few a version ahead,, every check well, and a three-broker cluster in sync.
+Staging has the same services, a few a version ahead, every check well, a three-broker cluster in sync, its
+databases' replicas caught up, and level traffic.
 
 - **A message followed** in production goes *not yet* for picking and turns *read it* as the group's
   offset passes it, since the world moves each group's offsets at its rate and writes a consumer span when it does.
+- **The database view** (spec 0060) draws orders-db and stock-db from cnpg's series, and their lanes on the overview
+  show each instance as a dot.
+- **Traffic** follows the events in every chart that counts requests: each service's load, the vitals, the map's
+  flows and the databases' connections and transactions, busier a little slower.
 - **Ask AI** on an alert or on the cluster answers with a likely cause, evidence and next steps fitting the story,
   starting *Demo answer, canned: no model was asked.*
 - Everything else (logs, builds, versions across environments, the map, the kiosk) works as it does against real tools, from the
@@ -72,14 +81,15 @@ means a service added to the catalog shows up with pods, versions and load, with
 ## Depends on
 
 - Bun's YAML import, for the world to read the catalog it plays for.
-- Spec 0057's follow, for the message followed.
+- Spec 0057's follow, for the message followed, and spec 0060's database view, for the cnpg clusters.
 
 ## Stack
 
 - [x] **`demo`** — `examples/demo/` and its section in the README.
       Done when: `bun examples/demo/run.ts` starts both, a test checks the demo's catalog clean and has the world
       answer each source the settings name, and production shows the gone broker, the lagging group, both alerts, the
-      incident with its comments, a followed message turning *read it*, and Ask AI's canned answer.
+      incident with its comments, a followed message turning *read it*, orders-db's replica behind, the traffic's
+      events, and Ask AI's canned answer.
 
 ## Acceptance
 

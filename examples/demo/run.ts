@@ -5,6 +5,7 @@
 import { alertId } from "../../src/server/sources/alerts"
 import { firingIn } from "./story"
 import { latestOrder, traceIdOf, writtenOf } from "./traces"
+import { events, nextOf } from "./traffic"
 
 const estate = "http://127.0.0.1:8080"
 const here = new URL(".", import.meta.url).pathname
@@ -102,8 +103,11 @@ and Ask AI's answers are canned.
     - bus, its Kafka cluster of six brokers, lost broker 4: ${estate}/stores/bus?env=production
     - picking is falling behind on orders, and an incident is open about it: ${estate}/incidents
     - checkout is slow since its latest version rolled out: ${estate}/services/checkout?env=production
+    - orders-db's async replica is falling behind, and an old slot holds WAL: ${estate}/stores/orders-db?env=production
   Follow an order picking has not read yet, and watch it turn to "read it" in a couple of minutes:
     ${estate}/stores/bus/messages/${toFollow()}?env=production
+  Traffic rises and falls every 24 minutes, in production:
+${events.map((event) => `    - ${event.name}, next in ${nextOf(event)} min`).join("\n")}
   On a wall screen: ${estate}/kiosk?token=demo-screen
 
 Ctrl-C stops both.`)
