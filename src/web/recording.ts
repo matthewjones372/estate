@@ -7,6 +7,7 @@ import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
 import { incidentActions, keptIncidents } from "./fixture-incidents"
 import { includedAs, summarised } from "./fixture-included"
+import { kafkaCluster } from "./fixture-kafka"
 import { groups, lines } from "./fixture-logs"
 import { journeySample, orderTrace, refusedTrace } from "./fixture-traces"
 
@@ -178,6 +179,10 @@ export const recording = (): Recorded => {
       storeLoad: (store, range) => {
         calls.push(["storeLoad", store, range])
         return Promise.resolve({ stats: [{ title: "Connections used", unit: "%", series: series([40, 45]) }] })
+      },
+      storeCluster: (store) => {
+        calls.push(["storeCluster", store])
+        return Promise.resolve(store === "bus" ? kafkaCluster : `kafka_exporter publishes nothing for ${store}`)
       },
       watchLogs: (service, handlers) => {
         calls.push(["watchLogs", service])

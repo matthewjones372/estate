@@ -26,7 +26,7 @@ const Partition = Schema.Struct({
   oldest: Count,
   newest: Count,
 })
-type Partition = typeof Partition.Type
+export type Partition = typeof Partition.Type
 
 const Topic = Schema.Struct({ name: Schema.String, rate: Count, partitions: Schema.Array(Partition) })
 
@@ -85,7 +85,7 @@ const byKey = (readings: ReadonlyArray<Reading>, of: (labels: Readonly<Record<st
   new Map(readings.map((reading) => [of(reading.labels), reading.value]))
 
 /** Partitions in trouble: under-replicated, or with no leader. */
-const troubled = (partition: Partition): boolean =>
+export const troubled = (partition: Partition): boolean =>
   partition.leader === null ||
   (partition.inSync !== null && partition.replicas !== null && partition.inSync < partition.replicas)
 

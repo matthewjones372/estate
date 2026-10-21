@@ -9,6 +9,7 @@ import type { EvidenceSet } from "../shared/evidence"
 import type { PastFiring } from "../shared/firing"
 import type { Incident, IncidentRecord } from "../shared/incidents"
 import type { Included } from "../shared/included"
+import type { KafkaCluster } from "../shared/kafka-cluster"
 import type { ErrorGroups, LogBatch } from "../shared/log-events"
 import type { SummaryAnswer } from "../shared/summary"
 import type { FiringEvent } from "../shared/timeline"
@@ -35,6 +36,8 @@ export interface Actions {
   readonly loadBetween: (service: string, from: string, to: string) => Promise<ServiceState["load"] | undefined>
   /** A store's stats over a range, as a load with only stats. */
   readonly storeLoad: (store: string, range: Range) => Promise<ServiceState["load"] | undefined>
+  /** A Kafka store's cluster now (spec 0057), or why it could not be read. */
+  readonly storeCluster: (store: string) => Promise<KafkaCluster | string>
   /** A service's live lines; the returned function stops watching. */
   readonly watchLogs: (service: string, handlers: LogHandlers) => () => void
   /** An agent's recent runs: "none" where it has no runs to read, undefined where they could not be read. */

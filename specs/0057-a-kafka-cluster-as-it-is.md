@@ -236,7 +236,7 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
       `GET /api/store-cluster`.
       Done when: against the stub, three brokers with one gone, a partition under-replicated, one without a leader
       and one off its preferred leader all read as such, and a store with no series is a 404 naming why.
-- [ ] **`kafka-cluster-panel`** — *The cluster* on a Kafka store's page: broker columns, partitions in their leader's
+- [x] **`kafka-cluster-panel`** — *The cluster* on a Kafka store's page: broker columns, partitions in their leader's
       column with offsets, every topic with the internal switch and the filter, and the sentence of what is wrong.
       Done when: a suite draws the stub's cluster, marks the gone broker, the amber and red partitions and the ↻,
       filters by name, and says the sentence.

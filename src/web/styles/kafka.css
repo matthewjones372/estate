@@ -1,0 +1,77 @@
+/* A Kafka store's cluster (spec 0057): brokers as columns, partitions as chips in their leader's. */
+.cluster-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+table.cluster {
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+table.cluster th,
+table.cluster td {
+  text-align: start;
+  vertical-align: top;
+  padding-block: 6px;
+  padding-inline: 8px;
+  border-block-end: 1px solid var(--line-soft);
+}
+table.cluster thead th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+table.cluster thead th.gone {
+  color: var(--critical);
+}
+table.cluster tbody th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+table.cluster td {
+  min-inline-size: 9rem;
+}
+.partition {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-block: 2px;
+  margin-inline-end: 6px;
+  padding-block: 2px;
+  padding-inline: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--chip);
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+.partition.attention {
+  border-color: var(--amber-line);
+  background: var(--amber-panel);
+  color: var(--amber-text);
+}
+.partition.critical {
+  border-color: var(--critical-line);
+  background: var(--critical-panel);
+  color: var(--critical);
+}
+.pips {
+  display: inline-flex;
+  gap: 2px;
+  margin-inline: 2px;
+}
+.pip {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+}
+.pip.on {
+  background: currentColor;
+}
+@media (forced-colors: active) {
+  .partition.attention,
+  .partition.critical {
+    border-width: 2px;
+  }
+}
