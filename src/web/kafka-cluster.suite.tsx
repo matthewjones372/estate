@@ -2,7 +2,7 @@
 /** A Kafka store's cluster on its page, in happy-dom: run by `kafka-cluster.test.ts` once Solid's compiler is in place. */
 import { describe, expect, test } from "bun:test"
 import type { Events } from "../shared/events"
-import { events } from "./fixture"
+import { events, operator } from "./fixture"
 import { kafkaCluster } from "./fixture-kafka"
 import { mount } from "./harness"
 import { behind, whatIsWrong } from "./kafka"
@@ -147,6 +147,28 @@ describe("a Kafka store's consumer groups", () => {
     ) as HTMLElement
     page.click(p0)
     expect(seen(page.container.querySelector(".kafka-out .kafka-card.marked strong"))).toBe("orders-projector")
+    page.dispose()
+  })
+})
+
+describe("Ask AI about a Kafka store's cluster", () => {
+  test("asks about the cluster where Ask AI is set, and shows its cause, evidence, next steps and cost", async () => {
+    const page = mount(() => <StorePage name="bus" />, { sent: withBus, me: { ...operator, ai: true } })
+    await page.settle()
+    page.click(page.button("Ask AI"))
+    await page.settle()
+    expect(page.calls).toContainEqual(["askStore", "bus"])
+    const answer = seen(page.container.querySelector(".kafka-ask")) ?? ""
+    expect(answer).toContain("Likely cause Broker 3 left the cluster")
+    expect(answer).toContain("broker 3 not seen for 10 min")
+    expect(answer).toContain("bring broker 3 back")
+    expect(answer).toContain("fake-model · 300 in · 40 out")
+    page.dispose()
+  })
+
+  test("is not offered where Ask AI is not set", async () => {
+    const page = await opened()
+    expect([...page.container.querySelectorAll("button")].some((each) => each.textContent === "Ask AI")).toBe(false)
     page.dispose()
   })
 })

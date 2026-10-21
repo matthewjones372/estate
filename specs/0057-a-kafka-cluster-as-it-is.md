@@ -108,6 +108,9 @@ From kafka_exporter, which every Kafka store already has:
   each time the rate is ten times more, since a cluster's topics run from a message a minute to thousands a second;
   with no messages a flow is still. A group falling behind flows in amber. Nothing moves under reduced motion.
 - **Choosing** a group marks the partitions it reads, and choosing a partition marks the groups that read it.
+- **Ask AI**, where it is set, reads the cluster as Estate read it and answers in one round with a likely cause, its
+  evidence and next steps, at `POST /api/stores/:name/ask?env=`. It shares the alerts' model, day's budget and
+  minute's turn; a cluster's brief holds no logs, so one answer serves everyone who asks within the minute.
 - On a narrow screen the diagram reads top to bottom, its flows pointing down.
 
 From the JMX exporter, when the store names its series with `jmx:`, the same view fills in what kafka_exporter cannot
@@ -245,6 +248,9 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
       called out, and choosing a group or a partition marking the other.
       Done when: a suite shows one group with one partition behind called out in words, and choosing it marks its
       partitions above.
+- [x] **`kafka-cluster-ask`** — Ask AI on *The cluster*: the cluster as a brief, one round, the answer on the panel.
+      Done when: against the exporter and model stubs, the brief names the gone broker, the leaderless partition and
+      the lagging group, the answer has its cause, evidence, next steps and cost, and no button shows without Ask AI.
 - [ ] **`kafka-cluster-detail`** — the detail beside the view for a broker, partition, group or topic.
       Done when: a suite opens each, and a partition's detail lists the groups reading it with their lag.
 - [ ] **`kafka-cluster-jmx`** — `jmx:` on a Kafka store and in a Kafka rule's `store:`, and followers, the controller quorum and per-broker rates

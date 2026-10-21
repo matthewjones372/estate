@@ -187,6 +187,7 @@ export const serverActions = (
       )
       .catch(() => undefined),
   askAlert: (alert, signal) => askAlert(environment(), alert, signal),
+  askStore: (store) => askAt(`/api/stores/${encodeURIComponent(store)}/ask?env=${encodeURIComponent(environment())}`),
   ...incidentsOn(environment),
   timelineMarkdown: (of) =>
     fetch(timelinePath(of, environment(), "md"))
@@ -221,11 +222,14 @@ export const serverActions = (
 })
 
 const askAlert = (environment: string, alert: string, signal: AbortSignal): Promise<AskAnswer | string> =>
-  fetch(`/api/alerts/${encodeURIComponent(alert)}/ask?env=${encodeURIComponent(environment)}`, {
+  askAt(`/api/alerts/${encodeURIComponent(alert)}/ask?env=${encodeURIComponent(environment)}`, signal)
+
+const askAt = (path: string, signal?: AbortSignal): Promise<AskAnswer | string> =>
+  fetch(path, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: "{}",
-    signal,
+    ...(signal === undefined ? {} : { signal }),
   })
     .then(
       (response): Promise<AskAnswer | string> =>

@@ -38,6 +38,8 @@ export interface Actions {
   readonly storeLoad: (store: string, range: Range) => Promise<ServiceState["load"] | undefined>
   /** A Kafka store's cluster now (spec 0057), or why it could not be read. */
   readonly storeCluster: (store: string) => Promise<KafkaCluster | string>
+  /** Ask AI about a Kafka store's cluster: its answer, or why there is none. */
+  readonly askStore: (store: string) => Promise<AskAnswer | string>
   /** A service's live lines; the returned function stops watching. */
   readonly watchLogs: (service: string, handlers: LogHandlers) => () => void
   /** An agent's recent runs: "none" where it has no runs to read, undefined where they could not be read. */

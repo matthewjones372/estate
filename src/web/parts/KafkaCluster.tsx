@@ -9,6 +9,7 @@ import { type KafkaCluster, type Partition, troubled } from "../../shared/kafka-
 import { useEstate } from "../context"
 import { clock, duration, measured } from "../format"
 import { internal, whatIsWrong } from "../kafka"
+import { ClusterAsk } from "./KafkaAsk"
 import { Flow } from "./KafkaFlow"
 import { type Chosen, Groups, reads } from "./KafkaGroups"
 
@@ -217,6 +218,7 @@ export const ClusterPanel = (props: { readonly store: string; readonly every?: n
       <h2 id="store-cluster" class="section-title">
         The cluster
       </h2>
+      <ClusterAsk store={props.store} />
       <Show
         when={drawn()}
         fallback={<p class="muted flush">{cluster() === "loading" ? "Reading the cluster…" : (cluster() as string)}</p>}

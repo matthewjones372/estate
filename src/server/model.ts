@@ -79,7 +79,7 @@ confidence. When you have answered, reply with one JSON object and nothing else:
 const objectIn = (text: string): string => text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)
 
 /** Evidence links only to web pages: a model's `javascript:` or file link is dropped, the evidence kept. */
-const safely = (answer: ModelAnswer): ModelAnswer => ({
+export const safely = (answer: ModelAnswer): ModelAnswer => ({
   ...answer,
   evidence: answer.evidence.map(({ text, href }) =>
     href !== undefined && /^https?:\/\//i.test(href) ? { text, href } : { text },

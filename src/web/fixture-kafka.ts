@@ -1,4 +1,5 @@
 /** A Kafka store's cluster for the pages' tests: three brokers, the third gone, orders in trouble, payments well. */
+import type { AskAnswer } from "../shared/ask"
 import type { KafkaCluster } from "../shared/kafka-cluster"
 
 const partition = (id: number, leader: string | null, inSync: number, preferred = true) => ({
@@ -40,4 +41,17 @@ export const kafkaCluster: KafkaCluster = {
       ],
     },
   ],
+}
+
+/** Ask AI's answer about the cluster. */
+export const clusterAnswer: AskAnswer = {
+  likelyCause: "Broker 3 left the cluster, so its partitions lost a replica and orders 2 lost its leader.",
+  evidence: [{ text: "broker 3 not seen for 10 min" }],
+  nextSteps: ["bring broker 3 back"],
+  confidence: "high",
+  model: "fake-model",
+  read: ["Cluster"],
+  called: [],
+  usage: { input: 300, cached: 0, output: 40 },
+  readLogs: false,
 }
