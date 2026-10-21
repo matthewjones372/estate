@@ -135,6 +135,8 @@ const sense = (catalog: Catalog): ReadonlyArray<Mistake> => {
     }
     if (store.selector.trim() === "") mistake(`${at}.selector`, "is empty")
     links(at, store.environments, store.links, storePlaceholders)
+    if (store.messages !== undefined && store.engine !== "kafka")
+      mistake(`${at}.messages`, "names a message's attributes, which only a kafka store has")
     store.extra?.forEach((extra, extraIndex) => {
       query(`${at}.extra[${extraIndex}] (${extra.title})`, extra.query)
     })

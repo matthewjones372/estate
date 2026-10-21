@@ -178,7 +178,9 @@ stores:
       group: messaging.kafka.consumer.group
 ```
 
-The catalog check names `jmx:` or `messages:` on a store whose engine is not `kafka`.
+Each of `system`, `operation`, `topic`, `partition`, `offset`, `key`, `id` and `group` may be named; a Kafka rule's
+`store:` may name them for the clusters it finds. The catalog check names `jmx:` or `messages:` on a store whose engine
+is not `kafka`.
 
 ### Reads
 
@@ -261,7 +263,7 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
       under reduced motion; the cluster read again every 15 seconds while the page is open and not otherwise.
       Done when: a suite shows a faster flow for a higher rate and none under reduced motion, and leaving the page
       stops the reads.
-- [ ] **`span-attributes`** — a trace's spans keep their messaging attributes, and Tempo is searched by them.
+- [x] **`span-attributes`** — a trace's spans keep their messaging attributes, and Tempo is searched by them.
       Done when: against the Tempo stub, a producer span reads its topic, partition, offset, key and message ID, and
       a consumer span its group, under the current names or a store's `messages:`.
 - [ ] **`message-follow-read`** — `GET /api/store-message`: the message's spans, and each group reading the topic

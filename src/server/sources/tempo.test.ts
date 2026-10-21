@@ -1,11 +1,53 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Result } from "effect"
+import { messageNames } from "../../shared/messaging"
 import { type Call, reply, stubRemote } from "../remote"
-import { readTrace, searchTraces, spansNamed } from "./tempo"
+import { readTrace, searchTraces, spansCarrying, spansNamed } from "./tempo"
 
 const tempo = { url: "http://tempo:3200", headers: { "x-scope-orgid": "shop" } }
 
 const resource = (service: string) => ({ attributes: [{ key: "service.name", value: { stringValue: service } }] })
+
+const text = (key: string, value: string) => ({ key, value: { stringValue: value } })
+const number = (key: string, value: string | number) => ({ key, value: { intValue: value } })
+
+/** A producer's or a consumer's span through Kafka, its attributes under both the current names and older ones. */
+const carried = (service: string, name: "publish" | "process", kind: number) => ({
+  resource: resource(service),
+  scopeSpans: [
+    {
+      spans: [
+        {
+          spanId: name,
+          name,
+          kind,
+          startTimeUnixNano: "1791979421000000000",
+          endTimeUnixNano: "1791979421002000000",
+          attributes:
+            name === "publish"
+              ? [
+                  text("messaging.system", "kafka"),
+                  text("messaging.operation.type", "send"),
+                  text("messaging.destination.name", "events"),
+                  text("messaging.destination.partition.id", "2"),
+                  number("messaging.kafka.offset", "1882340"),
+                  text("messaging.kafka.message.key", "pet-7"),
+                  text("messaging.message.id", "81723"),
+                  text("http.route", "/adoptions"),
+                ]
+              : [
+                  text("messaging.system", "kafka"),
+                  text("messaging.operation", "process"),
+                  text("messaging.destination.name", "events"),
+                  number("messaging.destination.partition.id", 2),
+                  number("messaging.kafka.message.offset", 1882340),
+                  text("messaging.kafka.consumer.group", "petshop-projection"),
+                ],
+        },
+      ],
+    },
+  ],
+})
 
 /** Tempo's answers, in the shapes its API reference gives: a search, and a trace whole as OTLP's JSON. */
 const fake = (calls: Call[]) => (call: Call) => {
@@ -54,6 +96,8 @@ const fake = (calls: Call[]) => (call: Call) => {
         },
       ],
     })
+  if (url.pathname === "/api/traces/5c0d")
+    return reply({ batches: [carried("shop", "publish", 4), carried("shop", "process", 5)] })
   if (url.pathname === "/api/traces/9a1c")
     return reply({ trace: { resourceSpans: [{ resource: resource("shop"), scopeSpans: [{ spans: [] }] }] } })
   return reply("trace not found", 404)
@@ -105,6 +149,53 @@ describe("traces in Tempo", () => {
         ],
       }),
     ))
+
+  test("keep a producer span's topic, partition, offset, key and message ID, under OpenTelemetry's names", () =>
+    Effect.runPromise(readTrace(tempo, "5c0d").pipe(Effect.provide(stubRemote(fake([]))))).then((trace) =>
+      expect(trace.spans.map((span) => span.messaging)).toEqual([
+        {
+          system: "kafka",
+          operation: "send",
+          topic: "events",
+          partition: 2,
+          offset: 1_882_340,
+          key: "pet-7",
+          id: "81723",
+        },
+        { system: "kafka", topic: "events", partition: 2 },
+      ]),
+    ))
+
+  test("keep a consumer span's group under the names a store gives, where its instrumentation is older", () =>
+    Effect.runPromise(
+      readTrace(
+        tempo,
+        "5c0d",
+        messageNames({
+          operation: "messaging.operation",
+          offset: "messaging.kafka.message.offset",
+          group: "messaging.kafka.consumer.group",
+        }),
+      ).pipe(Effect.provide(stubRemote(fake([])))),
+    ).then((trace) =>
+      expect(trace.spans[1]?.messaging).toEqual({
+        system: "kafka",
+        operation: "process",
+        topic: "events",
+        partition: 2,
+        offset: 1_882_340,
+        group: "petshop-projection",
+      }),
+    ))
+
+  test("are searched by a message's ID and topic, under the names in use", () => {
+    expect(spansCarrying(messageNames(undefined), { id: "81723", topic: "events" })).toBe(
+      '{ span.messaging.message.id = "81723" && span.messaging.destination.name = "events" }',
+    )
+    expect(spansCarrying(messageNames({ id: "message id" }), { id: "81723", topic: "events" })).toBe(
+      '{ span."message id" = "81723" && span.messaging.destination.name = "events" }',
+    )
+  })
 
   test("read in Tempo's v2 shape too", () =>
     Effect.runPromise(readTrace(tempo, "9a1c").pipe(Effect.provide(stubRemote(fake([]))))).then((trace) =>

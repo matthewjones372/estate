@@ -1,5 +1,6 @@
 /** Stores in the catalog (spec 0003), and the rule that finds Kafka clusters to make stores of (spec 0057). */
 import { Schema } from "effect"
+import { MessageNames } from "./messaging"
 
 const optional = Schema.optionalKey
 
@@ -19,6 +20,8 @@ export const Store = Schema.Struct({
   ),
   /** The preset's thresholds, overridden for a store sized close to its limits on purpose. */
   attention: optional(Schema.Record(Schema.String, Schema.Number)),
+  /** A Kafka store's: where its spans keep a message's attributes, where they are not OpenTelemetry's current names. */
+  messages: optional(MessageNames),
   /** Set by discovery, never written: where the entry was found. */
   discovered: optional(Schema.Struct({ from: Schema.Literal("prometheus") })),
 })
@@ -31,7 +34,7 @@ export const KafkaRule = Schema.Struct({
   selector: optional(Schema.String),
 })
 
-const { description, category, links, extra, attention } = Store.fields
+const { description, category, links, extra, attention, messages } = Store.fields
 
 /** What each cluster found becomes: a store's own fields, its values naming the rule's labels as `{label:KEY}`. */
 export const StoreTemplate = Schema.Struct({
@@ -41,5 +44,6 @@ export const StoreTemplate = Schema.Struct({
   links,
   extra,
   attention,
+  messages,
   environments: optional(Schema.Array(Schema.String)),
 })
