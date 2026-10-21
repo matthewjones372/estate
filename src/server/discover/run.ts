@@ -30,8 +30,8 @@ export interface Catalogs {
 export const makeCatalogs = (written: Catalog): Effect.Effect<Catalogs> =>
   Effect.all({ written: Ref.make(written), found: Ref.make({}), stores: Ref.make({}), said: Ref.make("") })
 
-/** The catalog shown made again; the state is left alone when it comes out the same. */
-const publish = (catalogs: Catalogs, settings: Settings): Effect.Effect<void, never, Estate> =>
+/** The catalog shown from what is written and found, and the found entries left out for a name already taken. */
+const shownNow = (catalogs: Catalogs) =>
   Effect.gen(function* () {
     const written = yield* Ref.get(catalogs.written)
     // In the rules' order, so that of two rules finding one name, the first's entry is the one kept.
@@ -45,11 +45,15 @@ const publish = (catalogs: Catalogs, settings: Settings): Effect.Effect<void, ne
         .flatMap(([, each]) => each),
     )
     const stores = yield* Ref.get(catalogs.stores)
-    const { catalog } = shown(
-      written,
-      found,
-      togetherStores(written.environments.flatMap((environment) => stores[environment.name] ?? [])),
-    )
+    const merged = togetherStores(written.environments.flatMap((environment) => stores[environment.name] ?? []))
+    const { catalog, clashes } = shown(written, found, merged.stores)
+    return { catalog, clashes: [...merged.clashes, ...clashes] }
+  })
+
+/** The catalog shown made again; the state is left alone when it comes out the same. */
+const publish = (catalogs: Catalogs, settings: Settings): Effect.Effect<void, never, Estate> =>
+  Effect.gen(function* () {
+    const { catalog } = yield* shownNow(catalogs)
     yield* updateEstate((estate) =>
       JSON.stringify(estate.catalog) === JSON.stringify(catalog) ? estate : withCatalog(estate, catalog, settings),
     )
@@ -142,7 +146,7 @@ export const discoverOnce = (
       ],
       { concurrency: "unbounded" },
     )
-    const saying = leftOut.flat().join("; ")
+    const saying = [...leftOut.flat(), ...(yield* shownNow(catalogs)).clashes].join("; ")
     if (saying !== (yield* Ref.getAndSet(catalogs.said, saying)) && saying !== "")
       yield* Effect.logWarning(`discovered entries left out, each with a mistake: ${saying}`)
     yield* publish(catalogs, settings)

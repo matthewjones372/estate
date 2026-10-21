@@ -59,17 +59,24 @@ export const checkedStores = (written: Catalog, entries: ReadonlyArray<unknown>)
   return { kept, leftOut }
 }
 
-/** Stores of one name, found in several environments, as one store in each; its first selector kept. */
-export const togetherStores = (stores: ReadonlyArray<Store>): ReadonlyArray<Store> => {
+/**
+ * Stores of one name, found in several environments, as one store in each. A store has one selector, so one found
+ * with other labels than the first of its name is left out, and said.
+ */
+export const togetherStores = (stores: ReadonlyArray<Store>) => {
   const byName = new Map<string, Store>()
+  const clashes: Array<string> = []
   for (const store of stores) {
     const was = byName.get(store.name)
-    byName.set(
-      store.name,
-      was === undefined ? store : { ...was, environments: [...new Set([...was.environments, ...store.environments])] },
-    )
+    if (was === undefined) byName.set(store.name, store)
+    else if (was.selector === store.selector)
+      byName.set(store.name, { ...was, environments: [...new Set([...was.environments, ...store.environments])] })
+    else
+      clashes.push(
+        `${store.environments.join(", ")} ${store.name}: found with other labels in ${was.environments.join(", ")} (${was.selector}); name the store by a label that tells them apart`,
+      )
   }
-  return [...byName.values()]
+  return { stores: [...byName.values()], clashes }
 }
 
 /**

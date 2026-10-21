@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, Result, SubscriptionRef } from "effect"
+import { Effect, Layer, Ref, Result, SubscriptionRef } from "effect"
 import type { Catalog, DiscoverRule } from "../../shared/catalog"
 import { checkCatalog } from "../../shared/check"
 import { kafkaFinding } from "../doctor-discover"
@@ -10,6 +10,7 @@ import type { Settings } from "../settings"
 import { prometheusRanges } from "../sources/prometheus"
 import { Estate, estateLayer } from "../state"
 import { catalogView } from "../views/catalog"
+import { shown as shownFrom } from "./merge"
 import { discoverOnce, makeCatalogs } from "./run"
 
 const rule: DiscoverRule = {
@@ -42,7 +43,7 @@ const series = (namespace: string, cluster: string) => ({
 
 /** Two Prometheuses: bus in both, and in production audit, which is written, and orders, a service's name. */
 const prometheuses =
-  (queries: Array<string>, down = new Set<string>()) =>
+  (queries: Array<string>, down = new Set<string>(), stagingNamespace = "data") =>
   (call: Call) => {
     const url = new URL(call.url)
     queries.push(`${url.host} ${url.searchParams.get("query")}`)
@@ -50,7 +51,7 @@ const prometheuses =
     return reply({
       data: {
         result: [
-          series("data", "bus"),
+          series(url.host === "staging" ? stagingNamespace : "data", "bus"),
           ...(url.host === "production" ? [series("data", "audit"), series("data", "orders")] : []),
         ],
       },
@@ -138,6 +139,44 @@ describe("discovered Kafka clusters", () => {
         expect(catalogView(shown, "production").stores?.[0]?.discovered).toBeUndefined()
       }),
     ))
+})
+
+describe("a found name that is taken", () => {
+  test("is left out where a cluster of that name has other labels, and said", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const [shown, said] = yield* Effect.gen(function* () {
+          const catalogs = yield* makeCatalogs(written)
+          yield* discoverOnce(catalogs, metered)
+          return [(yield* SubscriptionRef.get(yield* Estate)).catalog, yield* Ref.get(catalogs.said)] as const
+        }).pipe(
+          Effect.provide(estateLayer(estate({ catalog: written }))),
+          Effect.provide(Layer.merge(stubRemote(prometheuses([], new Set(), "data-staging")), platform)),
+        )
+        const bus = shown.stores?.find((store) => store.name === "bus")
+        expect(bus?.environments).toEqual(["staging"])
+        expect(bus?.selector).toContain('namespace="data-staging"')
+        expect(said).toContain(
+          'production bus: found with other labels in staging (job="kafka-exporter",namespace="data-staging",strimzi_io_cluster="bus"); name the store by a label that tells them apart',
+        )
+      }),
+    ))
+
+  test("by a service or a store is left to the written entry, then to the found service", () => {
+    const store = { name: "bus", environments: ["production"], engine: "kafka" as const, selector: "a" }
+    const service = { name: "bus", environments: ["production"] }
+    const withStore: Catalog = { ...catalog, stores: [{ ...store, name: "ledger" }] }
+    const { catalog: shown, clashes } = shownFrom(
+      withStore,
+      [service, { name: "ledger", environments: ["production"] }],
+      [{ ...store, discovered: { from: "prometheus" } }],
+    )
+    expect(shown.services.filter((each) => ["bus", "ledger"].includes(each.name)).map((each) => each.name)).toEqual([
+      "bus",
+    ])
+    expect(shown.stores?.map((each) => each.name)).toEqual(["ledger"])
+    expect(clashes).toEqual(["ledger: a written store has this name", "bus: a found service has this name"])
+  })
 })
 
 describe("the doctor's Kafka discover line", () => {

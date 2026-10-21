@@ -64,7 +64,7 @@ export const kafkaFinding = (ranges: Ranges, catalog: Catalog, environment: stri
   )
   return finding("discover", found, (entries) => {
     const { kept, leftOut } = checkedStores(catalog, entries.flat())
-    const stores = togetherStores(kept)
+    const { stores } = togetherStores(kept)
     const written = new Set((catalog.stores ?? []).map((store) => store.name))
     const writtenOver = stores.filter((store) => written.has(store.name)).map((store) => store.name)
     return [
