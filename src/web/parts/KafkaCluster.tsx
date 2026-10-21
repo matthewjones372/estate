@@ -2,7 +2,7 @@
 /**
  * A Kafka store's cluster now (spec 0057), drawn as a developer draws one: topics flowing in on the left, the cluster
  * with each broker holding the partitions it leads, and the consumer groups reading out on the right. Each flow moves
- * as fast as its messages a second. Read when the page opens, and again every 15 seconds while it stays open.
+ * as fast as its messages a second. Read when the page opens, and again every 15 seconds while it is open and seen.
  */
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
 import { type KafkaCluster, type Partition, troubled } from "../../shared/kafka-cluster"
@@ -194,17 +194,26 @@ export const ClusterPanel = (props: { readonly store: string; readonly every?: n
       () => props.store,
       (store) => {
         let current = true
+        let readAt = 0
+        const often = props.every ?? every
         setCluster("loading")
         // A read again keeps what is drawn until it answers, and a failure in between leaves it drawn.
-        const read = (again: boolean) =>
+        const read = (again: boolean) => {
+          readAt = Date.now()
           void actions.storeCluster(store).then((answer) => {
             if (current && (!again || typeof answer !== "string")) setCluster(answer)
           })
+        }
+        const visible = () => document.visibilityState !== "hidden"
         read(false)
-        const timer = setInterval(() => read(true), props.every ?? every)
+        // Read again while someone can see it, and on coming back to a tab left longer than that.
+        const timer = setInterval(() => visible() && read(true), often)
+        const back = () => visible() && Date.now() - readAt >= often && read(true)
+        document.addEventListener("visibilitychange", back)
         onCleanup(() => {
           current = false
           clearInterval(timer)
+          document.removeEventListener("visibilitychange", back)
         })
       },
     ),
@@ -214,7 +223,7 @@ export const ClusterPanel = (props: { readonly store: string; readonly every?: n
     return typeof read === "string" ? undefined : read
   }
   return (
-    <section aria-labelledby="store-cluster" class="panel section-box stack">
+    <section aria-labelledby="store-cluster" class="panel section-box stack kafka-panel">
       <h2 id="store-cluster" class="section-title">
         The cluster
       </h2>

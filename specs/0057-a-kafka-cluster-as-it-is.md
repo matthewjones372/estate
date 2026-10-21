@@ -190,11 +190,11 @@ GET /api/store-message?env=&store=&trace=       a message's spans, and each grou
 GET /api/store-message?env=&store=&id=&topic=
 ```
 
-The cluster is read every 15 seconds while the panel is open, and a followed message every 5 seconds until every
-group is past it. Nothing is read when the page is not open, so the overview costs no more than it does now. The
-cluster's queries are instant queries narrowed by the store's selectors, through a new `instant` on the metrics source
-beside `range` and `labels`. A missing JMX exporter leaves those parts out and says so. A missing Tempo turns *Follow
-a message* off and says why. The rest of the page is unharmed either way.
+The cluster is read every 15 seconds while the panel is open and its tab is seen, and a followed message every 5 seconds
+until every group is past it. Nothing is read when the page is not open, so the overview costs no more than it does now.
+The cluster's queries are instant queries narrowed by the store's selectors, through a new `instant` on the metrics
+source beside `range` and `labels`. A missing JMX exporter leaves those parts out and says so. A missing Tempo turns
+*Follow a message* off and says why. The rest of the page is unharmed either way.
 
 ## Why this shape
 

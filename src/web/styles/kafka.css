@@ -204,8 +204,11 @@ button.kafka-chip {
   }
 }
 
-/* On a narrow screen the diagram reads top to bottom, its flows pointing down. */
-@media (max-width: 900px) {
+/* In a narrow panel the diagram reads top to bottom, its flows pointing down: the panel's width, not the screen's. */
+.kafka-panel {
+  container-type: inline-size;
+}
+@container (max-width: 50em) {
   .kafka-diagram {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;

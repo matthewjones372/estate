@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 /** A Kafka store's cluster on its page, in happy-dom: run by `kafka-cluster.test.ts` once Solid's compiler is in place. */
-import { describe, expect, test } from "bun:test"
+import { describe, expect, jest, test } from "bun:test"
 import type { Events } from "../shared/events"
 import { events, operator } from "./fixture"
 import { kafkaCluster } from "./fixture-kafka"
@@ -105,6 +105,26 @@ describe("a Kafka store's cluster", () => {
     page.dispose()
     await new Promise((resolve) => setTimeout(resolve, 30))
     expect(page.calls.filter(([name]) => name === "storeCluster").length).toBe(read)
+  })
+
+  test("is not read again while the tab is hidden, and is on coming back to it", () => {
+    jest.useFakeTimers()
+    try {
+      const page = mount(() => <ClusterPanel store="bus" every={1000} />, { sent: withBus })
+      const reads = () => page.calls.filter(([name]) => name === "storeCluster").length
+      expect(reads()).toBe(1)
+      jest.advanceTimersByTime(1000)
+      expect(reads()).toBe(2)
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" })
+      jest.advanceTimersByTime(5000)
+      expect(reads()).toBe(2)
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" })
+      document.dispatchEvent(new Event("visibilitychange"))
+      expect(reads()).toBe(3)
+      page.dispose()
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   test("says why it is not drawn, and is not there for a store that is not Kafka", async () => {
