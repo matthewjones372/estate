@@ -17,6 +17,13 @@ import { recording } from "./recording"
 const ordersSlow = { id: "i1", title: "Orders slow" } as Incident
 const checkoutDown = { id: "i2", title: "Checkout down" } as Incident
 
+/** A chart's box for picking it, by the chart's label. */
+const pick = (container: HTMLElement, label: string) => {
+  const found = container.querySelector<HTMLInputElement>(`input.chart-pick[aria-label="Pick ${label}"]`)
+  if (found === null) throw new Error(`no pick for ${label}`)
+  return found
+}
+
 /** The page's actions with `open` as the incidents open now. */
 const opened = (open: ReadonlyArray<Incident>) => {
   const recorded = recording()
@@ -104,7 +111,7 @@ describe("including what was found in an incident", () => {
     ])
   })
 
-  test("a chart goes as its service, panel and the range on screen, which the server reads again", async () => {
+  test("charts are picked once for the panel, and each goes as its service, panel and the range on screen", async () => {
     const calls: Array<readonly [string, ...ReadonlyArray<unknown>]> = []
     const recorded = recording()
     const actions = {
@@ -122,13 +129,16 @@ describe("including what was found in an incident", () => {
       { actions },
     )
     await page.settle()
-    expect(page.container.querySelectorAll(".chart .plain-button")).toHaveLength(4)
-    page.click(page.button("Include…", 1))
-    page.click(page.button("Include in Orders slow"))
+    expect(page.container.querySelectorAll(".chart button, .chart-pick")).toHaveLength(0)
+    page.click(page.button("Include charts…"))
+    expect(page.container.querySelectorAll(".chart-pick")).toHaveLength(4)
+    expect(page.button("Include in Orders slow").disabled).toBe(true)
+    page.click(pick(page.container, "Errors"))
+    page.click(pick(page.container, "Queue"))
+    page.click(page.button("Include 2 in Orders slow"))
     await page.settle()
-    page.click(page.button("Include…", 3))
-    page.click(page.button("Include in Orders slow"))
-    await page.settle()
+    expect(page.container.querySelector(".chart-pick")).toBeNull()
+    expect(page.container.querySelector(".include-told")?.textContent).toBe("Included in Orders slow")
     const range = { from: new Date(now - 3_600_000).toISOString(), to: new Date(now).toISOString() }
     expect(calls).toEqual([
       ["include", "i1", { kind: "chart", environment: "production", service: "storefront", panel: "errors", ...range }],
@@ -154,8 +164,9 @@ describe("including what was found in an incident", () => {
     } as PastFiring
     const page = mount(() => <LoadThen service="storefront" firing={firing} />, { actions })
     await page.settle()
-    expect(page.container.querySelectorAll(".chart .plain-button")).toHaveLength(3)
-    page.click(page.button("Include…", 1))
+    page.click(page.button("Include charts…"))
+    expect(page.container.querySelectorAll(".chart-pick")).toHaveLength(3)
+    page.click(pick(page.container, "Errors"))
     page.click(page.button("Include in Orders slow"))
     await page.settle()
     expect(calls).toEqual([
