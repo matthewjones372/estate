@@ -1,10 +1,10 @@
 /**
  * Discovery every minute, beside the catalog file's reload: each environment read from Kubernetes asked what its
- * rules find, and the catalog shown made again from the written one and all that was found. A cluster that does not
- * answer keeps what it found last.
+ * rules find, its Prometheus what Kafka clusters it scrapes, and the catalog shown made again from the written one and
+ * all that was found. A source that does not answer keeps what it found last.
  */
 import { Effect, type FileSystem, Ref } from "effect"
-import type { Catalog, Service } from "../../shared/catalog"
+import type { Catalog, Service, Store } from "../../shared/catalog"
 import { withCatalog } from "../catalog-file"
 import type { Remote } from "../remote"
 import { forEver } from "../schedule"
@@ -13,6 +13,7 @@ import { clusterOf } from "../sources/kubernetes"
 import { runtimeOf } from "../sources/ports"
 import { type Estate, updateEstate } from "../state"
 import { entryOf as backstageEntry, componentsIn } from "./backstage"
+import { discoverKafka, togetherStores } from "./kafka"
 import { entryOf, together, workloadsIn } from "./kubernetes"
 import { checked, shown } from "./merge"
 
@@ -20,12 +21,14 @@ import { checked, shown } from "./merge"
 export interface Catalogs {
   readonly written: Ref.Ref<Catalog>
   readonly found: Ref.Ref<Readonly<Record<string, ReadonlyArray<Service>>>>
+  /** The Kafka clusters each environment's Prometheus was last found to scrape, as stores. */
+  readonly stores: Ref.Ref<Readonly<Record<string, ReadonlyArray<Store>>>>
   /** What was last said about entries left out, so a mistake is logged once, not every minute. */
   readonly said: Ref.Ref<string>
 }
 
 export const makeCatalogs = (written: Catalog): Effect.Effect<Catalogs> =>
-  Effect.all({ written: Ref.make(written), found: Ref.make({}), said: Ref.make("") })
+  Effect.all({ written: Ref.make(written), found: Ref.make({}), stores: Ref.make({}), said: Ref.make("") })
 
 /** The catalog shown made again; the state is left alone when it comes out the same. */
 const publish = (catalogs: Catalogs, settings: Settings): Effect.Effect<void, never, Estate> =>
@@ -41,7 +44,12 @@ const publish = (catalogs: Catalogs, settings: Settings): Effect.Effect<void, ne
         .sort(([a], [b]) => order(a) - order(b))
         .flatMap(([, each]) => each),
     )
-    const { catalog } = shown(written, found)
+    const stores = yield* Ref.get(catalogs.stores)
+    const { catalog } = shown(
+      written,
+      found,
+      togetherStores(written.environments.flatMap((environment) => stores[environment.name] ?? [])),
+    )
     yield* updateEstate((estate) =>
       JSON.stringify(estate.catalog) === JSON.stringify(catalog) ? estate : withCatalog(estate, catalog, settings),
     )
@@ -118,6 +126,7 @@ export const discoverOnce = (
       yield* Ref.update(catalogs.found, (found) => ({ ...found, [environment.name]: kept }))
     }
     leftOut.push(...(yield* discoverBackstage(catalogs, settings, catalog)))
+    leftOut.push(...(yield* discoverKafka(catalogs.stores, settings, catalog)))
     const saying = leftOut.join("; ")
     if (saying !== (yield* Ref.getAndSet(catalogs.said, saying)) && saying !== "")
       yield* Effect.logWarning(`discovered services left out, each with a mistake: ${saying}`)

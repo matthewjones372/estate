@@ -219,7 +219,7 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
 - [x] **`discover-kafka-rule`** — `kafka:` and `store:` in a discover rule, and its checks.
       Done when: a rule with no `by`, with `{label:x}` not among its `by`, or with `service:`, is a catalog mistake
       that says so.
-- [ ] **`discover-kafka`** — every minute, each environment's clusters found from kafka_exporter's series, checked,
+- [x] **`discover-kafka`** — every minute, each environment's clusters found from kafka_exporter's series, checked,
       and put after the written stores, which win by name.
       Done when: against the Prometheus stub, two clusters in two environments are two stores in both, each with its
       selector and its template filled; a written store of the same name replaces one; and a failing Prometheus keeps what
