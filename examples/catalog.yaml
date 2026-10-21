@@ -173,6 +173,8 @@ stores:
     engine: kafka
     selector: 'job="kafka"'
     attention: { underReplicated: 0 }
+    # Where its spans keep a message's attributes, where these are not OpenTelemetry's current names.
+    messages: { offset: messaging.kafka.message.offset, group: messaging.kafka.consumer.group }
 
 # Jobs no service owns: a CronJob or Job by name in its namespace, or an ECS scheduled task in its cluster.
 jobs:

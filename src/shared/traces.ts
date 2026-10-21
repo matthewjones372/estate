@@ -1,6 +1,7 @@
 /** Traces as Estate reads them from the tracing tool, and a catalog's journey measured in them (spec 0046). */
 import { Schema } from "effect"
 import type { Edge, Journey, Stage } from "./catalog-journey"
+import { Messaging } from "./messaging"
 
 const optional = Schema.optionalKey
 const Instant = Schema.String
@@ -16,6 +17,8 @@ export const TraceSpan = Schema.Struct({
   start: Schema.Number,
   end: Schema.Number,
   failed: Schema.Boolean,
+  /** What it says of a message it sent or handled, by its messaging attributes (spec 0057). */
+  messaging: optional(Messaging),
 })
 export type TraceSpan = typeof TraceSpan.Type
 

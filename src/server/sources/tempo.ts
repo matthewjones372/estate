@@ -3,6 +3,7 @@
  * Read when a page asks, not polled, since a sample is many calls (spec 0046).
  */
 import { Effect, Schema } from "effect"
+import { type MessageNames, messageNames, messagingOf } from "../../shared/messaging"
 import type { Trace, TraceSpan } from "../../shared/traces"
 import { callJson, type Remote } from "../remote"
 import type { Reach } from "./grafana"
@@ -15,7 +16,13 @@ const Found = Schema.Struct({
 const Nanos = Schema.Union([Schema.String, Schema.Number])
 const Attribute = Schema.Struct({
   key: Schema.String,
-  value: Schema.Struct({ stringValue: Schema.optionalKey(Schema.String) }),
+  /** OTLP's JSON writes a 64-bit integer as a string, and some writers as a number. */
+  value: Schema.Struct({
+    stringValue: Schema.optionalKey(Schema.String),
+    intValue: Schema.optionalKey(Nanos),
+    doubleValue: Schema.optionalKey(Schema.Number),
+    boolValue: Schema.optionalKey(Schema.Boolean),
+  }),
 })
 const OtlpSpan = Schema.Struct({
   spanId: Schema.String,
@@ -25,6 +32,7 @@ const OtlpSpan = Schema.Struct({
   startTimeUnixNano: Nanos,
   endTimeUnixNano: Nanos,
   status: Schema.optionalKey(Schema.Struct({ code: Schema.optionalKey(Schema.Union([Schema.String, Schema.Number])) })),
+  attributes: Schema.optionalKey(Schema.Array(Attribute)),
 })
 const Scope = Schema.Struct({ spans: Schema.optionalKey(Schema.Array(OtlpSpan)) })
 const Batch = Schema.Struct({
@@ -53,21 +61,37 @@ const failedOf = (code: string | number | undefined) => code === 2 || code === "
 
 const millis = (nanos: string | number) => Number(nanos) / 1e6
 
-const spansOf = (batches: ReadonlyArray<typeof Batch.Type>): ReadonlyArray<TraceSpan> =>
+const textOf = ({ value }: typeof Attribute.Type): string | undefined =>
+  value.stringValue ??
+  [value.intValue, value.doubleValue, value.boolValue].find((each) => each !== undefined)?.toString()
+
+const textsOf = (attributes: ReadonlyArray<typeof Attribute.Type>) =>
+  new Map(
+    attributes.flatMap((attribute) => {
+      const text = textOf(attribute)
+      return text === undefined ? [] : [[attribute.key, text] as const]
+    }),
+  )
+
+const spansOf = (batches: ReadonlyArray<typeof Batch.Type>, names: Required<MessageNames>): ReadonlyArray<TraceSpan> =>
   batches.flatMap((batch) => {
     const service =
       batch.resource?.attributes?.find((attribute) => attribute.key === "service.name")?.value.stringValue ?? "unknown"
     return [...(batch.scopeSpans ?? []), ...(batch.instrumentationLibrarySpans ?? [])].flatMap((scope) =>
-      (scope.spans ?? []).map((span) => ({
-        id: span.spanId,
-        ...(span.parentSpanId === undefined || span.parentSpanId === "" ? {} : { parent: span.parentSpanId }),
-        service,
-        name: span.name,
-        kind: kindOf(span.kind),
-        start: millis(span.startTimeUnixNano),
-        end: millis(span.endTimeUnixNano),
-        failed: failedOf(span.status?.code),
-      })),
+      (scope.spans ?? []).map((span) => {
+        const messaging = messagingOf(textsOf(span.attributes ?? []), names)
+        return {
+          id: span.spanId,
+          ...(span.parentSpanId === undefined || span.parentSpanId === "" ? {} : { parent: span.parentSpanId }),
+          service,
+          name: span.name,
+          kind: kindOf(span.kind),
+          start: millis(span.startTimeUnixNano),
+          end: millis(span.endTimeUnixNano),
+          failed: failedOf(span.status?.code),
+          ...(messaging === undefined ? {} : { messaging }),
+        }
+      }),
     )
   })
 
@@ -87,6 +111,15 @@ const ask = <S extends Schema.Decoder<unknown>>(tempo: Reach, path: string, sche
 /** A TraceQL selector for spans of this name from this service. */
 export const spansNamed = (service: string, name: string): string =>
   `{ resource.service.name = ${JSON.stringify(service)} && name = ${JSON.stringify(name)} }`
+
+const attribute = (name: string) => `span.${/^[\w.]+$/.test(name) ? name : JSON.stringify(name)}`
+
+/** A TraceQL selector for the spans that carry this message: its ID, on its topic. */
+export const spansCarrying = (
+  names: Required<MessageNames>,
+  message: { readonly id: string; readonly topic: string },
+): string =>
+  `{ ${attribute(names.id)} = ${JSON.stringify(message.id)} && ${attribute(names.topic)} = ${JSON.stringify(message.topic)} }`
 
 /** The ids of up to `most` traces a TraceQL query finds between two times, in milliseconds since the epoch. */
 export const searchTraces = (
@@ -109,9 +142,13 @@ export const searchTraces = (
     (found) => (found.traces ?? []).map((trace) => trace.traceID),
   )
 
-/** One trace, every span of it. */
-export const readTrace = (tempo: Reach, id: string): Effect.Effect<Trace, Failure, Remote> =>
+/** One trace, every span of it, a message's attributes read under these names. */
+export const readTrace = (
+  tempo: Reach,
+  id: string,
+  names: Required<MessageNames> = messageNames(undefined),
+): Effect.Effect<Trace, Failure, Remote> =>
   Effect.map(ask(tempo, `/api/traces/${encodeURIComponent(id)}`, Whole), (whole) => ({
     id,
-    spans: spansOf(batchesOf(whole)),
+    spans: spansOf(batchesOf(whole), names),
   }))
