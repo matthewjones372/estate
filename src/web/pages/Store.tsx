@@ -9,6 +9,7 @@ import { DatabasePanel } from "../parts/DatabaseCluster"
 import { FoundEntry } from "../parts/Found"
 import { ClusterPanel } from "../parts/KafkaCluster"
 import { HealthLine, Links } from "../parts/Lane"
+import { SilencedAlerts } from "../parts/Silenced"
 
 export const StorePage = (props: { readonly name: string; readonly message?: string | undefined }) => {
   const { actions, me, now } = useEstate()
@@ -18,6 +19,7 @@ export const StorePage = (props: { readonly name: string; readonly message?: str
   const state = () => events().services?.stores?.find((each) => each.name === props.name)
   const alerts = () => (events().alerts?.alerts ?? []).filter((alert) => alert.store === props.name)
   const firing = () => alerts().filter((alert) => alert.state === "firing")
+  const silenced = () => alerts().filter((alert) => alert.state === "silenced")
   const canSilence = () => me.role === "operator" && events().alerts?.silences === true
   return (
     <Show
@@ -72,6 +74,7 @@ export const StorePage = (props: { readonly name: string; readonly message?: str
               {(alert) => <AlertCard alert={alert} catalog={events().catalog} canSilence={canSilence()} />}
             </For>
           </div>
+          <SilencedAlerts alerts={silenced()} canSilence={canSilence()} />
         </section>
         <section aria-labelledby="store-today" class="panel section-box">
           <h2 id="store-today" class="section-title">

@@ -4,17 +4,17 @@
  * stores, and what changed. Alert → context, not vitals-first.
  */
 import { For, Show } from "solid-js"
-import type { Alert, Events } from "../../shared/events"
+import type { Events } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
-import { clock, counted, measured } from "../format"
+import { counted, measured } from "../format"
 import { A } from "../parts/A"
 import { alertsLayout, LayoutChoice } from "../parts/AlertsLayout"
 import { Feed } from "../parts/Feed"
 import { FiringAlerts } from "../parts/FiringAlerts"
-import { Icon } from "../parts/icons"
 import { Lanes } from "../parts/Lanes"
 import { EstateMap } from "../parts/Map"
 import { Signals } from "../parts/Signals"
+import { SilencedAlerts } from "../parts/Silenced"
 import { Reading, SourceNotices } from "./States"
 
 export interface Headline {
@@ -144,38 +144,6 @@ export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
   return [...own, ...always].slice(0, Math.max(4, own.length))
 }
 
-const Silenced = (props: { readonly alerts: ReadonlyArray<Alert>; readonly canSilence: boolean }) => {
-  const { actions } = useEstate()
-  return (
-    <div class="stack close">
-      <For each={props.alerts}>
-        {(alert) => (
-          <Show when={alert.silence}>
-            {(silence) => (
-              <div class="silenced-row">
-                <Icon name="silence" />
-                <span class="mono ink-soft">{alert.name}</span>
-                <span>
-                  silenced until {clock(silence().endsAt)} by {silence().by}: “{silence().reason}”
-                </span>
-                <Show when={props.canSilence}>
-                  <button
-                    type="button"
-                    class="plain-button push-right"
-                    onClick={() => void actions.unsilence(silence().id)}
-                  >
-                    Unsilence
-                  </button>
-                </Show>
-              </div>
-            )}
-          </Show>
-        )}
-      </For>
-    </div>
-  )
-}
-
 export const Overview = () => {
   const { me, now } = useEstate()
   const snapshot = useSnapshot()
@@ -234,7 +202,7 @@ export const Overview = () => {
           by="incident and service"
           rows={rows(firing())}
         />
-        <Silenced alerts={silenced()} canSilence={canSilence()} />
+        <SilencedAlerts alerts={silenced()} canSilence={canSilence()} />
       </section>
       <Signals services={events().services?.services} />
       <section aria-label="Vitals and map" class="now">
