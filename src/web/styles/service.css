@@ -222,3 +222,32 @@ fieldset.silencing {
   min-width: 0;
   gap: 24px;
 }
+/* A chart ticked for an incident (spec 0063). */
+.chart-pick {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  margin-inline-end: 8px;
+  accent-color: var(--amber);
+}
+.chart.chart-picked {
+  outline: 1px solid var(--amber-ring);
+  outline-offset: 6px;
+  border-radius: 4px;
+}
+.chart-name {
+  display: inline-flex;
+  align-items: center;
+}
+/* The panel's one Include charts…: beside the range, and a row of its own while choosing. */
+.charts-head {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.charts-include {
+  margin-inline-start: auto;
+}
+.charts-include:has(.include-chooser) {
+  order: 3;
+  flex: 1 1 100%;
+}

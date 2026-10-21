@@ -3,13 +3,13 @@
 import { createEffect, createMemo, createSignal, For, on, onCleanup, Show } from "solid-js"
 import type { Alert, Load as Read, Series } from "../../shared/events"
 import { loadPanels } from "../../shared/stats"
-import { reading, whole, type Zoom } from "../chart"
-import { type Range, useEstate, useSnapshot } from "../context"
+import { onScreen, reading, whole, type Zoom } from "../chart"
+import { type Range, useEstate } from "../context"
 import { clock, measured } from "../format"
 import { firingPath, pathOf } from "../route"
 import { spikeBands } from "../spike"
 import { A } from "./A"
-import { IncludeInIncident } from "./IncludeInIncident"
+import { IncludeCharts, type Picking, pickingCharts } from "./PickCharts"
 import { Plot } from "./Plot"
 import { TrafficSpike } from "./Signals"
 
@@ -40,6 +40,8 @@ export interface Reading {
   readonly zoom: () => Zoom
   readonly onZoom: (zoom: Zoom) => void
   readonly shade?: () => { readonly from: number; readonly to: number } | undefined
+  /** Charts being picked for an incident (spec 0063). */
+  readonly pick?: Picking
 }
 
 export const Chart = (props: {
@@ -48,12 +50,11 @@ export const Chart = (props: {
   readonly series: Series | undefined
   readonly limit: number | undefined
   readonly reading: Reading
-  /** The service and panel it is, for *Include in incident* over the range on screen (spec 0051). */
+  /** The service and panel it is, for picking it for an incident (specs 0051 and 0063). */
   readonly of?: { readonly service: string; readonly panel: string }
   /** Shade jumps in this request rate. The number and the line stay as they are. */
   readonly spike?: boolean
 }) => {
-  const snapshot = useSnapshot()
   const shared = props.reading
   const span = () => shared.span()
   const points = () => props.series?.points ?? []
@@ -64,9 +65,22 @@ export const Chart = (props: {
   const zoomed = () => shared.zoom().from > 0 || shared.zoom().to < 1
   const edge = (fraction: number) => at(shared.end() - span() + fraction * span())
   return (
-    <figure class="chart">
+    <figure class="chart" classList={{ "chart-picked": props.of !== undefined && shared.pick?.has(props.of.panel) }}>
       <figcaption class="spread">
-        <span class="muted">{read() === undefined ? props.label : `${props.label} at ${at(read()?.at ?? 0)}`}</span>
+        <span class="chart-name">
+          <Show when={shared.pick?.on() ? props.of : undefined}>
+            {(of) => (
+              <input
+                type="checkbox"
+                class="chart-pick"
+                aria-label={`Pick ${props.label}`}
+                checked={shared.pick?.has(of().panel)}
+                onClick={() => shared.pick?.toggle(of().panel)}
+              />
+            )}
+          </Show>
+          <span class="muted">{read() === undefined ? props.label : `${props.label} at ${at(read()?.at ?? 0)}`}</span>
+        </span>
         <span class="mono" aria-live="polite" style={{ color: alarm() ? "var(--amber-text)" : undefined }}>
           {read() === undefined ? now() : measured(read()?.value, props.unit)}
         </span>
@@ -98,19 +112,6 @@ export const Chart = (props: {
         </Show>
         <span>{zoomed() && shared.zoom().to < 1 ? edge(shared.zoom().to) : shared.ends()}</span>
       </div>
-      <Show when={props.of}>
-        {(of) => (
-          <IncludeInIncident
-            label="Include…"
-            what={() => {
-              const from = shared.end() - span() + shared.zoom().from * span()
-              const to = shared.end() - span() + shared.zoom().to * span()
-              const iso = (ms: number) => new Date(ms).toISOString()
-              return { kind: "chart", environment: snapshot.environment, ...of(), from: iso(from), to: iso(to) }
-            }}
-          />
-        )}
-      </Show>
     </figure>
   )
 }
@@ -158,7 +159,9 @@ export const Load = (props: {
     setZoom(whole)
     setMark(undefined)
   }
+  const charts = pickingCharts()
   const shared: Reading = {
+    pick: charts.picking,
     span: () => spans[range()],
     over: range,
     starts: () => `${range()} ago`,
@@ -171,10 +174,17 @@ export const Load = (props: {
   }
   return (
     <section aria-labelledby="load" class="panel section-box">
-      <div class="spread">
+      <div class="spread charts-head">
         <h2 id="load" class="section-title">
           {props.title ?? "Load"}
         </h2>
+        <div class="charts-include">
+          <IncludeCharts
+            service={props.name}
+            charts={charts}
+            range={() => onScreen(shared.end(), shared.span(), shared.zoom())}
+          />
+        </div>
         <fieldset class="choices bare">
           <legend class="visually-hidden">Range</legend>
           <Show when={zoom().from > 0 || zoom().to < 1}>

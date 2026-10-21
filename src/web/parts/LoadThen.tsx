@@ -1,16 +1,17 @@
 /** @jsxImportSource solid-js */
 /**
  * A service's load around a past firing: from an hour before it fired to an hour after it ended, the firing shaded.
- * Each chart is included in an incident over the range on screen (spec 0051).
+ * Its charts are picked for an incident over the range on screen (specs 0051 and 0063).
  */
 import { createEffect, createSignal, on, onCleanup } from "solid-js"
 import type { Load } from "../../shared/events"
 import type { PastFiring } from "../../shared/firing"
 import { windowOf } from "../../shared/window"
-import { whole, type Zoom } from "../chart"
+import { onScreen, whole, type Zoom } from "../chart"
 import { useEstate } from "../context"
 import { day } from "../format"
 import { Chart, type Reading } from "./Charts"
+import { IncludeCharts, pickingCharts } from "./PickCharts"
 
 const hour = 3_600_000
 
@@ -37,7 +38,9 @@ export const LoadThen = (props: { readonly service: string; readonly firing: Pas
     }),
   )
   const of = (panel: string) => ({ service: props.service, panel })
+  const charts = pickingCharts()
   const shared: Reading = {
+    pick: charts.picking,
     span: () => (window().end - window().start) * 1000,
     over: () => "the firing",
     starts: () => day(new Date(window().start * 1000).toISOString()),
@@ -51,9 +54,18 @@ export const LoadThen = (props: { readonly service: string; readonly firing: Pas
   }
   return (
     <section aria-labelledby="firing-load" class="panel section-box">
-      <h2 id="firing-load" class="section-title">
-        Load then
-      </h2>
+      <div class="spread charts-head">
+        <h2 id="firing-load" class="section-title">
+          Load then
+        </h2>
+        <div class="charts-include">
+          <IncludeCharts
+            service={props.service}
+            charts={charts}
+            range={() => onScreen(shared.end(), shared.span(), shared.zoom())}
+          />
+        </div>
+      </div>
       <div class="charts">
         <Chart
           label="Requests"

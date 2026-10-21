@@ -64,3 +64,9 @@ export const reading = (
   const value = points[index]
   return value === null || value === undefined ? undefined : { at: timeOf(index, points.length, end, span), value }
 }
+
+/** The range on screen, zoomed or not, as an incident includes it (spec 0063). */
+export const onScreen = (end: number, span: number, zoom: Zoom) => {
+  const iso = (fraction: number) => new Date(end - span + fraction * span).toISOString()
+  return { from: iso(zoom.from), to: iso(zoom.to) }
+}
