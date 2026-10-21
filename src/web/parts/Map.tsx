@@ -5,7 +5,7 @@
  */
 import { createMemo, createSignal, For, Show } from "solid-js"
 import type { CatalogEvent, ServicesEvent } from "../../shared/events"
-import { healthOf, largeMap, pathOf, subOf } from "../areas"
+import { healthOf, manyServices, pathOf, subOf } from "../areas"
 import { type DrawnCategory, type DrawnEdge, type DrawnNode, drawnOf } from "../drawn"
 import { amount, took } from "../format"
 import { byName } from "../indexed"
@@ -35,22 +35,28 @@ const sameShape = (was: Shape, now: Shape) =>
   was.ids.every((id, index) => now.ids[index] === id) &&
   was.edges.every((edge, index) => now.edges[index]?.from === edge.from && now.edges[index]?.to === edge.to)
 
-type View = "areas" | "lines"
-const viewing = kept("estate.map.view")
+type Layout = "auto" | "areas" | "lines"
+const layouts: ReadonlyArray<{ readonly value: Layout; readonly label: string }> = [
+  { value: "auto", label: "Auto" },
+  { value: "areas", label: "Areas" },
+  { value: "lines", label: "Lines" },
+]
+const choosing = kept("estate.map.layout")
+const layoutAtFirst = (): Layout => layouts.find((each) => each.value === choosing.read())?.value ?? "auto"
 const narrow = () => typeof window.matchMedia === "function" && window.matchMedia("(max-width: 720px)").matches
-const viewAtFirst = (catalog: CatalogEvent): View => {
-  const chosen = viewing.read()
-  if (chosen === "areas" || chosen === "lines") return chosen
-  return largeMap(catalog) || narrow() ? "areas" : "lines"
-}
 
 const isCategory = (node: DrawnNode): node is DrawnCategory => "kind" in node && node.kind === "category"
 
 export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly services: ServicesEvent | undefined }) => {
-  const [view, setView] = createSignal(viewAtFirst(props.catalog))
-  const choose = (next: View) => {
-    setView(next)
-    viewing.write(next)
+  const [chosen, setChosen] = createSignal(layoutAtFirst())
+  const choose = (next: Layout) => {
+    setChosen(next)
+    choosing.write(next)
+  }
+  // Auto is areas for many services or a phone's width, and the drawing otherwise (spec 0064).
+  const view = () => {
+    const now = chosen()
+    return now !== "auto" ? now : manyServices(props.catalog) || narrow() ? "areas" : "lines"
   }
   const [opened, setOpened] = createSignal(openedAtFirst())
   const toggle = (category: string) => {
@@ -226,12 +232,18 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
           <span class="map-opened">
             <fieldset class="choices bare">
               <legend class="visually-hidden">Draw the estate as</legend>
-              <button type="button" class="choice" aria-pressed={view() === "areas"} onClick={() => choose("areas")}>
-                Areas
-              </button>
-              <button type="button" class="choice" aria-pressed={view() === "lines"} onClick={() => choose("lines")}>
-                Lines
-              </button>
+              <For each={layouts}>
+                {(each) => (
+                  <button
+                    type="button"
+                    class="choice"
+                    aria-pressed={chosen() === each.value}
+                    onClick={() => choose(each.value)}
+                  >
+                    {each.label}
+                  </button>
+                )}
+              </For>
             </fieldset>
             <Show when={view() === "lines"}>
               <JourneyChoices on={on} />

@@ -108,9 +108,12 @@ Viewers see everything and add notes. Operators can also silence, switch debug, 
 ![A service page: its version in each environment, links and owners, load and stats, live logs, pods, debug, what changed and alerts today](docs/service.png)
 
 Services, stores and jobs can be grouped by category, such as Payments or Data, so a page of forty services
-can be read as five groups. The map at the top draws a node per category once there are more than a dozen, and opens one
-in place when you click it. Anything that needs attention is always drawn on its own. The overview shows services as
-lanes or, when the estate is long to scroll, as a grid of compact cards; the choice is kept in this browser.
+can be read as five groups. The map at the top is on *Auto* unless you choose: past a dozen services (`map.areas` in the
+catalog) or on a phone it is a card per area with every part named, what needs attention first, and where traffic meets
+trouble; otherwise it is drawn, a node per category once there are more than a dozen nodes (`map.collapse`), opened in
+place when you click it. Anything that needs attention is always shown on its own. What is firing shows as a row each
+unless you choose cards. The overview shows services as lanes or, when the estate is long to scroll, as a grid of
+compact cards; each choice is kept in this browser.
 
 ### Around this alert, and Ask AI
 

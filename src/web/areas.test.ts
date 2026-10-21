@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test"
 import type { CatalogEvent, Health, ServicesEvent } from "../shared/events"
-import { areasOf, largeMap, neighboursOf, troubleOf } from "./areas"
+import { areasOf, manyServices, neighboursOf, troubleOf } from "./areas"
 
 const catalogOf = (
   members: Readonly<Record<string, ReadonlyArray<string>>>,
   edges: CatalogEvent["map"]["edges"] = [],
-  collapse?: number | "never",
+  areas?: number | "never",
 ): CatalogEvent => {
   const names = Object.entries(members).flatMap(([category, each]) => each.map((name) => [name, category] as const))
   return {
@@ -19,7 +19,7 @@ const catalogOf = (
         { id: "provider", title: "Card provider", kind: "external" },
       ],
       edges,
-      ...(collapse === undefined ? {} : { collapse }),
+      ...(areas === undefined ? {} : { areas }),
     },
   }
 }
@@ -107,13 +107,13 @@ describe("the map as areas", () => {
     ])
   })
 
-  test("is the view for a map past its collapse, and never for one that never collapses", () => {
+  test("is Auto's view past `map.areas` services, and never when that is never", () => {
     const many = { Shop: Array.from({ length: 13 }, (_, index) => `shop${index}`) }
     expect([
-      largeMap(estate),
-      largeMap(catalogOf(many)),
-      largeMap(catalogOf(many, [], "never")),
-      largeMap(catalogOf({ Shop: ["a", "b", "c"] }, [], 2)),
+      manyServices(estate),
+      manyServices(catalogOf(many)),
+      manyServices(catalogOf(many, [], "never")),
+      manyServices(catalogOf({ Shop: ["a", "b", "c"] }, [], 2)),
     ]).toEqual([false, true, false, true])
   })
 })

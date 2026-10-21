@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-/** Auto, Cards or Rows for what is firing, kept in this browser as the services' list or grid is. */
+/** Auto, Cards or Rows for what is firing, Rows unless chosen (spec 0064), kept in this browser. */
 import { createSignal, For } from "solid-js"
 import type { Alert } from "../../shared/events"
 import { kept } from "../kept"
@@ -11,7 +11,7 @@ const layouts: ReadonlyArray<{ readonly value: Layout; readonly label: string }>
   { value: "cards", label: "Cards" },
   { value: "rows", label: "Rows" },
 ]
-const initial = (): Layout => layouts.find((each) => each.value === preference.read())?.value ?? "auto"
+const initial = (): Layout => layouts.find((each) => each.value === preference.read())?.value ?? "rows"
 
 /** More firing than this, and *Auto* shows rows: two cards fill a laptop's width, four are about a screen. */
 const fewest = 3

@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-/** Auto, Cards or Rows for what is firing, kept in this browser: run by `alert-choice.test.ts`. */
+/** Auto, Cards or Rows for what is firing, Rows unless chosen, kept in this browser: run by `alert-choice.test.ts`. */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import type { Alert } from "../shared/events"
 import { events } from "./fixture"
@@ -48,7 +48,15 @@ afterEach(() => {
 })
 
 describe("the alerts layout", () => {
-  test("Auto, the default, shows cards for three firing and switches to rows at four", () => {
+  test("Rows, the default, shows a row for each even of two firing", () => {
+    const two = mount(() => <Overview />, { sent: sent(several(2)) })
+    expect(pressed(two)).toEqual(["Rows"])
+    expect(rows(two.container)).toBe(2)
+    expect(cards(two.container)).toBe(0)
+  })
+
+  test("Auto shows cards for three firing and switches to rows at four", () => {
+    held.set("estate.alerts.layout", "auto")
     const three = mount(() => <Overview />, { sent: sent(several(3)) })
     expect(pressed(three)).toEqual(["Auto"])
     expect(cards(three.container)).toBe(3)

@@ -148,8 +148,8 @@ export const troubleOf = (parts: ReadonlyMap<string, Part>, edges: ReadonlyArray
   return rows
 }
 
-/** Past `map.collapse` nodes the map starts as areas; a map that never collapses starts drawn. */
-export const largeMap = (catalog: CatalogEvent) => {
-  const collapse = catalog.map.collapse ?? 12
-  return collapse !== "never" && catalog.map.nodes.length > collapse
+/** Past `map.areas` services, 12 unless set, the map's *Auto* is areas (spec 0064); `never` keeps it drawn. */
+export const manyServices = (catalog: CatalogEvent) => {
+  const areas = catalog.map.areas ?? 12
+  return areas !== "never" && catalog.services.length > areas
 }

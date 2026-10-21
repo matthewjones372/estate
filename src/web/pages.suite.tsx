@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 /** What each page draws from the fixture's events: run by `pages.test.ts` once Solid's compiler is in place. */
-import { describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { App } from "./App"
 import { events, heard, now, operator } from "./fixture"
 import { mount, render } from "./harness"
@@ -11,6 +11,10 @@ import { ServicePage } from "./pages/Service"
 import { NoAccess, Reading, SignIn } from "./pages/States"
 import { pipelineOf } from "./parts/Rail"
 import { recording } from "./recording"
+
+// These read and act on alerts' cards, which a viewer now chooses over the rows shown first (spec 0064).
+beforeEach(() => window.localStorage.setItem("estate.alerts.layout", "cards"))
+afterEach(() => window.localStorage.removeItem("estate.alerts.layout"))
 
 const text = (html: string) =>
   html
