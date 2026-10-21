@@ -13,6 +13,12 @@ export const clock = (iso: string): string => {
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
+/** "14:17:02.114", in the viewer's time zone: when a span happened. */
+export const exact = (milliseconds: number): string => {
+  const date = new Date(milliseconds)
+  return `${clock(date.toISOString())}:${pad(date.getSeconds())}.${String(date.getMilliseconds()).padStart(3, "0")}`
+}
+
 /** "27 Sep 09:10", in the viewer's time zone. */
 export const day = (iso: string): string => {
   const date = new Date(iso)

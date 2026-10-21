@@ -159,8 +159,14 @@ FOLLOWING 4bf92f35…  order 81723 · key cust-118                              
   should take at the group's rate on that partition. A committed offset is the next one the group reads, so the group
   is past the message once its offset is beyond the message's. A group that reads the topic but has no offset on the
   message's partition is *not known*, not *not yet*.
-- On the cluster, the message is a dot in its partition's cell, with a line to each group that read it. Groups
-  marked *not yet* are lit amber. Under reduced motion nothing moves, and the words say the same.
+- On the cluster, the message is a dot in its partition's cell, and its topic's card is outlined. The flow to each
+  group that read it is lit, and each group's card says *read it*, *not yet* with how many are before it, or *past
+  it*. Groups marked *not yet* are lit amber. Above the diagram, the path is in words: who wrote it, the partition
+  and offset with the broker leading it, then each group. Under reduced motion nothing moves, and the words say the
+  same.
+- The panel's *Follow a message* field takes a trace ID and goes to the follow's address. A message ID with its
+  topic is followed through the read; the page reaches it from a topic's recent messages, which hold each one's
+  trace.
 - *Open its trace* goes to the trace's page (spec 0046), where the rest of the request around the message is.
 
 A follow has an address, `/stores/:name/messages/:traceId`, so it can be pasted into a chat or an incident.
@@ -274,7 +280,7 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
       as read, not yet (with how far before it), or past it.
       Done when: against both stubs, one group read it, one is 11 400 messages before it, and one with no span
       is past its offset and says so.
-- [ ] **`message-follow-view`** — *Follow a message*, its address, the path drawn over the cluster, and live
+- [x] **`message-follow-view`** — *Follow a message*, its address, the path drawn over the cluster, and live
       updates until every group is past it.
       Done when: a suite follows a message, shows the dot and the groups, and a group turns from *not yet* to *past
       it* when the stub's offset moves past.

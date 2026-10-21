@@ -1,10 +1,14 @@
 /** @jsxImportSource solid-js */
-/** A line messages flow along (spec 0057): faster and thicker the more a second, still with none. */
+/** A line messages flow along (spec 0057): faster and thicker the more a second, still with none; lit where it carried a followed message. */
 import { flowStep } from "../kafka"
 
-export const Flow = (props: { readonly rate: number | null; readonly behind?: boolean }) => (
+export const Flow = (props: {
+  readonly rate: number | null
+  readonly behind?: boolean
+  readonly carrying?: boolean
+}) => (
   <svg
-    class={`kafka-flow step-${flowStep(props.rate)}${props.behind === true ? " behind" : ""}`}
+    class={`kafka-flow step-${flowStep(props.rate)}${props.behind === true ? " behind" : ""}${props.carrying === true ? " carrying" : ""}`}
     viewBox="0 0 100 10"
     preserveAspectRatio="none"
     aria-hidden="true"
