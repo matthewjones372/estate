@@ -41,6 +41,7 @@ const answers: ReadonlyArray<readonly [string, () => ReadonlyArray<ReturnType<ty
   ["sum by (topic) (rate(", () => [series({ topic: "orders" }, 240), series({ topic: "payments" }, 35)]],
   ["kafka_topic_partition_current_offset", () => partitions({ "orders/0": 1_882_340, "orders/1": 1_880_102 })],
   ["kafka_consumergroup_members", () => [series({ consumergroup: "orders-projector" }, 3)]],
+  ["sum by (consumergroup) (rate(", () => [series({ consumergroup: "orders-projector" }, 236)]],
   ["deriv(", () => [series({ consumergroup: "orders-projector" }, 0)]],
   [
     "kafka_consumergroup_lag",

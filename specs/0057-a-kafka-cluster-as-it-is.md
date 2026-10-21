@@ -74,40 +74,41 @@ rule with a `service:` in place of a `store:`.
 
 ### The cluster
 
-**On a Kafka store's page**, under its health line and above its stats, a panel *The cluster* draws every part of it
-now:
+**On a Kafka store's page**, under its health line and above its stats, a panel *The cluster* draws it as a
+developer draws one: topics written on the left, the cluster in the middle with each broker holding its partitions,
+and the consumer groups reading on the right, joined by flows that move with the messages:
 
 ```text
-THE CLUSTER                         3 brokers · controller 2 · 14 topics · 96 partitions · read 4 s ago   [ Follow a message ]
- CONTROLLER  ○ 1 voter   ● 2 active   ○ 3 voter (gone)
-                         broker 1              broker 2 ★ controller   broker 3 (gone 6 min)
-                         kafka-0:9092 · rack a kafka-1:9092 · rack b   —
-                         in 180/s · out 410/s  in 95/s · out 220/s
-                         leads 48 · 31 GiB     leads 48 · 30 GiB       offline 8
- orders      240/s ──▶   p0 L ε7 ●●○ 2/3 ⚠     p0 F in sync            p0 F out of sync
-   12 partitions · rf 3  p1 F in sync          p1 L ε4 ●●● 3/3         p1 F in sync
-                         …                     p4 L ε9 ●●● 3/3 ↻
- payments     35/s ──▶   p0 L ε2 ●●● 3/3       p0 F in sync            p0 F in sync
- [ ] show internal topics (__consumer_offsets, …)
+Broker 3 has been gone 9 min; audit 0 has no leader; 7 partitions are under-replicated.
+4 brokers · 4 topics · 15 partitions · read 14:26
 
- GROUPS                  members  lag      growing   partitions
- orders-projector        3        12 400   ▲ 40/s    p0 ▇▇▇▇▇▁  p1 ▁  p3 ▁  p4 ▁   ← p0 is behind the rest
- payments-settler        1        0        —         p0 ▁  p1 ▁
+TOPICS WRITTEN        ┌ KAFKA CLUSTER · 4 BROKERS ────────────────────────────────┐   CONSUMER GROUPS
+┌───────────────┐     │ ┌ Broker 0 ┐ ┌ Broker 1 ┐ ┌ Broker 2 ┐ ┆ Broker 3  ┆ ┆No leader┆ │   ┌──────────────────────┐
+│ orders 240/s  │ ═══▶│ │ orders 0 │ │ orders 1 │ │ orders 2 │ ┆ gone 9min ┆ ┆ audit 0 ┆ │══▶│ orders-projector     │
+└───────────────┘     │ │ orders 3↻│ │ orders 5 │ │payments 1│ ┆           ┆ ┆ offline ┆ │   │ 3 members · 230/s ·  │
+┌───────────────┐     │ │payments 3│ │payments 0│ │          │ ┆           ┆ ┆         ┆ │   │ lag 12,410 ▲ 40/s    │
+│ payments 35/s │ ──▶ │ └──────────┘ └──────────┘ └──────────┘ ┆           ┆ ┆         ┆ │   └──────────────────────┘
+└───────────────┘     └──────────────────────────────────────────────────────────────┘
+[orders 0] leader  [orders 1] short of replicas  [audit 0 offline] no leader  ↻ off its preferred broker
 ```
 
 From kafka_exporter, which every Kafka store already has:
 
-- **Brokers** are columns, from `kafka_broker_info{id,address}`. A broker seen in the last hour that is not there
-  now stays as a column marked *gone*, with how long ago.
-- **Partitions** sit in their leader's column (`kafka_topic_partition_leader`). Each shows its in-sync replicas of its
-  replicas as pips and a count. It is amber when it is under-replicated, red when it has no leader, and marked ↻ when
-  its leader is not the preferred one. It carries its oldest and newest offsets, so its depth is in its text.
-- **Topics** are rows, every topic the store has. Internal `__` topics sit behind a switch, and a filter box narrows
-  by name. Each topic shows its partitions, replication factor and rate in, with a flow into its partitions that moves
-  faster as the rate rises. Troubled topics come first, then the busiest. Rows off screen are not drawn, as with
-  lanes and logs (spec 0053).
-- **Consumer groups** are rows under the cluster: members, lag, how fast the lag grows over ten minutes, and committed
-  offset and lag per partition. A partition far behind the rest is called out in words.
+- **Brokers** are boxes in the cluster, from `kafka_broker_info{id,address}`. A broker seen in the last hour that is
+  not there now stays as a dashed box marked *gone*, with how long ago.
+- **Partitions** sit in their leader's box (`kafka_topic_partition_leader`); those with no leader in a box of their
+  own. A partition is amber when it is short of replicas, red when it has no leader, and marked ↻ when its leader is
+  not the preferred one. What its marks mean, its in-sync replicas and its offsets are in its words for a screen
+  reader.
+- **Topics** are cards on the left, every topic the store has, each with its rate in. Internal `__` topics sit behind
+  a switch, and a filter box narrows by name. Troubled topics come first, then the busiest.
+- **Consumer groups** are cards on the right: members, the messages they read a second, lag, and how fast the lag
+  grows over ten minutes. A partition far behind the rest is called out in words.
+- **Flows** join each topic to the cluster and the cluster to each group. Their dashes move faster, on a thicker line,
+  each time the rate is ten times more, since a cluster's topics run from a message a minute to thousands a second;
+  with no messages a flow is still. A group falling behind flows in amber. Nothing moves under reduced motion.
+- **Choosing** a group marks the partitions it reads, and choosing a partition marks the groups that read it.
+- On a narrow screen the diagram reads top to bottom, its flows pointing down.
 
 From the JMX exporter, when the store names its series with `jmx:`, the same view fills in what kafka_exporter cannot
 say:
@@ -236,11 +237,11 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
       `GET /api/store-cluster`.
       Done when: against the stub, three brokers with one gone, a partition under-replicated, one without a leader
       and one off its preferred leader all read as such, and a store with no series is a 404 naming why.
-- [x] **`kafka-cluster-panel`** — *The cluster* on a Kafka store's page: broker columns, partitions in their leader's
-      column with offsets, every topic with the internal switch and the filter, and the sentence of what is wrong.
+- [x] **`kafka-cluster-panel`** — *The cluster* on a Kafka store's page, drawn as a diagram: topics, brokers holding the
+      partitions they lead, every topic with the internal switch and the filter, and the sentence of what is wrong.
       Done when: a suite draws the stub's cluster, marks the gone broker, the amber and red partitions and the ↻,
       filters by name, and says the sentence.
-- [ ] **`kafka-cluster-groups`** — consumer groups with offset and lag per partition, growth, the partition behind
+- [x] **`kafka-cluster-groups`** — consumer groups with offset and lag per partition, growth, the partition behind
       called out, and choosing a group or a partition marking the other.
       Done when: a suite shows one group with one partition behind called out in words, and choosing it marks its
       partitions above.
@@ -250,8 +251,8 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
       and sizes from it.
       Done when: against the stub, followers are placed in their brokers' columns, one out of sync is marked, the
       active controller is starred, and a store without `jmx:` says what it would show.
-- [ ] **`kafka-cluster-flow`** — the flow into each topic's partitions by its rate, still under reduced motion, read
-      again every 15 seconds while the page is open and not otherwise.
+- [x] **`kafka-cluster-flow`** — flows from each topic into the cluster and out to each group, as fast as their rate, still
+      under reduced motion; the cluster read again every 15 seconds while the page is open and not otherwise.
       Done when: a suite shows a faster flow for a higher rate and none under reduced motion, and leaving the page
       stops the reads.
 - [ ] **`span-attributes`** — a trace's spans keep their messaging attributes, and Tempo is searched by them.

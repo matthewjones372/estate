@@ -51,6 +51,7 @@ const exporter = (now: number) => (call: Call) => {
     ["sum by (topic) (rate(", [series({ topic: "orders" }, 240), series({ topic: "payments" }, 35)]],
     ["kafka_topic_partition_current_offset", [partition("orders", 0, 1_882_340), partition("payments", 0, 90)]],
     ["kafka_consumergroup_members", [series({ consumergroup: "orders-projector" }, 3)]],
+    ["sum by (consumergroup) (rate(", [series({ consumergroup: "orders-projector" }, 230)]],
     ["deriv(", [series({ consumergroup: "orders-projector" }, 40)]],
     [
       "kafka_consumergroup_lag",
@@ -97,6 +98,7 @@ describe("a Kafka store's cluster", () => {
             name: "orders-projector",
             members: 3,
             lag: 12_010,
+            rate: 230,
             growing: 40,
             partitions: [
               { topic: "orders", partition: 0, offset: 1_870_340, lag: 12_000 },

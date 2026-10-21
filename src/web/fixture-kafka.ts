@@ -32,6 +32,7 @@ export const kafkaCluster: KafkaCluster = {
       name: "orders-projector",
       members: 3,
       lag: 12_010,
+      rate: 230,
       growing: 40,
       partitions: [
         { topic: "orders", partition: 0, offset: 1_870_340, lag: 12_000 },

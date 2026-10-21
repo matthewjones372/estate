@@ -34,6 +34,8 @@ const Group = Schema.Struct({
   name: Schema.String,
   members: Count,
   lag: Schema.Number,
+  /** Messages it reads a second, from how fast its committed offsets move. */
+  rate: Count,
   /** How fast its lag grew over ten minutes, a second. */
   growing: Count,
   partitions: Schema.Array(
@@ -71,6 +73,7 @@ export const clusterQueries = (selector: string) => {
     lag: `kafka_consumergroup_lag${s}`,
     offset: `kafka_consumergroup_current_offset${s}`,
     growing: `deriv(sum by (consumergroup) (kafka_consumergroup_lag${s})[10m:1m])`,
+    consumed: `sum by (consumergroup) (rate(kafka_consumergroup_current_offset${s}[5m]))`,
   } as const
 }
 
@@ -144,6 +147,7 @@ const groupsFrom = (readings: Readings): KafkaCluster["groups"] => {
   const groupOf = (labels: Readonly<Record<string, string>>) => labels["consumergroup"] ?? ""
   const members = byKey(readings.members, groupOf)
   const growing = byKey(readings.growing, groupOf)
+  const consumed = byKey(readings.consumed, groupOf)
   const offsets = byKey(readings.offset, (labels) => `${groupOf(labels)} ${key(labels)}`)
   const names = [...new Set([...members.keys(), ...readings.lag.map((reading) => groupOf(reading.labels))])]
   return names
@@ -161,6 +165,7 @@ const groupsFrom = (readings: Readings): KafkaCluster["groups"] => {
         name,
         members: members.get(name) ?? null,
         lag: partitions.reduce((sum, partition) => sum + (partition.lag ?? 0), 0),
+        rate: consumed.get(name) ?? null,
         growing: growing.get(name) ?? null,
         partitions,
       }

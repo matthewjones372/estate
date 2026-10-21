@@ -5,8 +5,9 @@ import type { Events } from "../shared/events"
 import { events } from "./fixture"
 import { kafkaCluster } from "./fixture-kafka"
 import { mount } from "./harness"
-import { whatIsWrong } from "./kafka"
+import { behind, whatIsWrong } from "./kafka"
 import { StorePage } from "./pages/Store"
+import { ClusterPanel } from "./parts/KafkaCluster"
 
 const withBus: Events = {
   ...events,
@@ -26,16 +27,19 @@ const opened = async (store = "bus") => {
   return page
 }
 
-/** The partitions a cell shows, as each is seen, without what it says only to a screen reader. */
-const cell = (page: Awaited<ReturnType<typeof opened>>, topic: string, column: number) =>
-  [
-    ...([...page.container.querySelectorAll("table.cluster tbody tr")]
-      .find((row) => row.querySelector("th")?.textContent?.startsWith(topic))
-      ?.querySelectorAll("td")
-      [column]?.querySelectorAll(".partition > [aria-hidden]") ?? []),
-  ]
-    .map((chip) => chip.textContent?.replace(/\s+/g, " ").trim())
-    .join(" ")
+type Page = Awaited<ReturnType<typeof opened>>
+
+const seen = (element: Element | null | undefined) => element?.textContent?.replace(/\s+/g, " ").trim()
+
+/** Each broker's heading and the partitions it leads, as each is seen, without what is said only to a reader. */
+const brokers = (page: Page) =>
+  [...page.container.querySelectorAll(".kafka-broker")].map((broker) => [
+    seen(broker.querySelector("h4")),
+    seen(broker.querySelector("p")),
+    ...[...broker.querySelectorAll(".kafka-chip > [aria-hidden]")].map(seen),
+  ])
+
+const written = (page: Page) => [...page.container.querySelectorAll(".kafka-in strong")].map(seen)
 
 describe("a Kafka store's cluster", () => {
   test("says what is wrong in a sentence, and that all is well when it is", () => {
@@ -50,27 +54,20 @@ describe("a Kafka store's cluster", () => {
     expect(whatIsWrong(well)).toBe("Every broker is up and every partition is in sync.")
   })
 
-  test("draws its brokers as columns, a gone one marked, each partition in its leader's", async () => {
+  test("draws each broker with the partitions it leads, a gone one marked, and those with no leader apart", async () => {
     const page = await opened()
     expect(page.calls).toContainEqual(["storeCluster", "bus"])
     const text = page.container.textContent ?? ""
     expect(text).toContain("3 brokers · 2 topics · 5 partitions")
     expect(text).toContain("Broker 3 has been gone 10 min")
-    const heads = [...page.container.querySelectorAll("table.cluster thead th")].map((head) =>
-      head.textContent?.replace(/\s+/g, " ").trim(),
-    )
-    expect(heads).toEqual([
-      "Topic",
-      "broker 1 kafka-0:9092 leads 2",
-      "broker 2 kafka-1:9092 leads 2",
-      "broker 3 kafka-2:9092 gone 10 min",
-      "No leader",
+    expect(brokers(page)).toEqual([
+      ["Broker 1", "kafka-0:9092", "orders 0", "orders 3"],
+      ["Broker 2", "kafka-1:9092", "orders 1 ↻", "payments 0"],
+      ["Broker 3", "gone 10 min"],
+      ["No leader", "offline", "orders 2 offline"],
     ])
-    expect(cell(page, "orders", 0)).toBe("p0 2/3 p3 2/3")
-    expect(cell(page, "orders", 1)).toBe("p1 3/3 ↻")
-    expect(cell(page, "orders", 3)).toBe("p2 2/3")
-    expect(page.container.querySelector("table.cluster .partition.critical")?.textContent).toContain("p2")
-    expect(page.container.querySelectorAll("table.cluster .partition.attention")).toHaveLength(2)
+    expect(page.container.querySelectorAll(".kafka-chip.critical:not([aria-hidden])")).toHaveLength(1)
+    expect(page.container.querySelectorAll("button.kafka-chip.attention")).toHaveLength(2)
     // Each partition says what its marks mean to a screen reader.
     expect(text).toContain(
       "partition 1 of orders: 3 of 3 replicas in sync, not on its preferred leader, offsets 100 to 1,882,341",
@@ -78,16 +75,36 @@ describe("a Kafka store's cluster", () => {
     page.dispose()
   })
 
+  test("flows each topic in, and each group out, faster the more messages a second", async () => {
+    const page = await opened()
+    const flows = (side: string) =>
+      [...page.container.querySelectorAll(`.kafka-${side} .kafka-flow`)].map((flow) => flow.getAttribute("class"))
+    expect(flows("in")).toEqual(["kafka-flow step-4", "kafka-flow step-3"])
+    expect(flows("out")).toEqual(["kafka-flow step-4 behind"])
+    expect(written(page)).toEqual(["orders", "payments"])
+    page.dispose()
+  })
+
   test("hides internal topics until asked, and filters topics by name", async () => {
     const page = await opened()
-    const topics = () =>
-      [...page.container.querySelectorAll("table.cluster tbody th")].map((head) => head.textContent?.split(" ")[0])
-    expect(topics()).toEqual(["orders", "payments"])
+    expect(written(page)).toEqual(["orders", "payments"])
     page.click(page.container.querySelector("input[type=checkbox]") as HTMLElement)
-    expect(topics()).toEqual(["orders", "payments", "__consumer_offsets"])
+    expect(written(page)).toEqual(["orders", "payments", "__consumer_offsets"])
     page.type(page.container.querySelector("input[type=search]") as HTMLInputElement, "pay")
-    expect(topics()).toEqual(["payments"])
+    expect(written(page)).toEqual(["payments"])
+    expect(brokers(page)[0]).toEqual(["Broker 1", "kafka-0:9092"])
     page.dispose()
+  })
+
+  test("is read again while the page is open, and no more once it is left", async () => {
+    const page = mount(() => <ClusterPanel store="bus" every={5} />, { sent: withBus })
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    const read = page.calls.filter(([name]) => name === "storeCluster").length
+    expect(read).toBeGreaterThan(2)
+    expect(page.container.querySelector(".kafka-diagram")).not.toBeNull()
+    page.dispose()
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    expect(page.calls.filter(([name]) => name === "storeCluster").length).toBe(read)
   })
 
   test("says why it is not drawn, and is not there for a store that is not Kafka", async () => {
@@ -99,5 +116,37 @@ describe("a Kafka store's cluster", () => {
     expect(broken.calls).not.toContainEqual(["storeCluster", "cache"])
     expect(broken.container.textContent).not.toContain("The cluster")
     broken.dispose()
+  })
+})
+
+describe("a Kafka store's consumer groups", () => {
+  test("call out a partition far behind the rest, and none when they are close", () => {
+    const group = kafkaCluster.groups[0]
+    expect(group && behind(group).map((each) => `${each.topic} p${each.partition}`)).toEqual(["orders p0"])
+    expect(group && behind({ ...group, partitions: group.partitions.map((each) => ({ ...each, lag: 900 })) })).toEqual(
+      [],
+    )
+  })
+
+  test("each have a card with members, rate, lag and its growth, and a partition behind called out", async () => {
+    const page = await opened()
+    const card = seen(page.container.querySelector(".kafka-out .kafka-card"))
+    expect(card).toBe("orders-projector 3 members · 230/s · lag 12,010 ▲ 40/s orders p0 is behind the rest")
+    page.dispose()
+  })
+
+  test("mark each other: a group its partitions, a partition the groups reading it", async () => {
+    const page = await opened()
+    const marked = () => [...page.container.querySelectorAll(".kafka-chip.marked > [aria-hidden]")].map(seen)
+    page.click(page.button(/^orders-projector/))
+    expect(marked()).toEqual(["orders 0", "orders 1 ↻"])
+    page.click(page.button(/^orders-projector/))
+    expect(marked()).toEqual([])
+    const p0 = [...page.container.querySelectorAll("button.kafka-chip")].find((chip) =>
+      chip.textContent?.includes("partition 0 of orders"),
+    ) as HTMLElement
+    page.click(p0)
+    expect(seen(page.container.querySelector(".kafka-out .kafka-card.marked strong"))).toBe("orders-projector")
+    page.dispose()
   })
 })
