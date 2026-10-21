@@ -1,4 +1,4 @@
-# 0057 — A Kafka cluster as it is, and a message through it
+# 0057 — A Kafka cluster as it is, found, and a message through it
 
 ## Problem
 
@@ -13,6 +13,10 @@ partition, at which offset? Has each group that reads the topic got past it, and
 spans that answer this are already in Tempo, because the estate's producers and consumers are traced. But nothing
 puts a span's partition and offset next to where each consumer group is now.
 
+And before any of this, the cluster has to be in the catalog. Each Kafka store is written by hand, with the selector
+that picks out its exporter's series, though Prometheus already knows every cluster kafka_exporter scrapes. A cluster
+nobody wrote an entry for is not on the page at all.
+
 Simulators such as monedula.dev's Kafka simulator draw a cluster the way people think about it: brokers as columns,
 partitions in them with leaders and followers, writes going in, consumer groups reading out with lag. Estate should
 draw the real cluster that way, from what the exporters already put in Prometheus. Over that same drawing, it should
@@ -20,8 +24,11 @@ show one real message's path from its trace.
 
 ## Not doing
 
-- **Simulating anything.** No scenarios, faults, seeds or replays. Every number on the view was read from the
-  estate's Prometheus or Tempo at that time, and a number nobody published is not drawn.
+- **Simulating anything, yet.** No scenarios, faults, replays or what-ifs here. Every number on the view was read
+  from the estate's Prometheus or Tempo at that time, and a number nobody published is not drawn. Replaying the
+  cluster's past and asking what if are spec 0058, built on this one.
+- **Discovering other engines.** Postgres, MySQL and Redis stores stay written. Kafka is first because its view needs
+  the most from the catalog. The same rule can take other engines later, each with the series that names an instance.
 - **Talking to Kafka.** Estate reads exporters' series and Tempo's spans. It never connects to a broker, the admin
   API or the controller quorum, and it never reads a message's payload.
 - **Administering it.** No reassigning partitions, electing leaders, resetting offsets or killing brokers.
@@ -31,6 +38,40 @@ show one real message's path from its trace.
   topic by key or by offset.
 
 ## Shape
+
+### Found, not written
+
+A `kafka:` discover rule, beside spec 0031's `kubernetes:` and spec 0033's `backstage:`, finds every cluster
+kafka_exporter is scraped for. It makes each one an ordinary Kafka store:
+
+```yaml
+discover:
+  - kafka:
+      by: [ namespace, strimzi_io_cluster ]   # the labels that tell one cluster from another
+      selector: 'job=~"kafka-exporter.*"'     # optional: only these exporters' series
+    # What each cluster found becomes. Values may name {label:KEY} for any `by` label, and {env}.
+    store:
+      name: "{label:strimzi_io_cluster}"
+      category: Data
+      owner: "{label:team}"
+      jmx: 'strimzi_io_cluster="{label:strimzi_io_cluster}",namespace="{label:namespace}"'
+      links: { dashboard: "https://grafana.{env}.example/d/kafka?var-cluster={label:strimzi_io_cluster}" }
+```
+
+```text
+each environment whose sources read Prometheus, every minute, for each kafka rule:
+  count by (<by>) (kafka_brokers{<selector>})     one series per cluster
+  a cluster is a store: engine kafka, its selector the rule's selector and its `by` labels as matchers,
+    named by the rule's `name`, or else by its `by` labels' values joined with `-`
+  the same name in several environments is one store in each of them
+  checked as a written store is; one with a mistake is left out, named in the log and the doctor
+written stores win by name; a Prometheus that does not answer keeps what it last found
+```
+
+A found store is marked *found in Prometheus* on its lane and page, and its page offers *Copy as YAML*, as a found
+service does. The doctor says per environment what each rule found, what was written over and what was left out.
+The catalog check names a `kafka:` rule with no `by`, a `{label:…}` that is not one of its `by` labels, and a `kafka:`
+rule with a `service:` in place of a `store:`.
 
 ### The cluster
 
@@ -166,7 +207,8 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
 
 ## Depends on
 
-- kafka_exporter scraped by the environment's Prometheus, as spec 0003 already reads.
+- kafka_exporter scraped by the environment's Prometheus, as spec 0003 already reads, with a label that tells one
+  cluster from another (Strimzi's `strimzi_io_cluster`, a `cluster` or `namespace` label, or the scrape `job`).
 - For followers, the controller and per-broker detail: the JMX exporter with the series names of the common Kafka
   rules (Strimzi's and Bitnami's ship them). Until a store names `jmx:`, those parts say *needs the JMX exporter*.
 - For following a message: Tempo, as spec 0046 reads it, and producers and consumers traced with OpenTelemetry's
@@ -179,6 +221,18 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
       Prometheus and Grafana's proxy.
       Done when: against the Prometheus stub, an instant query gives labels with numbers, `NaN` and `+Inf` are
       dropped, and a failing source is a `SourceFailure`.
+- [ ] **`discover-kafka-rule`** — `kafka:` and `store:` in a discover rule, and its checks.
+      Done when: a rule with no `by`, with `{label:x}` not among its `by`, or with `service:`, is a catalog mistake
+      that says so.
+- [ ] **`discover-kafka`** — every minute, each environment's clusters found from kafka_exporter's series, checked,
+      and put after the written stores, which win by name.
+      Done when: against the Prometheus stub, two clusters in two environments are two stores in both, each with its
+      selector and filled `jmx:`; a written store of the same name replaces one; and a failing Prometheus keeps what
+      was found.
+- [ ] **`discover-kafka-page`** — *found in Prometheus* on a found store's lane and page, *Copy as YAML*, and the
+      doctor's line.
+      Done when: the page suite shows the mark and copies an entry that parses as a catalog store, and the doctor
+      names what was found, written over and left out.
 - [ ] **`kafka-cluster-read`** — the cluster from kafka_exporter into one shape in `shared`, at
       `GET /api/store-cluster`.
       Done when: against the stub, three brokers with one gone, a partition under-replicated, one without a leader
@@ -227,23 +281,28 @@ bun run gate
 bunx playwright test
 ```
 
-Against a real cluster, stopping one broker turns its column to *gone* within a scrape and 15 seconds. The
+With a discover rule and no written Kafka store, the e2e estate's cluster appears on the overview as a store marked
+found. Against a real cluster, stopping one broker turns its column to *gone* within a scrape and 15 seconds. The
 partitions it led move to the other columns, and its followers turn *out of sync*. Pasting the trace ID of an order
 placed in the petshop demo shows the partition and offset it was written to and each group reading the topic, each
 turning to *read it* as it is processed.
 
 ## Open questions
 
-1. **Where does the panel live?** Recommended on the store's page, above the stats, and not on the overview. The
+1. **Discover from Prometheus, or from Strimzi's `Kafka` resources in Kubernetes?** Recommended Prometheus first: it
+   finds any cluster with an exporter, wherever it runs (Strimzi, Confluent, MSK with its open monitoring, bare
+   VMs). The view reads nothing but those series anyway. Strimzi's resources could add a cluster's version and
+   listeners later, through spec 0031's Kubernetes reader.
+2. **Where does the panel live?** Recommended on the store's page, above the stats, and not on the overview. The
    overview's lane already says the cluster is unwell, and the view is too wide for a lane.
-2. **The JMX exporter's series names.** Recommended the names from the common Kafka rules (Strimzi's and
+3. **The JMX exporter's series names.** Recommended the names from the common Kafka rules (Strimzi's and
    Bitnami's), each overridable under `jmx:` if an estate's rules differ. Guessing past those is a step too far.
-3. **Follow by key?** Recommended not without a trace. Tempo can search a key attribute, but keys repeat, so a key
+4. **Follow by key?** Recommended not without a trace. Tempo can search a key attribute, but keys repeat, so a key
    gives a list of the messages written with it in the window, each one followed when chosen. That could come later
    as a search on the topic's detail.
-4. **Refresh every 15 seconds, or with the page's other live data?** Recommended its own refresh while open. The
+5. **Refresh every 15 seconds, or with the page's other live data?** Recommended its own refresh while open. The
    live stream sends the whole estate to every page, and per-partition data for every cluster would cost each page
    for a panel few of them show.
-5. **A group with no span for a message, but past its offset: read or skipped?** Recommended *past it*, not *read
+6. **A group with no span for a message, but past its offset: read or skipped?** Recommended *past it*, not *read
    it*. Estate knows the group's offset moved past, but not that a traced consumer handled it. Untraced and filtered
    consumers look the same from here.
