@@ -1,16 +1,18 @@
 /** @jsxImportSource solid-js */
 /**
  * The estate drawn live: its services and stores, and the traffic between them; amber is what needs someone. Past a
- * dozen nodes, a node a category, which opens in place.
+ * dozen nodes, a node a category, which opens in place. A large map or a narrow screen starts as areas (spec 0062).
  */
 import { createMemo, createSignal, For, Show } from "solid-js"
 import type { CatalogEvent, ServicesEvent } from "../../shared/events"
+import { healthOf, largeMap, pathOf, subOf } from "../areas"
 import { type DrawnCategory, type DrawnEdge, type DrawnNode, drawnOf } from "../drawn"
 import { amount, took } from "../format"
 import { byName } from "../indexed"
 import { kept } from "../kept"
 import { layout } from "../layout"
 import { A } from "./A"
+import { MapAreas } from "./MapAreas"
 import { JourneyChoices, journeyOnMap, RouteLines, RouteNote } from "./MapJourney"
 
 type MapNode = CatalogEvent["map"]["nodes"][number]
@@ -33,9 +35,23 @@ const sameShape = (was: Shape, now: Shape) =>
   was.ids.every((id, index) => now.ids[index] === id) &&
   was.edges.every((edge, index) => now.edges[index]?.from === edge.from && now.edges[index]?.to === edge.to)
 
+type View = "areas" | "lines"
+const viewing = kept("estate.map.view")
+const narrow = () => typeof window.matchMedia === "function" && window.matchMedia("(max-width: 720px)").matches
+const viewAtFirst = (catalog: CatalogEvent): View => {
+  const chosen = viewing.read()
+  if (chosen === "areas" || chosen === "lines") return chosen
+  return largeMap(catalog) || narrow() ? "areas" : "lines"
+}
+
 const isCategory = (node: DrawnNode): node is DrawnCategory => "kind" in node && node.kind === "category"
 
 export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly services: ServicesEvent | undefined }) => {
+  const [view, setView] = createSignal(viewAtFirst(props.catalog))
+  const choose = (next: View) => {
+    setView(next)
+    viewing.write(next)
+  }
   const [opened, setOpened] = createSignal(openedAtFirst())
   const toggle = (category: string) => {
     const next = new Set(opened())
@@ -144,27 +160,13 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
   const Node = (shown: { readonly node: MapNode }) => {
     const state = () => stateOf(shown.node.service)
     const store = () => storeStateOf(shown.node.store)
-    const health = () =>
-      shown.node.service !== undefined
-        ? (state()?.health ?? "unknown")
-        : shown.node.store !== undefined
-          ? (store()?.health ?? "unknown")
-          : "healthy"
-    const to = () =>
-      shown.node.service !== undefined
-        ? `/services/${encodeURIComponent(shown.node.service)}`
-        : shown.node.store === undefined
-          ? undefined
-          : `/stores/${encodeURIComponent(shown.node.store)}`
+    const health = () => healthOf(shown.node, state(), store())
+    const to = () => pathOf(shown.node)
     const steps = () => on.stepsAt(shown.node.id)
     const here = () => on.hereAt(shown.node.id)
     const sub = () => {
       const spent = here()
-      if (spent !== undefined) return `${took(spent)} here`
-      const requests = state()?.load.requests?.now
-      if (shown.node.store !== undefined) return store()?.reasons[0] ?? shown.node.kind
-      if (shown.node.service === undefined) return shown.node.kind
-      return requests === undefined || requests === null ? (state()?.version ?? "") : `${amount(requests)} req/s`
+      return spent === undefined ? subOf(shown.node, state(), store()) : `${took(spent)} here`
     }
     const routed = () => (on.journey() === undefined ? "" : steps().length > 0 ? " map-on-route" : " map-off-route")
     const body = () => (
@@ -222,36 +224,52 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
             The estate, live
           </span>
           <span class="map-opened">
-            <JourneyChoices on={on} />
-            <For each={drawn().opened}>
-              {(category) => (
-                <button type="button" class="plain-button" aria-expanded="true" onClick={() => toggle(category)}>
-                  Close {category}
-                </button>
-              )}
-            </For>
+            <fieldset class="choices bare">
+              <legend class="visually-hidden">Draw the estate as</legend>
+              <button type="button" class="choice" aria-pressed={view() === "areas"} onClick={() => choose("areas")}>
+                Areas
+              </button>
+              <button type="button" class="choice" aria-pressed={view() === "lines"} onClick={() => choose("lines")}>
+                Lines
+              </button>
+            </fieldset>
+            <Show when={view() === "lines"}>
+              <JourneyChoices on={on} />
+              <For each={drawn().opened}>
+                {(category) => (
+                  <button type="button" class="plain-button" aria-expanded="true" onClick={() => toggle(category)}>
+                    Close {category}
+                  </button>
+                )}
+              </For>
+            </Show>
             <span class="muted small">Traffic over the last minute · amber is what needs you</span>
           </span>
         </figcaption>
-        <div class="map-scroll">
-          <div
-            class="map-canvas"
-            style={{
-              height: `${Math.max(380, placed().rows * rowHeight + 20)}px`,
-              "min-width": `${Math.max(720, placed().columns * columnWidth)}px`,
-            }}
-          >
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" class="map-lines">
-              <For each={drawn().edges}>{(edge) => <Line edge={edge} />}</For>
-              <RouteLines journey={on.journey()} at={(node) => placed().at.get(node)} />
-            </svg>
-            <For each={drawn().edges}>{(edge) => <Label edge={edge} />}</For>
-            <For each={drawn().nodes}>
-              {(node) => (isCategory(node) ? <Category node={node} /> : <Node node={node} />)}
-            </For>
+        <Show when={view() === "areas"}>
+          <MapAreas catalog={props.catalog} services={props.services} />
+        </Show>
+        <Show when={view() === "lines"}>
+          <div class="map-scroll">
+            <div
+              class="map-canvas"
+              style={{
+                height: `${Math.max(380, placed().rows * rowHeight + 20)}px`,
+                "min-width": `${Math.max(720, placed().columns * columnWidth)}px`,
+              }}
+            >
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" class="map-lines">
+                <For each={drawn().edges}>{(edge) => <Line edge={edge} />}</For>
+                <RouteLines journey={on.journey()} at={(node) => placed().at.get(node)} />
+              </svg>
+              <For each={drawn().edges}>{(edge) => <Label edge={edge} />}</For>
+              <For each={drawn().nodes}>
+                {(node) => (isCategory(node) ? <Category node={node} /> : <Node node={node} />)}
+              </For>
+            </div>
           </div>
-        </div>
-        <RouteNote on={on} />
+          <RouteNote on={on} />
+        </Show>
       </figure>
     </Show>
   )
