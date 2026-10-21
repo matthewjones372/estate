@@ -59,7 +59,11 @@ const kindOf = (kind: string | number | undefined): TraceSpan["kind"] => {
 
 const failedOf = (code: string | number | undefined) => code === 2 || code === "STATUS_CODE_ERROR"
 
-const millis = (nanos: string | number) => Number(nanos) / 1e6
+/** Nanoseconds as a string are more than a number holds: their milliseconds and the rest are read apart. */
+const millis = (nanos: string | number) =>
+  typeof nanos === "number" || nanos.length <= 6
+    ? Number(nanos) / 1e6
+    : Number(nanos.slice(0, -6)) + Number(nanos.slice(-6)) / 1e6
 
 const textOf = ({ value }: typeof Attribute.Type): string | undefined =>
   value.stringValue ??
