@@ -5,6 +5,7 @@ import type { LogBatch } from "../shared/log-events"
 import { allSeenLive, type FiringEvent } from "../shared/timeline"
 import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
+import { databaseCluster, loneDatabase } from "./fixture-database"
 import { incidentActions, keptIncidents } from "./fixture-incidents"
 import { includedAs, summarised } from "./fixture-included"
 import { clusterAnswer, kafkaCluster } from "./fixture-kafka"
@@ -187,6 +188,11 @@ export const recording = (): Recorded => {
       storeCluster: (store) => {
         calls.push(["storeCluster", store])
         return Promise.resolve(store === "bus" ? kafkaCluster : `kafka_exporter publishes nothing for ${store}`)
+      },
+      databaseCluster: (store) => {
+        calls.push(["databaseCluster", store])
+        const drawn = store === "orders-db" ? databaseCluster : store === "shop-db" ? loneDatabase : undefined
+        return Promise.resolve(drawn ?? `the exporter publishes nothing for ${store}`)
       },
       watchLogs: (service, handlers) => {
         calls.push(["watchLogs", service])

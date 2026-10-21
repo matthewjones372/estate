@@ -227,7 +227,7 @@ read a store. Recommended: exporters and traces only, as spec 0057 chose.
       Done when: against the stub, three instances with one gone, a promoted primary, a replica
       past the lag threshold, an inactive slot retaining WAL and a client idle in a transaction all read as such,
       and a single-instance store reads as one primary.
-- [ ] **`postgres-cluster-panel`** — *The cluster* on a Postgres or cnpg store's page: clients, instance columns,
+- [x] **`postgres-cluster-panel`** — *The cluster* on a Postgres or cnpg store's page: clients, instance columns,
       WAL targets, the sentence and the key.
       Done when: a suite draws the stub's cluster, marks the gone instance, the amber replica and slot, says the
       sentence, and stacks top to bottom in a narrow panel.

@@ -1,0 +1,52 @@
+/* A database store's cluster (spec 0060), in the Kafka cluster's layout: the primary marked, a replica behind in amber. */
+.kafka-broker.primary {
+  border-color: var(--link);
+}
+.kafka-broker.attention {
+  border-color: var(--amber-line);
+  background: var(--amber-panel);
+}
+.kafka-broker.attention p {
+  color: var(--amber-text);
+}
+.database-connections {
+  inline-size: 100%;
+  block-size: 8px;
+}
+.database-connections::-webkit-meter-bar {
+  background: var(--chip);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+}
+.database-connections::-webkit-meter-optimum-value {
+  background: var(--healthy);
+  border-radius: 4px;
+}
+.database-connections::-webkit-meter-suboptimum-value {
+  background: var(--amber);
+  border-radius: 4px;
+}
+.database-key {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding-inline: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--ink);
+}
+.database-key.primary {
+  border-color: var(--link);
+}
+.database-key.attention {
+  border-color: var(--amber-line);
+  background: var(--amber-panel);
+  color: var(--amber-text);
+}
+.database-key.gone {
+  border-style: dashed;
+  border-color: var(--critical-line);
+  background: var(--critical-panel);
+  color: var(--critical);
+}

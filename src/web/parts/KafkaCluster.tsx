@@ -4,11 +4,12 @@
  * with each broker holding the partitions it leads, and the consumer groups reading out on the right. Each flow moves
  * as fast as its messages a second. Read when the page opens, and again every 15 seconds while it is open and seen.
  */
-import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
+import { createSignal, For, Show } from "solid-js"
 import { type KafkaCluster, type Partition, troubled } from "../../shared/kafka-cluster"
 import { useEstate } from "../context"
 import { clock, duration, measured } from "../format"
 import { internal, whatIsWrong } from "../kafka"
+import { readEvery } from "../read-every"
 import { ClusterAsk } from "./KafkaAsk"
 import { Flow } from "./KafkaFlow"
 import { type Chosen, Groups, reads } from "./KafkaGroups"
@@ -188,35 +189,10 @@ const every = 15_000
 
 export const ClusterPanel = (props: { readonly store: string; readonly every?: number }) => {
   const { actions } = useEstate()
-  const [cluster, setCluster] = createSignal<KafkaCluster | string | "loading">("loading")
-  createEffect(
-    on(
-      () => props.store,
-      (store) => {
-        let current = true
-        let readAt = 0
-        const often = props.every ?? every
-        setCluster("loading")
-        // A read again keeps what is drawn until it answers, and a failure in between leaves it drawn.
-        const read = (again: boolean) => {
-          readAt = Date.now()
-          void actions.storeCluster(store).then((answer) => {
-            if (current && (!again || typeof answer !== "string")) setCluster(answer)
-          })
-        }
-        const visible = () => document.visibilityState !== "hidden"
-        read(false)
-        // Read again while someone can see it, and on coming back to a tab left longer than that.
-        const timer = setInterval(() => visible() && read(true), often)
-        const back = () => visible() && Date.now() - readAt >= often && read(true)
-        document.addEventListener("visibilitychange", back)
-        onCleanup(() => {
-          current = false
-          clearInterval(timer)
-          document.removeEventListener("visibilitychange", back)
-        })
-      },
-    ),
+  const cluster = readEvery(
+    () => props.store,
+    (store) => actions.storeCluster(store),
+    () => props.every ?? every,
   )
   const drawn = () => {
     const read = cluster()
