@@ -198,6 +198,19 @@ docker run -v ./examples:/etc/estate -p 8080:8080 ghcr.io/matthewjones372/estate
 Then open <http://localhost:8080>. The example points at tools that don't exist, so each part of the page says
 what it couldn't reach. Edit `examples/estate.yaml` to point it at your own.
 
+To see an estate with something wrong in it, without any tools of your own, run the demo from a clone:
+
+```bash
+bun install
+bun examples/demo/run.ts
+```
+
+It starts Estate on <http://localhost:8080> against one process playing every tool it reads, for Larder, a made-up
+online grocer. Staging is well. In production a broker of the six-broker Kafka cluster is gone, a consumer group is
+falling behind, checkout's new version is slow, an incident is open with comments in it, and you can follow an order
+from the web to each group that reads it. Ask AI answers there are canned, and say so. Everything comes from
+[`examples/demo/`](examples/demo): its catalog is a real one to read and copy from.
+
 To see it with live data, [petshop's demo](https://github.com/matthewjones372/petshop/tree/main/demo) runs Estate
 in Docker Compose against a real Prometheus and Alertmanager watching a small Kotlin service. Stopping the demo's
 chip registry fires an alert, which appears at the top of the page and resolves once the registry is back. Its
