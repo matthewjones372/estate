@@ -32,6 +32,7 @@ import { signInRoutes } from "./http/sign-in"
 import { silenceRoute, unsilenceRoute } from "./http/silences"
 import { storeAskRoute } from "./http/store-ask"
 import { storeClusterRoute } from "./http/store-cluster"
+import { storeMessageRoute } from "./http/store-message"
 import { tellRoute } from "./http/tell"
 import { timelineExportRoutes } from "./http/timeline-export"
 import { logHubLayer } from "./log-hub"
@@ -116,6 +117,7 @@ export const application = Layer.mergeAll(
   loadRoute,
   storeLoadRoute,
   storeClusterRoute,
+  storeMessageRoute,
   storeAskRoute,
   notesRoute,
   removeNoteRoute,

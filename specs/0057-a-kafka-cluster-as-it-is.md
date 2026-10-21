@@ -150,11 +150,15 @@ FOLLOWING 4bf92f35…  order 81723 · key cust-118                              
 - **Written**: the producer span (`messaging.operation.type = send`, kind producer) gives the service, topic,
   partition (`messaging.destination.partition.id`), offset (`messaging.kafka.offset`), key and message ID.
 - **Read**: each consumer span on the same trace or linked to it (`process` or `receive`, kind consumer) gives the
-  group (`messaging.consumer.group.name`), the service and when it happened.
+  group (`messaging.consumer.group.name`), the service and when it happened. A linked trace is found by searching
+  Tempo for the message's ID on its topic. A consumer span that names no group is not placed, and the follow says
+  which attribute it lacked.
 - **Not yet**: for every group the cluster view shows reading that topic with no span for the message, the group's
   committed offset on that partition is compared with the message's offset. This is read live, so *not yet* turns
   into *past it* as the group catches up, and the line says how many messages are still before it and how long that
-  should take at the group's rate.
+  should take at the group's rate on that partition. A committed offset is the next one the group reads, so the group
+  is past the message once its offset is beyond the message's. A group that reads the topic but has no offset on the
+  message's partition is *not known*, not *not yet*.
 - On the cluster, the message is a dot in its partition's cell, with a line to each group that read it. Groups
   marked *not yet* are lit amber. Under reduced motion nothing moves, and the words say the same.
 - *Open its trace* goes to the trace's page (spec 0046), where the rest of the request around the message is.
@@ -266,7 +270,7 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
 - [x] **`span-attributes`** — a trace's spans keep their messaging attributes, and Tempo is searched by them.
       Done when: against the Tempo stub, a producer span reads its topic, partition, offset, key and message ID, and
       a consumer span its group, under the current names or a store's `messages:`.
-- [ ] **`message-follow-read`** — `GET /api/store-message`: the message's spans, and each group reading the topic
+- [x] **`message-follow-read`** — `GET /api/store-message`: the message's spans, and each group reading the topic
       as read, not yet (with how far before it), or past it.
       Done when: against both stubs, one group read it, one is 11 400 messages before it, and one with no span
       is past its offset and says so.
