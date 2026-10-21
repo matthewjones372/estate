@@ -1,7 +1,11 @@
-/** The doctor's `discover` line: what an environment's cluster holds for the catalog's rules, and what was left out. */
+/**
+ * The doctor's `discover` line: what an environment's cluster holds for the catalog's rules, and the Kafka clusters
+ * its Prometheus scrapes, and what was left out.
+ */
 import { Effect } from "effect"
 import type { Catalog } from "../shared/catalog"
 import { entryOf as backstageEntry, componentsIn } from "./discover/backstage"
+import { checkedStores, clustersQuery, storeOf, togetherStores } from "./discover/kafka"
 import { entryOf, together, workloadsIn } from "./discover/kubernetes"
 import { type Checked, checked, shown } from "./discover/merge"
 import { services } from "./discover/run"
@@ -10,6 +14,7 @@ import type { Sources } from "./settings"
 import type { Backstage } from "./settings-backstage"
 import { clusterOf } from "./sources/kubernetes"
 import { runtimeOf } from "./sources/ports"
+import type { Ranges } from "./sources/prometheus"
 
 const counted = (count: number) => `${count} service${count === 1 ? "" : "s"}`
 
@@ -43,6 +48,31 @@ export const discoverFinding = (section: Sources, catalog: Catalog, environment:
     ),
   )
   return finding("discover", found, (entries) => said(catalog, checked(catalog, entries.flat())))
+}
+
+/** The Kafka line, when the catalog has Kafka rules and the environment's metrics can list series; none otherwise. */
+export const kafkaFinding = (ranges: Ranges, catalog: Catalog, environment: string) => {
+  const rules = (catalog.discover ?? []).filter(
+    (rule) => rule.kafka !== undefined && (rule.store?.environments?.includes(environment) ?? true),
+  )
+  const labels = ranges.labels
+  if (rules.length === 0 || labels === undefined) return Effect.succeed(undefined)
+  const found = Effect.forEach(rules, (rule) =>
+    Effect.map(labels(clustersQuery(rule.kafka ?? { by: [] })), (clusters) =>
+      clusters.map((cluster) => storeOf(rule, environment, cluster)),
+    ),
+  )
+  return finding("discover", found, (entries) => {
+    const { kept, leftOut } = checkedStores(catalog, entries.flat())
+    const stores = togetherStores(kept)
+    const written = new Set((catalog.stores ?? []).map((store) => store.name))
+    const writtenOver = stores.filter((store) => written.has(store.name)).map((store) => store.name)
+    return [
+      `Kafka: ${stores.length} store${stores.length === 1 ? "" : "s"} found`,
+      ...(writtenOver.length === 0 ? [] : [`${writtenOver.length} written over (${writtenOver.join(", ")})`]),
+      ...(leftOut.length === 0 ? [] : [`${leftOut.length} left out (${leftOut.join("; ")})`]),
+    ].join(", ")
+  })
 }
 
 /** The doctor's Backstage line, for the whole estate: what each Backstage rule finds; none without one. */

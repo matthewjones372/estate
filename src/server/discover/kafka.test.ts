@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, SubscriptionRef } from "effect"
+import { Effect, Layer, Result, SubscriptionRef } from "effect"
 import type { Catalog, DiscoverRule } from "../../shared/catalog"
+import { checkCatalog } from "../../shared/check"
+import { kafkaFinding } from "../doctor-discover"
 import { catalog, estate, settings } from "../fixture"
 import { platform } from "../platform"
 import { type Call, reply, stubRemote } from "../remote"
 import type { Settings } from "../settings"
+import { prometheusRanges } from "../sources/prometheus"
 import { Estate, estateLayer } from "../state"
+import { catalogView } from "../views/catalog"
 import { discoverOnce, makeCatalogs } from "./run"
 
 const rule: DiscoverRule = {
@@ -116,6 +120,51 @@ describe("discovered Kafka clusters", () => {
           ["data-audit", 'namespace="data",strimzi_io_cluster="audit"'],
           ["data-orders", 'namespace="data",strimzi_io_cluster="orders"'],
         ])
+      }),
+    ))
+
+  test("are offered to the page as YAML that is a store entry, marked only by where they were found", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const shown = yield* shownAfter(written, [[]])
+        const stores = catalogView(shown, "staging").stores ?? []
+        const bus = stores.find((store) => store.name === "bus")
+        expect(bus?.discovered?.from).toBe("prometheus")
+        const pasted = Bun.YAML.parse(`stores:\n${(bus?.discovered?.yaml ?? "").replace(/^/gm, "  ")}`)
+        const checked = checkCatalog({ environments: catalog.environments, services: [], ...(pasted as object) })
+        expect(Result.isSuccess(checked) && checked.success.stores?.[0]?.selector).toBe(
+          'job="kafka-exporter",namespace="data",strimzi_io_cluster="bus"',
+        )
+        expect(catalogView(shown, "production").stores?.[0]?.discovered).toBeUndefined()
+      }),
+    ))
+})
+
+describe("the doctor's Kafka discover line", () => {
+  const asked = (host: string, answer = prometheuses([]), from: Catalog = written) =>
+    kafkaFinding(prometheusRanges({ url: `http://${host}`, headers: {} }), from, host).pipe(
+      Effect.provide(Layer.merge(stubRemote(answer), platform)),
+    )
+
+  test("names the clusters found, those written over, and those left out with why", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        expect(yield* asked("production")).toEqual({
+          part: "discover",
+          ok: true,
+          says: 'Kafka: 2 stores found, 1 written over (audit), 1 left out (orders: "orders" is also a service\'s name)',
+        })
+      }),
+    ))
+
+  test("fails in Prometheus's words, and says nothing without a rule", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        expect(yield* asked("production", prometheuses([], new Set(["production"])))).toMatchObject({
+          part: "discover",
+          ok: false,
+        })
+        expect(yield* asked("production", prometheuses([]), catalog)).toBeUndefined()
       }),
     ))
 })

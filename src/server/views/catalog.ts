@@ -7,14 +7,15 @@ import {
   runsAs,
   type Service,
   type StandaloneJob,
+  type Store,
 } from "../../shared/catalog"
 import { compact } from "../../shared/compact"
 import type { CatalogEvent } from "../../shared/events"
 import { journeysIn, placesOf, servicesOf } from "./journeys"
 import { storesIn } from "./stores"
 
-/** A discovered entry as it would be written under `services:`, without the mark only discovery sets. */
-const asYaml = ({ discovered: _, ...entry }: Service): string =>
+/** A discovered entry as it would be written under `services:` or `stores:`, without the mark only discovery sets. */
+const asYaml = ({ discovered: _, ...entry }: Service | Store): string =>
   `- ${Bun.YAML.stringify(entry, null, 2).replace(/ +$/gm, "").trimEnd().split("\n").join("\n  ")}\n`
 
 interface Named {
@@ -96,6 +97,9 @@ export const catalogView = (catalog: Catalog, environment: string): CatalogEvent
           ...(store.category === undefined ? {} : { category: store.category }),
           engine: store.engine,
           links: linksOf(catalog, environment, store, store.links),
+          ...(store.discovered === undefined
+            ? {}
+            : { discovered: { from: store.discovered.from, yaml: asYaml(store) } }),
         })),
       }),
   ...(catalog.teams === undefined

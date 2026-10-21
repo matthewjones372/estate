@@ -224,7 +224,7 @@ Bun, reading payloads, and a second way to read a store. Recommended: exporters 
       Done when: against the Prometheus stub, two clusters in two environments are two stores in both, each with its
       selector and its template filled; a written store of the same name replaces one; and a failing Prometheus keeps what
       was found.
-- [ ] **`discover-kafka-page`** — *found in Prometheus* on a found store's lane and page, *Copy as YAML*, and the
+- [x] **`discover-kafka-page`** — *found in Prometheus* on a found store's lane and page, *Copy as YAML*, and the
       doctor's line.
       Done when: the page suite shows the mark and copies an entry that parses as a catalog store, and the doctor
       names what was found, written over and left out.

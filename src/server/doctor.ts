@@ -9,7 +9,7 @@ import { costLine } from "../shared/costs"
 import { makeAwsJson } from "./aws/json"
 import { agentsFindings } from "./doctor-agents"
 import { codeFinding } from "./doctor-code"
-import { backstageFinding, discoverFinding } from "./doctor-discover"
+import { backstageFinding, discoverFinding, kafkaFinding } from "./doctor-discover"
 import { amount, type Finding, finding, type Needs } from "./doctor-finding"
 import { incidentToolFinding } from "./doctor-incident-tool"
 import type { Remote } from "./remote"
@@ -210,6 +210,8 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
       )
     const discovered = yield* discoverFinding(section, catalog, environment)
     if (discovered !== undefined) findings.push(discovered)
+    const kafka = ranges === undefined ? undefined : yield* kafkaFinding(ranges, catalog, environment)
+    if (kafka !== undefined) findings.push(kafka)
     findings.push(...(yield* logsFinding(section, services, now)))
     findings.push(...(yield* agentsFindings(section, ranges, agentsIn(catalog, environment), now)))
     return { environment, findings }

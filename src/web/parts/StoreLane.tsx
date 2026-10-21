@@ -3,6 +3,7 @@
 import { For } from "solid-js"
 import type { CatalogEvent, ServicesEvent } from "../../shared/events"
 import { A } from "./A"
+import { FoundMark } from "./Found"
 import { HealthLine, Links } from "./Lane"
 import { Spark } from "./Sparkline"
 
@@ -17,6 +18,7 @@ export const StoreLane = (props: { readonly store: DescribedStore; readonly stat
       </A>
       <HealthLine state={props.state} />
       <span class="muted mono small">{props.store.engine}</span>
+      <FoundMark discovered={props.store.discovered} />
     </div>
     <div class="sparks">
       <For each={(props.state?.stats ?? []).slice(0, 4)}>

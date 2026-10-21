@@ -12,13 +12,13 @@ import { filled } from "./kubernetes"
 type Labels = Readonly<Record<string, string>>
 
 /** The query that gives one series per cluster, labelled with the values that tell it from the others. */
-const clustersQuery = (rule: NonNullable<DiscoverRule["kafka"]>): string =>
+export const clustersQuery = (rule: NonNullable<DiscoverRule["kafka"]>): string =>
   `count by (${rule.by.join(",")}) (kafka_brokers${rule.selector === undefined ? "" : `{${rule.selector}}`})`
 
 const quoted = (value: string) => JSON.stringify(value)
 
 /** The store a cluster in `environment` becomes, before it is checked as a written one is. */
-const storeOf = (rule: DiscoverRule, environment: string, labels: Labels): unknown => {
+export const storeOf = (rule: DiscoverRule, environment: string, labels: Labels): unknown => {
   const by = rule.kafka?.by ?? []
   const values = by.flatMap((label) => (labels[label] ? [labels[label]] : []))
   const plain = values.length === 0 ? "kafka" : values.join("-")
@@ -37,7 +37,7 @@ const storeOf = (rule: DiscoverRule, environment: string, labels: Labels): unkno
 }
 
 /** Each found store checked against the written catalog as if it were written there; a mistaken one left out. */
-const checkedStores = (written: Catalog, entries: ReadonlyArray<unknown>) => {
+export const checkedStores = (written: Catalog, entries: ReadonlyArray<unknown>) => {
   const kept: Array<Store> = []
   const leftOut: Array<string> = []
   for (const entry of entries) {

@@ -5,6 +5,7 @@ import { useEstate, useSnapshot } from "../context"
 import { A } from "../parts/A"
 import { AlertCard } from "../parts/AlertCard"
 import { Load, Timeline } from "../parts/Charts"
+import { FoundEntry } from "../parts/Found"
 import { HealthLine, Links } from "../parts/Lane"
 
 export const StorePage = (props: { readonly name: string }) => {
@@ -42,6 +43,7 @@ export const StorePage = (props: { readonly name: string }) => {
           </Show>
           <p class="lede measure">{[store()?.description, store()?.engine].filter(Boolean).join(" · ")}</p>
           <Show when={store()}>{(described) => <Links service={described()} />}</Show>
+          <FoundEntry discovered={store()?.discovered} />
         </section>
         <Load
           name={props.name}

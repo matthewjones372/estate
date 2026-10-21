@@ -2,7 +2,21 @@
  * A store's stats and health from the preset for its engine: the four or five numbers that say whether it is well,
  * read from its exporter's series, and the thresholds past which it needs someone.
  */
+import { Schema } from "effect"
 import type { Store } from "./catalog"
+
+const optional = Schema.optionalKey
+
+/** A store as the page is told of it, its links filled in, and where it was found when it was not written. */
+export const DescribedStore = Schema.Struct({
+  name: Schema.String,
+  description: optional(Schema.String),
+  category: optional(Schema.String),
+  engine: Schema.String,
+  links: Schema.Array(Schema.Struct({ name: Schema.String, url: Schema.String })),
+  /** Found, not written (spec 0057): where, and the entry as YAML to put in the catalog. */
+  discovered: optional(Schema.Struct({ from: Schema.String, yaml: Schema.String })),
+})
 
 export interface StoreStat {
   readonly key: string
