@@ -18,6 +18,10 @@
   text-transform: uppercase;
   color: var(--ink-soft);
 }
+/* The groups' heading clears the cluster's edge as their cards do, past the shortest flow out to them. */
+.kafka-out .kafka-label {
+  padding-inline-start: 56px;
+}
 .kafka-list {
   list-style: none;
   margin: 0;
@@ -216,6 +220,9 @@ button.kafka-chip {
   .kafka-row {
     flex-direction: column;
     align-items: stretch;
+  }
+  .kafka-out .kafka-label {
+    padding-inline-start: 0;
   }
   .kafka-flow {
     flex: 0 0 auto;
