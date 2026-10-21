@@ -29,6 +29,22 @@ const pages = [
 ]
 
 describe("a silenced alert", () => {
+  test("is named silenced until the silence ends, not firing, on its own page", () => {
+    const page = mount(() => <AlertPage id="a2" />, { sent: silenced({}) })
+    const until = `silenced until ${clock("2026-10-03T15:00:00Z")}`
+    expect(page.container.querySelector(".alert-for")?.textContent).toBe(until)
+    expect(page.container.querySelector(".lede")?.textContent).toContain(until)
+    expect(page.container.querySelector(".lede")?.textContent).not.toContain("firing")
+    page.dispose()
+  })
+
+  test("is named firing for how long while it is not silenced", () => {
+    const page = mount(() => <AlertPage id="a1" />)
+    expect(page.container.querySelector(".alert-for")?.textContent).toBe("firing 14 min")
+    expect(page.container.querySelector(".lede")?.textContent).toContain("firing 14 min")
+    page.dispose()
+  })
+
   test("links to its page from its service's page", () => {
     const page = mount(() => <ServicePage name="storefront" />, { sent: silenced({ service: "storefront" }) })
     expect(page.container.querySelector(".silenced-row a")?.textContent).toBe("DiskFilling")

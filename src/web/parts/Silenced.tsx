@@ -3,9 +3,13 @@
 import { For, Show } from "solid-js"
 import type { Alert } from "../../shared/events"
 import { useEstate } from "../context"
-import { clock } from "../format"
+import { clock, since } from "../format"
 import { A } from "./A"
 import { Icon } from "./icons"
+
+/** What an alert is doing now, in a few words: silenced until when, or firing for how long. */
+export const standing = (alert: Alert, now: number): string =>
+  alert.silence === undefined ? `firing ${since(alert.startsAt, now)}` : `silenced until ${clock(alert.silence.endsAt)}`
 
 export const SilencedRow = (props: {
   readonly alert: Alert
