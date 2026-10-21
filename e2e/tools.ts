@@ -194,13 +194,15 @@ const server = Bun.serve({
     if (traced !== undefined) return json(traced)
     if (path === "/api/public/traces") return json({ data: [{ id: "t2" }, { id: "t1" }], meta: { page: 1 } })
     if (path.startsWith("/api/public/traces/")) return json(traceOf(path.split("/").at(-1) ?? ""))
-    // The model the support agent uses, as the label of the series its query groups by.
+    // The model the support agent uses, as the label of the series its query groups by; and one Kafka cluster.
     if (path === "/api/v1/query")
       return json({
         status: "success",
         data: {
           resultType: "vector",
-          result: [{ metric: { gen_ai_response_model: "claude-sonnet" }, value: [0, "1"] }],
+          result: url.searchParams.get("query")?.includes("kafka_brokers")
+            ? [{ metric: { namespace: "data", strimzi_io_cluster: "bus" }, value: [0, "3"] }]
+            : [{ metric: { gen_ai_response_model: "claude-sonnet" }, value: [0, "1"] }],
         },
       })
     if (path === "/api/v1/rules")

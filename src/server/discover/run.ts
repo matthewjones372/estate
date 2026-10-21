@@ -90,13 +90,9 @@ const discoverBackstage = (catalogs: Catalogs, settings: Settings, catalog: Cata
     return leftOut
   })
 
-/** Each environment's cluster, and Backstage, asked once what the rules find there. */
-export const discoverOnce = (
-  catalogs: Catalogs,
-  settings: Settings,
-): Effect.Effect<void, never, Estate | Remote | FileSystem.FileSystem> =>
+/** Each environment's cluster asked once what the Kubernetes rules find; returns what was left out, and why. */
+const discoverKubernetes = (catalogs: Catalogs, settings: Settings, catalog: Catalog) =>
   Effect.gen(function* () {
-    const catalog = yield* Ref.get(catalogs.written)
     const rules = (catalog.discover ?? []).flatMap((rule) =>
       rule.kubernetes === undefined ? [] : [{ ...rule, kubernetes: rule.kubernetes }],
     )
@@ -125,11 +121,30 @@ export const discoverOnce = (
       leftOut.push(...wrong.map((each) => `${environment.name} ${each.name}: ${each.mistakes[0]?.message ?? ""}`))
       yield* Ref.update(catalogs.found, (found) => ({ ...found, [environment.name]: kept }))
     }
-    leftOut.push(...(yield* discoverBackstage(catalogs, settings, catalog)))
-    leftOut.push(...(yield* discoverKafka(catalogs.stores, settings, catalog)))
-    const saying = leftOut.join("; ")
+    return leftOut
+  })
+
+/**
+ * Each environment's cluster and Prometheus, and Backstage, asked once what the rules find there. They are asked
+ * together, so that what is found reaches the page as soon as the slowest of them answers.
+ */
+export const discoverOnce = (
+  catalogs: Catalogs,
+  settings: Settings,
+): Effect.Effect<void, never, Estate | Remote | FileSystem.FileSystem> =>
+  Effect.gen(function* () {
+    const catalog = yield* Ref.get(catalogs.written)
+    const leftOut = yield* Effect.all(
+      [
+        discoverKubernetes(catalogs, settings, catalog),
+        discoverBackstage(catalogs, settings, catalog),
+        discoverKafka(catalogs.stores, settings, catalog),
+      ],
+      { concurrency: "unbounded" },
+    )
+    const saying = leftOut.flat().join("; ")
     if (saying !== (yield* Ref.getAndSet(catalogs.said, saying)) && saying !== "")
-      yield* Effect.logWarning(`discovered services left out, each with a mistake: ${saying}`)
+      yield* Effect.logWarning(`discovered entries left out, each with a mistake: ${saying}`)
     yield* publish(catalogs, settings)
   })
 

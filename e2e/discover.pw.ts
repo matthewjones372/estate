@@ -30,3 +30,15 @@ test("a service found in Backstage is on the overview with its owner's links, an
   )
   await expect(page.getByText("Owned by Web")).toBeVisible()
 })
+
+test("a Kafka cluster found in Prometheus is a store on the overview, and its page offers its entry", async ({
+  page,
+}) => {
+  await page.goto("/?env=production")
+  const bus = page.locator("article", { has: page.getByRole("link", { name: "bus", exact: true }) })
+  await expect(bus).toBeVisible({ timeout: 30_000 })
+  await expect(bus.getByText("found in Prometheus")).toBeVisible()
+  await bus.getByRole("link", { name: "bus", exact: true }).click()
+  await expect(page.getByText("Found in Prometheus, not written in the catalog.")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Copy as YAML" })).toBeVisible()
+})

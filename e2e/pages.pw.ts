@@ -27,8 +27,13 @@ test("the overview says what needs someone, with each service's lane and what ch
     "https://storefront.production.example.com/swagger-ui",
   )
   await expect(page.getByText("orders job orders-nightly-export succeeded")).toBeVisible()
-  // The catalog's categories, in its order, and what has none last.
-  await expect(services(page).getByRole("heading", { level: 2 })).toHaveText(["Shop", "Payments", "Everything else"])
+  // The catalog's categories, in its order, then a found Kafka store's, and what has none last.
+  await expect(services(page).getByRole("heading", { level: 2 })).toHaveText([
+    "Shop",
+    "Payments",
+    "Data",
+    "Everything else",
+  ])
   await expect(page.getByRole("region", { name: "Payments" }).getByRole("link", { name: "orders-db" })).toBeVisible()
   // An AI agent beside the services it helps: its model, its tokens against its budget.
   const agent = page.getByRole("article", { name: "support-triage, an agent" })

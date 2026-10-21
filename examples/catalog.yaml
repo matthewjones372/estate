@@ -27,6 +27,13 @@ discover:
       load:
         requests: sum(rate(http_requests_total{app="{name}"}[1m]))
         errors: sum(rate(http_requests_total{app="{name}",code=~"5.."}[1m]))
+  # And every Kafka cluster kafka_exporter is scraped for, one per Strimzi cluster, as a store; its selector names
+  # the exporter's job and the cluster's labels. A store written below with the same name wins whole.
+  - kafka: { by: [ namespace, strimzi_io_cluster ], selector: 'job="kafka-exporter"' }
+    store:
+      name: "{label:strimzi_io_cluster}"
+      category: Data
+      links: { dashboard: 'https://grafana.example.com/d/kafka?var-env={env}&var-cluster={label:strimzi_io_cluster}' }
 
 # AI agents run in production, their usage from OpenTelemetry's GenAI metrics in the environment's Prometheus.
 agents:

@@ -271,6 +271,10 @@ A `backstage:` rule does the same from Backstage's catalog. Each Component becom
 system as category, description, links, and repository and namespace from the annotations Backstage's plugins use.
 The Backstage address and token go in `estate.yaml`.
 
+A `kafka:` rule finds Kafka clusters in each environment's Prometheus, one for each set of values of the labels it
+names on kafka_exporter's series. Each cluster becomes a Kafka store, selected by those labels and filled from the
+rule's `store:`, and is marked "found in Prometheus".
+
 ```yaml
 discover:
   - kubernetes: { selector: estate.dev/show=true, namespaces: [ shop ] }
@@ -278,6 +282,8 @@ discover:
       owner: "{label:team}"
       category: "{label:app.kubernetes.io/part-of}"
       load: { requests: 'sum(rate(http_requests_total{app="{name}"}[1m]))' }
+  - kafka: { by: [ namespace, strimzi_io_cluster ] }
+    store: { name: "{label:strimzi_io_cluster}", category: Data }
 ```
 [`examples/catalog.yaml`](examples/catalog.yaml) uses every option, including stores, jobs no service owns, the map
 and vitals.
