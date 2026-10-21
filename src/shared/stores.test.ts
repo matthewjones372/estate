@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { Store } from "./catalog"
-import { engines, reasonsOf, storeStatsOf } from "./stores"
+import { engines, instancesOf, reasonsOf, storeStatsOf } from "./stores"
 
 const store = (engine: Store["engine"], attention?: Record<string, number>): Store => ({
   name: "db",
@@ -19,6 +19,34 @@ describe("a store's preset", () => {
     }
     const own = storeStatsOf({ ...store("postgres"), extra: [{ title: "Outbox lag", query: "max(outbox_lag)" }] })
     expect(own.at(-1)).toEqual({ key: "extra0", title: "Outbox lag", query: "max(outbox_lag)" })
+  })
+
+  test("counts a database's instances by role, those behind its threshold and those gone, read but not charted", () => {
+    const counts = storeStatsOf(store("cnpg", { lag: 20 })).filter((stat) => stat.count === true)
+    expect(counts.map((stat) => [stat.key, stat.query])).toEqual([
+      ["primaries", 'count(cnpg_pg_replication_in_recovery{database="db"} == 0) or vector(0)'],
+      ["replicas", 'count(cnpg_pg_replication_in_recovery{database="db"} == 1) or vector(0)'],
+      ["behind", 'count(cnpg_pg_replication_lag{database="db"} > 20) or vector(0)'],
+      ["gone", 'count(cnpg_collector_up{database="db"} == 0) or vector(0)'],
+    ])
+    expect(
+      storeStatsOf(store("postgres"))
+        .filter((stat) => stat.count === true)
+        .map((stat) => stat.query),
+    ).toEqual([
+      'count(pg_replication_is_replica{database="db"} == 0) or vector(0)',
+      'count(pg_replication_is_replica{database="db"} == 1) or vector(0)',
+      'count(pg_replication_lag_seconds{database="db"} > 30) or vector(0)',
+      'count(pg_up{database="db"} == 0) or vector(0)',
+    ])
+    expect(storeStatsOf(store("redis")).some((stat) => stat.count === true)).toBe(false)
+    expect(instancesOf({ primaries: 1, replicas: 2, behind: 1, gone: null })).toEqual({
+      primaries: 1,
+      replicas: 2,
+      behind: 1,
+      gone: 0,
+    })
+    expect(instancesOf({ connections: 40 })).toBeUndefined()
   })
 
   test("says why a store needs someone, past its thresholds or the catalog's", () => {

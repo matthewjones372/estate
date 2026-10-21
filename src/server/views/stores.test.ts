@@ -39,6 +39,30 @@ const alert = (name: string, labels: Record<string, string>, severity = "warning
   labels,
 })
 
+describe("a database store's instances", () => {
+  test("are counted for its lane's dots, and the counts are not sent as stats", () => {
+    const state = estate({
+      catalog: withStores,
+      environments: {
+        staging: environment({
+          metrics: metrics({
+            "orders-db": [
+              reading("connections", 40),
+              reading("primaries", 1),
+              reading("replicas", 2),
+              reading("behind", 1),
+              reading("gone", 1),
+            ],
+          }),
+        }),
+      },
+    })
+    const [ordersDbNow] = servicesView(state, "staging").stores ?? []
+    expect(ordersDbNow?.stats.map((stat) => stat.title)).toEqual(["connections"])
+    expect(ordersDbNow?.instances).toEqual({ primaries: 1, replicas: 2, behind: 1, gone: 1 })
+  })
+})
+
 describe("a store's health", () => {
   test("needs attention when a CloudNativePG instance is not ready, saying which", () => {
     const state = environment({

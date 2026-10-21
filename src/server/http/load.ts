@@ -86,7 +86,7 @@ export const storeLoadRoute = HttpRouter.add(
     const ranges = yield* rangesIn(settings.sources[environment.sources] ?? {})
     if (ranges === undefined) return json({ message: `${environment.name} has no metrics to read` }, 404)
     const now = yield* Clock.currentTimeMillis
-    const readings = yield* storeLoadOf(ranges, store, spans[asked.range], now)
+    const readings = yield* storeLoadOf(ranges, store, spans[asked.range], now, false)
     return json({ stats: readings.map(({ key: _, ...stat }) => stat) })
   }).pipe(Effect.catchTag("Refusal", refused)),
 )

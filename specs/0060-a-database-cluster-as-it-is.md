@@ -126,9 +126,9 @@ A store with one instance and no replicas draws one column, no lag and only the 
 ### Every cluster at a glance
 
 On the overview, a Postgres or cnpg store's lane gains a row of dots after its health line, one per instance: the
-primary filled, a replica as a ring, amber past the lag threshold, dashed when gone. The dots come from two counts
-added to the preset (instances by role, instances not ready), read with the lane's other stats, so the overview reads
-no per-instance detail.
+primary filled, a replica as a ring, amber past the lag threshold, dashed when gone. The dots come from four counts
+added to the preset (primaries, replicas, replicas past the store's lag threshold, instances gone), read with the
+lane's other stats and not drawn as charts, so the overview reads no per-instance detail.
 
 ### A request's queries through it
 
@@ -241,7 +241,7 @@ read a store. Recommended: exporters and traces only, as spec 0057 chose.
 - [ ] **`postgres-cluster-ask`** — Ask AI on a Postgres or cnpg cluster: the cluster as a brief, one round.
       Done when: against the exporter and model stubs, the brief names the gone instance, the lagging replica and the
       inactive slot, and no button shows without Ask AI.
-- [ ] **`postgres-lane-instances`** — the instance dots on a Postgres or cnpg store's lane, from two counts in the
+- [x] **`postgres-lane-instances`** — the instance dots on a Postgres or cnpg store's lane, from four counts in the
       preset.
       Done when: a suite shows a lane with a primary, a replica past its threshold and a gone instance as dots, each
       with its words.
@@ -282,7 +282,7 @@ the petshop demo, the trace of an adoption shows its writes and the claimer's `S
 3. **Which replica did a read hit?** Recommended *the replicas (ro)* and no closer. A pod-level `server.address` names
    one, but most clients connect through the `-ro` service, and naming a replica Estate cannot see would be a guess.
    The stale-read mark uses the largest lag among them, and says so.
-4. **Instance dots on the overview, or only on the page?** Recommended on the lane, from two counts. Spec 0057 kept
+4. **Instance dots on the overview, or only on the page?** Recommended on the lane, from four counts. Spec 0057 kept
    its view off the overview because it is wide; dots are not, and a gone instance is the thing most worth seeing
    from the overview.
 5. **MySQL in the same panel?** Recommended not in this spec. Its replica series are thinner in mysqld_exporter

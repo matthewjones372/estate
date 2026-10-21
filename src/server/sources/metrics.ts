@@ -48,15 +48,16 @@ export const loadOf = (
     return { ...Object.fromEntries(load), ...(stats.length === 0 ? {} : { stats }) }
   })
 
-/** A store's stats over a span, from the preset for its engine and its own queries. */
+/** A store's stats over a span, from the preset for its engine and its own queries; with its dots' counts, or not. */
 export const storeLoadOf = (
   ranges: Ranges,
   store: Store,
   span: Span,
   now: number,
+  counts = true,
 ): Effect.Effect<ReadonlyArray<StoreReading>, never, Remote> =>
   Effect.forEach(
-    storeStatsOf(store),
+    storeStatsOf(store).filter((stat) => counts || stat.count !== true),
     (stat) =>
       quietly(ranges.range(stat.query, span, now)).pipe(
         Effect.map((series) => compact({ key: stat.key, title: stat.title, unit: stat.unit, series })),
