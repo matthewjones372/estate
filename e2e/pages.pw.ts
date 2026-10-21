@@ -12,6 +12,11 @@ const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screensh
 
 const services = (page: Page) => page.getByRole("region", { name: "The estate by area" })
 
+// These act on alerts' cards, which a viewer chooses over the rows shown first (spec 0065).
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem("estate.alerts.layout", "cards"))
+})
+
 test("the overview says what needs someone, with each service's lane and what changed", async ({ page }) => {
   await page.goto("/?env=production")
   await expect(page.getByRole("heading", { name: /Two things\s*need you\./ })).toBeVisible({ timeout: 20_000 })

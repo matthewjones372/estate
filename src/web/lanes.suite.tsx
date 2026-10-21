@@ -1,11 +1,15 @@
 /** @jsxImportSource solid-js */
 /** The overview's lanes in happy-dom: grouped by category, and a job's: run by `lanes.test.ts` once Solid's compiler is in place. */
-import { describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { events } from "./fixture"
 import { mount } from "./harness"
 import { Overview } from "./pages/Overview"
 import { scaled, shareOf } from "./parts/AgentLane"
 import { chatOf, teamOf } from "./teams"
+
+// These read and act on alerts' cards, which a viewer now chooses over the rows shown first (spec 0065).
+beforeEach(() => window.localStorage.setItem("estate.alerts.layout", "cards"))
+afterEach(() => window.localStorage.removeItem("estate.alerts.layout"))
 
 describe("an overview of a catalog with categories", () => {
   test("puts each category's lanes under its heading, in the catalog's order, and the rest last", () => {
@@ -120,7 +124,7 @@ describe("the map of a large estate", () => {
     page.click(page.button("Close Data"))
     await page.settle()
     expect(nodes()).toHaveLength(2)
-    window.localStorage.removeItem("estate.map.view")
+    window.localStorage.removeItem("estate.map.layout")
   })
 })
 

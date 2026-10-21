@@ -19,9 +19,16 @@ const MapEdge = Schema.Struct({
   alert: optional(Schema.String),
 })
 
+/** The counts the map changes at, as the catalog sets them and the page reads them. */
+export const MapCounts = {
+  /** Past how many nodes the map draws a node a category: 12 unless set, or never. */
+  collapse: optional(Schema.Union([Schema.Number, Schema.Literal("never")])),
+  /** Past how many services the map's *Auto* is areas (spec 0065): 12 unless set, or never. */
+  areas: optional(Schema.Union([Schema.Number, Schema.Literal("never")])),
+}
+
 export const CatalogMap = Schema.Struct({
   nodes: Schema.Array(MapNode),
   edges: Schema.Array(MapEdge),
-  /** Past how many nodes the map draws a node a category: 12 unless set, or never. */
-  collapse: optional(Schema.Union([Schema.Number, Schema.Literal("never")])),
+  ...MapCounts,
 })

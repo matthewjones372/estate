@@ -9,13 +9,13 @@ import { Cost } from "./costs"
 import { DeploysEvent } from "./deploys"
 import { FeedEvent } from "./feed"
 import { Suggested } from "./incidents"
+import { MapCounts } from "./map"
 import { CardNote, Note } from "./note"
 import { DescribedStore } from "./stores"
-
-export { type Build, DeploysEvent } from "./deploys"
-
 import { DescribedJourney } from "./traces"
 import { Debug, Job, Pod, Series } from "./workloads"
+
+export { type Build, DeploysEvent } from "./deploys"
 
 const optional = Schema.optionalKey
 const Instant = Schema.String
@@ -78,7 +78,7 @@ export const CatalogEvent = Schema.Struct({
     ),
   ),
   map: Schema.Struct({
-    collapse: optional(Schema.Union([Schema.Number, Schema.Literal("never")])),
+    ...MapCounts,
     nodes: Schema.Array(
       Schema.Struct({
         id: Schema.String,

@@ -36,10 +36,12 @@ const rows = (container: HTMLElement) => [...container.querySelectorAll(".alert-
 const cards = (container: HTMLElement) => container.querySelectorAll(".alert-card").length
 
 describe("needs you now, with many firing", () => {
-  test("shows cards for three firing", () => {
+  test("on Auto, shows cards for three firing", () => {
+    window.localStorage.setItem("estate.alerts.layout", "auto")
     const page = mount(() => <Overview />, { sent: sent(several(3)) })
     expect(cards(page.container)).toBe(3)
     expect(rows(page.container)).toHaveLength(0)
+    window.localStorage.removeItem("estate.alerts.layout")
   })
 
   test("shows a row each for four, with its severity, name, service, time, latest note and incident", () => {
@@ -121,12 +123,14 @@ describe("needs you now, with many firing", () => {
 })
 
 describe("what's happening on a service's page", () => {
-  test("shows cards for three firing and rows for four", () => {
+  test("on Auto, shows cards for three firing and rows for four", () => {
+    window.localStorage.setItem("estate.alerts.layout", "auto")
     const three = mount(() => <ServicePage name="storefront" />, { sent: sent(several(3, "storefront")) })
     expect(cards(three.container)).toBe(3)
     const four = mount(() => <ServicePage name="storefront" />, { sent: sent(several(4, "storefront")) })
     expect(rows(four.container)).toHaveLength(4)
     expect(cards(four.container)).toBe(0)
+    window.localStorage.removeItem("estate.alerts.layout")
   })
 })
 

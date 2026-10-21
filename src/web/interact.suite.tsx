@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 /** What a person does on the page, in happy-dom: run by \`interact.test.ts\` once Solid's compiler is in place. */
-import { describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { events, listening, operator } from "./fixture"
 import { mount } from "./harness"
 import { Alerts } from "./pages/Alerts"
@@ -8,6 +8,10 @@ import { Overview } from "./pages/Overview"
 import { ServicePage } from "./pages/Service"
 import { A } from "./parts/A"
 import { Header } from "./parts/Header"
+
+// These read and act on alerts' cards, which a viewer now chooses over the rows shown first (spec 0065).
+beforeEach(() => window.localStorage.setItem("estate.alerts.layout", "cards"))
+afterEach(() => window.localStorage.removeItem("estate.alerts.layout"))
 
 describe("acting on an alert", () => {
   test("adds a note", async () => {
