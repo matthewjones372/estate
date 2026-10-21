@@ -52,6 +52,15 @@ describe("a Kafka store's cluster", () => {
       topics: kafkaCluster.topics.slice(1),
     }
     expect(whatIsWrong(well)).toBe("Every broker is up and every partition is in sync.")
+    // Not known is not in sync: a cluster whose in-sync replicas could not be read says so.
+    const unread = {
+      ...well,
+      topics: well.topics.map((topic) => ({
+        ...topic,
+        partitions: topic.partitions.map((partition) => ({ ...partition, inSync: null })),
+      })),
+    }
+    expect(whatIsWrong(unread)).toBe("Every broker is up; replicas in sync are not known for 1 partition.")
   })
 
   test("draws each broker with the partitions it leads, a gone one marked, and those with no leader apart", async () => {

@@ -24,7 +24,19 @@ export const whatIsWrong = (cluster: KafkaCluster): string => {
       ]
     }),
   ]
-  const sentence = said.length === 0 ? "every broker is up and every partition is in sync" : said.join("; ")
+  // A partition whose replica counts were not read is neither in sync nor short: it is not known, and said so.
+  const unknown = cluster.topics
+    .filter((topic) => !internal(topic.name))
+    .flatMap((topic) => topic.partitions)
+    .filter((partition) => partition.leader !== null && (partition.inSync === null || partition.replicas === null))
+  const unread =
+    unknown.length === 0
+      ? []
+      : [`replicas in sync are not known for ${unknown.length} partition${unknown.length === 1 ? "" : "s"}`]
+  const sentence =
+    said.length === 0 && unread.length === 0
+      ? "every broker is up and every partition is in sync"
+      : [...(said.length === 0 ? ["every broker is up"] : said), ...unread].join("; ")
   return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`
 }
 
