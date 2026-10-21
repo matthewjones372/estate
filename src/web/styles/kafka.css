@@ -226,3 +226,59 @@ button.kafka-chip {
     transform: rotate(90deg);
   }
 }
+
+/* Following a message: the trace ID asked for, its path in words, the dot in its partition and each group marked. */
+.kafka-follow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+.kafka-follow-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kafka-follow-field .select {
+  inline-size: min(36ch, 100%);
+  min-height: 44px;
+  font-family: var(--mono);
+}
+.kafka-followed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kafka-path {
+  margin: 0;
+  padding-inline-start: 1.25em;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+.kafka-card.carrying,
+.kafka-chip.carrying {
+  border-color: var(--link);
+}
+.kafka-dot {
+  inline-size: 8px;
+  block-size: 8px;
+  margin-inline-start: 6px;
+  border-radius: 50%;
+  background: var(--link);
+}
+.kafka-card.carried .kafka-follow-state {
+  color: var(--healthy);
+}
+.kafka-card.waiting {
+  border-color: var(--amber-line);
+  background: var(--amber-panel);
+}
+.kafka-card.waiting .kafka-follow-state {
+  color: var(--amber-text);
+}
+.kafka-flow.carrying line {
+  stroke: var(--link);
+}
+.kafka-flow.carrying polygon {
+  fill: var(--link);
+}

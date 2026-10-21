@@ -7,7 +7,7 @@ import type { Actions, LogHandlers } from "./context"
 import { series } from "./fixture"
 import { incidentActions, keptIncidents } from "./fixture-incidents"
 import { includedAs, summarised } from "./fixture-included"
-import { clusterAnswer, kafkaCluster } from "./fixture-kafka"
+import { clusterAnswer, followedMessage, kafkaCluster } from "./fixture-kafka"
 import { groups, lines } from "./fixture-logs"
 import { journeySample, orderTrace, refusedTrace } from "./fixture-traces"
 
@@ -187,6 +187,12 @@ export const recording = (): Recorded => {
       storeCluster: (store) => {
         calls.push(["storeCluster", store])
         return Promise.resolve(store === "bus" ? kafkaCluster : `kafka_exporter publishes nothing for ${store}`)
+      },
+      storeMessage: (store, trace) => {
+        calls.push(["storeMessage", store, trace])
+        return Promise.resolve(
+          trace === followedMessage.trace ? followedMessage : `${store} has no Tempo to follow a message in`,
+        )
       },
       watchLogs: (service, handlers) => {
         calls.push(["watchLogs", service])

@@ -12,7 +12,8 @@ export interface LogsShown {
 export type Page =
   | { readonly page: "overview" }
   | { readonly page: "service"; readonly name: string; readonly logs?: LogsShown }
-  | { readonly page: "store"; readonly name: string }
+  /** A store, and on a Kafka store a message followed by its trace (spec 0057). */
+  | { readonly page: "store"; readonly name: string; readonly message?: string }
   | { readonly page: "job"; readonly name: string }
   | { readonly page: "agent"; readonly name: string }
   | { readonly page: "deploys" }
@@ -67,6 +68,13 @@ export const pageOf = (pathname: string, search = ""): Page => {
       ? { page: "missing" }
       : { page: "firing", id: decodedId, at: decodedAt }
   }
+  const [, store = "", message = ""] = /^\/stores\/([^/]+)\/messages\/([^/]+)$/.exec(pathname) ?? []
+  if (store !== "") {
+    const [decodedStore, decodedMessage] = [decodedOf(store), decodedOf(message)]
+    return decodedStore === undefined || decodedMessage === undefined
+      ? { page: "missing" }
+      : { page: "store", name: decodedStore, message: decodedMessage }
+  }
   const [, journey = "", trace = ""] = /^\/journeys\/([^/]+)\/([^/]+)$/.exec(pathname) ?? []
   if (journey !== "") {
     const [decodedJourney, decodedTrace] = [decodedOf(journey), decodedOf(trace)]
@@ -103,8 +111,9 @@ export const titleOf = (page: Page): string => {
   switch (page.page) {
     case "overview":
       return "Estate"
-    case "service":
     case "store":
+      return named(page.message === undefined ? page.name : `A message through ${page.name}`)
+    case "service":
     case "job":
     case "agent":
       return named(page.name)
@@ -136,7 +145,9 @@ export const pathOf = (page: Page): string => {
     case "service":
       return `/services/${encodeURIComponent(page.name)}${logsQuery(page.logs)}`
     case "store":
-      return `/stores/${encodeURIComponent(page.name)}`
+      return page.message === undefined
+        ? `/stores/${encodeURIComponent(page.name)}`
+        : `/stores/${encodeURIComponent(page.name)}/messages/${encodeURIComponent(page.message)}`
     case "job":
       return `/jobs/${encodeURIComponent(page.name)}`
     case "agent":

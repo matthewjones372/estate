@@ -6,6 +6,7 @@ import { AskAnswer } from "../shared/ask"
 import { type EventName, Load } from "../shared/events"
 import { PastFiring } from "../shared/firing"
 import { KafkaCluster } from "../shared/kafka-cluster"
+import { FollowedMessage } from "../shared/kafka-message"
 import { ErrorGroups, LogBatch } from "../shared/log-events"
 import { FiringEvent } from "../shared/timeline"
 import { TraceView } from "../shared/trace-view"
@@ -25,6 +26,7 @@ const decodeThread = Schema.decodeUnknownOption(Schema.Struct({ url: Schema.Stri
 const decodeJourney = Schema.decodeUnknownOption(JourneySample)
 const decodeTrace = Schema.decodeUnknownOption(TraceView)
 const decodeCluster = Schema.decodeUnknownOption(KafkaCluster)
+const decodeFollowed = Schema.decodeUnknownOption(FollowedMessage)
 
 /** A read that answers a 404 or 403 as "none", any other failure as undefined, and the body decoded. */
 const readOrNone = <A>(path: string, decode: (body: unknown) => Option.Option<A>): Promise<A | "none" | undefined> =>
@@ -163,6 +165,21 @@ export const serverActions = (
           ),
       )
       .catch(() => "The cluster could not be read."),
+  storeMessage: (store, trace) =>
+    fetch(
+      `/api/store-message?env=${encodeURIComponent(environment())}&store=${encodeURIComponent(store)}&trace=${encodeURIComponent(trace)}`,
+    )
+      .then((response) =>
+        response
+          .json()
+          .then((body) =>
+            response.ok
+              ? (Option.getOrUndefined(decodeFollowed(body)) ?? "The message could not be followed.")
+              : (Option.getOrUndefined(decodeMessage(body))?.message ??
+                `The message could not be followed (${response.status}).`),
+          ),
+      )
+      .catch(() => "The message could not be followed."),
   firing: (alert, at) =>
     fetch(
       `/api/firings/${encodeURIComponent(alert)}?env=${encodeURIComponent(environment())}${at === undefined ? "" : `&at=${encodeURIComponent(at)}`}`,

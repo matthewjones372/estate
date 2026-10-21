@@ -1,6 +1,7 @@
 /** A Kafka store's cluster for the pages' tests: three brokers, the third gone, orders in trouble, payments well. */
 import type { AskAnswer } from "../shared/ask"
 import type { KafkaCluster } from "../shared/kafka-cluster"
+import type { FollowedMessage } from "../shared/kafka-message"
 
 const partition = (id: number, leader: string | null, inSync: number, preferred = true) => ({
   id,
@@ -54,4 +55,38 @@ export const clusterAnswer: AskAnswer = {
   called: [],
   usage: { input: 300, cached: 0, output: 40 },
   readLogs: false,
+}
+
+/** When the followed message was written to orders 0. */
+const writtenAt = Date.parse("2026-10-03T11:58:02.114Z")
+
+/** A message followed: written to orders 0, read by audit, and orders-projector 11,400 messages short of it. */
+export const followedMessage: FollowedMessage = {
+  trace: "4bf92f35",
+  readAt: "2026-10-03T11:59:56Z",
+  written: {
+    service: "petshop",
+    topic: "orders",
+    partition: 0,
+    offset: 1_882_340,
+    key: "cust-118",
+    id: "81723",
+    at: writtenAt,
+  },
+  groups: [
+    { name: "audit", state: "read", service: "audit-sink", at: writtenAt + 888, after: 888 },
+    { name: "orders-projector", state: "not yet", offset: 1_870_940, before: 11_400, seconds: 240 },
+  ],
+  done: false,
+  missing: [],
+}
+
+/** The same message once orders-projector's offset has moved past it. */
+export const caughtUp: FollowedMessage = {
+  ...followedMessage,
+  groups: [
+    followedMessage.groups[0] ?? { name: "audit", state: "unknown" },
+    { name: "orders-projector", state: "past it", offset: 1_882_400 },
+  ],
+  done: true,
 }
