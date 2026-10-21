@@ -117,6 +117,7 @@ describe("where the page is", () => {
       "/alerts/a1/2026-10-06T09:00:00Z",
       "/services/orders%20api",
       "/stores/orders-db",
+      "/stores/bus/messages/4bf92f35",
       "/jobs/nightly-settlement",
       "/agents/support-triage",
       "/incidents",
@@ -126,6 +127,8 @@ describe("where the page is", () => {
     ])
       expect(pathOf(pageOf(path))).toBe(path)
     expect(pageOf("/stores/orders-db")).toEqual({ page: "store", name: "orders-db" })
+    expect(pageOf("/stores/bus/messages/4bf92f35")).toEqual({ page: "store", name: "bus", message: "4bf92f35" })
+    expect(pageOf("/stores/bus/messages/%E0")).toEqual({ page: "missing" })
     expect(pageOf("/jobs/nightly-settlement")).toEqual({ page: "job", name: "nightly-settlement" })
     expect(pageOf("/agents/support-triage")).toEqual({ page: "agent", name: "support-triage" })
     expect(pageOf("/alerts/a1")).toEqual({ page: "alert", id: "a1" })
@@ -153,6 +156,7 @@ describe("where the page is", () => {
     expect(titleOf(pageOf("/"))).toBe("Estate")
     expect(titleOf(pageOf("/services/checkout"))).toBe("checkout · Estate")
     expect(titleOf(pageOf("/stores/orders-db"))).toBe("orders-db · Estate")
+    expect(titleOf(pageOf("/stores/bus/messages/4bf92f35"))).toBe("A message through bus · Estate")
     expect(titleOf(pageOf("/deploys"))).toBe("Deploys · Estate")
     expect(titleOf(pageOf("/alerts/a1"))).toBe("Alert · Estate")
     expect(titleOf(pageOf("/alerts/a1/2026-10-06T09:00:00Z"))).toBe("Past firing · Estate")

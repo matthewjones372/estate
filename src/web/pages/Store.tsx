@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-/** A store in the chosen environment: its health, its stats over a range, and the alerts about it. */
+/** A store in the chosen environment: its health, its stats over a range, the alerts about it, and a message followed. */
 import { For, Show } from "solid-js"
 import { useEstate, useSnapshot } from "../context"
 import { A } from "../parts/A"
@@ -9,7 +9,7 @@ import { FoundEntry } from "../parts/Found"
 import { ClusterPanel } from "../parts/KafkaCluster"
 import { HealthLine, Links } from "../parts/Lane"
 
-export const StorePage = (props: { readonly name: string }) => {
+export const StorePage = (props: { readonly name: string; readonly message?: string | undefined }) => {
   const { actions, me, now } = useEstate()
   const snapshot = useSnapshot()
   const events = () => snapshot.events
@@ -47,7 +47,7 @@ export const StorePage = (props: { readonly name: string }) => {
           <FoundEntry discovered={store()?.discovered} />
         </section>
         <Show when={store()?.engine === "kafka"}>
-          <ClusterPanel store={props.name} />
+          <ClusterPanel store={props.name} message={props.message} />
         </Show>
         <Load
           name={props.name}
