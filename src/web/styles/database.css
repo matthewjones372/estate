@@ -50,3 +50,25 @@
   background: var(--critical-panel);
   color: var(--critical);
 }
+
+/* A database's instances on its lane: the primary filled, a replica a ring, amber when behind, gone dashed. */
+.instance-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.instance-dot {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--healthy);
+}
+.instance-dot.primary {
+  background: var(--healthy);
+}
+.instance-dot.behind {
+  border-color: var(--amber);
+}
+.instance-dot.gone {
+  border: 2px dashed var(--critical);
+}

@@ -47,6 +47,7 @@ const withStores: Events = {
           { title: "Connections used", unit: "%", series: series([40, 45]) },
           { title: "Instances not ready", series: series([0, 1]) },
         ],
+        instances: { primaries: 1, replicas: 2, behind: 1, gone: 1 },
       },
     ],
   },
@@ -90,6 +91,20 @@ describe("stores on the overview", () => {
     expect(page).toContain("Connections used")
     expect(page).toContain("cache Unknown")
     expect(text(render(() => <Overview />))).not.toContain("Stores")
+  })
+
+  test("show a database's instances as dots, each said in words", () => {
+    const page = mount(() => <Overview />, { sent: withStores })
+    const dots = page.container.querySelector(".instance-dots")
+    expect([...(dots?.querySelectorAll(".instance-dot") ?? [])].map((dot) => dot.getAttribute("class"))).toEqual([
+      "instance-dot primary",
+      "instance-dot replica behind",
+      "instance-dot replica",
+      "instance-dot gone",
+    ])
+    expect(dots?.getAttribute("aria-label")).toBe("1 primary, 2 replicas, 1 of them behind, 1 gone")
+    expect(page.container.querySelectorAll(".instance-dots")).toHaveLength(1)
+    page.dispose()
   })
 
   test("say when they were found rather than written", () => {

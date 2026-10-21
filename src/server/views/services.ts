@@ -4,6 +4,7 @@
  */
 import { compact } from "../../shared/compact"
 import type { ServicesEvent, SourceKind, SourceStatus } from "../../shared/events"
+import { instancesOf, isCount } from "../../shared/stores"
 import type { EnvironmentState, EstateState, Part } from "../state"
 import { agentStateOf } from "./agents"
 import { agentsIn, inEnvironment, jobsIn } from "./catalog"
@@ -71,11 +72,16 @@ export const servicesView = (estate: EstateState, environment: string): Services
     ...(estate.catalog.stores === undefined
       ? {}
       : {
-          stores: storesIn(estate.catalog, environment).map((store) => ({
-            name: store.name,
-            ...storeHealthOf(store, state, storesIn(estate.catalog, environment)),
-            stats: (metrics?.stores?.[store.name] ?? []).map(({ key: _, ...stat }) => stat),
-          })),
+          stores: storesIn(estate.catalog, environment).map((store) => {
+            const readings = metrics?.stores?.[store.name] ?? []
+            const instances = instancesOf(Object.fromEntries(readings.map((each) => [each.key, each.series.now])))
+            return {
+              name: store.name,
+              ...storeHealthOf(store, state, storesIn(estate.catalog, environment)),
+              stats: readings.filter((each) => !isCount(each.key)).map(({ key: _, ...stat }) => stat),
+              ...(instances === undefined ? {} : { instances }),
+            }
+          }),
         }),
     ...(estate.catalog.agents === undefined
       ? {}
