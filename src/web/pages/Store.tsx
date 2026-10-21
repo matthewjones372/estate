@@ -5,6 +5,7 @@ import { useEstate, useSnapshot } from "../context"
 import { A } from "../parts/A"
 import { AlertCard } from "../parts/AlertCard"
 import { Load, Timeline } from "../parts/Charts"
+import { DatabasePanel } from "../parts/DatabaseCluster"
 import { FoundEntry } from "../parts/Found"
 import { ClusterPanel } from "../parts/KafkaCluster"
 import { HealthLine, Links } from "../parts/Lane"
@@ -48,6 +49,9 @@ export const StorePage = (props: { readonly name: string; readonly message?: str
         </section>
         <Show when={store()?.engine === "kafka"}>
           <ClusterPanel store={props.name} message={props.message} />
+        </Show>
+        <Show when={store()?.engine === "postgres" || store()?.engine === "cnpg"}>
+          <DatabasePanel store={props.name} />
         </Show>
         <Load
           name={props.name}
