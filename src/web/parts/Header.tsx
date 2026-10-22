@@ -99,10 +99,54 @@ const Switcher = () => {
   )
 }
 
+/** Who you are, as your initials: a button opening your name and role, and Sign out, so the header fits one row. */
+const Account = () => {
+  const { me } = useEstate()
+  let button: HTMLButtonElement | undefined
+  let panel: HTMLDivElement | undefined
+  // Under its button, at its end: anchor positioning does it where there is any, and this where there is none.
+  const place = (event: Event) => {
+    if ((event as ToggleEvent).newState !== "open" || button === undefined || panel === undefined) return
+    if (CSS.supports("position-area", "block-end")) return
+    const below = button.getBoundingClientRect()
+    panel.style.top = `${below.bottom + 8}px`
+    panel.style.right = `${Math.max(8, window.innerWidth - below.right)}px`
+  }
+  onMount(() => panel?.addEventListener("toggle", place))
+  onCleanup(() => panel?.removeEventListener("toggle", place))
+  const who = () => `${me.name} · ${me.role}${me.readOnly === true ? " · read-only" : ""}`
+  return (
+    <span class="person">
+      <button
+        ref={button}
+        type="button"
+        class="avatar avatar-button"
+        popovertarget="account"
+        aria-label={`Account: ${who()}`}
+      >
+        {initials(me.name)}
+      </button>
+      <div ref={panel} id="account" popover="auto" class="account-panel">
+        <span>{who()}</span>
+        <form method="post" action="/auth/logout">
+          <button type="submit" class="plain-button">
+            Sign out
+          </button>
+        </form>
+      </div>
+    </span>
+  )
+}
+
 export const Header = () => {
-  const { me, page } = useEstate()
+  const { page } = useEstate()
   const snapshot = useSnapshot()
-  const firing = () => (snapshot.events.alerts?.alerts ?? []).filter((alert) => alert.state === "firing").length
+  const firing = () => (snapshot.events.alerts?.alerts ?? []).filter((alert) => alert.state === "firing")
+  // The incidents open now that something fires in, as the overview counts them (spec 0068).
+  const incidents = () =>
+    new Set(
+      firing().flatMap((alert) => (alert.incident === undefined || alert.incident.closed ? [] : [alert.incident.id])),
+    ).size
   const connection = () => snapshot.connection
   return (
     <header class="header">
@@ -120,31 +164,22 @@ export const Header = () => {
             Deploys
           </A>
           <A to="/alerts" current={page().page === "alerts"}>
-            Alerts {firing() > 0 && <span class="count">{firing()}</span>}
+            Alerts {firing().length > 0 && <span class="count">{firing().length}</span>}
           </A>
           <A to="/incidents" current={page().page === "incidents" || page().page === "incident"}>
-            Incidents
+            Incidents {incidents() > 0 && <span class="count critical-count">{incidents()}</span>}
           </A>
         </nav>
         <Jump />
         <div class="header-end">
           <span class="live-clock">
             <span class={`dot small-dot ${connection() === "open" ? "healthy live" : "unknown"}`} />
-            {connection() === "lost" ? "Reconnecting" : connection() === "connecting" ? "Connecting" : "Live"}
-            {snapshot.heardAt !== undefined && ` · ${clock(new Date(snapshot.heardAt).toISOString())}`}
-          </span>
-          <span class="person">
-            <span class="avatar" aria-hidden="true">
-              {initials(me.name)}
+            <span class="live-words">
+              {connection() === "lost" ? "Reconnecting" : connection() === "connecting" ? "Connecting" : "Live"}
+              {snapshot.heardAt !== undefined && ` · ${clock(new Date(snapshot.heardAt).toISOString())}`}
             </span>
-            {me.name} · {me.role}
-            {me.readOnly === true ? " · read-only" : ""}
-            <form method="post" action="/auth/logout">
-              <button type="submit" class="plain-button">
-                Sign out
-              </button>
-            </form>
           </span>
+          <Account />
         </div>
       </div>
     </header>
