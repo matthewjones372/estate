@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright"
 import { expect, type Page, test } from "@playwright/test"
+import { openCards, showLanes } from "./overview"
 
 const accessible = async (page: Page) => {
   const { violations } = await new AxeBuilder({ page }).analyze()
@@ -11,11 +12,6 @@ const accessible = async (page: Page) => {
 const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screenshots/${name}.png`, fullPage: true })
 
 const services = (page: Page) => page.getByRole("region", { name: "The estate by area" })
-/** The overview's things open their alerts' cards in place (spec 0068): each alert's, once the list is drawn. */
-const openCards = async (page: Page) => {
-  await expect(page.getByRole("heading", { name: /need(s)? you$/ })).toBeVisible({ timeout: 20_000 })
-  for (const toggle of await page.getByRole("button", { name: /^Open .*'s card$/ }).all()) await toggle.click()
-}
 
 // A service's page shows its alerts as cards when a viewer chooses them (spec 0065).
 test.beforeEach(async ({ page }) => {
@@ -27,6 +23,7 @@ test("the overview says what needs someone, with each service's lane and what ch
   await expect(page.getByRole("heading", { name: /Three things\s*need you\./ })).toBeVisible({ timeout: 20_000 })
   await expect(page.getByRole("link", { name: "Orders are slow to place" })).toBeVisible()
   await openCards(page)
+  await showLanes(page)
   // The owners' chat, on the card of an alert about their service.
   await expect(page.getByRole("link", { name: "Orders on Slack" })).toHaveAttribute(
     "href",

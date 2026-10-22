@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright"
 import { expect, type Page, test } from "@playwright/test"
+import { openCards } from "./overview"
 
 /** What a person does to an alert from its card, opened in place among the overview's things (spec 0068). */
 const accessible = async (page: Page) => {
@@ -7,11 +8,6 @@ const accessible = async (page: Page) => {
   expect(
     violations.map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target).join(", ")}`),
   ).toEqual([])
-}
-
-const openCards = async (page: Page) => {
-  await expect(page.getByRole("heading", { name: /need(s)? you$/ })).toBeVisible({ timeout: 20_000 })
-  for (const toggle of await page.getByRole("button", { name: /^Open .*'s card$/ }).all()) await toggle.click()
 }
 
 test("an alert is told to its team on Slack once, and its card then links to the thread", async ({ page }) => {

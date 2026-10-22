@@ -28,7 +28,7 @@ describe("the header", () => {
   test("says who you are behind your initials, with Sign out", () => {
     const page = mount(() => <Header />)
     const account = page.container.querySelector<HTMLButtonElement>(".avatar-button")
-    expect(account?.getAttribute("aria-label")).toBe("Account: ada lovelace · operator")
+    expect(account?.querySelector(".visually-hidden")?.textContent).toBe("Account: ada lovelace · operator")
     expect(account?.getAttribute("popovertarget")).toBe("account")
     expect(page.container.querySelector("#account")?.textContent).toContain("Sign out")
   })

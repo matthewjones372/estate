@@ -117,14 +117,9 @@ const Account = () => {
   const who = () => `${me.name} · ${me.role}${me.readOnly === true ? " · read-only" : ""}`
   return (
     <span class="person">
-      <button
-        ref={button}
-        type="button"
-        class="avatar avatar-button"
-        popovertarget="account"
-        aria-label={`Account: ${who()}`}
-      >
-        {initials(me.name)}
+      <button ref={button} type="button" class="avatar avatar-button" popovertarget="account">
+        <span aria-hidden="true">{initials(me.name)}</span>
+        <span class="visually-hidden">Account: {who()}</span>
       </button>
       <div ref={panel} id="account" popover="auto" class="account-panel">
         <span>{who()}</span>

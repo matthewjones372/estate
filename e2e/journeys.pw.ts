@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright"
 import { expect, type Page, test } from "@playwright/test"
+import { showLanes } from "./overview"
 
 const accessible = async (page: Page) => {
   const { violations } = await new AxeBuilder({ page }).analyze()
@@ -12,6 +13,7 @@ test("a journey opens from its service's links, and a trace from it sets each st
   page,
 }) => {
   await page.goto("/?env=production")
+  await showLanes(page)
   await page.locator("a.link-chip", { hasText: "Placing an order" }).first().click()
   await expect(page).toHaveURL(/\/services\/storefront\?/)
   const panel = page.getByRole("region", { name: "Placing an order" })
@@ -38,6 +40,7 @@ test("a journey drawn on the map numbers the nodes it passes through, with the t
   page,
 }) => {
   await page.goto("/?env=production")
+  await showLanes(page)
   const map = page.getByRole("figure", { name: "The estate, live" })
   await map.getByRole("button", { name: "Placing an order" }).click()
   await expect(map.locator(".map-route")).toHaveCount(2)

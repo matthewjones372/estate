@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test"
+import { showLanes } from "./overview"
 
 test("a service found in the cluster is on the overview, marked as found, with its load", async ({ page }) => {
   await page.goto("/?env=production")
+  await showLanes(page)
   const estate = page.getByRole("region", { name: "The estate by area" })
   const basket = estate.locator("article", { has: page.getByRole("link", { name: "basket", exact: true }) })
   await expect(basket).toBeVisible({ timeout: 30_000 })
@@ -17,6 +19,7 @@ test("a service found in Backstage is on the overview with its owner's links, an
   page,
 }) => {
   await page.goto("/?env=production")
+  await showLanes(page)
   const estate = page.getByRole("region", { name: "The estate by area" })
   const found = estate.locator("article", { has: page.getByRole("link", { name: "recommendations", exact: true }) })
   await expect(found).toBeVisible({ timeout: 30_000 })
@@ -35,6 +38,7 @@ test("a Kafka cluster found in Prometheus is a store on the overview, and its pa
   page,
 }) => {
   await page.goto("/?env=production")
+  await showLanes(page)
   const bus = page.locator("article", { has: page.getByRole("link", { name: "bus", exact: true }) })
   await expect(bus).toBeVisible({ timeout: 30_000 })
   await expect(bus.getByText("found in Prometheus")).toBeVisible()
