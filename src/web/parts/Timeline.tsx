@@ -25,21 +25,26 @@ export const Timeline = (props: {
       <For each={props.alerts}>
         {(alert) => (
           <div class="timeline-row">
-            <A
-              to={
-                alert.endsAt === undefined
-                  ? pathOf({ page: "alert", id: alert.id })
-                  : firingPath(alert.id, alert.startsAt)
-              }
-              class="mono"
-              style={{ "font-size": "0.75rem" }}
-            >
-              {alert.name}
-            </A>
-            <div class="timeline-track">
+            {/* When, as text beside the name, not a bar's tooltip that a keyboard or a finger never reaches. */}
+            <span class="timeline-name">
+              <A
+                to={
+                  alert.endsAt === undefined
+                    ? pathOf({ page: "alert", id: alert.id })
+                    : firingPath(alert.id, alert.startsAt)
+                }
+                class="mono"
+                style={{ "font-size": "0.75rem" }}
+              >
+                {alert.name}
+              </A>
+              <span class="muted mono tiny">
+                {clock(alert.startsAt)} to {alert.endsAt === undefined ? "now" : clock(alert.endsAt)}
+              </span>
+            </span>
+            <div class="timeline-track" aria-hidden="true">
               <span
                 class={`timeline-bar ${alert.endsAt === undefined ? "live" : ""}`}
-                title={`${clock(alert.startsAt)} to ${alert.endsAt === undefined ? "now" : clock(alert.endsAt)}`}
                 style={{
                   left: `${place(alert.startsAt)}%`,
                   width: `${Math.max(1, place(alert.endsAt ?? new Date(props.now).toISOString()) - place(alert.startsAt))}%`,

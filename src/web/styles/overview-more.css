@@ -1,33 +1,37 @@
 /* The overview's View menu: the map's and the services' layouts, out of the way until wanted. */
-.view-menu {
-  position: relative;
-}
-.view-menu > summary {
+.view-menu-button {
   display: inline-flex;
   align-items: center;
-  cursor: pointer;
-  list-style: none;
 }
-.view-menu > summary::-webkit-details-marker {
-  display: none;
-}
-.view-menu > summary::after {
+.view-menu-button::after {
   content: "▾";
   margin-inline-start: 6px;
 }
+/* A popover in the top layer: placed under its button by the toggle handler, or by anchor positioning below. */
 .view-menu-body {
-  position: absolute;
-  inset-inline-end: 0;
-  z-index: 5;
-  margin-block-start: 6px;
+  position: fixed;
+  inset: auto;
+  margin: 0;
   padding: 12px;
-  display: flex;
   flex-direction: column;
   gap: 10px;
   background: var(--raised);
   border: 1px solid var(--line-strong);
   border-radius: 12px;
   min-width: 15rem;
+}
+.view-menu-body:popover-open {
+  display: flex;
+}
+@supports (position-area: block-end) {
+  .view-menu-body {
+    position-area: block-end span-inline-start;
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline;
+    margin-block-start: 6px;
+  }
 }
 .view-choice {
   margin: 0;
@@ -77,6 +81,16 @@
 }
 .feed-batch > summary::-webkit-details-marker {
   display: none;
+}
+/* The marker hidden above, put back as a cue that the line opens, turned when it has. */
+.feed-batch > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-inline-end: 6px;
+  color: var(--ink-3);
+}
+.feed-batch[open] > summary::before {
+  rotate: 90deg;
 }
 .feed-batch-text {
   color: var(--ink);

@@ -39,14 +39,20 @@
 @supports (position-area: block-end) {
   .account-panel {
     position-area: block-end span-inline-start;
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline;
     margin-block-start: 8px;
   }
 }
 
 @media (max-width: 40em) {
+  /* The tabs move under the account and the search; Tab follows them where a browser can, not the source order. */
   .header-inner {
     padding-block: 8px 0;
     gap: 8px 10px;
+    reading-flow: flex-visual;
   }
   .switcher-button .mono {
     display: none;
