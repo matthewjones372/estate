@@ -27,10 +27,16 @@ const empty: Search = { _tag: "Empty" }
 export const LineRow = (props: {
   readonly line: LogLine
   readonly search?: Search
+  /** Shown only for being near a match (spec 0067), and whether held lines were skipped before it. */
+  readonly around?: boolean
+  readonly gap?: boolean
   readonly picked?: boolean
   readonly onPick?: (range: boolean) => void
 }) => (
-  <li class={`log-line ${kindOf(props.line)}`} classList={{ picked: props.picked === true }}>
+  <li
+    class={`log-line ${kindOf(props.line)}`}
+    classList={{ picked: props.picked === true, around: props.around === true, gap: props.gap === true }}
+  >
     <Show when={props.onPick} fallback={<span class="log-at">{clock(props.line.at)}</span>}>
       {(pick) => (
         <button
@@ -44,7 +50,12 @@ export const LineRow = (props: {
       )}
     </Show>
     <span class="log-pod">{props.line.pod ?? ""}</span>
-    <span class="log-level">{levelOf(props.line)}</span>
+    <span class="log-level">
+      {levelOf(props.line)}
+      <Show when={props.around}>
+        <span class="visually-hidden"> around a match</span>
+      </Show>
+    </span>
     <span class="log-body">
       <Show when={props.line.logger !== undefined || props.line.trace !== undefined}>
         <span class="log-fields">
@@ -65,7 +76,7 @@ export const LineRow = (props: {
         </span>
       </Show>
       <span class="log-text">
-        <For each={marked(props.line.text, props.search ?? empty)}>
+        <For each={marked(props.line.text, props.around === true ? empty : (props.search ?? empty))}>
           {(part) => (part.mark ? <mark>{part.text}</mark> : part.text)}
         </For>
       </span>

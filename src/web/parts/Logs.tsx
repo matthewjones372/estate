@@ -4,10 +4,12 @@ import { createEffect, createMemo, createSignal, For, on, onCleanup, Show } from
 import type { LogLine } from "../../shared/log-events"
 import { replaceAddress } from "../address"
 import { useEstate, useSnapshot } from "../context"
+import { around } from "../log-around"
 import { asText, copy, fileName, save } from "../log-copy"
 import { searchOf, shows } from "../log-search"
 import { type ErrorRange, type LogsShown, pathOf } from "../route"
 import { IncludeInIncident } from "./IncludeInIncident"
+import { aroundChoice } from "./LogAround"
 import { Errors } from "./LogErrors"
 import { type Kind, kindOf, kinds, LineRow } from "./LogLine"
 
@@ -31,6 +33,7 @@ const Live = (props: { readonly service: string }) => {
   const [skipped, setSkipped] = createSignal(false)
   const [failed, setFailed] = createSignal<string | undefined>(undefined)
   const [hidden, setHidden] = createSignal<ReadonlySet<Kind>>(new Set())
+  const { each: aroundEach, Choice: AroundChoice } = aroundChoice()
   // What is typed, shown as typed; what is searched, once typing has paused, or at once when the search is cleared.
   const [typed, setTyped] = createSignal("")
   const [text, setText] = createSignal("")
@@ -81,7 +84,11 @@ const Live = (props: { readonly service: string }) => {
   const count = (kind: Kind) => lines().filter((line) => kindOf(line) === kind).length
   // Worked out once a change, not on every read: the list, its footer, the copy and each picked range read them.
   const search = createMemo(() => searchOf(text()))
-  const shown = createMemo(() => lines().filter((line) => !hidden().has(kindOf(line)) && shows(search(), line.text)))
+  const rows = createMemo(() =>
+    around(lines(), (line) => !hidden().has(kindOf(line)) && shows(search(), line.text), aroundEach()),
+  )
+  const shown = createMemo(() => rows().map((row) => row.item))
+  const matching = () => rows().filter((row) => row.match).length
   const pick = (line: LogLine, range: boolean) => {
     const key = keyOf(line)
     const keys = shown().map(keyOf)
@@ -159,6 +166,7 @@ const Live = (props: { readonly service: string }) => {
             onInput={(event) => type(event.currentTarget.value)}
           />
         </label>
+        <AroundChoice />
         <Show when={search()._tag === "Invalid"}>
           <span class="log-invalid" role="status">
             Not a valid pattern
@@ -196,23 +204,26 @@ const Live = (props: { readonly service: string }) => {
       </div>
       <Show when={failed()}>{(message) => <div class="notice">The logs did not answer: {message()}</div>}</Show>
       <ol class="log-lines" ref={setBox} onScroll={scrolled}>
-        <For each={shown()}>
-          {(line) => (
+        <For each={rows()}>
+          {(row) => (
             <LineRow
-              line={line}
+              line={row.item}
               search={search()}
-              picked={picked().has(keyOf(line))}
-              onPick={(range) => pick(line, range)}
+              around={!row.match}
+              gap={row.gap}
+              picked={picked().has(keyOf(row.item))}
+              onPick={(range) => pick(row.item, range)}
             />
           )}
         </For>
       </ol>
       <p class="muted log-foot">
-        {search()._tag === "Pattern"
-          ? `${shown().length} of the last ${lines().length} lines match`
+        {search()._tag === "Pattern" || (aroundEach() > 0 && matching() < lines().length)
+          ? `${matching()} of the last ${lines().length} lines match`
           : shown().length === 0
             ? "No lines yet."
             : `${shown().length} of the last ${lines().length} lines`}
+        {aroundEach() > 0 && matching() < lines().length ? `, with ${aroundEach()} lines around each` : ""}
         {from() === undefined ? "" : ` · from ${from()}`}
         {skipped() ? " · busy: older lines were skipped" : ""}
         {
