@@ -9,13 +9,14 @@ import { ServicePage } from "./pages/Service"
 import { A } from "./parts/A"
 import { Header } from "./parts/Header"
 
-// These read and act on alerts' cards, which a viewer now chooses over the rows shown first (spec 0065).
+// These read and act on alerts' cards: opened from their row among the things on the overview (spec 0068).
 beforeEach(() => window.localStorage.setItem("estate.alerts.layout", "cards"))
 afterEach(() => window.localStorage.removeItem("estate.alerts.layout"))
 
 describe("acting on an alert", () => {
   test("adds a note", async () => {
     const page = mount(() => <Overview />)
+    page.click(page.button("Open OrdersSlow's card"))
     page.click(page.button("Show notes"))
     const input = page.container.querySelector<HTMLInputElement>(".note-form input")
     if (input === null) throw new Error("no note input")
@@ -28,6 +29,7 @@ describe("acting on an alert", () => {
 
   test("silences it for a chosen time, only with a reason", async () => {
     const page = mount(() => <Overview />)
+    page.click(page.button("Open OrdersSlow's card"))
     page.click(page.button("Silence…"))
     page.click(page.button("6 hours"))
     const silence = page.button(/^Silence until/)
@@ -44,6 +46,7 @@ describe("acting on an alert", () => {
 
   test("cancelling the silence closes it, and a silenced one can be unsilenced", () => {
     const page = mount(() => <Overview />)
+    page.click(page.button("Open OrdersSlow's card"))
     page.click(page.button("Silence…"))
     page.click(page.button("Cancel"))
     expect(page.container.textContent).not.toContain("Silence until")
@@ -58,6 +61,7 @@ describe("the page as events arrive", () => {
     send("catalog", events.catalog)
     send("alerts", events.alerts)
     const page = mount(() => <Overview />, { live })
+    page.click(page.button("Open OrdersSlow's card"))
     page.click(page.button("Show notes"))
     const input = page.container.querySelector<HTMLInputElement>(".note-form input")
     if (input === null) throw new Error("no note input")
@@ -78,6 +82,7 @@ describe("the page as events arrive", () => {
 describe("a note", () => {
   test("is removed by an operator, or by whoever wrote it", () => {
     const page = mount(() => <Overview />)
+    page.click(page.button("Open OrdersSlow's card"))
     page.click(page.button("Show notes"))
     page.click(page.button(/^Remove/))
     expect(page.calls).toContainEqual(["removeNote", "n1"])
@@ -87,6 +92,7 @@ describe("a note", () => {
     const viewer = { ...operator, role: "viewer" as const }
     const notesOf = (me: typeof viewer) => {
       const page = mount(() => <Overview />, { me })
+      page.click(page.button("Open OrdersSlow's card"))
       page.click(page.button("Show notes"))
       const shown = page.container.textContent
       page.dispose()
@@ -221,6 +227,7 @@ describe("reading a chart", () => {
 
   test("the alert's chart reads its points too, and a sparkline answers to a pointer", () => {
     const page = mount(() => <Overview />)
+    page.click(page.button("Open OrdersSlow's card"))
     const alert = page.container.querySelector<SVGSVGElement>(".alert-card svg[tabindex], article svg[tabindex]")
     if (alert === null) throw new Error("no alert chart")
     key(alert, "End")

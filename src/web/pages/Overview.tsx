@@ -1,158 +1,26 @@
 /** @jsxImportSource solid-js */
 /**
- * The overview: the headline, what needs someone, then vitals and the map, services as list lanes or a denser grid,
- * stores, and what changed. Alert → context, not vitals-first.
+ * The overview: what needs you, counted once (spec 0068), as the headline and a row a thing; then the map, services
+ * by area, worst first, and what changed. Alert → context, not vitals-first.
  */
-import { For, Show } from "solid-js"
-import type { Events } from "../../shared/events"
+import { createMemo, Show } from "solid-js"
 import { useEstate, useSnapshot } from "../context"
-import { counted, measured } from "../format"
-import { A } from "../parts/A"
-import { alertsLayout, LayoutChoice } from "../parts/AlertsLayout"
+import { thingsOf } from "../needs"
 import { Feed } from "../parts/Feed"
-import { FiringAlerts } from "../parts/FiringAlerts"
+import { Hero } from "../parts/Hero"
 import { Lanes } from "../parts/Lanes"
 import { EstateMap } from "../parts/Map"
 import { Signals } from "../parts/Signals"
 import { SilencedAlerts } from "../parts/Silenced"
+import { Things } from "../parts/Things"
 import { Reading, SourceNotices } from "./States"
-
-export interface Headline {
-  readonly tone: "healthy" | "attention" | "critical"
-  readonly kicker: string
-  readonly top: string
-  readonly bottom: string
-  readonly lede: string
-}
-
-export const headlineOf = (events: Partial<Events>): Headline => {
-  const firing = (events.alerts?.alerts ?? []).filter((alert) => alert.state === "firing")
-  const services = [
-    ...(events.services?.services ?? []),
-    ...(events.services?.stores ?? []),
-    ...(events.services?.jobs ?? []),
-    ...(events.services?.agents ?? []),
-  ]
-  const troubled = services.filter((service) => service.health === "attention" || service.health === "critical")
-  const critical =
-    firing.some((alert) => alert.severity === "critical") || services.some((service) => service.health === "critical")
-  const count = Math.max(firing.length, troubled.length)
-  const reasons = troubled.flatMap((service) =>
-    service.reasons.slice(0, 1).map((reason) => `${service.name}: ${reason}`),
-  )
-  if (count === 0 && services.length > 0 && services.every((service) => service.health === "unknown")) {
-    return {
-      tone: "healthy",
-      kicker: "Listening",
-      top: "Not heard yet.",
-      bottom: "Reading the sources.",
-      lede: "No source has said how the services are, so nothing is claimed about them yet.",
-    }
-  }
-  if (count === 0) {
-    const healthy = services.filter((service) => service.health === "healthy").length
-    return {
-      tone: "healthy",
-      kicker: "All healthy",
-      top: "All quiet.",
-      bottom: "Nothing needs you.",
-      lede:
-        services.length === 0
-          ? "No service is in this environment yet."
-          : `${counted(healthy, "service")} healthy, nothing firing.`,
-    }
-  }
-  return {
-    tone: critical ? "critical" : "attention",
-    kicker: critical ? "Something is down" : "Needs attention",
-    top: counted(count, "thing"),
-    bottom: count === 1 ? "needs you." : "need you.",
-    lede: `${reasons.slice(0, 3).join("; ")}${reasons.length > 3 ? `; and ${reasons.length - 3} more` : ""}.`,
-  }
-}
-
-interface Tile {
-  readonly label: string
-  readonly value: string
-  readonly note: string
-  readonly alarm: boolean
-}
-
-/** The catalog's vitals, then what Estate always knows, to fill four tiles. */
-export const tilesOf = (events: Partial<Events>): ReadonlyArray<Tile> => {
-  const services = events.services?.services ?? []
-  const pods = services.flatMap((service) => service.pods)
-  const runtime = events.services?.sources.find((source) => source.kind === "cluster")
-  const here = new Set(services.map((service) => service.name))
-  const failing = (events.deploys?.services ?? [])
-    .filter((service) => here.has(service.name) && service.builds[0]?.status === "failure")
-    .map((service) => service.name)
-  const firing = (events.alerts?.alerts ?? []).filter((alert) => alert.state === "firing")
-  const stalled = (events.deploys?.services ?? []).flatMap((service) =>
-    service.environments.filter(
-      (each) => each.stalled !== undefined && each.environment === events.catalog?.environment,
-    ),
-  )
-  const own: ReadonlyArray<Tile> = (events.services?.vitals ?? []).map((vital) => ({
-    label: vital.title,
-    value: measured(vital.series.now, vital.unit),
-    note: "now",
-    alarm: false,
-  }))
-  const always: ReadonlyArray<Tile> = [
-    {
-      label: "Services healthy",
-      value: `${services.filter((service) => service.health === "healthy").length} of ${services.length}`,
-      note: "in this environment",
-      alarm: false,
-    },
-    {
-      label: "Alerts firing",
-      value: String(firing.length),
-      note:
-        firing.length === 0
-          ? "none"
-          : firing
-              .map((alert) => alert.name)
-              .slice(0, 2)
-              .join(", "),
-      alarm: firing.length > 0,
-    },
-    ...(runtime === undefined || runtime.state === "off"
-      ? []
-      : [
-          {
-            label: `${runtime.tool === "ECS" ? "Tasks" : "Pods"} ready`,
-            value: `${pods.filter((pod) => pod.ready).length}/${pods.length}`,
-            note: `${pods.reduce((total, pod) => total + pod.restarts, 0)} restarts`,
-            alarm: pods.some((pod) => !pod.ready),
-          },
-        ]),
-    {
-      label: "Deploys stalled",
-      value: String(stalled.length),
-      note: stalled.length === 0 ? "every deploy in step" : "see Deploys",
-      alarm: stalled.length > 0,
-    },
-    {
-      label: "Builds failing",
-      value: String(failing.length),
-      note: failing.length === 0 ? "every last build passed" : failing.slice(0, 2).join(", "),
-      alarm: failing.length > 0,
-    },
-  ]
-  return [...own, ...always].slice(0, Math.max(4, own.length))
-}
 
 export const Overview = () => {
   const { me, now } = useEstate()
   const snapshot = useSnapshot()
   const events = () => snapshot.events
-  const headline = () => headlineOf(events())
-  const alerts = () => events().alerts?.alerts ?? []
-  const firing = () => alerts().filter((alert) => alert.state === "firing")
-  const silenced = () => alerts().filter((alert) => alert.state === "silenced")
-  const { layout, choose, rows } = alertsLayout()
+  const things = createMemo(() => thingsOf(events()))
+  const silenced = () => (events().alerts?.alerts ?? []).filter((alert) => alert.state === "silenced")
   const canSilence = () => me.role === "operator" && events().alerts?.silences === true
   const waiting = () =>
     events().services === undefined || (events().services?.sources ?? []).some((source) => source.state === "waiting")
@@ -162,67 +30,11 @@ export const Overview = () => {
         <Reading sources={events().services?.sources} />
       </Show>
       <SourceNotices services={events().services} now={now()} />
-      <section aria-label="The estate now" class="now">
-        <div class="now-words">
-          <div class="stack">
-            <span class={`kicker ${headline().tone === "healthy" ? "" : headline().tone}`}>
-              <span class={`dot ${headline().tone} ${headline().tone === "healthy" ? "" : "hot"}`} />
-              {headline().kicker}
-            </span>
-            <h1 class="headline">
-              {headline().top}
-              <br />
-              {headline().bottom}
-            </h1>
-            <p class="lede">{headline().lede}</p>
-          </div>
-        </div>
-      </section>
-      <section aria-labelledby="needs" class="stack">
-        <div class="spread">
-          <h2 id="needs" class="section-title">
-            Needs you now{firing().length === 0 ? "" : ` · ${firing().length} firing`}
-          </h2>
-          <Show when={firing().length > 0}>
-            <div class="choices middle">
-              <LayoutChoice layout={layout()} choose={choose} />
-              <Show when={rows(firing())}>
-                <A to="/alerts">All on Alerts →</A>
-              </Show>
-            </div>
-          </Show>
-        </div>
-        <Show when={firing().length === 0}>
-          <p class="muted flush">Nothing. When something does, it appears here first.</p>
-        </Show>
-        <FiringAlerts
-          alerts={firing()}
-          catalog={events().catalog}
-          canSilence={canSilence()}
-          by="incident and service"
-          rows={rows(firing())}
-        />
-        <SilencedAlerts alerts={silenced()} canSilence={canSilence()} />
-      </section>
+      <Hero events={events()} things={things()} />
+      <Things things={things()} catalog={events().catalog} canSilence={canSilence()} />
+      <SilencedAlerts alerts={silenced()} canSilence={canSilence()} />
       <Signals services={events().services?.services} />
-      <section aria-label="Vitals and map" class="now">
-        <div class="vitals">
-          <For each={tilesOf(events())}>
-            {(tile) => (
-              <div class="vital">
-                <span class="muted small">{tile.label}</span>
-                <span class="vital-value" style={{ color: tile.alarm ? "var(--amber-text)" : undefined }}>
-                  {tile.value}
-                </span>
-                <span class="muted small">{tile.note}</span>
-              </div>
-            )}
-          </For>
-        </div>
-        <Show when={events().catalog}>
-          {(catalog) => <EstateMap catalog={catalog()} services={events().services} />}
-        </Show>
-      </section>
+      <Show when={events().catalog}>{(catalog) => <EstateMap catalog={catalog()} services={events().services} />}</Show>
       <div class="row">
         <Lanes />
         <Feed feed={events().feed} />

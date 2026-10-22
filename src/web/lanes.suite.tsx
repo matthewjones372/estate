@@ -153,6 +153,7 @@ describe("a team", () => {
       },
     }
     const page = mount(() => <Overview />, { sent })
+    page.click(page.button("Open OrdersSlow's card"))
     const cards = [...page.container.querySelectorAll(".alert-card a")].map((link) => link.textContent?.trim())
     expect(cards).toContain("Web on Slack")
     const owner = page.container.querySelector('[aria-label="settle, a job"] .owner')
