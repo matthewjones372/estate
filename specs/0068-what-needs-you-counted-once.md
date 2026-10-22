@@ -98,7 +98,9 @@ stay a line each. An alert that fired within half an hour of a version applied t
 **How it unfolded.** With an incident open, its firing alerts and its notes, oldest first, then the note box.
 
 **The header** fits one row at 1440 pixels: the account is its initials, a button opening who you are and *Sign out*.
-Under 40em the pages are a row of tabs under the brand, switcher and account.
+Under 40em it is three rows in the order Tab meets them: the brand and switcher, the pages as a row of tabs, then
+the search beside the live dot and account. Nothing is moved out of its source order, so what is seen and what is
+focused agree in every browser.
 
 **The service page's charts** draw a solid line where a version was applied to the service and a dashed one where
 one of its alerts fired, in the window shown, with a legend above them: `main-154-199fdaf applied 10:31`,
@@ -128,7 +130,7 @@ Specs 0039, 0044, 0062 and 0065.
 - [x] **`view-menu`** — the View menu, areas worst first, healthy as a line.
       Done when: no layout buttons are on the overview outside the menu, and the Fulfilment area comes before Shop.
 - [x] **`header-one-row`** — the account as a menu; tabs on a phone.
-      Done when: the header is one row at 1440 pixels, and four tabs under 40em.
+      Done when: the header is one row at 1440 pixels, and four tabs under 40em, nothing in it reordered.
 - [x] **`changes-in-batches`** — the feed's batches and the firing that follows a version.
       Done when: the demo's eight builds at one time are one line, and CheckoutSlow says the version before it.
 - [x] **`how-it-unfolded`** — the incident's thread on the overview.
