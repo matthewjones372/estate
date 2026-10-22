@@ -13,6 +13,7 @@ import { EstateMap } from "../parts/Map"
 import { Signals } from "../parts/Signals"
 import { SilencedAlerts } from "../parts/Silenced"
 import { Things } from "../parts/Things"
+import { Unfolded } from "../parts/Unfolded"
 import { ViewMenu } from "../parts/ViewMenu"
 import { mapChoice, servicesChoice } from "../view-choices"
 import { Reading, SourceNotices } from "./States"
@@ -40,6 +41,9 @@ export const Overview = () => {
       <Signals services={events().services?.services} />
       <Show when={events().catalog}>
         {(catalog) => <EstateMap catalog={catalog()} services={events().services} layout={map} />}
+      </Show>
+      <Show when={things().find((thing) => thing.kind === "incident")}>
+        {(incident) => <Unfolded incident={incident()} />}
       </Show>
       <div class="row">
         <Lanes layout={services} menu={<ViewMenu map={map} services={services} />} />
