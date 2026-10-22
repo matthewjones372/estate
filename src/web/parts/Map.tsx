@@ -11,6 +11,7 @@ import { amount, took } from "../format"
 import { byName } from "../indexed"
 import { kept } from "../kept"
 import { layout } from "../layout"
+import type { Choice, MapLayout } from "../view-choices"
 import { A } from "./A"
 import { MapAreas } from "./MapAreas"
 import { JourneyChoices, journeyOnMap, RouteLines, RouteNote } from "./MapJourney"
@@ -35,24 +36,17 @@ const sameShape = (was: Shape, now: Shape) =>
   was.ids.every((id, index) => now.ids[index] === id) &&
   was.edges.every((edge, index) => now.edges[index]?.from === edge.from && now.edges[index]?.to === edge.to)
 
-type Layout = "auto" | "areas" | "lines"
-const layouts: ReadonlyArray<{ readonly value: Layout; readonly label: string }> = [
-  { value: "auto", label: "Auto" },
-  { value: "areas", label: "Areas" },
-  { value: "lines", label: "Lines" },
-]
-const choosing = kept("estate.map.layout")
-const layoutAtFirst = (): Layout => layouts.find((each) => each.value === choosing.read())?.value ?? "auto"
 const narrow = () => typeof window.matchMedia === "function" && window.matchMedia("(max-width: 720px)").matches
 
 const isCategory = (node: DrawnNode): node is DrawnCategory => "kind" in node && node.kind === "category"
 
-export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly services: ServicesEvent | undefined }) => {
-  const [chosen, setChosen] = createSignal(layoutAtFirst())
-  const choose = (next: Layout) => {
-    setChosen(next)
-    choosing.write(next)
-  }
+export const EstateMap = (props: {
+  readonly catalog: CatalogEvent
+  readonly services: ServicesEvent | undefined
+  /** As chosen in the overview's View menu (spec 0068). */
+  readonly layout: Choice<MapLayout>
+}) => {
+  const chosen = () => props.layout.chosen()
   // Auto is areas for many services or a phone's width, and the drawing otherwise (spec 0065).
   const view = () => {
     const now = chosen()
@@ -230,21 +224,6 @@ export const EstateMap = (props: { readonly catalog: CatalogEvent; readonly serv
             The estate, live
           </span>
           <span class="map-opened">
-            <fieldset class="choices bare">
-              <legend class="visually-hidden">Draw the estate as</legend>
-              <For each={layouts}>
-                {(each) => (
-                  <button
-                    type="button"
-                    class="choice"
-                    aria-pressed={chosen() === each.value}
-                    onClick={() => choose(each.value)}
-                  >
-                    {each.label}
-                  </button>
-                )}
-              </For>
-            </fieldset>
             <Show when={view() === "lines"}>
               <JourneyChoices on={on} />
               <For each={drawn().opened}>

@@ -1,5 +1,5 @@
 /** The overview's lanes in groups: one a category, in the order the catalog first names each, the rest last. */
-import type { CatalogEvent } from "../shared/events"
+import type { CatalogEvent, Health } from "../shared/events"
 
 type Services = CatalogEvent["services"]
 type Stores = NonNullable<CatalogEvent["stores"]>
@@ -43,4 +43,24 @@ export const groupsOf = (catalog: CatalogEvent | undefined): ReadonlyArray<Group
   }
   const left = rest.services.length + rest.stores.length + rest.jobs.length + rest.agents.length
   return left === 0 ? groups : [...groups, rest]
+}
+
+const ranks: Readonly<Record<Health, number>> = { critical: 0, attention: 1, unknown: 2, healthy: 2 }
+
+/** Areas with something down first, then degraded, then the rest, each kept in the catalog's order (spec 0068). */
+export const needingFirst = (
+  groups: ReadonlyArray<Group>,
+  healthOf: (name: string) => Health | undefined,
+): ReadonlyArray<Group> => {
+  const worst = (group: Group) =>
+    Math.min(
+      2,
+      ...[...group.services, ...group.stores, ...group.jobs, ...group.agents].map(
+        (entry) => ranks[healthOf(entry.name) ?? "unknown"],
+      ),
+    )
+  return groups
+    .map((group, index) => ({ group, index, rank: worst(group) }))
+    .toSorted((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(({ group }) => group)
 }

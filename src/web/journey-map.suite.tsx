@@ -4,13 +4,14 @@ import { describe, expect, test } from "bun:test"
 import { withJourney } from "./fixture-traces"
 import { mount } from "./harness"
 import { EstateMap } from "./parts/Map"
+import { mapChoice } from "./view-choices"
 
 describe("a journey on the estate's map", () => {
   test("draws its route over the map, each node numbered with how long it usually spends there", async () => {
     const sent = withJourney("order")
     const catalog = sent.catalog
     if (catalog === undefined) throw new Error("no catalog")
-    const page = mount(() => <EstateMap catalog={catalog} services={sent.services} />, { sent })
+    const page = mount(() => <EstateMap catalog={catalog} services={sent.services} layout={mapChoice()} />, { sent })
     expect(page.container.querySelector(".map-route")).toBeNull()
     page.click(page.button("Placing an order"))
     await page.settle()

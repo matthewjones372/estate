@@ -13,6 +13,8 @@ import { EstateMap } from "../parts/Map"
 import { Signals } from "../parts/Signals"
 import { SilencedAlerts } from "../parts/Silenced"
 import { Things } from "../parts/Things"
+import { ViewMenu } from "../parts/ViewMenu"
+import { mapChoice, servicesChoice } from "../view-choices"
 import { Reading, SourceNotices } from "./States"
 
 export const Overview = () => {
@@ -20,6 +22,8 @@ export const Overview = () => {
   const snapshot = useSnapshot()
   const events = () => snapshot.events
   const things = createMemo(() => thingsOf(events()))
+  const map = mapChoice()
+  const services = servicesChoice()
   const silenced = () => (events().alerts?.alerts ?? []).filter((alert) => alert.state === "silenced")
   const canSilence = () => me.role === "operator" && events().alerts?.silences === true
   const waiting = () =>
@@ -34,9 +38,11 @@ export const Overview = () => {
       <Things things={things()} catalog={events().catalog} canSilence={canSilence()} />
       <SilencedAlerts alerts={silenced()} canSilence={canSilence()} />
       <Signals services={events().services?.services} />
-      <Show when={events().catalog}>{(catalog) => <EstateMap catalog={catalog()} services={events().services} />}</Show>
+      <Show when={events().catalog}>
+        {(catalog) => <EstateMap catalog={catalog()} services={events().services} layout={map} />}
+      </Show>
       <div class="row">
-        <Lanes />
+        <Lanes layout={services} menu={<ViewMenu map={map} services={services} />} />
         <Feed feed={events().feed} />
       </div>
     </main>

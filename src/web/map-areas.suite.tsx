@@ -45,10 +45,12 @@ describe("the map of a large estate as areas", () => {
       [...page.container.querySelectorAll(`section[aria-label="${area}"] .map-part-name`)].map(
         (each) => each.textContent,
       )
-    const pressed = [...page.container.querySelectorAll('.map button[aria-pressed="true"]')].map(
+    // Chosen in the overview's View menu (spec 0068), not on the map.
+    const pressed = [...page.container.querySelectorAll('.view-menu button[aria-pressed="true"]')].map(
       (each) => each.textContent,
     )
-    expect(pressed).toEqual(["Auto"])
+    expect(pressed).toEqual(["Auto", "List"])
+    expect([...page.container.querySelectorAll(".map button")].map((each) => each.textContent)).not.toContain("Lines")
     expect(page.container.querySelector(".map-node")).toBeNull()
     expect(parts("Shop")).toEqual(["svc-0", "svc-1", "svc-2", "svc-3"])
     expect(parts("Data")).toEqual(["svc-11", "svc-4", "svc-5", "svc-6", "svc-7", "svc-8"])
