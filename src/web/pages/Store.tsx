@@ -4,12 +4,13 @@ import { For, Show } from "solid-js"
 import { useEstate, useSnapshot } from "../context"
 import { A } from "../parts/A"
 import { AlertCard } from "../parts/AlertCard"
-import { Load, Timeline } from "../parts/Charts"
+import { Load } from "../parts/Charts"
 import { DatabasePanel } from "../parts/DatabaseCluster"
 import { FoundEntry } from "../parts/Found"
 import { ClusterPanel } from "../parts/KafkaCluster"
 import { HealthLine, Links } from "../parts/Lane"
 import { SilencedAlerts } from "../parts/Silenced"
+import { Timeline } from "../parts/Timeline"
 
 export const StorePage = (props: { readonly name: string; readonly message?: string | undefined }) => {
   const { actions, me, now } = useEstate()
@@ -61,6 +62,7 @@ export const StorePage = (props: { readonly name: string; readonly message?: str
           hour={state() === undefined ? undefined : { stats: state()?.stats ?? [] }}
           read={actions.storeLoad}
           alerts={alerts()}
+          of={{ store: props.name }}
         />
         <section aria-labelledby="store-alerts" class="stack">
           <h2 id="store-alerts" class="section-title">

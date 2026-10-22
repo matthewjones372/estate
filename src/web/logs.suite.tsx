@@ -286,6 +286,7 @@ describe("a service's errors", () => {
 
   test("from the minutes before an alert started are on its card", async () => {
     const page = mount(() => <Overview />)
+    page.click(page.button("Open OrdersSlow's card"))
     page.click(page.button("Lines from then"))
     await page.settle()
     expect(page.container.textContent).toContain("Errors from ten minutes before it started")

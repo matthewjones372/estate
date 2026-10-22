@@ -23,6 +23,10 @@ export const FeedItem = Schema.Struct({
   agent: optional(Schema.String),
   /** The job no service owns an item is about, so it opens the job's page. */
   job: optional(Schema.String),
+  /** The version a deploy applied, so the overview can say a batch of them in one line (spec 0068). */
+  version: optional(Schema.String),
+  /** What a build was and whether it passed, likewise. */
+  build: optional(Schema.Struct({ title: Schema.String, passed: Schema.Boolean })),
 })
 export type FeedItem = typeof FeedItem.Type
 

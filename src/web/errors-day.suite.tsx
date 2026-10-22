@@ -100,11 +100,12 @@ describe("a service's errors over the last day", () => {
       page.dispose()
       return text
     }
-    expect(await shown(many(37, 4))).toBe("37 errors · 4 groups in 24h")
-    expect(await shown(many(1, 1))).toBe("1 error · 1 group in 24h")
-    expect(await shown({ ...many(2000, 3), capped: true })).toBe("2,000+ errors · 3 groups in 24h")
+    expect(await shown(many(37, 4))).toBe("37 errors, 4 different messages, in 24h")
+    expect(await shown(many(1, 1))).toBe("1 error in 24h")
+    expect(await shown(many(5, 1))).toBe("5 errors, all one message, in 24h")
+    expect(await shown({ ...many(2000, 3), capped: true })).toBe("2,000+ errors, 3 different messages, in 24h")
     expect(await shown({ from: "Loki", groups: [] })).toBe("No errors in 24h")
-    expect(await shown(many(12, 3, "the cluster"))).toBe("12 errors · 3 groups since the pods started")
+    expect(await shown(many(12, 3, "the cluster"))).toBe("12 errors, 3 different messages, since the pods started")
     expect(await shown(undefined)).toBe("Errors in 24h: the logs did not answer")
     expect(await shown("none")).toBeUndefined()
   })

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { openCards } from "./overview"
 
 // The second estate, on other kinds of tool: e2e/cloud.yaml against e2e/cloud-tools.ts.
 const cloud = "http://127.0.0.1:8183"
@@ -12,6 +13,7 @@ test("on EKS: Grafana's alert with its chart, Argo CD's stall in its words, and 
   page,
 }) => {
   await page.goto(`${cloud}/?env=eks`)
+  await openCards(page)
   const card = page.getByRole("article").filter({ hasText: "Storefront is failing requests" })
   await expect(card).toBeVisible({ timeout: 20_000 })
   await expect(card.getByRole("img").first()).toBeVisible({ timeout: 10_000 })
@@ -42,6 +44,7 @@ test("on ECS: CloudWatch's alarm with its chart, ECS's failed rollout, tasks, a 
   page,
 }) => {
   await page.goto(`${cloud}/?env=aws`)
+  await openCards(page)
   const card = page.getByRole("article").filter({ hasText: "Checkout is using most of its CPU" })
   await expect(card).toBeVisible({ timeout: 20_000 })
   await expect(card.getByRole("img").first()).toBeVisible({ timeout: 10_000 })
@@ -59,6 +62,7 @@ test("on Datadog: a monitor with its chart, silenced with a downtime, a service'
   page,
 }) => {
   await page.goto(`${cloud}/?env=datadog`)
+  await openCards(page)
   const card = page.getByRole("article").filter({ hasText: "Payments are slower than customers wait for" })
   await expect(card).toBeVisible({ timeout: 20_000 })
   await expect(card.getByRole("img").first()).toBeVisible({ timeout: 10_000 })
@@ -78,6 +82,7 @@ test("on Datadog: a monitor with its chart, silenced with a downtime, a service'
 
 test("on Datadog: a service built by TeamCity, and Harness's failed deployment as a stall", async ({ page }) => {
   await page.goto(`${cloud}/?env=datadog`)
+  await openCards(page)
   await expect(page.getByText("stalled: Deployment exceeded progress deadline").first()).toBeVisible({
     timeout: 20_000,
   })

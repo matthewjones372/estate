@@ -27,13 +27,7 @@ export const ServiceAlerts = (props: {
       <Show when={firing().length === 0}>
         <p class="muted flush">Nothing firing.</p>
       </Show>
-      <FiringAlerts
-        alerts={firing()}
-        catalog={props.catalog}
-        canSilence={props.canSilence}
-        by="incident"
-        rows={rows(firing())}
-      />
+      <FiringAlerts alerts={firing()} catalog={props.catalog} canSilence={props.canSilence} rows={rows(firing())} />
       <SilencedAlerts alerts={silenced()} canSilence={props.canSilence} />
     </section>
   )

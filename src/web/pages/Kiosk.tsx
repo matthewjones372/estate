@@ -7,11 +7,11 @@ import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Sh
 import type { Alert, Health, ServiceState } from "../../shared/events"
 import { useEstate, useSnapshot } from "../context"
 import { amount, clock, since } from "../format"
+import { headlineOf } from "../hero"
 import { firingOf, type Narrowed, nextOf, staleSince, tilesOf, turnOf } from "../kiosk"
 import { Plot } from "../parts/Plot"
 import { Spark } from "../parts/Sparkline"
 import { teamOf } from "../teams"
-import { headlineOf } from "./Overview"
 
 const hour = 3_600_000
 

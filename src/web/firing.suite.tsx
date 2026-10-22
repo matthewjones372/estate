@@ -9,10 +9,10 @@ import { AlertPage } from "./pages/Alert"
 import { Alerts } from "./pages/Alerts"
 import { FiringPage } from "./pages/Firing"
 import { AroundThen } from "./parts/AroundThen"
-import { Timeline } from "./parts/Charts"
 import { Feed } from "./parts/Feed"
 import { History } from "./parts/History"
 import { ErrorList } from "./parts/LogErrors"
+import { Timeline } from "./parts/Timeline"
 import { recording } from "./recording"
 
 const links = (container: HTMLElement) =>

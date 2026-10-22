@@ -14,14 +14,23 @@ type Found = ErrorGroups | undefined | "loading"
 const many = (count: number, noun: string, more = false) =>
   `${count.toLocaleString("en-GB")}${more ? "+" : ""} ${count === 1 && !more ? noun : `${noun}s`}`
 
-/** The count in words: how many, how many groups, and over what, which for pods is only since they started. */
+/**
+ * The count in words: how many, how many different messages they are (an error group, said plainly), and over what,
+ * which for pods is only since they started.
+ */
 const said = (found: Found) => {
   if (found === "loading") return "Errors in 24h …"
   if (found === undefined) return "Errors in 24h: the logs did not answer"
   const over = found.from === "the cluster" ? "since the pods started" : "in 24h"
   if (found.groups.length === 0) return `No errors ${over}`
   const errors = found.groups.reduce((total, group) => total + group.count, 0)
-  return `${many(errors, "error", found.capped)} · ${many(found.groups.length, "group")} ${over}`
+  const kinds =
+    errors === 1
+      ? ""
+      : found.groups.length === 1
+        ? ", all one message,"
+        : `, ${found.groups.length} different messages,`
+  return `${many(errors, "error", found.capped)}${kinds} ${over}`
 }
 
 export const ErrorsDay = (props: { readonly service: string }) => {

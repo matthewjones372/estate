@@ -1,9 +1,9 @@
 /** @jsxImportSource solid-js */
-/** Alerts that are one problem, as one row: an incident's, or a service's or store's, opening to their rows. */
+/** An incident's firing alerts as one row, opening to their rows. */
 import { For, Show } from "solid-js"
 import { useEstate } from "../context"
 import { cardFold } from "../fold"
-import { clock, since } from "../format"
+import { since } from "../format"
 import type { Grouped } from "../grouped"
 import { A } from "./A"
 import { LatestNote, SeverityDot } from "./AlertLine"
@@ -51,16 +51,10 @@ export const AlertGroup = (props: Shown & { readonly group: Group }) => {
             </span>
           )}
         </Show>
-        <span class="row-since">
-          {props.group.kind === "incident"
-            ? `open ${since(props.group.since, now())}`
-            : `since ${clock(props.group.since)}`}
+        <span class="row-since">open {since(props.group.since, now())}</span>
+        <span class="row-note">
+          latest: <LatestNote note={newest()} />
         </span>
-        <Show when={props.group.kind === "incident"}>
-          <span class="row-note">
-            latest: <LatestNote note={newest()} />
-          </span>
-        </Show>
       </div>
       <Show when={open()}>
         <ul id={rows()} class="alert-rows nested">

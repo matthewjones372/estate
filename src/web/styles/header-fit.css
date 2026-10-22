@@ -1,0 +1,97 @@
+/* The header on one row on a desktop, and as tabs on a phone (spec 0068). */
+.header-inner {
+  gap: 8px 20px;
+}
+.nav {
+  flex-wrap: nowrap;
+}
+.jump {
+  flex: 0 1 240px;
+}
+.critical-count {
+  background: var(--critical-panel);
+  color: var(--critical);
+}
+.avatar-button {
+  border: 0;
+  cursor: pointer;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 18px;
+}
+/* A popover in the top layer: placed under its button by the toggle handler, or by anchor positioning below. */
+.account-panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 12px;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 0.8125rem;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+}
+.account-panel:popover-open {
+  display: flex;
+}
+@supports (position-area: block-end) {
+  .account-panel {
+    position-area: block-end span-inline-start;
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline;
+    margin-block-start: 8px;
+  }
+}
+
+@media (max-width: 40em) {
+  /* Three rows in source order, so what is seen and what Tab meets agree: brand and switcher, tabs, search and you. */
+  .header-inner {
+    padding-block: 8px;
+    gap: 8px 10px;
+  }
+  .switcher-button .mono {
+    display: none;
+  }
+  .header-end {
+    gap: 10px;
+  }
+  /* The dot says live; the words are for a screen reader, so the search keeps its row's width. */
+  .live-words {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* The pages as a row of tabs, the full width, under the brand and switcher. */
+  .nav {
+    flex: 1 1 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    margin-inline: -16px;
+    border-block: 1px solid var(--line);
+  }
+  .nav a {
+    justify-content: center;
+    border-radius: 0;
+    padding: 12px 2px;
+    min-height: 44px;
+    gap: 4px;
+    font-size: 0.875rem;
+  }
+  .nav a[aria-current="page"] {
+    background: transparent;
+    box-shadow: inset 0 -2px 0 var(--ink);
+  }
+  .jump {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+  }
+}

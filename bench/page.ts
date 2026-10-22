@@ -1,6 +1,6 @@
 /**
- * The overview in Chromium: how long until every lane is drawn, and the page's heap after a collection. Each call into
- * the browser has a deadline, since a Chromium that wedges on CI answers none of them and would hang the run.
+ * The overview in Chromium: how long until every service is drawn, and the page's heap after a collection. Each call
+ * into the browser has a deadline, since a Chromium that wedges on CI answers none of them and would hang the run.
  */
 import { chromium } from "@playwright/test"
 import { againIfClosed } from "./again"
@@ -25,9 +25,12 @@ const measureOnce = async (url: string, lanes: number): Promise<PageMeasured> =>
     const page = await deadline("opening a page", 30_000, browser.newPage())
     const started = performance.now()
     await page.goto(`${url}/?env=production`)
-    await page.waitForFunction((count) => document.querySelectorAll("article.lane").length >= count, lanes, {
-      timeout: 120_000,
-    })
+    // A service is drawn as a lane, or as a link in its area's line of healthy ones (spec 0068).
+    await page.waitForFunction(
+      (count) => document.querySelectorAll("article.lane, .healthy-line a").length >= count,
+      lanes,
+      { timeout: 120_000 },
+    )
     const drawnMs = Math.round(performance.now() - started)
     // A few events after drawing, as someone leaving the page open would have.
     await page.waitForTimeout(5000)
