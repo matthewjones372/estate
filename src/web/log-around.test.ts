@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test"
 import { around } from "./log-around"
 
 const held = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
-const shown = (matching: ReadonlyArray<string>, count: number) =>
-  around(held, (each) => matching.includes(each), count).map(
+const shown = (matching: ReadonlyArray<string>, before: number, after = before) =>
+  around(held, (each) => matching.includes(each), { before, after }).map(
     (row) => `${row.gap ? "|" : ""}${row.match ? row.item.toUpperCase() : row.item}`,
   )
 
@@ -23,6 +23,12 @@ describe("the lines around a match", () => {
 
   test("stop at the first and last lines held", () => {
     expect(shown(["a", "j"], 2)).toEqual(["A", "b", "c", "|h", "i", "J"])
+  })
+
+  test("before and after apart, as grep's -B and -A", () => {
+    expect(shown(["c", "h"], 2, 0)).toEqual(["a", "b", "C", "|f", "g", "H"])
+    expect(shown(["c", "h"], 0, 1)).toEqual(["C", "d", "|H", "i"])
+    expect(shown(["c", "e"], 0, 1)).toEqual(["C", "d", "E", "f"])
   })
 
   test("change nothing when every line matches, and show nothing when none does", () => {

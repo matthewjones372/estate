@@ -193,8 +193,11 @@ describe("a service's live lines", () => {
     page.dispose()
   })
 
-  test("filtered to errors, bring the lines around each, dimmed, with the gap between runs, and copy them too", async () => {
-    window.localStorage.removeItem("estate.logs.around")
+  test("filtered to errors, bring the lines before and after each, dimmed, with the gap between runs, and copy them too", async () => {
+    const forget = () => {
+      for (const side of ["before", "after"]) window.localStorage.removeItem(`estate.logs.${side}`)
+    }
+    forget()
     const copied: Array<string> = []
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -210,9 +213,13 @@ describe("a service's live lines", () => {
     page.click(page.button(/^Warn/))
     page.click(page.button(/^Info/))
     expect(texts(page.container)).toEqual(["ERROR order 41 lost", "ERROR disk full"])
-    const choice = page.container.querySelector<HTMLSelectElement>(".log-around select")
-    if (choice === null) throw new Error("no Around")
-    page.type(choice, "2")
+    const side = (name: string) => {
+      const choice = page.container.querySelector<HTMLSelectElement>(`.log-reach-${name} select`)
+      if (choice === null) throw new Error(`no ${name}`)
+      return choice
+    }
+    page.type(side("before"), "2")
+    page.type(side("after"), "2")
     expect(texts(page.container)).toEqual([
       "INFO started",
       "ERROR order 41 lost",
@@ -227,12 +234,22 @@ describe("a service's live lines", () => {
     expect(rows.map((row) => row.classList.contains("gap"))).toEqual([false, false, false, false, true, false, false])
     expect(rows[0]?.textContent).toContain("around a match")
     expect(page.container.textContent).toContain("2 of the last 9 lines match, with 2 lines around each")
-    expect(window.localStorage.getItem("estate.logs.around")).toBe("2")
     page.click(page.button("Copy 7 lines"))
     await page.settle()
     expect(copied[0]?.split("\n")).toHaveLength(7)
+    page.type(side("after"), "0")
+    expect(texts(page.container)).toEqual([
+      "INFO started",
+      "ERROR order 41 lost",
+      "INFO step 4",
+      "INFO step 5",
+      "ERROR disk full",
+    ])
+    expect(page.container.textContent).toContain("2 of the last 9 lines match, with 2 lines before each")
+    expect(window.localStorage.getItem("estate.logs.before")).toBe("2")
+    expect(window.localStorage.getItem("estate.logs.after")).toBe("0")
     page.dispose()
-    window.localStorage.removeItem("estate.logs.around")
+    forget()
   })
 
   test("arrive without a screen reader reading each one aloud", () => {

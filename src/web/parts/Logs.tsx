@@ -33,7 +33,7 @@ const Live = (props: { readonly service: string }) => {
   const [skipped, setSkipped] = createSignal(false)
   const [failed, setFailed] = createSignal<string | undefined>(undefined)
   const [hidden, setHidden] = createSignal<ReadonlySet<Kind>>(new Set())
-  const { each: aroundEach, Choice: AroundChoice } = aroundChoice()
+  const { reach, reaching, said: reachSaid, Choice: AroundChoice } = aroundChoice()
   // What is typed, shown as typed; what is searched, once typing has paused, or at once when the search is cleared.
   const [typed, setTyped] = createSignal("")
   const [text, setText] = createSignal("")
@@ -85,7 +85,7 @@ const Live = (props: { readonly service: string }) => {
   // Worked out once a change, not on every read: the list, its footer, the copy and each picked range read them.
   const search = createMemo(() => searchOf(text()))
   const rows = createMemo(() =>
-    around(lines(), (line) => !hidden().has(kindOf(line)) && shows(search(), line.text), aroundEach()),
+    around(lines(), (line) => !hidden().has(kindOf(line)) && shows(search(), line.text), reach()),
   )
   const shown = createMemo(() => rows().map((row) => row.item))
   const matching = () => rows().filter((row) => row.match).length
@@ -218,12 +218,12 @@ const Live = (props: { readonly service: string }) => {
         </For>
       </ol>
       <p class="muted log-foot">
-        {search()._tag === "Pattern" || (aroundEach() > 0 && matching() < lines().length)
+        {search()._tag === "Pattern" || (reaching() && matching() < lines().length)
           ? `${matching()} of the last ${lines().length} lines match`
           : shown().length === 0
             ? "No lines yet."
             : `${shown().length} of the last ${lines().length} lines`}
-        {aroundEach() > 0 && matching() < lines().length ? `, with ${aroundEach()} lines around each` : ""}
+        {reaching() && matching() < lines().length ? `, with ${reachSaid()}` : ""}
         {from() === undefined ? "" : ` · from ${from()}`}
         {skipped() ? " · busy: older lines were skipped" : ""}
         {
