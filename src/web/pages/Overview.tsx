@@ -43,7 +43,11 @@ export const Overview = () => {
       </Show>
       <div class="row">
         <Lanes layout={services} menu={<ViewMenu map={map} services={services} />} />
-        <Feed feed={events().feed} />
+        <Feed
+          feed={events().feed}
+          needing={new Set(things().flatMap((thing) => thing.about))}
+          stuck={new Set(things().flatMap((thing) => (thing.kind === "deploy" ? thing.about : [])))}
+        />
       </div>
     </main>
   )

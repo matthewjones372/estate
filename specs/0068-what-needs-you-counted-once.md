@@ -90,7 +90,7 @@ what is not healthy has its lane; the healthy are one line of links, `11 healthy
 **What changed today, in batches.** Builds that passed within five minutes of each other are one line,
 `8 builds passed`, `New substitutions rules, and 7 more`; versions applied together likewise, `8 versions applied`,
 `includes checkout main-154-199fdaf · inventory stuck`. A failed build, an alert, a note, a silence, debug and a job
-stay a line each. An alert that fired within an hour of a version applied to its service says so:
+stay a line each. An alert that fired within half an hour of a version applied to its service says so:
 `22 min after checkout main-154-199fdaf applied`.
 
 **How it unfolded.** With an incident open, its firing alerts and its notes, oldest first, then the note box.

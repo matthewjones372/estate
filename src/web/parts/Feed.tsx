@@ -1,7 +1,11 @@
 /** @jsxImportSource solid-js */
-/** What changed today, newest first, each change opening what it is about. */
+/**
+ * What changed today, newest first, each change opening what it is about; builds and versions that went out together
+ * as one line that opens to them, and an alert that followed a version saying so (spec 0068).
+ */
 import { For, type JSX, Show } from "solid-js"
 import type { FeedEvent, FeedItem } from "../../shared/feed"
+import { batchesOf, type Entry } from "../feed-batches"
 import { clock } from "../format"
 import { firingPath, pathOf } from "../route"
 import { A, Out } from "./A"
@@ -66,8 +70,58 @@ const FeedNote = (props: { readonly item: FeedItem }) => (
   </span>
 )
 
-export const Feed = (props: { readonly feed: FeedEvent | undefined }) => {
+const Item = (props: { readonly item: FeedItem; readonly after?: string | undefined }) => (
+  <li classList={{ "feed-alert": props.item.kind === "alert" }}>
+    <span class="mono muted small">{clock(props.item.at)}</span>
+    <span class="dot" style={{ background: dots[props.item.kind] }} />
+    <span>
+      <Show
+        when={props.item.kind === "note"}
+        fallback={
+          <Opens item={props.item}>
+            <FeedText item={props.item} />
+          </Opens>
+        }
+      >
+        <FeedNote item={props.item} />
+      </Show>
+      <Show when={props.after}>{(after) => <span class="feed-sub muted small">{after()}</span>}</Show>
+    </span>
+  </li>
+)
+
+const Batch = (props: { readonly entry: Exclude<Entry, { readonly kind: "item" }> }) => (
+  <li>
+    <span class="mono muted small">{clock(props.entry.at)}</span>
+    <span class="dot" style={{ background: dots[props.entry.kind === "builds" ? "build" : "deploy"] }} />
+    <details class="feed-batch">
+      <summary>
+        <span class="feed-batch-text">{props.entry.text}</span>
+        <span class="feed-sub muted small">{props.entry.sub}</span>
+      </summary>
+      <ul>
+        <For each={props.entry.items}>
+          {(item) => (
+            <li>
+              <Opens item={item}>
+                <FeedText item={item} />
+              </Opens>
+            </li>
+          )}
+        </For>
+      </ul>
+    </details>
+  </li>
+)
+
+export const Feed = (props: {
+  readonly feed: FeedEvent | undefined
+  /** What needs someone, and what is stuck, for which change a batch names first. */
+  readonly needing?: ReadonlySet<string>
+  readonly stuck?: ReadonlySet<string>
+}) => {
   const items = () => props.feed?.items ?? []
+  const entries = () => batchesOf(items(), props.needing, props.stuck)
   return (
     <aside aria-labelledby="changes" class="panel feed">
       <div class="spread">
@@ -78,23 +132,10 @@ export const Feed = (props: { readonly feed: FeedEvent | undefined }) => {
       </div>
       <Show when={items().length > 0} fallback={<p class="muted flush">Nothing yet today.</p>}>
         <ol>
-          <For each={items()}>
-            {(item) => (
-              <li>
-                <span class="mono muted small">{clock(item.at)}</span>
-                <span class="dot" style={{ background: dots[item.kind] }} />
-                <Show
-                  when={item.kind === "note"}
-                  fallback={
-                    <Opens item={item}>
-                      <FeedText item={item} />
-                    </Opens>
-                  }
-                >
-                  <FeedNote item={item} />
-                </Show>
-              </li>
-            )}
+          <For each={entries()}>
+            {(entry) =>
+              entry.kind === "item" ? <Item item={entry.item} after={entry.after} /> : <Batch entry={entry} />
+            }
           </For>
         </ol>
       </Show>

@@ -243,3 +243,35 @@
 .healthy-line .plain-button {
   margin-inline-start: auto;
 }
+
+/* What changed today: a batch is one line that opens to its changes; an alert stands out. */
+.feed-sub {
+  display: block;
+}
+.feed-batch > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+.feed-batch > summary::-webkit-details-marker {
+  display: none;
+}
+.feed-batch-text {
+  color: var(--ink);
+}
+.feed-batch ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.feed .feed-batch li {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+.feed-alert > span:last-child > :first-child {
+  font-weight: 600;
+}
