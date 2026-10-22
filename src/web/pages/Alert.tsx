@@ -12,6 +12,7 @@ import { AlertCard } from "../parts/AlertCard"
 import { Around } from "../parts/Around"
 import { FiringTimeline } from "../parts/FiringTimeline"
 import { standing } from "../parts/Silenced"
+import { Subject } from "../parts/Subject"
 import { Owner } from "../parts/Team"
 import { TimelineExport } from "../parts/TimelineExport"
 import { firingPath } from "../route"
@@ -78,7 +79,11 @@ export const AlertPage = (props: { readonly id: string }) => {
             </h1>
             <p class="lede">
               {found().severity} · {standing(found(), now())}
-              {found().service === undefined ? "" : ` · ${found().service}`} · {snapshot.environment}
+              <Show when={found().service ?? found().store}>
+                {" · "}
+                <Subject service={found().service} store={found().store} />
+              </Show>
+              {` · ${snapshot.environment}`}
             </p>
             <AlertCard alert={found()} catalog={catalog()} canSilence={canSilence()} level={2} />
           </section>

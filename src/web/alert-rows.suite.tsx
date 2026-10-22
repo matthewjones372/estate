@@ -70,6 +70,8 @@ describe("needs you now, with many firing", () => {
     expect(shown[0]?.querySelector("a.row-name")?.getAttribute("href")).toBe("/alerts/f1")
     expect(shown[1]?.textContent).toContain("orders-db")
     expect(shown[1]?.textContent).toContain("no notes")
+    expect(shown[0]?.querySelector(".row-where a")?.getAttribute("href")).toBe("/services/storefront")
+    expect(shown[1]?.querySelector(".row-where a")?.getAttribute("href")).toBe("/stores/orders-db")
   })
 
   test("says the count in the heading, and links to all on Alerts", () => {
