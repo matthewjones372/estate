@@ -8,7 +8,8 @@ import { solidInBrowser } from "../shared/solid"
 let compiling = false
 
 export const inBrowser = () => {
-  if (!GlobalRegistrator.isRegistered) GlobalRegistrator.register()
+  // At an address of its own, as a page is, so links it writes out are whole.
+  if (!GlobalRegistrator.isRegistered) GlobalRegistrator.register({ url: "http://estate.test/" })
   if (!compiling) Bun.plugin(solidInBrowser.plugin)
   compiling = true
   return () => GlobalRegistrator.unregister()

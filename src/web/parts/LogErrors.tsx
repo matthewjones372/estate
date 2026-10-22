@@ -4,7 +4,7 @@ import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js"
 import type { ErrorGroups } from "../../shared/log-events"
 import { type ErrorWindow, useEstate, useSnapshot } from "../context"
 import { since } from "../format"
-import { asText, copy } from "../log-copy"
+import { copy, headed } from "../log-copy"
 import { type ErrorRange, errorRanges } from "../route"
 import { IncludeInIncident } from "./IncludeInIncident"
 import { LineRow } from "./LogLine"
@@ -31,6 +31,12 @@ export const ErrorList = (props: {
       })
     }),
   )
+  // Errors from a moment link to the last hour's, the nearest the service's page shows.
+  const whence = () => ({
+    service: props.service,
+    environment: snapshot.environment,
+    logs: { view: "errors", range: "range" in props.window ? props.window.range : "1h" } as const,
+  })
   const read = () => {
     const value = groups()
     return typeof value === "object" ? value : undefined
@@ -77,7 +83,7 @@ export const ErrorList = (props: {
                       <button
                         type="button"
                         class="plain-button log-copy-examples"
-                        onClick={() => void copy(asText(group.examples))}
+                        onClick={() => void copy(headed(whence(), group.examples))}
                       >
                         Copy these lines
                       </button>

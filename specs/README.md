@@ -72,3 +72,4 @@ entries, one per pull request, each with what proves it done.
 | [0065](0065-what-each-view-starts-as.md) | what each view starts as: the map *Auto*, *Areas* or *Lines*, *Auto* areas past `map.areas` services or on a phone; what is firing as rows unless a viewer chooses cards; done |
 | [0066](0066-what-axe-still-found.md) | what axe still found: the environment switcher named with what it shows, version cells with spaces between their words, faint grey text made readable, and an unnamed database instance headed "(no name)"; done |
 | [0067](0067-lines-around-a-match.md) | lines around a match: with levels hidden or a search typed, *Before* and *After* bring 2, 5 or 10 held lines ahead of and behind each match, dimmed, with gaps marked, kept in this browser; done |
+| [0068](0068-copied-lines-say-where-they-are-from.md) | copied lines say where they are from: every copy of a service's lines starts with its service, environment and the address of its logs; done |
