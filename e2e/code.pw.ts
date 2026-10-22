@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test"
+import { showLanes } from "./overview"
 
 test("a service's code health is under its name, linking to its tools, in amber for a high alert", async ({ page }) => {
   await page.goto("/?env=production")
+  await showLanes(page)
   const estate = page.getByRole("region", { name: "The estate by area" })
   const storefront = estate.locator("article", { has: page.getByRole("link", { name: "storefront", exact: true }) })
   const line = storefront.locator(".code-line")

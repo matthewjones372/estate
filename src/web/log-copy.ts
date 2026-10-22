@@ -18,7 +18,7 @@ export const fromWhere = (
   return `${from.service} in ${from.environment} · ${address.href}`
 }
 
-/** Lines to paste, below where they are from, so whoever reads the paste can open them (spec 0068). */
+/** Lines to paste, below where they are from, so whoever reads the paste can open them (spec 0069). */
 export const headed = (
   from: { readonly service: string; readonly environment: string; readonly logs?: LogsShown },
   lines: ReadonlyArray<LogLine>,

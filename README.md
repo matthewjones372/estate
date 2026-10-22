@@ -107,13 +107,20 @@ Viewers see everything and add notes. Operators can also silence, switch debug, 
 
 ![A service page: its version in each environment, links and owners, load and stats, live logs, pods, debug, what changed and alerts today](docs/service.png)
 
+The overview counts what needs you one way: an open incident with its alerts, an alert in no incident, a deploy
+stuck in the environment, and a service or store that is degraded with nothing else about it are each one thing, and
+the headline, the list and the tiles all count those. With an incident open, the top of the page says what it means for
+users, its likely cause where its alerts point at a store or one fired first, and who last wrote on it, and below the
+list is how it unfolded, its alerts and notes oldest first. Each thing is a row that opens its alerts' cards in place.
+
 Services, stores and jobs can be grouped by category, such as Payments or Data, so a page of forty services
-can be read as five groups. The map at the top is on *Auto* unless you choose: past a dozen services (`map.areas` in the
+can be read as five groups, those that need someone first. In each, the healthy services and stores are one line of
+links until you open their lanes. The map is on *Auto* unless you choose: past a dozen services (`map.areas` in the
 catalog) or on a phone it is a card per area with every part named, what needs attention first, and where traffic meets
 trouble; otherwise it is drawn, a node per category once there are more than a dozen nodes (`map.collapse`), opened in
-place when you click it. Anything that needs attention is always shown on its own. What is firing shows as a row each
-unless you choose cards. The overview shows services as lanes or, when the estate is long to scroll, as a grid of
-compact cards; each choice is kept in this browser.
+place when you click it. The overview's View menu chooses the map's layout and whether services are lanes or a grid of
+compact cards; each choice is kept in this browser. On a service's page, its charts mark when a version was applied
+and when an alert fired.
 
 ### Around this alert, and Ask AI
 

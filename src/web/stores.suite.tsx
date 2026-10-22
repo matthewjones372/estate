@@ -5,7 +5,9 @@ import type { Events } from "../shared/events"
 import { App } from "./App"
 import { events, heard, now, operator, series } from "./fixture"
 import { mount, render } from "./harness"
-import { headlineOf, Overview } from "./pages/Overview"
+import { headlineOf } from "./hero"
+import { thingsOf } from "./needs"
+import { Overview } from "./pages/Overview"
 import { StorePage } from "./pages/Store"
 import { recording } from "./recording"
 
@@ -115,8 +117,19 @@ describe("stores on the overview", () => {
     expect(text(render(() => <StorePage name="orders-db" />, { sent: withStores }))).not.toContain("Found in")
   })
 
-  test("count in the headline when they need someone", () => {
-    expect(headlineOf(withStores).lede).toContain("orders-db: 1 instance is not ready")
+  test("count in the headline when they need someone, once with the alert about them", () => {
+    expect(headlineOf(withStores).top).toBe("Three things")
+    const things = thingsOf(withStores)
+    expect(things.find((thing) => thing.kind === "alert" && thing.about.includes("orders-db"))?.what).toBe(
+      "BackupMissing on orders-db (Postgres).",
+    )
+    expect(things.filter((thing) => thing.about.includes("orders-db"))).toHaveLength(1)
+    const quiet = { ...withStores, alerts: events.alerts }
+    expect(thingsOf(quiet).find((thing) => thing.kind === "degraded")).toMatchObject({
+      title: "orders-db (Postgres) is degraded",
+      what: "1 instance is not ready; no backup for 30 h.",
+      to: "/stores/orders-db",
+    })
   })
 
   test("colour their map node by health, and link it to the store", () => {

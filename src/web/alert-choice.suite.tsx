@@ -47,9 +47,13 @@ afterEach(() => {
   else Object.defineProperty(globalThis, "window", prior)
 })
 
+// A service's page: the overview's things are a row each, with no choice to make (spec 0068).
+const on = (count: number) =>
+  mount(() => <ServicePage name="storefront" />, { sent: sent(several(count, "storefront")) })
+
 describe("the alerts layout", () => {
   test("Rows, the default, shows a row for each even of two firing", () => {
-    const two = mount(() => <Overview />, { sent: sent(several(2)) })
+    const two = on(2)
     expect(pressed(two)).toEqual(["Rows"])
     expect(rows(two.container)).toBe(2)
     expect(cards(two.container)).toBe(0)
@@ -57,48 +61,42 @@ describe("the alerts layout", () => {
 
   test("Auto shows cards for three firing and switches to rows at four", () => {
     held.set("estate.alerts.layout", "auto")
-    const three = mount(() => <Overview />, { sent: sent(several(3)) })
+    const three = on(3)
     expect(pressed(three)).toEqual(["Auto"])
     expect(cards(three.container)).toBe(3)
-    const four = mount(() => <Overview />, { sent: sent(several(4)) })
+    const four = on(4)
     expect(rows(four.container)).toBe(4)
     expect(cards(four.container)).toBe(0)
   })
 
   test("choosing Cards with five firing shows five cards, kept across a reload", () => {
-    const page = mount(() => <Overview />, { sent: sent(several(5)) })
+    const page = on(5)
     page.click(page.button("Cards"))
     expect(pressed(page)).toEqual(["Cards"])
     expect(cards(page.container)).toBe(5)
     expect(rows(page.container)).toBe(0)
     expect(held.get("estate.alerts.layout")).toBe("cards")
     page.dispose()
-    const again = mount(() => <Overview />, { sent: sent(several(5)) })
+    const again = on(5)
     expect(pressed(again)).toEqual(["Cards"])
     expect(cards(again.container)).toBe(5)
   })
 
-  test("choosing Rows shows rows for two firing, with All on Alerts, and Auto goes back to cards", () => {
-    const page = mount(() => <Overview />, { sent: sent(several(2)) })
+  test("choosing Rows shows rows for two firing, and Auto goes back to cards", () => {
+    held.set("estate.alerts.layout", "cards")
+    const page = on(2)
     page.click(page.button("Rows"))
     expect(rows(page.container)).toBe(2)
-    expect(page.container.textContent).toContain("All on Alerts")
     page.click(page.button("Auto"))
     expect(cards(page.container)).toBe(2)
     expect(held.get("estate.alerts.layout")).toBe("auto")
   })
 
-  test("is not offered while nothing fires", () => {
-    const page = mount(() => <Overview />, { sent: sent([]) })
+  test("is not offered while nothing fires, nor on the overview", () => {
+    const page = on(0)
     expect(page.container.querySelector(".alerts-layout")).toBeNull()
-  })
-
-  test("is the same choice on a service's page", () => {
-    held.set("estate.alerts.layout", "rows")
-    const page = mount(() => <ServicePage name="storefront" />, { sent: sent(several(2, "storefront")) })
-    expect(pressed(page)).toEqual(["Rows"])
-    expect(rows(page.container)).toBe(2)
-    page.click(page.button("Cards"))
-    expect(cards(page.container)).toBe(2)
+    const overview = mount(() => <Overview />, { sent: sent(several(3)) })
+    expect(overview.container.querySelector(".alerts-layout")).toBeNull()
+    expect(cards(overview.container)).toBe(0)
   })
 })

@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { events } from "./fixture"
 import { mount, render } from "./harness"
 import { AlertPage } from "./pages/Alert"
+import { AlertCard } from "./parts/AlertCard"
 
 const text = (html: string) =>
   html
@@ -23,6 +24,16 @@ describe("an alert's own page", () => {
     const to = (selector: string) => page.container.querySelector(`${selector} a`)?.getAttribute("href")
     expect(to(".lede")).toBe("/services/storefront")
     expect(to(".alert-card .alert-detail")).toBe("/services/storefront")
+  })
+
+  test("links a store's alert to the store's page", () => {
+    const first = events.alerts?.alerts[0]
+    if (first === undefined) throw new Error("the fixture has no alert")
+    const { service: _, ...alert } = first
+    const page = mount(() => (
+      <AlertCard alert={{ ...alert, store: "orders-db" }} catalog={events.catalog} canSilence={false} />
+    ))
+    expect(page.container.querySelector(".alert-detail a")?.getAttribute("href")).toBe("/stores/orders-db")
   })
 
   test("says an alert is not firing once the alerts are read, and waits for them before", () => {

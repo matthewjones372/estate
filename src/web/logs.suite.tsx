@@ -281,9 +281,8 @@ describe("a service's errors", () => {
     })
     page.click(page.button("Copy these lines"))
     await page.settle()
-    const [heading, ...rest] = copied[0]?.split("\n") ?? []
-    expect(heading).toBe("storefront in production · http://estate.test/services/storefront?logs=errors&env=production")
-    expect(rest).toHaveLength(2)
+    expect(copied[0]).toStartWith("storefront in production · http://estate.test/services/storefront?logs=errors&")
+    expect(copied[0]?.split("\n")).toHaveLength(3)
     page.click(page.button("6h"))
     await page.settle()
     expect(page.calls).toContainEqual(["errors", "storefront", { range: "6h" }])
@@ -291,6 +290,7 @@ describe("a service's errors", () => {
 
   test("from the minutes before an alert started are on its card", async () => {
     const page = mount(() => <Overview />)
+    page.click(page.button("Open OrdersSlow's card"))
     page.click(page.button("Lines from then"))
     await page.settle()
     expect(page.container.textContent).toContain("Errors from ten minutes before it started")

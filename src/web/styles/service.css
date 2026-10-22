@@ -79,6 +79,11 @@
   gap: 12px;
   align-items: center;
 }
+.timeline-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 .timeline-track {
   position: relative;
   height: 10px;

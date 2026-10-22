@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test"
 import type { Alert } from "../shared/events"
 import { events } from "./fixture"
 import { mount } from "./harness"
+import { thingsOf } from "./needs"
 import { Overview } from "./pages/Overview"
 import { ServicePage } from "./pages/Service"
 import { recording } from "./recording"
@@ -43,51 +44,58 @@ const busy: ReadonlyArray<Alert> = [
 ]
 
 const sent = (alerts: ReadonlyArray<Alert>) => ({ ...events, alerts: { ...events.alerts, alerts } })
+/** Only the alerts need anyone: every service well, and no deploy stuck. */
+const only = (alerts: ReadonlyArray<Alert>) => ({
+  ...sent(alerts),
+  services: {
+    ...events.services,
+    services: events.services.services.map((each) => ({ ...each, health: "healthy" as const, reasons: [] })),
+  },
+  deploys: { ...events.deploys, services: [] },
+})
 const top = (container: HTMLElement) => [...(container.querySelector(".alert-rows")?.children ?? [])]
+const things = (container: HTMLElement) => [...container.querySelectorAll(".things > li")]
 const said = (element: Element | undefined) => element?.textContent?.replace(/\s+/g, " ") ?? ""
 const cards = (container: HTMLElement) => container.querySelectorAll(".alert-card").length
 
-describe("needs you now, grouped", () => {
-  test("six in one incident and three on one service read as two group rows, and the rest single", () => {
-    const page = mount(() => <Overview />, { sent: sent(busy) })
-    const shown = top(page.container)
-    expect(shown).toHaveLength(4)
-    expect(shown.filter((each) => each.classList.contains("alert-group"))).toHaveLength(2)
-    expect(page.button("Chip registry slow, 6 alerts, worst critical")).toBeDefined()
-    expect(page.button("orders, 3 alerts, worst warning")).toBeDefined()
-  })
-
-  test("orders groups and rows worst first, then longest firing", () => {
-    const page = mount(() => <Overview />, { sent: sent(busy) })
-    expect(top(page.container).map((each) => each.querySelector(".row-name")?.textContent)).toEqual([
-      "Chip registry slow",
-      "PaymentsDown",
-      "CartSlow",
-      "orders",
+describe("what needs you, a row a thing", () => {
+  test("an incident's alerts are one thing, an alert in none is one each, and the incident comes first", () => {
+    expect(thingsOf(only(busy)).map((thing) => `${thing.kind} ${thing.title}`)).toEqual([
+      "incident Chip registry slow",
+      "alert PaymentsDown",
+      "alert CartSlow",
+      "alert OrdersSlow",
+      "alert OrdersErrors",
+      "alert OrdersQueue",
     ])
+    const page = mount(() => <Overview />, { sent: only(busy) })
+    expect(things(page.container)).toHaveLength(6)
+    expect(page.container.querySelector("#needs")?.textContent).toBe("Six things need you")
+    // With an incident open, the headline is what it means; without an impact, its title.
+    expect(page.container.querySelector("h1")?.textContent).toBe("Chip registry slow")
   })
 
-  test("an incident's group says how many, the worst, how long it has been open, and its latest note", () => {
-    const page = mount(() => <Overview />, { sent: sent(busy) })
-    const group = said(top(page.container)[0])
-    for (const words of ["incident · 6 alerts", "critical", "open 15 min", "latest: gil: “registry restarted”"])
-      expect(group).toContain(words)
-    expect(top(page.container)[0]?.querySelector("a.row-name")?.getAttribute("href")).toBe("/incidents/i1")
-    const service = said(top(page.container)[3])
-    expect(service).toContain("service · 3 alerts")
-    expect(service).toMatch(/since \d\d:44/)
+  test("an incident's row says how many alerts and which, links to it, and is as old as its first", () => {
+    const page = mount(() => <Overview />, { sent: only(busy) })
+    const incident = said(things(page.container)[0])
+    for (const words of [
+      "Incident",
+      "6 alerts: AdoptionsFailing, RegistrySlow, ChipLookupsSlow, PetsSlow, SearchSlow, OrdersRegistryWait.",
+      "14 min",
+    ])
+      expect(incident).toContain(words)
+    expect(things(page.container)[0]?.querySelector("a.thing-title")?.getAttribute("href")).toBe("/incidents/i1")
   })
 
-  test("a group opens to its alerts' rows, worst first, each opening to its card; it is kept on moving back", () => {
+  test("an incident's row opens to its alerts' rows, each opening to its card; it is kept on moving back", () => {
     const { actions } = recording()
-    const page = mount(() => <Overview />, { sent: sent(busy), actions })
-    const toggle = page.button("Chip registry slow, 6 alerts, worst critical")
+    const page = mount(() => <Overview />, { sent: only(busy), actions })
+    const toggle = page.button("Open Chip registry slow's alerts")
     expect(toggle.getAttribute("aria-expanded")).toBe("false")
     page.click(toggle)
-    expect(toggle.getAttribute("aria-expanded")).toBe("true")
     const nested = page.container.querySelector(`#${toggle.getAttribute("aria-controls")}`)
     expect(nested?.tagName).toBe("UL")
-    expect([...(nested?.children ?? [])].map((row) => row.querySelector(".row-name")?.textContent)).toEqual([
+    expect(top(page.container).map((row) => row.querySelector(".row-name")?.textContent)).toEqual([
       "AdoptionsFailing",
       "RegistrySlow",
       "ChipLookupsSlow",
@@ -99,35 +107,16 @@ describe("needs you now, grouped", () => {
     page.click(page.button("Open AdoptionsFailing's card"))
     expect(cards(page.container)).toBe(1)
     page.dispose()
-    const again = mount(() => <Overview />, { sent: sent(busy), actions })
-    expect(again.button("Chip registry slow, 6 alerts, worst critical").getAttribute("aria-expanded")).toBe("true")
+    const again = mount(() => <Overview />, { sent: only(busy), actions })
+    expect(again.button("Close Chip registry slow's alerts").getAttribute("aria-expanded")).toBe("true")
     expect(again.button("Close AdoptionsFailing's card").getAttribute("aria-expanded")).toBe("true")
   })
 
-  test("an alert in an incident is not also in its service's group", () => {
-    const page = mount(() => <Overview />, { sent: sent(busy) })
-    page.click(page.button("orders, 3 alerts, worst warning"))
-    const orders = top(page.container)[3]?.querySelector("ul")
-    expect([...(orders?.children ?? [])].map((row) => row.querySelector(".row-name")?.textContent)).toEqual([
-      "OrdersSlow",
-      "OrdersErrors",
-      "OrdersQueue",
-    ])
-  })
-
-  test("an incident or a service with one alert firing is a single row, its incident named on it", () => {
-    const alone = [
-      inRegistry("RegistrySlow", "registry", 14),
-      firing("OrdersSlow", "orders", 16),
-      firing("CartSlow", "cart", 20),
-      firing("PaymentsDown", "payments", 3),
-    ]
-    const page = mount(() => <Overview />, { sent: sent(alone) })
-    const shown = top(page.container)
-    expect(shown.filter((each) => each.classList.contains("alert-group"))).toHaveLength(0)
-    expect(said(shown.find((each) => each.textContent?.includes("RegistrySlow")))).toContain(
-      "Part of Chip registry slow",
-    )
+  test("an alert's row opens its own card in place", () => {
+    const page = mount(() => <Overview />, { sent: only(busy) })
+    page.click(page.button("Open PaymentsDown's card"))
+    expect(cards(page.container)).toBe(1)
+    expect(page.container.querySelector(".things .row-card")?.getAttribute("aria-label")).toBe("PaymentsDown's card")
   })
 })
 
@@ -147,6 +136,14 @@ describe("what's happening on a service's page, grouped", () => {
       "OrdersErrors",
       "OrdersQueue",
     ])
-    expect(page.button("Chip registry slow, 2 alerts, worst warning")).toBeDefined()
+    const group = page.button("Chip registry slow, 2 alerts, worst warning")
+    page.click(group)
+    const nested = page.container.querySelector(`#${group.getAttribute("aria-controls")}`)
+    expect([...(nested?.children ?? [])].map((row) => row.querySelector(".row-name")?.textContent)).toEqual([
+      "OrdersChipWait",
+      "OrdersRegistryWait",
+    ])
+    page.click(page.button("Open OrdersChipWait's card"))
+    expect(cards(page.container)).toBe(1)
   })
 })

@@ -12,7 +12,7 @@ beforeEach(() => window.localStorage.setItem("estate.alerts.layout", "cards"))
 afterEach(() => window.localStorage.removeItem("estate.alerts.layout"))
 
 describe("an overview of a catalog with categories", () => {
-  test("puts each category's lanes under its heading, in the catalog's order, and the rest last", () => {
+  test("puts each category's lanes under its heading, those that need someone first, then in the catalog's order", () => {
     const catalog = events.catalog
     if (catalog === undefined) throw new Error("no catalog")
     const page = mount(() => <Overview />, {
@@ -32,7 +32,8 @@ describe("an overview of a catalog with categories", () => {
       group.querySelector("h2")?.textContent,
       [...group.querySelectorAll(".lane .lane-name, .lane a.mono")].length,
     ])
-    expect(groups.map(([title]) => title)).toEqual(["Payments", "Everything else"])
+    // storefront, in no category, is degraded, so Everything else comes first.
+    expect(groups.map(([title]) => title)).toEqual(["Everything else", "Payments"])
     expect(page.container.querySelector('[aria-label="The estate by area"]')).not.toBeNull()
     expect(page.container.textContent).not.toContain("Stores")
   })
@@ -153,6 +154,7 @@ describe("a team", () => {
       },
     }
     const page = mount(() => <Overview />, { sent })
+    page.click(page.button("Open OrdersSlow's card"))
     const cards = [...page.container.querySelectorAll(".alert-card a")].map((link) => link.textContent?.trim())
     expect(cards).toContain("Web on Slack")
     const owner = page.container.querySelector('[aria-label="settle, a job"] .owner')
@@ -233,6 +235,21 @@ describe("an agent", () => {
       undefined,
     ])
     expect(shareOf({ now: null, points: [] }, runs)?.now).toBeNull()
+  })
+})
+
+describe("an area's healthy services", () => {
+  test("are one line of links, until their lanes are opened, and fold back again", () => {
+    const page = mount(() => <Overview />)
+    const line = page.container.querySelector(".healthy-line")
+    expect(line?.textContent).toContain("1 healthy:")
+    expect(line?.querySelector("a")?.getAttribute("href")).toBe("/services/orders")
+    expect(page.container.querySelector('a.lane-title[href*="orders"]')).toBeNull()
+    expect(page.container.querySelector('a.lane-title[href*="storefront"]')).not.toBeNull()
+    page.click(page.button(/^Show their lanes/))
+    expect(page.container.querySelector('a.lane-title[href*="orders"]')).not.toBeNull()
+    page.click(page.button(/^Fold them to a line/))
+    expect(page.container.querySelector('a.lane-title[href*="orders"]')).toBeNull()
   })
 })
 

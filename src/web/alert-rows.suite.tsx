@@ -5,7 +5,6 @@ import type { Alert } from "../shared/events"
 import { events } from "./fixture"
 import { mount } from "./harness"
 import { Alerts } from "./pages/Alerts"
-import { Overview } from "./pages/Overview"
 import { ServicePage } from "./pages/Service"
 import { recording } from "./recording"
 
@@ -23,27 +22,18 @@ const firing = (at: number, over: Partial<Alert> = {}): Alert => ({
   ...over,
 })
 
-/** The alert as fired on a store rather than a service. */
-const onStore = (alert: Alert, store: string): Alert => {
-  const { service: _service, ...rest } = alert
-  return { ...rest, store }
-}
-
 const sent = (alerts: ReadonlyArray<Alert>) => ({ ...events, alerts: { ...events.alerts, alerts } })
 const several = (count: number, service?: string) =>
   Array.from({ length: count }, (_, at) => firing(at, service === undefined ? {} : { service }))
 const rows = (container: HTMLElement) => [...container.querySelectorAll(".alert-rows > li")]
 const cards = (container: HTMLElement) => container.querySelectorAll(".alert-card").length
 
-describe("needs you now, with many firing", () => {
-  test("on Auto, shows cards for three firing", () => {
-    window.localStorage.setItem("estate.alerts.layout", "auto")
-    const page = mount(() => <Overview />, { sent: sent(several(3)) })
-    expect(cards(page.container)).toBe(3)
-    expect(rows(page.container)).toHaveLength(0)
-    window.localStorage.removeItem("estate.alerts.layout")
-  })
+// Rows on a service's page; the overview's things open the same rows (spec 0068).
+const on = (alerts: ReadonlyArray<Alert>, actions?: ReturnType<typeof recording>["actions"]) =>
+  mount(() => <ServicePage name="storefront" />, { sent: sent(alerts), ...(actions === undefined ? {} : { actions }) })
+const here = (alerts: ReadonlyArray<Alert>) => alerts.map((alert) => ({ ...alert, service: "storefront" }))
 
+describe("what is firing, a row each", () => {
   test("shows a row each for four, with its severity, name, service, time, latest note and incident", () => {
     const alerts = [
       firing(1, {
@@ -55,11 +45,11 @@ describe("needs you now, with many firing", () => {
         ],
         incident: { id: "i1", title: "Checkout", closed: false, openedAt: "2026-10-03T11:50:00Z" },
       }),
-      onStore(firing(2), "orders-db"),
+      firing(2),
       firing(3),
       firing(4),
     ]
-    const page = mount(() => <Overview />, { sent: sent(alerts) })
+    const page = on(here(alerts))
     expect(cards(page.container)).toBe(0)
     const shown = rows(page.container)
     expect(shown).toHaveLength(4)
@@ -68,21 +58,17 @@ describe("needs you now, with many firing", () => {
       expect(first).toContain(words)
     expect(first).not.toContain("and the pool")
     expect(shown[0]?.querySelector("a.row-name")?.getAttribute("href")).toBe("/alerts/f1")
-    expect(shown[1]?.textContent).toContain("orders-db")
     expect(shown[1]?.textContent).toContain("no notes")
     expect(shown[0]?.querySelector(".row-where a")?.getAttribute("href")).toBe("/services/storefront")
-    expect(shown[1]?.querySelector(".row-where a")?.getAttribute("href")).toBe("/stores/orders-db")
   })
 
-  test("says the count in the heading, and links to all on Alerts", () => {
-    const page = mount(() => <Overview />, { sent: sent(several(4)) })
-    expect(page.container.querySelector("#needs")?.textContent).toContain("Needs you now · 4 firing")
-    const all = [...page.container.querySelectorAll("a")].find((each) => each.textContent?.startsWith("All on Alerts"))
-    expect(all?.getAttribute("href")).toBe("/alerts")
+  test("says the count in the heading", () => {
+    const page = on(several(4, "storefront"))
+    expect(page.container.querySelector("#service-alerts")?.textContent).toContain("What's happening · 4 firing")
   })
 
   test("a toggle opens that card under its row; Escape closes it and gives the toggle the focus", () => {
-    const page = mount(() => <Overview />, { sent: sent(several(4)) })
+    const page = on(several(4, "storefront"))
     const toggle = page.button("Open Firing1's card")
     expect(toggle.getAttribute("aria-expanded")).toBe("false")
     page.click(toggle)
@@ -100,21 +86,21 @@ describe("needs you now, with many firing", () => {
 
   test("two can be open at once, and stay open on moving away and back", () => {
     const { actions } = recording()
-    const page = mount(() => <Overview />, { sent: sent(several(4)), actions })
+    const page = on(several(4, "storefront"), actions)
     page.click(page.button("Open Firing1's card"))
     page.click(page.button("Open Firing2's card"))
     expect(cards(page.container)).toBe(2)
     page.click(page.button("Close Firing1's card"))
     expect(cards(page.container)).toBe(1)
     page.dispose()
-    const again = mount(() => <Overview />, { sent: sent(several(4)), actions })
+    const again = on(several(4, "storefront"), actions)
     expect(again.button("Close Firing2's card").getAttribute("aria-expanded")).toBe("true")
     expect(cards(again.container)).toBe(1)
   })
 
   test("orders the rows worst first, then longest firing", () => {
     const alerts = [firing(1), firing(2, { severity: "critical" }), firing(3, { severity: "info" }), firing(0)]
-    const page = mount(() => <Overview />, { sent: sent(alerts) })
+    const page = on(here(alerts))
     expect(rows(page.container).map((row) => row.querySelector(".row-name")?.textContent)).toEqual([
       "Firing2",
       "Firing0",

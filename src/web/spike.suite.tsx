@@ -49,7 +49,7 @@ describe("a spike on the load", () => {
     expect(errors.container.querySelector(".plot-spike")).toBeNull()
   })
 
-  test("the overview says there was an unusual spike, and All quiet and Needs you now stay as they are", () => {
+  test("the overview says there was an unusual spike, and All quiet and what needs you stay as they are", () => {
     const quiet = mount(() => <Overview />)
     expect(quiet.container.querySelector("#signals")).toBeNull()
     const services = events.services.services.map((service, index) =>
@@ -65,11 +65,12 @@ describe("a spike on the load", () => {
     const sent = {
       ...events,
       alerts: { ...events.alerts, alerts: [] },
+      deploys: { ...events.deploys, services: [] },
       services: { ...events.services, services },
     }
     const page = mount(() => <Overview />, { sent })
     expect(page.container.querySelector("h1")?.textContent).toContain("All quiet")
-    expect(page.container.querySelector("#needs")?.textContent).toContain("Needs you now")
+    expect(page.container.querySelector("#needs")?.textContent).toContain("Nothing needs you")
     expect(page.container.textContent).toContain("Nothing. When something does, it appears here first.")
     const named = page.container.querySelector("#signals")?.closest("section")
     expect(named?.textContent).toContain("Interesting signals")

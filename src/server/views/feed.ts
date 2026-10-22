@@ -122,7 +122,8 @@ export const feedView = (estate: EstateState, environment: string, now: number):
     }
   }
   for (const [service, chosen] of Object.entries(state.deploys.value ?? {})) {
-    if (chosen.at !== undefined) add({ at: chosen.at, kind: "deploy", service, text: `${chosen.version} applied` })
+    if (chosen.at !== undefined)
+      add({ at: chosen.at, kind: "deploy", service, text: `${chosen.version} applied`, version: chosen.version })
   }
   for (const [service, builds] of Object.entries(estate.builds.value ?? {})) {
     for (const build of builds) {
@@ -133,6 +134,7 @@ export const feedView = (estate: EstateState, environment: string, now: number):
           service,
           ...(build.url === "" ? {} : { url: build.url }),
           text: `build ${build.status === "success" ? "passed" : "failed"}: ${build.title}`,
+          build: { title: build.title, passed: build.status === "success" },
         })
       }
     }

@@ -4,9 +4,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { App } from "./App"
 import { events, heard, now, operator } from "./fixture"
 import { mount, render } from "./harness"
+import { headlineOf, tilesOf } from "./hero"
 import { Alerts, alertsSummary } from "./pages/Alerts"
 import { Deploys, summaryOf } from "./pages/Deploys"
-import { headlineOf, Overview, tilesOf } from "./pages/Overview"
+import { Overview } from "./pages/Overview"
 import { ServicePage } from "./pages/Service"
 import { NoAccess, Reading, SignIn } from "./pages/States"
 import { pipelineOf } from "./parts/Rail"
@@ -23,13 +24,14 @@ const text = (html: string) =>
     .replace(/\s+/g, " ")
 
 describe("the overview", () => {
-  test("says how many things need someone, and what", () => {
+  test("says how many things need someone, and the worst of them, without a tool's raw words", () => {
     expect(headlineOf(events)).toMatchObject({
       tone: "attention",
-      top: "One thing",
-      bottom: "needs you.",
-      lede: "storefront: OrdersSlow is firing.",
+      top: "Two things",
+      bottom: "need you.",
+      lede: "Orders are slow.",
     })
+    expect(headlineOf(events).lede).not.toContain("cannot scan the registry")
   })
 
   test("says all quiet only when a source has said so", () => {
@@ -66,13 +68,15 @@ describe("the overview", () => {
     expect(headlineOf(critical).tone).toBe("critical")
   })
 
-  test("fills four tiles: the catalog's vitals, then what Estate always knows", () => {
+  test("fills four tiles: the catalog's vitals with their hour, then what Estate always knows", () => {
     expect(tilesOf(events).map((tile) => `${tile.label}: ${tile.value}`)).toEqual([
       "Orders: 5/s",
-      "Services healthy: 1 of 2",
-      "Alerts firing: 1",
+      "Healthy: 1 of 2",
       "Pods ready: 1/1",
+      "Builds failing: 0",
     ])
+    expect(tilesOf(events)[0]?.series?.points).toEqual([3, 4, 5])
+    expect(tilesOf(events)[1]?.note).toBe("1 affected, in the two things above")
     const runtime = (tool: string | undefined, state: "ok" | "off") => ({
       ...events,
       services: {
@@ -87,9 +91,8 @@ describe("the overview", () => {
     expect(tilesOf(runtime("ECS", "ok")).map((tile) => tile.label)).toContain("Tasks ready")
     expect(tilesOf(runtime(undefined, "off")).map((tile) => tile.label)).toEqual([
       "Orders",
-      "Services healthy",
-      "Alerts firing",
-      "Deploys stalled",
+      "Healthy",
+      "Builds failing",
     ])
     const off = runtime(undefined, "off")
     const withoutVitals = { ...off, catalog: { ...off.catalog, vitals: [] }, services: { ...off.services, vitals: [] } }
@@ -105,18 +108,20 @@ describe("the overview", () => {
     expect(tilesOf(builds("elsewhere")).at(-1)).toMatchObject({ label: "Builds failing", value: "0" })
   })
 
-  test("draws the headline, the map, the card for what fires, silences, lanes and the feed", () => {
+  test("draws the headline, a row a thing, the map, silences, lanes and the feed", () => {
     const page = text(render(() => <Overview />))
     for (const words of [
-      "One thing needs you.",
-      "The estate, live",
+      "Two things need you.",
+      "Two things need you",
+      "Alert",
       "Orders are slow",
-      "On it.",
+      "Deploy stuck",
+      "orders cannot roll out its new version",
+      "The estate, live",
       "silenced until",
       "resizing",
       "storefront",
       "Degraded",
-      "Debug until",
       "What changed today",
       "Prometheus did not answer",
       "Not set up here: builds.",

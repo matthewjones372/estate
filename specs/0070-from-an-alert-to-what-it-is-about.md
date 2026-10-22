@@ -1,8 +1,8 @@
-# 0069 — From an alert to what it is about
+# 0070 — From an alert to what it is about
 
 ## Problem
 
-An alert names the service or store it is about, on its row under *Needs you now*, under its card's title, in its own
+An alert names the service or store it is about, on its row among an incident's alerts, a service's and *Alerts*, under its card's title, in its own
 page's first line and on a past firing's page, but only as text. The one way to its service's page is a button
 named for the service among the card's actions, which reads as another action and is not on a row or a store's alert
 at all. People reading an alert look for the service's name to click and do not find it.
