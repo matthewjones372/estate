@@ -203,3 +203,16 @@
 .log-copy-examples {
   margin-top: 8px;
 }
+/* A line shown for being near a match (spec 0067): its level still reads, the match stands out. */
+.log-line.around,
+.log-line.around .log-level {
+  color: var(--ink-3);
+}
+.log-line.around.error {
+  background: none;
+}
+.log-line.gap {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--line-strong);
+}

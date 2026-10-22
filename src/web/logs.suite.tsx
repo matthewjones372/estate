@@ -193,6 +193,65 @@ describe("a service's live lines", () => {
     page.dispose()
   })
 
+  test("filtered to errors, bring the lines before and after each, dimmed, with the gap between runs, and copy them too", async () => {
+    const forget = () => {
+      for (const side of ["before", "after"]) window.localStorage.removeItem(`estate.logs.${side}`)
+    }
+    forget()
+    const copied: Array<string> = []
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => void copied.push(text) },
+    })
+    const page = mount(() => <LogsPanel service="storefront" />)
+    page.sendLines({
+      lines: [1, 2, 3, 4, 5]
+        .map((each) => line(50 + each, "INFO", `INFO step ${each}`))
+        .concat(line(58, "ERROR", "ERROR disk full")),
+      skipped: false,
+    })
+    page.click(page.button(/^Warn/))
+    page.click(page.button(/^Info/))
+    expect(texts(page.container)).toEqual(["ERROR order 41 lost", "ERROR disk full"])
+    const side = (name: string) => {
+      const choice = page.container.querySelector<HTMLSelectElement>(`.log-reach-${name} select`)
+      if (choice === null) throw new Error(`no ${name}`)
+      return choice
+    }
+    page.type(side("before"), "2")
+    page.type(side("after"), "2")
+    expect(texts(page.container)).toEqual([
+      "INFO started",
+      "ERROR order 41 lost",
+      "WARN slow",
+      "INFO step 1",
+      "INFO step 4",
+      "INFO step 5",
+      "ERROR disk full",
+    ])
+    const rows = [...page.container.querySelectorAll(".log-lines .log-line")]
+    expect(rows.map((row) => row.classList.contains("around"))).toEqual([true, false, true, true, true, true, false])
+    expect(rows.map((row) => row.classList.contains("gap"))).toEqual([false, false, false, false, true, false, false])
+    expect(rows[0]?.textContent).toContain("around a match")
+    expect(page.container.textContent).toContain("2 of the last 9 lines match, with 2 lines around each")
+    page.click(page.button("Copy 7 lines"))
+    await page.settle()
+    expect(copied[0]?.split("\n")).toHaveLength(7)
+    page.type(side("after"), "0")
+    expect(texts(page.container)).toEqual([
+      "INFO started",
+      "ERROR order 41 lost",
+      "INFO step 4",
+      "INFO step 5",
+      "ERROR disk full",
+    ])
+    expect(page.container.textContent).toContain("2 of the last 9 lines match, with 2 lines before each")
+    expect(window.localStorage.getItem("estate.logs.before")).toBe("2")
+    expect(window.localStorage.getItem("estate.logs.after")).toBe("0")
+    page.dispose()
+    forget()
+  })
+
   test("arrive without a screen reader reading each one aloud", () => {
     const page = mount(() => <LogsPanel service="storefront" />)
     expect(page.container.querySelector(".log-lines")?.closest("[aria-live]")).toBeNull()
