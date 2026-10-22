@@ -1,14 +1,13 @@
 /** @jsxImportSource solid-js */
-/** A service's load and stats, or a store's stats, over a chosen range; and alerts over the day. */
+/** A service's load and stats, or a store's stats, over a chosen range. */
 import { createEffect, createMemo, createSignal, For, on, onCleanup, Show } from "solid-js"
 import type { Alert, Load as Read, Series } from "../../shared/events"
 import { loadPanels } from "../../shared/stats"
 import { onScreen, reading, whole, type Zoom } from "../chart"
-import { type Range, useEstate } from "../context"
+import { type ChartMark, marksOf } from "../chart-marks"
+import { type Range, useEstate, useSnapshot } from "../context"
 import { clock, measured } from "../format"
-import { firingPath, pathOf } from "../route"
 import { spikeBands } from "../spike"
-import { A } from "./A"
 import { IncludeCharts, type Picking, pickingCharts } from "./PickCharts"
 import { Plot } from "./Plot"
 import { TrafficSpike } from "./Signals"
@@ -42,6 +41,8 @@ export interface Reading {
   readonly shade?: () => { readonly from: number; readonly to: number } | undefined
   /** Charts being picked for an incident (spec 0063). */
   readonly pick?: Picking
+  /** Versions applied and alerts fired in the window, drawn across every chart of it (spec 0068). */
+  readonly happened?: () => ReadonlyArray<ChartMark>
 }
 
 export const Chart = (props: {
@@ -64,6 +65,10 @@ export const Chart = (props: {
   const read = () => reading(points(), shared.end(), span(), shared.mark())
   const zoomed = () => shared.zoom().from > 0 || shared.zoom().to < 1
   const edge = (fraction: number) => at(shared.end() - span() + fraction * span())
+  const said = () => {
+    const marks = shared.happened?.() ?? []
+    return marks.length === 0 ? "" : ` Marked: ${marks.map((mark) => mark.label).join("; ")}.`
+  }
   return (
     <figure class="chart" classList={{ "chart-picked": props.of !== undefined && shared.pick?.has(props.of.panel) }}>
       <figcaption class="spread">
@@ -86,7 +91,7 @@ export const Chart = (props: {
         </span>
       </figcaption>
       <Plot
-        label={`${props.label} over ${shared.over()}, now ${now()}. Arrow keys read each point.`}
+        label={`${props.label} over ${shared.over()}, now ${now()}.${said()} Arrow keys read each point.`}
         points={points()}
         end={shared.end()}
         span={span()}
@@ -104,6 +109,7 @@ export const Chart = (props: {
         onZoom={shared.onZoom}
         shade={shared.shade?.()}
         bands={props.spike === true ? spikeBands(points(), shared.end(), span()) : undefined}
+        happened={shared.happened?.() ?? []}
       />
       <div class="chart-axis mono ink-3">
         <span>{zoomed() ? edge(shared.zoom().from) : shared.starts()}</span>
@@ -126,8 +132,11 @@ export const Load = (props: {
   readonly read: (name: string, range: Range) => Promise<Read | undefined>
   readonly alerts: ReadonlyArray<Alert>
   readonly title?: string
+  /** What the charts are of, for the versions applied to it and its alerts that fired. */
+  readonly of?: { readonly service?: string; readonly store?: string }
 }) => {
   const { now } = useEstate()
+  const snapshot = useSnapshot()
   const [range, setRange] = createSignal<Range>("1h")
   const [load, setLoad] = createSignal<Read | undefined>(undefined)
   const [mark, setMark] = createSignal<number | undefined>(undefined)
@@ -171,6 +180,14 @@ export const Load = (props: {
     onMark: setMark,
     zoom,
     onZoom: setZoom,
+    happened: () =>
+      marksOf(
+        props.of ?? { service: props.name },
+        snapshot.events.feed?.items ?? [],
+        props.alerts,
+        snapshot.events.alerts?.resolved ?? [],
+        { end: end(), span: spans[range()] },
+      ),
   }
   return (
     <section aria-labelledby="load" class="panel section-box">
@@ -201,6 +218,18 @@ export const Load = (props: {
           </For>
         </fieldset>
       </div>
+      <Show when={(shared.happened?.() ?? []).length > 0}>
+        <ul class="chart-legend" aria-label="Marked on the charts">
+          <For each={shared.happened?.() ?? []}>
+            {(mark) => (
+              <li>
+                <span class={`legend-swatch ${mark.kind}`} aria-hidden="true" />
+                {mark.label}
+              </li>
+            )}
+          </For>
+        </ul>
+      </Show>
       <Show when={props.title === undefined}>
         <TrafficSpike points={shown()?.requests?.points} span={spans[range()]} />
         <div class="charts">
@@ -239,61 +268,5 @@ export const Load = (props: {
         </div>
       </Show>
     </section>
-  )
-}
-
-const day = 24 * 3_600_000
-
-export const Timeline = (props: {
-  readonly alerts: ReadonlyArray<{
-    readonly id: string
-    readonly name: string
-    readonly startsAt: string
-    readonly endsAt?: string
-  }>
-  readonly now: number
-}) => {
-  const place = (iso: string) => Math.max(0, Math.min(100, ((Date.parse(iso) - (props.now - day)) / day) * 100))
-  return (
-    <div class="stack close">
-      <Show when={props.alerts.length === 0}>
-        <p class="muted flush">Nothing fired in the last day.</p>
-      </Show>
-      <For each={props.alerts}>
-        {(alert) => (
-          <div class="timeline-row">
-            <A
-              to={
-                alert.endsAt === undefined
-                  ? pathOf({ page: "alert", id: alert.id })
-                  : firingPath(alert.id, alert.startsAt)
-              }
-              class="mono"
-              style={{ "font-size": "0.75rem" }}
-            >
-              {alert.name}
-            </A>
-            <div class="timeline-track">
-              <span
-                class={`timeline-bar ${alert.endsAt === undefined ? "live" : ""}`}
-                title={`${clock(alert.startsAt)} to ${alert.endsAt === undefined ? "now" : clock(alert.endsAt)}`}
-                style={{
-                  left: `${place(alert.startsAt)}%`,
-                  width: `${Math.max(1, place(alert.endsAt ?? new Date(props.now).toISOString()) - place(alert.startsAt))}%`,
-                }}
-              />
-            </div>
-          </div>
-        )}
-      </For>
-      <div class="timeline-row muted mono tiny">
-        <span />
-        <span class="spread">
-          <span>24 h ago</span>
-          <span>12 h ago</span>
-          <span>now</span>
-        </span>
-      </div>
-    </div>
   )
 }

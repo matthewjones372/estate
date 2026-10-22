@@ -34,6 +34,8 @@ export interface PlotProps {
   readonly bands?: ReadonlyArray<{ readonly from: number; readonly to: number }> | undefined
   /** Moments to mark across it, such as a timeline's events, as times like `end`. */
   readonly marks?: ReadonlyArray<number>
+  /** Versions applied and alerts fired, drawn across it apart from the marks above (spec 0068). */
+  readonly happened?: ReadonlyArray<{ readonly at: number; readonly kind: "deploy" | "fired" }>
   readonly style?: JSX.CSSProperties
 }
 
@@ -71,6 +73,12 @@ export const Plot = (props: PlotProps) => {
   const placed = (time: number) => {
     const share = (time - (props.end - props.span)) / props.span
     return Math.max(0, Math.min(1, (share - zoom().from) / (zoom().to - zoom().from)))
+  }
+
+  /** Whether a time is on the chart as zoomed, not held to an edge. */
+  const shown = (time: number) => {
+    const share = (time - (props.end - props.span)) / props.span
+    return share >= zoom().from && share <= zoom().to
   }
 
   const move = (event: Pointer) => {
@@ -138,6 +146,18 @@ export const Plot = (props: PlotProps) => {
               x1={placed(time) * props.width}
               y1="0"
               x2={placed(time) * props.width}
+              y2={props.height}
+              vector-effect="non-scaling-stroke"
+            />
+          )}
+        </For>
+        <For each={(props.happened ?? []).filter((each) => shown(each.at))}>
+          {(each) => (
+            <line
+              class={each.kind === "deploy" ? "plot-deploy" : "plot-fired"}
+              x1={placed(each.at) * props.width}
+              y1="0"
+              x2={placed(each.at) * props.width}
               y2={props.height}
               vector-effect="non-scaling-stroke"
             />
