@@ -26,8 +26,10 @@ for the environment being looked at is green while the service in it is degraded
 - **The trouble map as a path with the cause on it** (stores and brokers between orders and picking). The map stays
   as spec 0062 and 0065 draw it, its choice moved into the overview's *View* menu; the path is a follow-up.
 - **Parsing who wrote a note out of its text.** "Who's on it" is the latest note's author as Estate kept it.
-- **The service page's diagnosis sentence, runtime stats folded to one line, and renaming "1 error · 1 group".**
-  Follow-ups; this change only adds the deploy and firing marks to its charts and fixes the version chip.
+- **The service page's diagnosis sentence and runtime stats folded to one line.** Follow-ups; this change adds the
+  deploy and firing marks to its charts, fixes the version chip and says error groups plainly.
+- **Names on the map.** A map node keeps the title the catalog's `map:` gives it ("Postgres" for orders-db); naming it
+  by the catalog entry with its kind beside it is a follow-up. The things list already says `orders-db (Postgres)`.
 - **Removing a layout.** Cards, rows, areas, lines, list and grid all stay; only where they are chosen moves.
 
 ## Shape
@@ -101,7 +103,8 @@ Under 40em the pages are a row of tabs under the brand, switcher and account.
 **The service page's charts** draw a solid line where a version was applied to the service and a dashed one where
 one of its alerts fired, in the window shown, with a legend above them: `main-154-199fdaf applied 10:31`,
 `CheckoutSlow fired 10:53`. The version strip's chip for the environment shown takes the service's health when it is
-worse than the deploy's.
+worse than the deploy's. The day's errors under its health line say how many different messages they are, `12 errors,
+3 different messages, in 24h`, rather than "12 errors · 3 groups".
 
 ## Why this shape
 
@@ -119,18 +122,19 @@ Specs 0039, 0044, 0062 and 0065.
 
 ## Stack
 
-- [ ] **`things-once`** — `needs.ts`, the hero, the list of things with cards in place, the tiles.
+- [x] **`things-once`** — `needs.ts`, the hero, the list of things with cards in place, the tiles.
       Done when: the demo's production says four things in the headline, the list and the tile, with a row for the
       stuck inventory deploy and none of its raw error on the overview; tests cover each kind and the hero's cause.
-- [ ] **`view-menu`** — the View menu, areas worst first, healthy as a line.
+- [x] **`view-menu`** — the View menu, areas worst first, healthy as a line.
       Done when: no layout buttons are on the overview outside the menu, and the Fulfilment area comes before Shop.
-- [ ] **`header-one-row`** — the account as a menu; tabs on a phone.
+- [x] **`header-one-row`** — the account as a menu; tabs on a phone.
       Done when: the header is one row at 1440 pixels, and four tabs under 40em.
-- [ ] **`changes-in-batches`** — the feed's batches and the firing that follows a version.
+- [x] **`changes-in-batches`** — the feed's batches and the firing that follows a version.
       Done when: the demo's eight builds at one time are one line, and CheckoutSlow says the version before it.
-- [ ] **`how-it-unfolded`** — the incident's thread on the overview.
+- [x] **`how-it-unfolded`** — the incident's thread on the overview.
       Done when: alerts and notes interleave oldest first, and a note added there is the incident's.
-- [ ] **`marks-on-charts`** — deploy and firing marks on a service's charts, and the version chip's health.
+- [x] **`marks-on-charts`** — deploy and firing marks on a service's charts, the version chip's health, and error
+      groups said as different messages.
       Done when: checkout's charts in the demo show main-154's line and CheckoutSlow's, and production's chip is amber.
 
 ## Acceptance
@@ -139,6 +143,16 @@ Specs 0039, 0044, 0062 and 0065.
 bun run gate
 CHROMIUM=/path/to/chromium bunx playwright test
 ```
+
+## Left for later
+
+- The trouble map as the path an order takes, with the stores and brokers on it and the one at the root marked, drawn
+  down the page on a phone.
+- The map's nodes named by their catalog entry, the kind beside it.
+- A service page that leads with one sentence of diagnosis (state, threshold, how long, the version before it) and its
+  runbook as an action.
+- A service's runtime stats as one "in range" line with *Show charts*, open by itself when one is out of range.
+- A "usual" beside a vital, once a source can say what usual is.
 
 ## Open questions
 
