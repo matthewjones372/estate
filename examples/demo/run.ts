@@ -11,11 +11,11 @@ const estate = "http://127.0.0.1:8080"
 const here = new URL(".", import.meta.url).pathname
 
 const started = [
-  Bun.spawn(["bun", `${here}world.ts`], { stdout: "ignore", stderr: "inherit" }),
+  Bun.spawn(["bun", `${here}world.ts`], { stdout: "inherit", stderr: "inherit" }),
   Bun.spawn(["bun", `${here}../../src/server/main.ts`], {
-    env: { ...process.env, ESTATE_SETTINGS: `${here}estate.yaml` },
+    env: { ...process.env, ESTATE_SETTINGS: `${here}estate.yaml`, ESTATE_LOG_FORMAT: "pretty" },
     cwd: `${here}../..`,
-    stdout: "ignore",
+    stdout: "inherit",
     stderr: "inherit",
   }),
 ]
@@ -25,6 +25,15 @@ const stop = () => {
 }
 process.on("SIGINT", stop)
 process.on("SIGTERM", stop)
+
+// If either process exits unexpectedly, say so and stop. A clean SIGINT/SIGTERM kills both and exits 0.
+for (const child of started)
+  child.exited.then((code) => {
+    if (code !== null && code !== 0) {
+      process.stderr.write(`demo: a process exited with ${code}\n`)
+      stop()
+    }
+  })
 
 const say = (line = "") => process.stdout.write(`${line}\n`)
 
