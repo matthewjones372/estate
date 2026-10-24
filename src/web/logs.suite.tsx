@@ -73,7 +73,9 @@ describe("a service's live lines", () => {
     const page = mount(() => <LogsPanel service="storefront" />)
     page.click(page.button("Copy 3 lines"))
     await page.settle()
-    expect(copied[0]?.split("\n")).toHaveLength(3)
+    const [heading, ...rest] = copied[0]?.split("\n") ?? []
+    expect(heading).toBe("storefront in production · http://estate.test/services/storefront?env=production")
+    expect(rest).toHaveLength(3)
     expect(copied[0]).toContain("\tstorefront-1\tERROR\torder 41 lost")
     const picks = [...page.container.querySelectorAll<HTMLButtonElement>(".log-pick")]
     page.click(picks[1] as HTMLButtonElement)
@@ -81,14 +83,15 @@ describe("a service's live lines", () => {
     page.click(picks[2] as HTMLButtonElement, { shiftKey: true })
     page.click(page.button("Copy 2 lines"))
     await page.settle()
-    expect(copied[1]?.split("\n").map((each) => each.split("\t")[3])).toEqual(["order 41 lost", "slow"])
+    const picked = copied[1]?.split("\n").slice(1) ?? []
+    expect(picked.map((each) => each.split("\t")[3])).toEqual(["order 41 lost", "slow"])
     page.click(page.button("Save"))
     expect(saved).toEqual([expect.stringMatching(/^storefront-production-\d{4}-\d\d-\d\dT\d{4}\.log$/)])
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
     expect(page.button("Copy 3 lines")).toBeDefined()
     page.click(page.button(/Copy this line/))
     await page.settle()
-    expect(copied[2]).toEndWith("\tINFO\tstarted")
+    expect(copied[2]?.split("\n")).toEqual([heading, expect.stringMatching(/\tINFO\tstarted$/)])
     HTMLAnchorElement.prototype.click = click
   })
 
@@ -236,7 +239,7 @@ describe("a service's live lines", () => {
     expect(page.container.textContent).toContain("2 of the last 9 lines match, with 2 lines around each")
     page.click(page.button("Copy 7 lines"))
     await page.settle()
-    expect(copied[0]?.split("\n")).toHaveLength(7)
+    expect(copied[0]?.split("\n")).toHaveLength(8)
     page.type(side("after"), "0")
     expect(texts(page.container)).toEqual([
       "INFO started",
@@ -278,7 +281,8 @@ describe("a service's errors", () => {
     })
     page.click(page.button("Copy these lines"))
     await page.settle()
-    expect(copied[0]?.split("\n")).toHaveLength(2)
+    expect(copied[0]).toStartWith("storefront in production · http://estate.test/services/storefront?logs=errors&")
+    expect(copied[0]?.split("\n")).toHaveLength(3)
     page.click(page.button("6h"))
     await page.settle()
     expect(page.calls).toContainEqual(["errors", "storefront", { range: "6h" }])

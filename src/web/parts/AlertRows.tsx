@@ -9,6 +9,7 @@ import { pathOf } from "../route"
 import { A } from "./A"
 import { AlertCard } from "./AlertCard"
 import { LatestNote, SeverityDot } from "./AlertLine"
+import { Subject } from "./Subject"
 
 export interface Shown {
   readonly catalog: CatalogEvent | undefined
@@ -47,7 +48,9 @@ export const AlertRow = (props: Shown & { readonly alert: Alert }) => {
         <A to={`/alerts/${encodeURIComponent(props.alert.id)}`} class="mono row-name">
           {props.alert.name}
         </A>
-        <span class="row-where">{props.alert.service ?? props.alert.store ?? ""}</span>
+        <span class="row-where">
+          <Subject service={props.alert.service} store={props.alert.store} />
+        </span>
         <span class="row-since mono">{since(props.alert.startsAt, now())}</span>
         <span class="row-note">
           <LatestNote note={props.alert.notes[0]} />

@@ -5,7 +5,7 @@ import type { LogLine } from "../../shared/log-events"
 import { replaceAddress } from "../address"
 import { useEstate, useSnapshot } from "../context"
 import { around } from "../log-around"
-import { asText, copy, fileName, save } from "../log-copy"
+import { asText, copy, fileName, headed, save } from "../log-copy"
 import { searchOf, shows } from "../log-search"
 import { type ErrorRange, type LogsShown, pathOf } from "../route"
 import { IncludeInIncident } from "./IncludeInIncident"
@@ -108,10 +108,11 @@ const Live = (props: { readonly service: string }) => {
     const some = shown().filter((line) => picked().has(keyOf(line)))
     return some.length > 0 ? some : shown()
   }
+  const whence = () => ({ service: props.service, environment: snapshot.environment })
   const lineCount = (count: number) => `${count} line${count === 1 ? "" : "s"}`
   const copyChosen = () => {
     const count = chosen().length
-    void copy(asText(chosen())).then(() => setTold(`Copied ${lineCount(count)}`))
+    void copy(headed(whence(), chosen())).then(() => setTold(`Copied ${lineCount(count)}`))
   }
   const clear = (event: KeyboardEvent) => {
     if (event.key === "Escape") setPicked(new Set<string>())
@@ -213,6 +214,7 @@ const Live = (props: { readonly service: string }) => {
               gap={row.gap}
               picked={picked().has(keyOf(row.item))}
               onPick={(range) => pick(row.item, range)}
+              onCopy={() => void copy(headed(whence(), [row.item]))}
             />
           )}
         </For>

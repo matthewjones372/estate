@@ -33,6 +33,7 @@ describe("a past firing's page", () => {
     expect(text).toContain("“Restarted the pool.” — ada")
     expect(page.calls).toContainEqual(["firing", "a1", "2026-10-02T09:00:00Z"])
     expect(links(page.container)).toContainEqual(["Open the runbook", "https://runbooks.example/orders-slow"])
+    expect(page.container.querySelector(".lede a")?.getAttribute("href")).toBe("/services/storefront")
     expect(links(page.container).map(([, href]) => href)).toContain("/alerts/a1/2026-09-20T14:02:00Z")
   })
 

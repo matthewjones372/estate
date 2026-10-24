@@ -20,6 +20,7 @@ import { Notes } from "./Notes"
 import { Plot } from "./Plot"
 import { RaiseIncident } from "./RaiseIncident"
 import { SilencedRow, standing } from "./Silenced"
+import { Subject } from "./Subject"
 import { TellTeam } from "./TellTeam"
 
 const minutesUntilNine = (now: number): number => {
@@ -164,7 +165,11 @@ export const AlertCard = (props: {
         <Dynamic component={props.level === 2 ? "h2" : "h3"} class="alert-title">
           {props.alert.summary ?? props.alert.name}
         </Dynamic>
-        <Show when={props.alert.service}>{(name) => <p class="alert-detail">{name()}</p>}</Show>
+        <Show when={props.alert.service ?? props.alert.store}>
+          <p class="alert-detail">
+            <Subject service={props.alert.service} store={props.alert.store} />
+          </p>
+        </Show>
       </div>
       <Impact alert={props.alert} />
       <PartOf incident={props.alert.incident} />

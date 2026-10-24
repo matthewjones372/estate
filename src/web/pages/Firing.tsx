@@ -13,21 +13,16 @@ import { FiringTimeline } from "../parts/FiringTimeline"
 import { PartOf } from "../parts/IncidentLink"
 import { LoadThen } from "../parts/LoadThen"
 import { ErrorList } from "../parts/LogErrors"
+import { Subject } from "../parts/Subject"
 import { TimelineExport } from "../parts/TimelineExport"
 import { firingPath, pathOf } from "../route"
 
-const lede = (firing: PastFiring) =>
-  [
-    `${firing.severity === undefined ? "" : `${firing.severity} · `}fired ${day(firing.startsAt)}${
-      firing.endsAt === undefined
-        ? ", its end not seen"
-        : ` for ${duration(Date.parse(firing.endsAt) - Date.parse(firing.startsAt))}, ended ${clock(firing.endsAt)}`
-    }`,
-    firing.service ?? firing.store,
-    firing.environment,
-  ]
-    .filter((part) => part !== undefined)
-    .join(" · ")
+const fired = (firing: PastFiring) =>
+  `${firing.severity === undefined ? "" : `${firing.severity} · `}fired ${day(firing.startsAt)}${
+    firing.endsAt === undefined
+      ? ", its end not seen"
+      : ` for ${duration(Date.parse(firing.endsAt) - Date.parse(firing.startsAt))}, ended ${clock(firing.endsAt)}`
+  }`
 
 /** From ten minutes before it fired, to see what led up to it, until it ended. */
 const windowOf = (firing: PastFiring) => ({
@@ -40,7 +35,14 @@ const WhatHappened = (props: { readonly firing: PastFiring }) => (
     <h1 id="firing-happened" class="headline item-title">
       What happened
     </h1>
-    <p class="lede">{lede(props.firing)}</p>
+    <p class="lede">
+      {fired(props.firing)}
+      <Show when={props.firing.service ?? props.firing.store}>
+        {" · "}
+        <Subject service={props.firing.service} store={props.firing.store} />
+      </Show>
+      {` · ${props.firing.environment}`}
+    </p>
     <Show
       when={props.firing.severity !== undefined}
       fallback={

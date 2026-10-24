@@ -3,7 +3,7 @@
 import { For, Show } from "solid-js"
 import type { LogLine } from "../../shared/log-events"
 import { clock } from "../format"
-import { asText, copy, levelOf } from "../log-copy"
+import { levelOf } from "../log-copy"
 import { marked, type Search } from "../log-search"
 import { pathOf } from "../route"
 import { A } from "./A"
@@ -23,7 +23,7 @@ export const kindOf = (line: LogLine): Kind =>
 
 const empty: Search = { _tag: "Empty" }
 
-/** A line, and when it is in the Live view, a way to pick it and to copy it alone. */
+/** A line, and when it is in the Live view, a way to pick it and to copy it alone, with where it is from. */
 export const LineRow = (props: {
   readonly line: LogLine
   readonly search?: Search
@@ -32,6 +32,7 @@ export const LineRow = (props: {
   readonly gap?: boolean
   readonly picked?: boolean
   readonly onPick?: (range: boolean) => void
+  readonly onCopy?: () => void
 }) => (
   <li
     class={`log-line ${kindOf(props.line)}`}
@@ -81,8 +82,8 @@ export const LineRow = (props: {
         </For>
       </span>
     </span>
-    <Show when={props.onPick}>
-      <button type="button" class="log-copy-one" onClick={() => void copy(asText([props.line]))}>
+    <Show when={props.onCopy}>
+      <button type="button" class="log-copy-one" onClick={() => props.onCopy?.()}>
         <span aria-hidden="true">⧉</span>
         <span class="visually-hidden">Copy this line</span>
       </button>
