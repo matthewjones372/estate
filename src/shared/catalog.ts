@@ -121,6 +121,17 @@ export const Service = Schema.Struct({
           message: optional(Schema.String),
         }),
       ),
+      /**
+       * In CloudWatch Logs: the log group, the prefix of its streams, and which container's streams. On ECS each
+       * defaults to what the task definition gives the awslogs driver.
+       */
+      cloudwatch: optional(
+        Schema.Struct({
+          group: optional(Schema.String),
+          prefix: optional(Schema.String),
+          container: optional(Schema.String),
+        }),
+      ),
     }),
   ),
   stats: optional(

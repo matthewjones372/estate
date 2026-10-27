@@ -47,6 +47,7 @@ import { Configured, readSettings, type Settings, type SettingsError } from "./s
 import { readBackEvery } from "./settings-incident-tool"
 import { keepDays } from "./settings-incidents"
 import { backfillHistory } from "./sources/backfill"
+import { cloudwatchBudgetLayer } from "./sources/cloudwatch-logs"
 import { runCode } from "./sources/code"
 import { codeEvery } from "./sources/every"
 import { incidentToolOf } from "./sources/incident-tool-of"
@@ -250,6 +251,7 @@ export const services = <E, F, R, W = Estate, N = never>(
         Layer.succeed(Configured)(started.settings),
         liveModel(started.settings.ai).pipe(Layer.provide(remote)),
         liveAskLimits(started.settings.ai?.budget?.tokensPerDay),
+        cloudwatchBudgetLayer,
         providerLayer,
       ),
     ),

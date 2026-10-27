@@ -57,10 +57,20 @@ const Task = Schema.Struct({
 })
 type Task = typeof Task.Type
 const Tasks = Schema.Struct({ tasks: Schema.Array(Task) })
+const Container = Schema.Struct({
+  name: Schema.String,
+  image: Schema.String,
+  essential: Schema.optionalKey(Schema.Boolean),
+  logConfiguration: Schema.optionalKey(
+    Schema.Struct({
+      logDriver: Schema.String,
+      options: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+    }),
+  ),
+})
+export type Container = typeof Container.Type
 const TaskDefinition = Schema.Struct({
-  taskDefinition: Schema.Struct({
-    containerDefinitions: Schema.Array(Schema.Struct({ name: Schema.String, image: Schema.String })),
-  }),
+  taskDefinition: Schema.Struct({ containerDefinitions: Schema.Array(Container) }),
 })
 
 /** ECS's answer to `operation`, read as `schema`, or a failure in ECS's words. */
@@ -221,3 +231,26 @@ export const readEcsDeploys = (
       }),
     { concurrency: 4 },
   ).pipe(Effect.map((read) => Object.fromEntries(read.flat())))
+
+/** The containers of the task definition a service's primary deployment runs; none while it has no deployment. */
+export const containersOf = (
+  ecs: AwsJson,
+  runtime: { readonly cluster: string; readonly service: string },
+): Effect.Effect<ReadonlyArray<Container>, Failure> =>
+  Effect.gen(function* () {
+    const described = yield* ask(
+      ecs,
+      "DescribeServices",
+      { cluster: runtime.cluster, services: [runtime.service] },
+      Services,
+    )
+    const primary = described.services[0]?.deployments.find((deployment) => deployment.status === "PRIMARY")
+    if (primary === undefined) return []
+    const defined = yield* ask(
+      ecs,
+      "DescribeTaskDefinition",
+      { taskDefinition: primary.taskDefinition },
+      TaskDefinition,
+    )
+    return defined.taskDefinition.containerDefinitions
+  })

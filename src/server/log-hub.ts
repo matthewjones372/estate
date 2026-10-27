@@ -20,6 +20,7 @@ import {
 import type { LogBatch } from "../shared/log-events"
 import type { Remote } from "./remote"
 import { Configured } from "./settings"
+import type { Line } from "./sources/lines"
 import { type ErrorsRead, logsFor, type ServiceLogs } from "./sources/logs"
 import type { Failure } from "./sources/run"
 import { Estate } from "./state"
@@ -63,26 +64,48 @@ export const serviceLogs = (environment: string, service: string) =>
       : logsFor(settings.sources[found.sources] ?? {}, described)
   })
 
-const sent = (since: number, ...batches: ReadonlyArray<LogBatch>) => [since, batches] as const
+/** What a line is told apart by, as a source re-read over an overlap gives no ids. */
+const keyOf = (line: Line) => `${line.at}\u0000${line.pod ?? ""}\u0000${line.text}`
 
-/** What is new every two seconds, from a quarter of an hour before `start`: a batch each time lines came, or a read failed. */
-const batchesOf = (logs: ServiceLogs, start: number) =>
-  Stream.tick(every).pipe(
+/** The lines of a read that were not among those already sent. */
+export const unsent = (sent: ReadonlyArray<Line>, read: ReadonlyArray<Line>): ReadonlyArray<Line> => {
+  const before = new Set(sent.map(keyOf))
+  return read.filter((line) => !before.has(keyOf(line)))
+}
+
+/** Where the next read starts, and the lines sent since a little before it, which that read may give again. */
+interface Reading {
+  readonly since: number
+  readonly sent: ReadonlyArray<Line>
+}
+
+const sent = (reading: Reading, ...batches: ReadonlyArray<LogBatch>) => [reading, batches] as const
+
+/**
+ * What is new every two seconds, from a quarter of an hour before `start`: a batch each time lines came, or a read
+ * failed. A source whose lines can arrive late is read again from a little before the last line sent.
+ */
+const batchesOf = (logs: ServiceLogs, start: number) => {
+  const overlap = logs.overlap ?? 0
+  return Stream.tick(every).pipe(
     Stream.mapAccumEffect(
-      () => start - Duration.toMillis(firstLook),
-      (since) =>
+      (): Reading => ({ since: start - Duration.toMillis(firstLook), sent: [] }),
+      (reading) =>
         Effect.gen(function* () {
           const now = yield* Clock.currentTimeMillis
-          const read = yield* Effect.result(logs.read(since, now, most + 1))
-          if (read._tag === "Failure") return sent(since, { lines: [], skipped: false, failed: read.failure.message })
-          const lines = read.success.slice(-most)
+          const read = yield* Effect.result(logs.read(reading.since - overlap, now, most + 1))
+          if (read._tag === "Failure") return sent(reading, { lines: [], skipped: false, failed: read.failure.message })
+          const fresh = unsent(reading.sent, read.success)
+          const lines = fresh.slice(-most)
           const last = lines.at(-1)
-          return last === undefined
-            ? sent(since)
-            : sent(Date.parse(last.at) + 1, { lines, skipped: read.success.length > most })
+          if (last === undefined) return sent(reading)
+          const since = Math.max(reading.since, Date.parse(last.at) + 1)
+          const kept = [...reading.sent, ...lines].filter((line) => Date.parse(line.at) >= since - overlap - 1)
+          return sent({ since, sent: kept }, { lines, skipped: fresh.length > most })
         }),
     ),
   )
+}
 
 export const logHubLayer = Layer.effect(LogHub)(
   Effect.gen(function* () {

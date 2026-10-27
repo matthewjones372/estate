@@ -97,10 +97,11 @@ export const cloudwatchLines = (
   older lines were skipped, as the 200-line cap does now.
 - **Late lines.** CloudWatch can make a line searchable seconds after its timestamp. Reading strictly from the last
   line seen would lose those, so `ServiceLogs` gains an optional `overlap` (10 seconds for CloudWatch, none for the
-  rest): the hub reads from `last - overlap`, and drops lines it already sent by `eventId`, remembered for the overlap.
+  rest): the hub reads from `last - overlap`, and drops lines it already sent by
+  their time, task and text, remembered for the overlap. (Lines carry no id to the page, so none is kept.)
 - **The account's budget.** `FilterLogEvents` is held to 10 calls a second per account in eu-west-2, 5 in some
   regions, not adjustable, and shared with the console and everything else in the account. All CloudWatch readers in
-  an Estate process share one `RateLimiter` at `callsPerSecond` (default 4). When more services are watched than
+  an Estate process share one budget, `CloudwatchBudget`, at `callsPerSecond` (default 4). When more services are watched than
   four calls a second covers at two seconds each, every reader's interval stretches evenly, and the panel shows
   "every 4 s" in place of "live". A `ThrottlingException` backs off the shared limiter and is shown as the source
   being slow, never as the panel failing.
@@ -182,7 +183,7 @@ catalog's `errors` patterns, and Insights can sort newest first, which is what a
 
 ## Stack
 
-- [ ] **`cloudwatch-logs-live`** — `cloudwatchLogs` in settings, `logs.cloudwatch` in the catalog, the group and
+- [x] **`cloudwatch-logs-live`** — `cloudwatchLogs` in settings, `logs.cloudwatch` in the catalog, the group and
       prefix from the task definition, `FilterLogEvents` with paging, the overlap and the shared rate limiter, and
       `logsFor` choosing it.
       Done when: against a stub of `FilterLogEvents`, an ECS service's lines arrive masked and in order with their
@@ -193,7 +194,8 @@ catalog's `errors` patterns, and Insights can sort newest first, which is what a
       Done when: against a stub that answers `Running` twice then `Complete`, errors group by message; a stub that
       never completes is stopped and reported slow; two pages asking within five minutes start one query.
 - [ ] **`cloudwatch-logs-doctor`** — `estate doctor`'s findings with `DescribeLogGroups`, the IAM policy in the docs,
-      `e2e/cloud-tools.ts` answering as CloudWatch Logs, and CloudWatch Logs in LocalStack in `bun run integration`.
+      `e2e/cloud-tools.ts` answering as CloudWatch Logs, CloudWatch Logs in LocalStack in `bun run integration`, and
+      the panel's "every 4 s", "slow" and Infrequent Access wording.
       Done when: Playwright watches a line arrive on the ECS environment's checkout page and opens an error group,
       and `integration/cloudwatch.it.ts` reads lines and errors back from LocalStack.
 
