@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { shortVersion } from "../../shared/feed"
 import type { Incident } from "../../shared/incidents"
 import { catalog, environment, estate } from "../fixture"
 import type { SourcedAlert } from "../state"
@@ -131,5 +132,11 @@ describe("the feed", () => {
       ],
       ["on one not kept", { kind: "note", who: "gil", alert: "Lost-1" }],
     ])
+  })
+
+  test("says a version that is a digest by its first 12 characters, and keeps all of it", () => {
+    expect(shortVersion("743fb49a20393a43ea2b57a628414504a1e8baf536ef836d0981dec3c0839701")).toBe("743fb49a2039")
+    expect(shortVersion("sha256:743fb49a20393a43ea2b57a628414504a1e8baf536ef836d0981dec3c0839701")).toBe("743fb49a2039")
+    expect(shortVersion("main-154-199fdaf")).toBe("main-154-199fdaf")
   })
 })

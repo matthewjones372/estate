@@ -3,7 +3,7 @@
  * line each; everything else stays a line of its own, and an alert that fired within half an hour of a version applied
  * to its service says so.
  */
-import type { FeedItem } from "../shared/feed"
+import { type FeedItem, shortVersion } from "../shared/feed"
 import { duration } from "./format"
 
 /** Changes within this of the first in their batch are one batch. */
@@ -28,7 +28,8 @@ const batchOf = (item: FeedItem): Batched | undefined => {
   return undefined
 }
 
-const named = (item: FeedItem) => `${item.service === undefined ? "" : `${item.service} `}${item.version ?? ""}`.trim()
+const named = (item: FeedItem) =>
+  `${item.service === undefined ? "" : `${item.service} `}${shortVersion(item.version ?? "")}`.trim()
 
 /** Said of a batch: the first of it that needs someone, else the first, and how many more. */
 const sayBatch = (

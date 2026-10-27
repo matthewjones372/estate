@@ -41,4 +41,20 @@ describe("what changed today", () => {
     ])
     expect(lines[2]?.querySelector("summary")?.textContent).toBe("2 versions appliedincludes checkout main-2")
   })
+
+  test("says a version that is a digest by its first 12 characters", () => {
+    const digest = "743fb49a20393a43ea2b57a628414504a1e8baf536ef836d0981dec3c0839701"
+    const item = { at: "2026-10-03T10:31:00Z", kind: "deploy" as const, service: "api", version: digest }
+    const page = mount(() => (
+      <Feed
+        feed={{
+          items: [
+            { ...item, text: "x" },
+            { ...item, service: "worker", text: "y" },
+          ],
+        }}
+      />
+    ))
+    expect(page.container.querySelector("summary")?.textContent).toBe("2 versions appliedincludes api 743fb49a2039")
+  })
 })

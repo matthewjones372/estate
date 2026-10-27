@@ -1,7 +1,7 @@
 /** The `feed` event: what changed in the last day, read from the sources' own times and Estate's records. */
 import { Duration } from "effect"
 import { compact } from "../../shared/compact"
-import type { FeedEvent, FeedItem } from "../../shared/feed"
+import { type FeedEvent, type FeedItem, shortVersion } from "../../shared/feed"
 import type { StoredNote } from "../notes"
 import type { EnvironmentState, EstateState } from "../state"
 import { before, iso } from "../time"
@@ -123,7 +123,13 @@ export const feedView = (estate: EstateState, environment: string, now: number):
   }
   for (const [service, chosen] of Object.entries(state.deploys.value ?? {})) {
     if (chosen.at !== undefined)
-      add({ at: chosen.at, kind: "deploy", service, text: `${chosen.version} applied`, version: chosen.version })
+      add({
+        at: chosen.at,
+        kind: "deploy",
+        service,
+        text: `${shortVersion(chosen.version)} applied`,
+        version: chosen.version,
+      })
   }
   for (const [service, builds] of Object.entries(estate.builds.value ?? {})) {
     for (const build of builds) {
