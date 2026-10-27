@@ -1,12 +1,14 @@
 /**
- * A service's lines, read from its environment's Loki or Elasticsearch, or else from its pods' own logs through the
- * cluster's API, each with what wrote it and its trace, masked as the catalog says before they go anywhere.
+ * A service's lines, read from its environment's Loki, Datadog, Elasticsearch or CloudWatch Logs, or else from its pods'
+ * own logs through the cluster's API, each with what wrote it and its trace, masked as the catalog says before they go
+ * anywhere.
  */
 import { Effect, type FileSystem, Schema } from "effect"
 import { kubernetesOf, type Service } from "../../shared/catalog"
 import { Remote } from "../remote"
 import type { Sources } from "../settings"
 import { iso } from "../time"
+import { cloudwatchOverlap, cloudwatchReader } from "./cloudwatch-logs"
 import { podsOf } from "./cluster"
 import { datadogErrors, datadogLines, datadogPage } from "./datadog-logs"
 import { elasticLines, elasticNotErrors } from "./elastic"
@@ -108,7 +110,7 @@ const podLines = (
 
 export interface ServiceLogs {
   /** Where the lines come from, as the page names it. */
-  readonly from: "Loki" | "Elasticsearch" | "Datadog" | "the cluster"
+  readonly from: "Loki" | "Elasticsearch" | "Datadog" | "CloudWatch Logs" | "the cluster"
   /** Lines from `from` to `to` (milliseconds), at most `limit`, oldest first, masked. */
   readonly read: (
     from: number,
@@ -125,6 +127,8 @@ export interface ServiceLogs {
     to: number,
     limit: number,
   ) => Effect.Effect<ErrorsRead, Failure, Remote | FileSystem.FileSystem>
+  /** How far behind the last line seen a reader should read again (milliseconds), where lines can arrive late. */
+  readonly overlap?: number
 }
 
 export interface ErrorsRead {
@@ -150,7 +154,10 @@ const errorsFrom =
 /** A LogQL line filter for the catalog's pattern, case aside: a superset of the errors, as levels are in the text. */
 const lokiSieve = (pattern: string) => ` |~ "(?i)${pattern.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`
 
-/** A service's lines in an environment: from Loki, Datadog or Elasticsearch, or else its pods in the cluster. */
+/**
+ * A service's lines in an environment: from Loki, Datadog, Elasticsearch or CloudWatch Logs, or else its pods in the
+ * cluster.
+ */
 export const logsFor = (section: Sources, service: Service): ServiceLogs | undefined => {
   const fields = fieldsOf(service.logs?.fields)
   // Found before masking, so that a mask over the text cannot hide which trace a line is in.
@@ -158,7 +165,7 @@ export const logsFor = (section: Sources, service: Service): ServiceLogs | undef
   const finished = (line: Line) => masked(fields(line))
   const isError = errorTest(service.logs?.errors)
   const namespace = kubernetesOf(service)?.namespace
-  const { datadog, elasticsearch, kubernetes } = section
+  const { aws, cloudwatchLogs, datadog, elasticsearch, kubernetes } = section
   const loki = lokiOf(section)
   if (loki !== undefined) {
     const selector =
@@ -194,6 +201,17 @@ export const logsFor = (section: Sources, service: Service): ServiceLogs | undef
       isError,
       read: (from, to, limit) => Effect.map(lines(from, to, limit), (read) => read.map(finished)),
       errors: errorsFrom(sieved, isError, finished),
+    }
+  }
+  if (cloudwatchLogs !== undefined) {
+    const read = aws === undefined ? undefined : cloudwatchReader(aws, cloudwatchLogs, service)
+    if (read === undefined) return undefined
+    return {
+      from: "CloudWatch Logs",
+      isError,
+      overlap: cloudwatchOverlap,
+      read: (from, to, limit) => Effect.map(read(from, to, limit), (lines) => lines.map(finished)),
+      errors: errorsFrom(read, isError, finished),
     }
   }
   if (kubernetes === undefined || namespace === undefined) return undefined

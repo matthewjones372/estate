@@ -84,6 +84,23 @@ describe("the settings", () => {
       }),
     ))
 
+  test("need aws beside cloudwatchLogs, and fewer CloudWatch Logs calls a second than the account allows", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const result = yield* read(
+          `${good}  production:\n    cloudwatchLogs: {}\n  staging:\n    aws: { region: eu-west-2 }\n    cloudwatchLogs: { callsPerSecond: 12 }\n`,
+          { SECRET: "s".repeat(32), CLIENT_SECRET: "c" },
+        )
+        expect(Result.isFailure(result) && result.failure.mistakes).toEqual([
+          { at: "sources.production.cloudwatchLogs", message: "needs aws: { region } beside it" },
+          {
+            at: "sources.staging.cloudwatchLogs.callsPerSecond",
+            message: "12 is not between 1 and 10, the most any region allows",
+          },
+        ])
+      }),
+    ))
+
   test("name the server a self-hosted model is asked on, and give each agent a token too long to guess", () =>
     Effect.runPromise(
       Effect.gen(function* () {

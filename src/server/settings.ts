@@ -15,6 +15,7 @@ import { notADuration, secondsIn } from "./settings-every"
 import { IncidentTool, incidentToolMistakes } from "./settings-incident-tool"
 import { Incidents, incidentsMistakes } from "./settings-incidents"
 import { Kubernetes } from "./settings-kubernetes"
+import { CloudwatchLogs, cloudwatchLogsMistakes, Elasticsearch } from "./settings-logs"
 import { WebSettings, webMistakes } from "./settings-web"
 
 const optional = Schema.optionalKey
@@ -90,15 +91,7 @@ const Sources = Schema.Struct({
   /** Tempo, for the traces of the catalog's journeys; a tenant is sent as its own header. */
   tempo: optional(Schema.Struct({ url: Schema.String, tenant: optional(Schema.String) })),
   /** Elasticsearch or OpenSearch, for services' lines in place of Loki: an index pattern, and an API key or a user. */
-  elasticsearch: optional(
-    Schema.Struct({
-      url: Schema.String,
-      index: optional(Schema.String),
-      apiKey: optional(Secret),
-      username: optional(Schema.String),
-      password: optional(Secret),
-    }),
-  ),
+  elasticsearch: optional(Elasticsearch),
   alertmanager: optional(Url),
   /**
    * Grafana's alerting, in place of Alertmanager: its URL and a service account's token. Naming a Prometheus, Loki or
@@ -117,6 +110,8 @@ const Sources = Schema.Struct({
   flux: optional(Schema.Struct({})),
   /** AWS, for services on ECS: the region, through the credentials AWS's tools would find. */
   aws: optional(Schema.Struct({ region: Schema.String, endpoint: optional(Schema.String) })),
+  /** CloudWatch Logs, for services' lines in place of Loki, read through `aws`. */
+  cloudwatchLogs: optional(CloudwatchLogs),
   /** Harness CD, in place of Flux or Argo CD: the account and an API key. */
   harness: optional(Harness),
   /** Argo CD, in place of Flux: its URL and a token that may read its Applications. */
@@ -282,6 +277,7 @@ export const readSettings = (text: string): Effect.Effect<Settings, SettingsErro
     }
     sense.push(
       ...everyMistakes(settings),
+      ...cloudwatchLogsMistakes(settings),
       ...askMistakes(settings),
       ...databaseMistakes(settings.database),
       ...clusterMistakes(settings),
