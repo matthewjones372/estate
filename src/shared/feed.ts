@@ -4,6 +4,10 @@ import { Schema } from "effect"
 const optional = Schema.optionalKey
 const Instant = Schema.String
 
+/** A version that is a bare digest, said by its first 12 characters as container tools say an image (spec 0071). */
+export const shortVersion = (version: string): string =>
+  /^(sha256:)?[0-9a-f]{40,}$/.test(version) ? version.replace(/^sha256:/, "").slice(0, 12) : version
+
 export const FeedItem = Schema.Struct({
   at: Instant,
   kind: Schema.Literals(["deploy", "build", "alert", "resolved", "silence", "note", "debug", "job"]),
