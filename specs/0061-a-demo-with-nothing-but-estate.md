@@ -90,6 +90,10 @@ means a service added to the catalog shows up with pods, versions and load, with
       answer each source the settings name, and production shows the gone broker, the lagging group, both alerts, the
       incident with its comments, a followed message turning *read it*, orders-db's replica behind, the traffic's
       events, and Ask AI's canned answer.
+- [x] **`demo-exits`** — `run.ts` holds the world and Estate together: Ctrl-C or SIGTERM stops both and exits 0;
+      either one ending on its own, Estate not becoming ready, or `run.ts` failing stops the rest and exits non-zero,
+      so a supervisor such as systemd restarts it and nothing is left holding 8080 or 8484.
+      Done when: a test runs stand-ins together and sees each of those end with its code and no process left behind.
 
 ## Acceptance
 
