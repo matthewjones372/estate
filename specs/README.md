@@ -76,3 +76,4 @@ entries, one per pull request, each with what proves it done.
 | [0069](0069-copied-lines-say-where-they-are-from.md) | copied lines say where they are from: every copy of a service's lines starts with its service, environment and the address of its logs; done |
 | [0070](0070-from-an-alert-to-what-it-is-about.md) | from an alert to what it is about: the service or store an alert names is a link to its page, on its row, its card, its page and a past firing's; done |
 | [0071](0071-long-names-in-what-changed-today.md) | long names in what changed today: lines that wrap within the panel, and a version that is a digest said by its first 12 characters; done |
+| [0072](0072-logs-from-cloudwatch.md) | logs from CloudWatch: an ECS service's live lines through `FilterLogEvents` and its errors through Logs Insights, its log group and stream prefix from its task definition, held to the account's call budget |
