@@ -10,7 +10,7 @@ an issue or a pull request. Say what an attacker can do, and how to reproduce it
 
 ## What is supported
 
-The latest image, `ghcr.io/matthewjones372/estate:main`. Fixes go to `main` and are published as a new image.
+The latest image, `ghcr.io/surefold/estate:main`. Fixes go to `main` and are published as a new image.
 
 ## How Estate is meant to be run
 

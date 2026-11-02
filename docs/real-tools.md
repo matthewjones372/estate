@@ -36,7 +36,7 @@ services:
 Then run the doctor, which asks each tool once and prints a line a part:
 
 ```bash
-docker run -v ./my-estate:/etc/estate --env-file my-estate/.env ghcr.io/matthewjones372/estate:main doctor
+docker run -v ./my-estate:/etc/estate --env-file my-estate/.env ghcr.io/surefold/estate:main doctor
 # or, from a checkout:
 ESTATE_SETTINGS=my-estate/estate.yaml bun src/server/main.ts doctor
 ```
