@@ -21,7 +21,7 @@ permissions:
 jobs:
   image:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
-    runs-on: namespace-profile-mattjones372
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
