@@ -1,7 +1,7 @@
 # Estate
 
-[![gate](https://github.com/matthewjones372/estate/actions/workflows/gate.yml/badge.svg)](https://github.com/matthewjones372/estate/actions/workflows/gate.yml)
-[![image](https://github.com/matthewjones372/estate/actions/workflows/image.yml/badge.svg)](https://github.com/matthewjones372/estate/pkgs/container/estate)
+[![gate](https://github.com/surefold/estate/actions/workflows/gate.yml/badge.svg)](https://github.com/surefold/estate/actions/workflows/gate.yml)
+[![image](https://github.com/surefold/estate/actions/workflows/image.yml/badge.svg)](https://github.com/surefold/estate/pkgs/container/estate)
 ![Bun](https://img.shields.io/badge/Bun-1.3-14151a?logo=bun&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
 ![Effect](https://img.shields.io/badge/Effect-4-0b0d12)
@@ -202,7 +202,7 @@ in `web: { frameAncestors: [https://grafana.example.com] }`; otherwise Estate re
 ## Try it
 
 ```bash
-docker run -v ./examples:/etc/estate -p 8080:8080 ghcr.io/matthewjones372/estate:main
+docker run -v ./examples:/etc/estate -p 8080:8080 ghcr.io/surefold/estate:main
 ```
 
 Then open <http://localhost:8080>. The example points at tools that don't exist, so each part of the page says
@@ -222,7 +222,7 @@ it, traffic rises and falls with a lunchtime rush and a newsletter, and you can 
 group that reads it. Ask AI answers there are canned, and say so. Everything comes from
 [`examples/demo/`](examples/demo): its catalog is a real one to read and copy from.
 
-To see it with live data, [petshop's demo](https://github.com/matthewjones372/petshop/tree/main/demo) runs Estate
+To see it with live data, [petshop's demo](https://github.com/surefold/petshop/tree/main/demo) runs Estate
 in Docker Compose against a real Prometheus and Alertmanager watching a small Kotlin service. Stopping the demo's
 chip registry fires an alert, which appears at the top of the page and resolves once the registry is back. Its
 `estate/` folder is a working `estate.yaml` and `catalog.yaml` to start from.
@@ -237,7 +237,7 @@ To try it against your team's real tools, set `readOnly: true` in `estate.yaml` 
 silences, no debug switching, notes only in memory), then run the `doctor` command:
 
 ```bash
-docker run -v ./my-estate:/etc/estate --env-file my-estate/.env ghcr.io/matthewjones372/estate:main doctor
+docker run -v ./my-estate:/etc/estate --env-file my-estate/.env ghcr.io/surefold/estate:main doctor
 ```
 
 It asks each tool once and prints a line per part: what answered, how many alerts matched a service, which services
@@ -328,7 +328,7 @@ Estate is used alongside these tools and links into each of them.
 
 ### Deployment
 
-Images for amd64 and arm64 are published to `ghcr.io/matthewjones372/estate` from `main`. [`deploy/`](deploy) has a
+Images for amd64 and arm64 are published to `ghcr.io/surefold/estate` from `main`. [`deploy/`](deploy) has a
 Kubernetes base to overlay with your two files, an ingress and your secrets. It runs as one container in about
 120 MB.
 
