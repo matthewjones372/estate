@@ -15,7 +15,13 @@ const endingWith = (code: number) => ["bun", "-e", `await Bun.sleep(500); proces
 
 const spare = () => join(tmpdir(), `demo-run-${crypto.randomUUID()}`)
 
-const isRunning = (pid: number) => Bun.spawnSync(["ps", "-p", String(pid)]).exitCode === 0
+/** A zombie has stopped; it lingers until whatever adopted it reaps it, which some containers' init is slow to do. */
+const isRunning = (pid: number) => {
+  const state = Bun.spawnSync(["ps", "-o", "stat=", "-p", String(pid)])
+    .stdout.toString()
+    .trim()
+  return state !== "" && !state.startsWith("Z")
+}
 
 const pidIn = (file: string, tries = 100): Promise<number> =>
   Bun.file(file)
