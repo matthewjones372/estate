@@ -277,23 +277,21 @@ export const datadogSilence = (
 }
 
 /** The downtime cancelled, so the group alerts again. */
-export const datadogUnsilence = (datadog: Datadog, id: string): Effect.Effect<void, Failure, Remote> => {
-  const reach = datadogReach(datadog)
-  return callJson({
-    url: `${reach.url}/api/v2/downtime/${encodeURIComponent(id)}`,
+export const datadogUnsilence = (datadog: Datadog, id: string): Effect.Effect<void, Failure, Remote> =>
+  callJson({
+    url: `${datadogReach(datadog).url}/api/v2/downtime/${encodeURIComponent(id)}`,
     method: "DELETE",
-    headers: reach.headers,
+    headers: datadogReach(datadog).headers,
   }).pipe(Effect.mapError(failed), Effect.asVoid)
-}
 
-/** Alerts read beside a manager's: CloudWatch's alarms and Datadog's monitors, where the environment has them. */
+/** Alerts read beside a manager's: CloudWatch's alarms, Datadog's monitors, and Cloud Monitoring alert policies. */
 export const alertsBeside = (
   alarms: Effect.Effect<ReadonlyArray<SourcedAlert>, Failure> | undefined,
   datadog: Datadog | undefined,
-): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> | undefined =>
-  alarms === undefined && datadog === undefined
-    ? undefined
-    : Effect.map(
-        Effect.all([alarms ?? Effect.succeed([]), datadog === undefined ? Effect.succeed([]) : datadogAlerts(datadog)]),
-        ([cloudwatch, monitors]) => [...cloudwatch, ...monitors],
-      )
+  cloudMonitoring?: Effect.Effect<ReadonlyArray<SourcedAlert>, Failure> | undefined,
+): Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> | undefined => {
+  const parts = [alarms, datadog === undefined ? undefined : datadogAlerts(datadog), cloudMonitoring].filter(
+    (p): p is Effect.Effect<ReadonlyArray<SourcedAlert>, Failure, Remote> => p !== undefined,
+  )
+  return parts.length === 0 ? undefined : Effect.map(Effect.all(parts), (lists) => lists.flat())
+}

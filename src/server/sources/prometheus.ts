@@ -6,7 +6,7 @@ import { callJson, type Remote } from "../remote"
 import type { Reach } from "./grafana"
 import { type Failure, SourceFailure } from "./run"
 
-const Matrix = Schema.Struct({
+export const Matrix = Schema.Struct({
   data: Schema.Struct({
     result: Schema.Array(
       Schema.Struct({
@@ -17,11 +17,11 @@ const Matrix = Schema.Struct({
   }),
 })
 
-const Instant = Schema.Struct({
+export const Instant = Schema.Struct({
   data: Schema.Struct({ result: Schema.Array(Schema.Struct({ metric: Schema.Record(Schema.String, Schema.String) })) }),
 })
 
-const Vector = Schema.Struct({
+export const Vector = Schema.Struct({
   data: Schema.Struct({
     result: Schema.Array(
       Schema.Struct({
@@ -32,7 +32,7 @@ const Vector = Schema.Struct({
   }),
 })
 
-const Rules = Schema.Struct({
+export const Rules = Schema.Struct({
   data: Schema.Struct({
     groups: Schema.Array(
       Schema.Struct({
@@ -72,7 +72,7 @@ export const onGrid = (values: ReadonlyArray<readonly [number, string]>, start: 
   return { now: points.at(-1) ?? null, points }
 }
 
-const subsetOf = (labels: Readonly<Record<string, string>>, of: Readonly<Record<string, string>>) =>
+export const subsetOf = (labels: Readonly<Record<string, string>>, of: Readonly<Record<string, string>>) =>
   Object.entries(labels).every(([name, value]) => of[name] === value)
 
 /** A query over the span ending now: the result whose labels the alert's include, or the first. */

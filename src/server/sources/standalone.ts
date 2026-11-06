@@ -3,8 +3,10 @@ import { Effect } from "effect"
 import { runsAs, type StandaloneJob } from "../../shared/catalog"
 import type { Job } from "../../shared/events"
 import type { AwsJson } from "../aws/json"
+import type { GcpJson } from "../gcp/json"
 import type { Remote } from "../remote"
 import type { Workloads } from "../state"
+import { cloudRunJobOf } from "./cloud-run"
 import { scheduledTaskOf } from "./ecs"
 import { jobsOf } from "./jobs"
 import type { Cluster } from "./kubernetes"
@@ -40,6 +42,23 @@ export const ecsJobs = (ecs: AwsJson, jobs: ReadonlyArray<StandaloneJob>): Effec
     jobs.flatMap((job) => ("ecs" in job.run ? [[job, job.run.ecs] as const] : [])),
     ([job, run]) =>
       Effect.map(scheduledTaskOf(ecs, run.cluster, run.scheduledTask), (read) => [job.name, [read]] as const),
+    { concurrency: 4 },
+  ).pipe(Effect.map(byName))
+
+/** Each Cloud Run job's runs, as a service's CloudRunJob is read. */
+export const cloudRunJobs = (
+  gcp: GcpJson,
+  project: string,
+  defaultRegion: string,
+  jobs: ReadonlyArray<StandaloneJob>,
+): Effect.Effect<Read, Failure> =>
+  Effect.forEach(
+    jobs.flatMap((job) => ("cloudRun" in job.run ? [[job, job.run.cloudRun] as const] : [])),
+    ([job, run]) =>
+      Effect.map(
+        cloudRunJobOf(gcp, project, run.region ?? defaultRegion, run.job),
+        (read) => [job.name, [{ ...read, name: job.name }]] as const,
+      ),
     { concurrency: 4 },
   ).pipe(Effect.map(byName))
 

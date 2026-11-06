@@ -2,6 +2,7 @@
 import { Clock, Effect, FiberMap, type FileSystem, Stream, SubscriptionRef } from "effect"
 import type { Service, StandaloneJob } from "../../shared/catalog"
 import { makeAwsJson } from "../aws/json"
+import { makeGcpJson } from "../gcp/json"
 import type { Remote } from "../remote"
 import type { Settings } from "../settings"
 import { Estate, updateEnvironment } from "../state"
@@ -10,12 +11,13 @@ import { priced, withModels } from "./agents"
 import { readAlerts, withResolved } from "./alerts"
 import { readArgo } from "./argo"
 import { runBuilds } from "./builds"
+import { readCloudMonitoringAlerts } from "./cloud-monitoring"
 import { cloudwatchApi, readAlarms } from "./cloudwatch"
 import { readCluster } from "./cluster"
 import { costsReader } from "./costs"
 import { alertsBeside } from "./datadog"
 import { revertExpired } from "./debug"
-import { ecsApi, readEcsDeploys, readEcsWorkloads } from "./ecs"
+import { ecsApi } from "./ecs"
 import { buildsEvery, everyOf } from "./every"
 import { readDeploys } from "./flux"
 import { readHarnessDeploys } from "./harness"
@@ -26,7 +28,8 @@ import { alertsOf, buildsOf, deploysOf, runtimeOf } from "./ports"
 import type { Ranges } from "./prometheus"
 import { rangesIn } from "./ranges"
 import { type Failure, runSource } from "./run"
-import { ecsJobs, kubernetesJobs, withJobs } from "./standalone"
+import { kubernetesJobs, withJobs } from "./standalone"
+import { cloudRunReader, ecsReader } from "./start-runtime"
 
 /** The services in an environment as the catalog says now, so a reloaded catalog is read from the next time. */
 const servicesIn = (environment: string): Effect.Effect<ReadonlyArray<Service>, never, Estate> =>
@@ -115,11 +118,18 @@ const readersFor = (
   Effect.gen(function* () {
     const readers: Array<Effect.Effect<never, never, Estate | Remote | FileSystem.FileSystem>> = []
     const section = settings.sources[environment.sources] ?? {}
-    const { aws } = section
+    const { aws, gcp } = section
     const ecs = aws === undefined ? undefined : yield* makeAwsJson(ecsApi, aws.region, aws.endpoint)
     const cloudwatch = aws === undefined ? undefined : yield* makeAwsJson(cloudwatchApi, aws.region, aws.endpoint)
+    const gcpJson = gcp === undefined ? undefined : yield* makeGcpJson(gcp.endpoint)
     if (alertsOf(section).length > 0) {
-      const alarms = alertsBeside(cloudwatch === undefined ? undefined : readAlarms(cloudwatch), section.datadog)
+      const gcpAlerts =
+        gcp === undefined || gcpJson === undefined ? undefined : readCloudMonitoringAlerts(gcpJson, gcp.project)
+      const alarms = alertsBeside(
+        cloudwatch === undefined ? undefined : readAlarms(cloudwatch),
+        section.datadog,
+        gcpAlerts,
+      )
       readers.push(
         runSource(
           environment.name,
@@ -174,38 +184,10 @@ const readersFor = (
       readers.push(runSource(environment.name, "deploys", everyOf(section, "deploys"), read))
     }
     if (runtimeOf(section) === "ecs" && ecs !== undefined) {
-      // Task definitions never change, so the image each names is asked for once.
-      const images = new Map<string, string | undefined>()
-      const read = <A>(part: (services: ReadonlyArray<Service>) => Effect.Effect<A, Failure, Estate>) =>
-        Effect.flatMap(servicesIn(environment.name), part)
-      readers.push(
-        Effect.all(
-          [
-            runSource(
-              environment.name,
-              "cluster",
-              everyOf(section, "cluster"),
-              read((services) =>
-                Effect.all([
-                  readEcsWorkloads(ecs, services),
-                  Effect.flatMap(jobsHere(environment.name), (jobs) => ecsJobs(ecs, jobs)),
-                ]).pipe(Effect.map(([workloads, jobs]) => withJobs(workloads, jobs))),
-              ),
-            ),
-            ...(deploysOf(section) === "ecs"
-              ? [
-                  runSource(
-                    environment.name,
-                    "deploys",
-                    everyOf(section, "deploys"),
-                    read((services) => readEcsDeploys(ecs, services, images)),
-                  ),
-                ]
-              : []),
-          ],
-          { concurrency: "unbounded" },
-        ).pipe(Effect.andThen(Effect.never)),
-      )
+      readers.push(ecsReader(section, ecs, environment.name, servicesIn, jobsHere))
+    }
+    if (runtimeOf(section) === "cloud-run" && gcp !== undefined && gcpJson !== undefined) {
+      readers.push(cloudRunReader(section, gcp, gcpJson, environment.name, servicesIn, jobsHere))
     }
     const { kubernetes } = section
     if (runtimeOf(section) === "kubernetes" && kubernetes !== undefined) {

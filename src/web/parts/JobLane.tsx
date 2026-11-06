@@ -13,7 +13,12 @@ import { Owner } from "./Team"
 export type DescribedJob = NonNullable<CatalogEvent["jobs"]>[number]
 export type JobState = NonNullable<ServicesEvent["jobs"]>[number]
 
-const kindWords = { CronJob: "CronJob", Job: "Job", ScheduledTask: "Scheduled task" } as const
+const kindWords = {
+  CronJob: "CronJob",
+  Job: "Job",
+  ScheduledTask: "Scheduled task",
+  CloudRunJob: "Cloud Run job",
+} as const
 
 export const JobLane = (props: { readonly job: DescribedJob; readonly state: JobState | undefined }) => {
   const { now } = useEstate()

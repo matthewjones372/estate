@@ -15,7 +15,7 @@ import { notADuration, secondsIn } from "./settings-every"
 import { IncidentTool, incidentToolMistakes } from "./settings-incident-tool"
 import { Incidents, incidentsMistakes } from "./settings-incidents"
 import { Kubernetes } from "./settings-kubernetes"
-import { CloudwatchLogs, cloudwatchLogsMistakes, Elasticsearch } from "./settings-logs"
+import { CloudLogging, CloudwatchLogs, Elasticsearch, logsMistakes } from "./settings-logs"
 import { WebSettings, webMistakes } from "./settings-web"
 
 const optional = Schema.optionalKey
@@ -112,6 +112,10 @@ const Sources = Schema.Struct({
   aws: optional(Schema.Struct({ region: Schema.String, endpoint: optional(Schema.String) })),
   /** CloudWatch Logs, for services' lines in place of Loki, read through `aws`. */
   cloudwatchLogs: optional(CloudwatchLogs),
+  /** Google Cloud Platform: the project and region for Cloud Run, Cloud Monitoring and Cloud Logging. */
+  gcp: optional(Schema.Struct({ project: Schema.String, region: Schema.String, endpoint: optional(Schema.String) })),
+  /** Cloud Logging, for services' lines in place of Loki, read through `gcp`. */
+  cloudLogging: optional(CloudLogging),
   /** Harness CD, in place of Flux or Argo CD: the account and an API key. */
   harness: optional(Harness),
   /** Argo CD, in place of Flux: its URL and a token that may read its Applications. */
@@ -269,15 +273,13 @@ export const readSettings = (text: string): Effect.Effect<Settings, SettingsErro
     if (Result.isFailure(shaped)) return yield* new SettingsError({ mistakes: shaped.failure })
     const settings = shaped.success
     const sense: Mistake[] = []
-    if (settings.auth.oidc === undefined && settings.auth.anonymous === undefined) {
+    if (settings.auth.oidc === undefined && settings.auth.anonymous === undefined)
       sense.push({ at: "auth", message: "needs oidc, or anonymous for trying Estate out" })
-    }
-    if (Redacted.value(settings.auth.sessionSecret).length < 32) {
+    if (Redacted.value(settings.auth.sessionSecret).length < 32)
       sense.push({ at: "auth.sessionSecret", message: "needs at least 32 characters" })
-    }
     sense.push(
       ...everyMistakes(settings),
-      ...cloudwatchLogsMistakes(settings),
+      ...logsMistakes(settings),
       ...askMistakes(settings),
       ...databaseMistakes(settings.database),
       ...clusterMistakes(settings),

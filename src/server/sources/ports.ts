@@ -7,38 +7,44 @@ import type { Settings, Sources } from "../settings"
 import { prometheusOf } from "./grafana"
 
 /** What the services run on: their instances, jobs and debug switch. An environment runs on one of them. */
-export const runtimeOf = (section: Sources): "kubernetes" | "ecs" | undefined => {
+export const runtimeOf = (section: Sources): "kubernetes" | "ecs" | "cloud-run" | undefined => {
   if (section.kubernetes !== undefined) return "kubernetes"
-  return section.aws === undefined ? undefined : "ecs"
+  if (section.aws !== undefined) return "ecs"
+  return section.gcp === undefined ? undefined : "cloud-run"
 }
 
 /**
  * What chose each version and applied it: Argo CD through its own API, Flux through the cluster it runs in, or ECS's
  * own deployments.
  */
-export const deploysOf = (section: Sources): "argo" | "harness" | "flux" | "ecs" | undefined => {
+export const deploysOf = (section: Sources): "argo" | "harness" | "flux" | "ecs" | "cloud-run" | undefined => {
   if (section.argo !== undefined) return "argo"
   if (section.harness !== undefined) return "harness"
   if (runtimeOf(section) === "ecs") return "ecs"
+  if (runtimeOf(section) === "cloud-run") return "cloud-run"
   return section.flux !== undefined && runtimeOf(section) === "kubernetes" ? "flux" : undefined
 }
 
 /** Where firing, pending and silenced alerts are read. */
 export const alertsOf = (
   section: Sources,
-): ReadonlyArray<"alertmanager" | "grafana" | "prometheus" | "cloudwatch" | "datadog"> => [
+): ReadonlyArray<"alertmanager" | "grafana" | "prometheus" | "cloudwatch" | "datadog" | "cloud-monitoring"> => [
   ...(section.alertmanager === undefined ? [] : ["alertmanager" as const]),
   ...(section.grafana === undefined ? [] : ["grafana" as const]),
   ...(prometheusOf(section) === undefined ? [] : ["prometheus" as const]),
   ...(section.aws === undefined ? [] : ["cloudwatch" as const]),
   ...(section.datadog === undefined ? [] : ["datadog" as const]),
+  ...(section.gcp === undefined ? [] : ["cloud-monitoring" as const]),
 ]
 
 /** Where queries over a range are answered: Prometheus, or else Datadog, or else CloudWatch. */
-export const metricsOf = (section: Sources): "prometheus" | "datadog" | "cloudwatch" | undefined => {
+export const metricsOf = (
+  section: Sources,
+): "prometheus" | "datadog" | "cloudwatch" | "cloud-monitoring" | undefined => {
   if (prometheusOf(section) !== undefined) return "prometheus"
   if (section.datadog !== undefined) return "datadog"
-  return section.aws === undefined ? undefined : "cloudwatch"
+  if (section.aws !== undefined) return "cloudwatch"
+  return section.gcp === undefined ? undefined : "cloud-monitoring"
 }
 
 /** Where each service's builds are read, for the whole estate rather than per environment. */
@@ -57,9 +63,11 @@ const named: Readonly<Record<string, string>> = {
   grafana: "Grafana",
   prometheus: "Prometheus",
   cloudwatch: "CloudWatch",
+  "cloud-monitoring": "Cloud Monitoring",
   datadog: "Datadog",
   kubernetes: "Kubernetes",
   ecs: "ECS",
+  "cloud-run": "Cloud Run",
   flux: "Flux",
   argo: "Argo CD",
   harness: "Harness",

@@ -8,6 +8,7 @@ import { kubernetesOf, type Service } from "../../shared/catalog"
 import { Remote } from "../remote"
 import type { Sources } from "../settings"
 import { iso } from "../time"
+import { cloudLoggingOverlap, cloudLoggingReader } from "./cloud-logging"
 import { cloudwatchOverlap, cloudwatchReader } from "./cloudwatch-logs"
 import { podsOf } from "./cluster"
 import { datadogErrors, datadogLines, datadogPage } from "./datadog-logs"
@@ -110,7 +111,7 @@ const podLines = (
 
 export interface ServiceLogs {
   /** Where the lines come from, as the page names it. */
-  readonly from: "Loki" | "Elasticsearch" | "Datadog" | "CloudWatch Logs" | "the cluster"
+  readonly from: "Loki" | "Elasticsearch" | "Datadog" | "CloudWatch Logs" | "Cloud Logging" | "the cluster"
   /** Lines from `from` to `to` (milliseconds), at most `limit`, oldest first, masked. */
   readonly read: (
     from: number,
@@ -212,6 +213,18 @@ export const logsFor = (section: Sources, service: Service): ServiceLogs | undef
       overlap: cloudwatchOverlap,
       read: (from, to, limit) => Effect.map(read(from, to, limit), (lines) => lines.map(finished)),
       errors: errorsFrom(read, isError, finished),
+    }
+  }
+  if (section.cloudLogging !== undefined && section.gcp !== undefined) {
+    const read = cloudLoggingReader(section.gcp, section.cloudLogging, service)
+    if (read !== undefined) {
+      return {
+        from: "Cloud Logging",
+        isError,
+        overlap: cloudLoggingOverlap,
+        read: (from, to, limit) => Effect.map(read(from, to, limit), (lines) => lines.map(finished)),
+        errors: errorsFrom(read, isError, finished),
+      }
     }
   }
   if (kubernetes === undefined || namespace === undefined) return undefined

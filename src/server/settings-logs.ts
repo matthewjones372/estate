@@ -17,9 +17,10 @@ export const Elasticsearch = Schema.Struct({
 })
 
 export const CloudwatchLogs = Schema.Struct({ callsPerSecond: optional(Schema.Number) })
+export const CloudLogging = Schema.Struct({ callsPerSecond: optional(Schema.Number) })
 
 /** CloudWatch Logs with no region to read it in, or asked more often than any region's account allows. */
-export const cloudwatchLogsMistakes = (settings: {
+const cloudwatchLogsMistakes = (settings: {
   readonly sources: Readonly<
     Record<string, { readonly aws?: unknown; readonly cloudwatchLogs?: typeof CloudwatchLogs.Type }>
   >
@@ -37,3 +38,37 @@ export const cloudwatchLogsMistakes = (settings: {
           ]),
     ]
   })
+
+/** Cloud Logging with no GCP project to read it in, or asked more often than allows. */
+const cloudLoggingMistakes = (settings: {
+  readonly sources: Readonly<
+    Record<string, { readonly gcp?: unknown; readonly cloudLogging?: typeof CloudLogging.Type }>
+  >
+}): ReadonlyArray<Mistake> =>
+  Object.entries(settings.sources).flatMap(([name, { gcp, cloudLogging }]) => {
+    if (cloudLogging === undefined) return []
+    const at = `sources.${name}.cloudLogging`
+    const perSecond = cloudLogging.callsPerSecond
+    return [
+      ...(gcp === undefined ? [{ at, message: "needs gcp: { project, region } beside it" }] : []),
+      ...(perSecond === undefined || (perSecond >= 1 && perSecond <= 10)
+        ? []
+        : [
+            { at: `${at}.callsPerSecond`, message: `${perSecond} is not between 1 and 10, the most any region allows` },
+          ]),
+    ]
+  })
+
+export const logsMistakes = (settings: {
+  readonly sources: Readonly<
+    Record<
+      string,
+      {
+        readonly aws?: unknown
+        readonly cloudwatchLogs?: typeof CloudwatchLogs.Type
+        readonly gcp?: unknown
+        readonly cloudLogging?: typeof CloudLogging.Type
+      }
+    >
+  >
+}): ReadonlyArray<Mistake> => [...cloudwatchLogsMistakes(settings), ...cloudLoggingMistakes(settings)]

@@ -12,11 +12,14 @@ import { codeFinding } from "./doctor-code"
 import { backstageFinding, discoverFinding, kafkaFinding } from "./doctor-discover"
 import { amount, type Finding, finding, type Needs } from "./doctor-finding"
 import { incidentToolFinding } from "./doctor-incident-tool"
+import { makeGcpJson } from "./gcp/json"
 import type { Remote } from "./remote"
 import type { Settings, Sources } from "./settings"
 import { readAlerts } from "./sources/alerts"
 import { readArgo } from "./sources/argo"
 import { readBuilds } from "./sources/builds"
+import { readCloudMonitoringAlerts } from "./sources/cloud-monitoring"
+import { readCloudRunDeploys, readCloudRunWorkloads } from "./sources/cloud-run"
 import { cloudwatchApi, readAlarms } from "./sources/cloudwatch"
 import { readCluster } from "./sources/cluster"
 import { costsIn } from "./sources/costs"
@@ -153,10 +156,17 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
     const section = settings.sources[sources] ?? {}
     const services = inEnvironment(catalog, environment)
     const now = yield* Clock.currentTimeMillis
-    const { aws, kubernetes, argo } = section
+    const { aws, gcp, kubernetes, argo } = section
     const ecs = aws === undefined ? undefined : yield* makeAwsJson(ecsApi, aws.region, aws.endpoint)
     const cloudwatch = aws === undefined ? undefined : yield* makeAwsJson(cloudwatchApi, aws.region, aws.endpoint)
-    const alarms = alertsBeside(cloudwatch === undefined ? undefined : readAlarms(cloudwatch), section.datadog)
+    const gcpJson = gcp === undefined ? undefined : yield* makeGcpJson(gcp.endpoint)
+    const gcpAlerts =
+      gcp === undefined || gcpJson === undefined ? undefined : readCloudMonitoringAlerts(gcpJson, gcp.project)
+    const alarms = alertsBeside(
+      cloudwatch === undefined ? undefined : readAlarms(cloudwatch),
+      section.datadog,
+      gcpAlerts,
+    )
     const ranges = yield* rangesIn(section)
     const findings: Array<Finding> = [{ part: "every", ok: true, says: intervalsOf(section) }]
     if (alertsOf(section).length > 0) findings.push(yield* alertsFinding(section, catalog, environment, alarms))
@@ -176,6 +186,12 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
     if (ecs !== undefined && runtimeOf(section) === "ecs")
       findings.push(
         yield* finding("cluster", readEcsWorkloads(ecs, services), (found) => workloadsSaid(services, found)),
+      )
+    if (gcp !== undefined && gcpJson !== undefined && runtimeOf(section) === "cloud-run")
+      findings.push(
+        yield* finding("cluster", readCloudRunWorkloads(gcpJson, gcp.project, gcp.region, services), (found) =>
+          workloadsSaid(services, found),
+        ),
       )
     const deploys = deploysOf(section)
     if (deploys === "argo" && argo !== undefined)
@@ -197,6 +213,12 @@ const examine = (settings: Settings, catalog: Catalog, environment: string, sour
     if (deploys === "ecs" && ecs !== undefined)
       findings.push(
         yield* finding("deploys", readEcsDeploys(ecs, services, new Map()), (found) => deploysSaid("ecs", found)),
+      )
+    if (deploys === "cloud-run" && gcp !== undefined && gcpJson !== undefined)
+      findings.push(
+        yield* finding("deploys", readCloudRunDeploys(gcpJson, gcp.project, gcp.region, services), (found) =>
+          deploysSaid("cloud-run", found),
+        ),
       )
     const costs = yield* costsIn(section)
     if (costs !== undefined)

@@ -72,7 +72,7 @@ export const CatalogEvent = Schema.Struct({
         owner: optional(Schema.String),
         category: optional(Schema.String),
         runbook: optional(Schema.String),
-        kind: Schema.Literals(["CronJob", "Job", "ScheduledTask"]),
+        kind: Schema.Literals(["CronJob", "Job", "ScheduledTask", "CloudRunJob"]),
         links: Schema.Array(Link),
       }),
     ),
@@ -100,7 +100,7 @@ export const CatalogEvent = Schema.Struct({
 })
 export type CatalogEvent = typeof CatalogEvent.Type
 
-export { Debug, Job, Pod, Series } from "./workloads"
+export { Debug, Job, JobRun, Pod, Series } from "./workloads"
 
 const Stat = Schema.Struct({ title: Schema.String, unit: optional(Schema.String), series: Series })
 

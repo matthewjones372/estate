@@ -65,6 +65,7 @@ export const Service = Schema.Struct({
     Schema.Struct({
       kubernetes: optional(Kubernetes),
       ecs: optional(Schema.Struct({ cluster: Schema.String, service: Schema.String })),
+      cloudRun: optional(Schema.Struct({ service: Schema.String, region: optional(Schema.String) })),
     }),
   ),
   /** The same as `runtime.kubernetes`, as catalogs written before `runtime` name it. */
@@ -93,7 +94,12 @@ export const Service = Schema.Struct({
   debug: optional(Schema.Struct({ configMap: Schema.String, key: Schema.String, levels: Schema.Array(Schema.String) })),
   /** Its jobs: Kubernetes' CronJobs and Jobs by name, or ECS's scheduled tasks by their task family. */
   jobs: optional(
-    Schema.Array(Schema.Struct({ kind: Schema.Literals(["CronJob", "Job", "ScheduledTask"]), name: Schema.String })),
+    Schema.Array(
+      Schema.Struct({
+        kind: Schema.Literals(["CronJob", "Job", "ScheduledTask", "CloudRunJob"]),
+        name: Schema.String,
+      }),
+    ),
   ),
   /** Where its lines are and which are errors; the defaults suit most services. */
   logs: optional(
@@ -130,6 +136,16 @@ export const Service = Schema.Struct({
           group: optional(Schema.String),
           prefix: optional(Schema.String),
           container: optional(Schema.String),
+        }),
+      ),
+      /**
+       * In Cloud Logging: the service name, container, or custom filter expression. Defaults to runtime.cloudRun service.
+       */
+      cloudLogging: optional(
+        Schema.Struct({
+          service: optional(Schema.String),
+          container: optional(Schema.String),
+          filter: optional(Schema.String),
         }),
       ),
     }),
@@ -180,6 +196,9 @@ export const kubernetesOf = (service: Service): typeof Kubernetes.Type | undefin
 
 /** Where a service runs on ECS. */
 export const ecsOf = (service: Service) => service.runtime?.ecs
+
+/** Where a service runs on Cloud Run. */
+export const cloudRunOf = (service: Service) => service.runtime?.cloudRun
 
 /** The GitHub Actions workflow that builds a service, however the catalog names it. */
 export const workflowOf = (service: Service): typeof Workflow.Type | undefined => {
@@ -246,18 +265,20 @@ export const StandaloneJob = Schema.Struct({
       }),
     }),
     Schema.Struct({ ecs: Schema.Struct({ cluster: Schema.String, scheduledTask: Schema.String }) }),
+    Schema.Struct({ cloudRun: Schema.Struct({ job: Schema.String, region: optional(Schema.String) }) }),
   ]),
   links: optional(Schema.Record(Schema.String, Schema.String)),
 })
 export type StandaloneJob = typeof StandaloneJob.Type
 
 /** What a job runs as, by its runtime's own kind and name. */
-export const runsAs = (job: StandaloneJob) =>
-  "ecs" in job.run
-    ? { kind: "ScheduledTask" as const, name: job.run.ecs.scheduledTask }
-    : job.run.kubernetes.job === undefined
-      ? { kind: "CronJob" as const, name: job.run.kubernetes.cronJob ?? job.name }
-      : { kind: "Job" as const, name: job.run.kubernetes.job }
+export const runsAs = (job: StandaloneJob) => {
+  if ("ecs" in job.run) return { kind: "ScheduledTask" as const, name: job.run.ecs.scheduledTask }
+  if ("cloudRun" in job.run) return { kind: "CloudRunJob" as const, name: job.run.cloudRun.job }
+  return job.run.kubernetes.job === undefined
+    ? { kind: "CronJob" as const, name: job.run.kubernetes.cronJob ?? job.name }
+    : { kind: "Job" as const, name: job.run.kubernetes.job }
+}
 
 export const Catalog = Schema.Struct({
   environments: Schema.Array(Environment),

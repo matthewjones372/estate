@@ -24,17 +24,18 @@ export const Pod = Schema.Struct({
 })
 export type Pod = typeof Pod.Type
 
-const JobRun = Schema.Struct({
+export const JobRun = Schema.Struct({
   name: Schema.String,
   outcome: Schema.Literals(["running", "succeeded", "failed"]),
   startedAt: Instant,
   finishedAt: optional(Instant),
   message: optional(Schema.String),
 })
+export type JobRun = typeof JobRun.Type
 
 export const Job = Schema.Struct({
   name: Schema.String,
-  kind: Schema.Literals(["CronJob", "Job", "ScheduledTask"]),
+  kind: Schema.Literals(["CronJob", "Job", "ScheduledTask", "CloudRunJob"]),
   schedule: optional(Schema.String),
   suspended: Schema.Boolean,
   runs: Schema.Array(JobRun),

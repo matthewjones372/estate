@@ -101,6 +101,23 @@ describe("the settings", () => {
       }),
     ))
 
+  test("need gcp beside cloudLogging, and fewer Cloud Logging calls a second than allowed", () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const result = yield* read(
+          `${good}  production:\n    cloudLogging: {}\n  staging:\n    gcp: { project: my-proj, region: europe-west2 }\n    cloudLogging: { callsPerSecond: 12 }\n`,
+          { SECRET: "s".repeat(32), CLIENT_SECRET: "c" },
+        )
+        expect(Result.isFailure(result) && result.failure.mistakes).toEqual([
+          { at: "sources.production.cloudLogging", message: "needs gcp: { project, region } beside it" },
+          {
+            at: "sources.staging.cloudLogging.callsPerSecond",
+            message: "12 is not between 1 and 10, the most any region allows",
+          },
+        ])
+      }),
+    ))
+
   test("name the server a self-hosted model is asked on, and give each agent a token too long to guess", () =>
     Effect.runPromise(
       Effect.gen(function* () {
